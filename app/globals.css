@@ -5,6 +5,8 @@
     --color-secondary: #af8f6f;
     --color-background: #f8f4e1;
     --color-text: #543310;
+    /* Defaults */
+    --default-transition-duration: 300ms;
 }
 
 @theme inline {
