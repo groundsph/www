@@ -84,7 +84,7 @@ export default function CafeMap({ cafes }: CafeMapProps) {
             center={defaultCenter}
             zoom={16}
             scrollWheelZoom={true}
-            className='h-full w-full'
+            className='h-full w-full z-10'
             style={{ minHeight: "500px" }}
         >
             {/* Carto Positron - clean, minimal map style */}
