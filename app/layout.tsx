@@ -62,7 +62,7 @@ export const metadata: Metadata = {
         description:
             "Discover and explore the best cafes in Cebu. Community-driven cafe database featuring daily highlights, reviews, events, and blog posts.",
         images: ["/og-image.png"],
-        // creator: "@yourtwitterhandle", // TODO: Add your Twitter handle if applicable
+        creator: "@adrianbonpin",
     },
     robots: {
         index: true,
@@ -76,9 +76,9 @@ export const metadata: Metadata = {
         },
     },
     icons: {
-        icon: "/favicon.ico",
-        shortcut: "/favicon.ico",
-        apple: "/apple-touch-icon.png",
+        icon: "/icon.png",
+        shortcut: "/icon.png",
+        apple: "/icon.png",
     },
     manifest: "/manifest.webmanifest",
     category: "food and drink",
