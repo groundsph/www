@@ -6,6 +6,8 @@ import { Icon, DivIcon } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import Link from "next/link"
 import { useMemo, useState, useEffect } from "react"
+import Image from "next/image"
+import { StarIcon } from "lucide-react"
 
 interface CafeMapProps {
     cafes: Cafe[]
@@ -80,7 +82,7 @@ export default function CafeMap({ cafes }: CafeMapProps) {
     return (
         <MapContainer
             center={defaultCenter}
-            zoom={14}
+            zoom={16}
             scrollWheelZoom={true}
             className='h-full w-full'
             style={{ minHeight: "500px" }}
@@ -98,14 +100,31 @@ export default function CafeMap({ cafes }: CafeMapProps) {
                     icon={customIcon}
                 >
                     <Popup>
-                        <div className='flex flex-col gap-1'>
+                        <div className='flex flex-col gap-2'>
                             <Link
                                 href={`/cafes/${cafe.slug}`}
-                                className='font-serif font-semibold text-primary hover:underline'
+                                className='font-serif font-semibold text-text hover:underline text-lg'
                             >
                                 {cafe.name}
                             </Link>
-                            <p className='text-sm opacity-70'>
+                            <div className='relative w-full h-auto aspect-video overflow-clip rounded-lg'>
+                                <Image
+                                    src={cafe.thumbnail}
+                                    alt={cafe.name}
+                                    fill
+                                    className='object-cover'
+                                />
+                            </div>
+                            <div className='flex flex-row gap-2 items-center'>
+                                <div className='flex flex-row gap-2 items-center text-base font-semibold opacity-80'>
+                                    <StarIcon className='w-4 h-4 fill-primary' />
+                                    {cafe.rating}/10
+                                </div>
+                                <span className='text-text/60 opacity-80'>
+                                    {cafe.reviews} reviews
+                                </span>
+                            </div>
+                            <p className='text-text/60'>
                                 {cafe.address_display}
                             </p>
                         </div>

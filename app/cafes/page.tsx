@@ -2,6 +2,7 @@
 
 import { dummyCafes } from "@/utils/dummy/cafes"
 import Image from "next/image"
+import Link from "next/link"
 import { useState } from "react"
 
 export default function CafesPage() {
@@ -97,14 +98,17 @@ export default function CafesPage() {
                                     {cafe.address_display}
                                 </p>
                             </div>
-                            <div className='relative w-auto aspect-video'>
+                            <Link
+                                href={`/cafes/${cafe.slug}`}
+                                className='relative w-auto aspect-video'
+                            >
                                 <Image
                                     src={cafe.thumbnail}
                                     alt=''
                                     fill
                                     className='object-cover'
                                 />
-                            </div>
+                            </Link>
                         </div>
                     ))}
             </div>

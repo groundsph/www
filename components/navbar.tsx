@@ -11,8 +11,13 @@ export default function Navbar() {
         <nav className='w-full bg-background text-text px-4 py-2 flex items-center justify-between'>
             <Link
                 href='/'
-                className='font-semibold font-serif text-2xl select-none'
+                className={`font-semibold font-serif text-2xl select-none ${
+                    curPath === "/"
+                        ? "text-transparent select-auto"
+                        : "text-text"
+                } transition-colors`}
                 draggable={false}
+                title='Go to Home'
             >
                 Grounds
             </Link>

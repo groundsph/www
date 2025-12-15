@@ -95,7 +95,7 @@ export default function RootLayout({
             className='overscroll-none'
         >
             <body
-                className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center w-screen relative`}
+                className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center w-screen relative min-h-screen`}
             >
                 <Navbar />
                 {children}
