@@ -1,5 +1,11 @@
 import { Cafe } from "../types/cafe";
 
+export async function getCafeBySlug(slug: string) {
+    // Utilize dummy data for now
+    const cafe = dummyCafes.find((cafe) => cafe.slug === slug)
+    return cafe
+}
+
 export const dummyCafes: Cafe[] = [
     {
         id: crypto.randomUUID(),

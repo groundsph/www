@@ -1,11 +1,12 @@
 "use client"
 
-import { getCafeBySlug } from "@/app/api/actions/cafe"
 import { Cafe } from "@/utils/types/cafe"
 import { useCallback, useEffect, useState } from "react"
 import Loading from "./Loading"
 import Image from "next/image"
 import { motion } from "motion/react"
+import Link from "next/link"
+import { getCafeBySlug } from "@/utils/dummy/cafes"
 
 export default function CafeDetails({ cafeSlug }: { cafeSlug: string }) {
     // Constants
@@ -25,7 +26,26 @@ export default function CafeDetails({ cafeSlug }: { cafeSlug: string }) {
         initializePage()
     }, [initializePage])
     // Render
-    if (loading || !cafe) return <Loading />
+    if (loading) return <Loading />
+    if (!cafe)
+        return (
+            <section
+                id='not-found'
+                className='w-full h-full flex flex-col items-center justify-center flex-1'
+            >
+                <h1 className='text-5xl font-bold'>404</h1>
+                <p className='text-2xl font-semibold'>Page Not Found</p>
+                <p className='text-xl'>
+                    The page you are looking for does not exist.
+                </p>
+                <Link
+                    href='/'
+                    className='text-sm font-semibold underline transition-colors hover:text-text/60'
+                >
+                    Go Back Home
+                </Link>
+            </section>
+        )
     return (
         <section
             id='top'
@@ -47,7 +67,7 @@ export default function CafeDetails({ cafeSlug }: { cafeSlug: string }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 * 0 }}
-                        className='text-4xl font-bold'
+                        className='text-2xl md:text-5xl font-bold'
                     >
                         {cafe.name}
                     </motion.h1>

@@ -1,20 +1,9 @@
-import { Cafe, FeaturedCafe } from "./types/cafe";
+import { Cafe } from "./types/cafe";
 
 export function getDailyFeatured(cafes: Cafe[]) {
     const dayOfYear = getDayOfYear(new Date())
 
-    const cafe = cafes[dayOfYear % cafes.length]
-
-    const featured: FeaturedCafe = {
-        title: cafe.name,
-        description: cafe.description,
-        image: cafe.thumbnail,
-        url: `/cafes/${cafe.slug}`,
-        rating: cafe.rating,
-        reviews: cafe.reviews,
-    }
-
-    return featured
+    return cafes[dayOfYear % cafes.length]
 }
 
 export function getDayOfYear(date: Date): number {

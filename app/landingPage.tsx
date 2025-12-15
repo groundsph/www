@@ -9,6 +9,7 @@ import { StarIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
+import { motion } from "motion/react"
 
 export default function LandingPage() {
     // Constants
@@ -17,7 +18,15 @@ export default function LandingPage() {
     // Functions
     const getFeaturedCafe = useCallback(async () => {
         const cafe = getDailyFeatured(dummyCafes)
-        setFeatured(cafe)
+        if (!cafe) return
+        setFeatured({
+            title: cafe.name,
+            description: cafe.description,
+            image: cafe.thumbnail,
+            url: `/cafes/${cafe.slug}`,
+            rating: cafe.rating,
+            reviews: cafe.reviews,
+        })
     }, [setFeatured])
     // Effects
     useEffect(() => {
@@ -34,53 +43,85 @@ export default function LandingPage() {
                 <div className='w-full flex flex-col gap-4'>
                     <div className='w-full flex flex-col md:flex-row gap-4 md:gap-6'>
                         <div className='flex-1 flex flex-col'>
-                            <h1 className='text-5xl md:text-6xl lg:text-7xl font-bold'>
+                            <motion.h1
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.5, delay: 0.2 * 0 }}
+                                className='text-5xl md:text-6xl lg:text-7xl font-bold'
+                            >
                                 GROUNDS<span className='text-text/60'>.</span>
                                 <br />
                                 COFFEE
-                            </h1>
-                            <span className='text-xl md:text-2xl lg:text-3xl font-semibold'>
+                            </motion.h1>
+                            <motion.span
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.5, delay: 0.2 * 1 }}
+                                className='text-xl md:text-2xl lg:text-3xl font-semibold'
+                            >
                                 Discover Cebu's Best Cafes
-                            </span>
+                            </motion.span>
                         </div>
                         <div className='flex-1 flex flex-col'>
-                            <h2 className='text-4xl md:text-5xl lg:text-6xl font-bold font-serif'>
-                                Today's Featured
-                            </h2>
-                            <p className='text-sm md:text-base lg:text-lg my-4 md:my-6'>
-                                {featured?.description ?? "fetching..."}
-                            </p>
-                            <Link
-                                href={featured?.url ?? "#"}
-                                className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group'
-                            >
-                                Learn More
-                                <div className='absolute opacity-0 left-0 top-1/2 -translate-y-1/2 w-max text-text font-normal font-sans pl-4 transition-all group-hover:translate-x-full group-hover:opacity-100 -z-1'>
-                                    View Details
-                                </div>
-                            </Link>
+                            {featured && (
+                                <>
+                                    <motion.h2
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{
+                                            duration: 0.5,
+                                            delay: 0.2 * 2,
+                                        }}
+                                        className='text-4xl md:text-5xl lg:text-6xl font-bold font-serif'
+                                    >
+                                        Today's Featured
+                                    </motion.h2>
+                                    <motion.p
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{
+                                            duration: 0.5,
+                                            delay: 0.2 * 3,
+                                        }}
+                                        className='text-sm md:text-base lg:text-lg my-4 md:my-6'
+                                    >
+                                        {featured.description}
+                                    </motion.p>
+                                    <Link
+                                        href={featured.url}
+                                        className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group'
+                                    >
+                                        Learn More
+                                        <div className='absolute opacity-0 left-0 top-1/2 -translate-y-1/2 w-max text-text font-normal font-sans pl-4 transition-all group-hover:translate-x-full group-hover:opacity-100 -z-1'>
+                                            View Details
+                                        </div>
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
                 {/* Photo */}
                 <div className='w-full relative h-auto aspect-square md:aspect-video'>
                     <div className='absolute inset-0 bg-linear-to-b from-black/50 via-black/20 to-transparent z-10' />
-                    <div className='absolute top-0 z-20 px-4 py-4 max-w-full w-max gap-x-2 text-3xl font-semibold flex flex-row flex-wrap text-background'>
-                        <span>{featured?.title ?? "fetching..."}</span>
-                        <span className='text-background/60 hidden md:block'>
-                            |
-                        </span>
-                        <span className='flex flex-row gap-2 items-center text-xl'>
-                            {featured?.rating ?? "fetching..."}/10
-                            <StarIcon className='w-4 h-4 fill-background' />
-                        </span>
-                        <span className='text-background/60 hidden md:block'>
-                            |
-                        </span>
-                        <span className='flex flex-row gap-2 items-center text-xl'>
-                            {featured?.reviews ?? "fetching..."} Reviews
-                        </span>
-                    </div>
+                    {featured && (
+                        <div className='absolute top-0 z-20 px-4 py-4 max-w-full w-max gap-x-2 text-3xl font-semibold flex flex-row flex-wrap text-background'>
+                            <span>{featured.title}</span>
+                            <span className='text-background/60 hidden md:block'>
+                                |
+                            </span>
+                            <span className='flex flex-row gap-2 items-center text-xl'>
+                                {featured.rating}/10
+                                <StarIcon className='w-4 h-4 fill-background' />
+                            </span>
+                            <span className='text-background/60 hidden md:block'>
+                                |
+                            </span>
+                            <span className='flex flex-row gap-2 items-center text-xl'>
+                                {featured.reviews} Reviews
+                            </span>
+                        </div>
+                    )}
                     {featured?.image && (
                         <Image
                             src={featured?.image}
