@@ -1,51 +1,11 @@
 "use client"
 
 import { Cafe } from "@/utils/types/cafe"
-import { useCallback, useEffect, useState } from "react"
-import Loading from "./Loading"
 import Image from "next/image"
 import { motion } from "motion/react"
-import Link from "next/link"
-import { getCafeBySlug } from "@/utils/dummy/cafes"
 
-export default function CafeDetails({ cafeSlug }: { cafeSlug: string }) {
-    // Constants
-    // States
-    const [cafe, setCafe] = useState<Cafe | null>(null)
-    const [loading, setLoading] = useState(true)
-    // Functions
-    const initializePage = useCallback(async () => {
-        const cafe = await getCafeBySlug(cafeSlug)
-        if (cafe) {
-            setCafe(cafe)
-            setLoading(false)
-        }
-    }, [cafeSlug, setLoading, setCafe])
-    // Effects
-    useEffect(() => {
-        initializePage()
-    }, [initializePage])
+export default function CafeDetails({ cafe }: { cafe: Cafe }) {
     // Render
-    if (loading) return <Loading />
-    if (!cafe)
-        return (
-            <section
-                id='not-found'
-                className='w-full h-full flex flex-col items-center justify-center flex-1'
-            >
-                <h1 className='text-5xl font-bold'>404</h1>
-                <p className='text-2xl font-semibold'>Page Not Found</p>
-                <p className='text-xl'>
-                    The page you are looking for does not exist.
-                </p>
-                <Link
-                    href='/'
-                    className='text-sm font-semibold underline transition-colors hover:text-text/60'
-                >
-                    Go Back Home
-                </Link>
-            </section>
-        )
     return (
         <section
             id='top'
@@ -54,7 +14,7 @@ export default function CafeDetails({ cafeSlug }: { cafeSlug: string }) {
             {/* Image */}
             <div className='absolute w-full h-full bg-linear-to-r from-black/70 to-transparent'>
                 <Image
-                    src={cafe?.thumbnail}
+                    src={cafe.thumbnail}
                     alt=''
                     fill
                     className='object-cover object-center -z-1'

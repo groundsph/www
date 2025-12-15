@@ -10,10 +10,10 @@ export default function RecentCard({ cafe, idx }: { cafe: Cafe; idx: number }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
-            transition={{ delay: idx * 0.1 }}
+            transition={{ delay: idx * 0.4 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className='min-w-full md:min-w-80 md:w-80 flex flex-col gap-2 bg-secondary/20 shadow-xl rounded-4xl p-4'
+            className='min-w-full md:min-w-80 md:w-80 flex flex-col gap-2 bg-background border-text/10 border shadow-sm  rounded-4xl p-4'
         >
             <div className='relative rounded-3xl overflow-clip w-full h-auto aspect-square select-none'>
                 <Image

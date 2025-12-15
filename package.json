@@ -6,7 +6,8 @@
         "dev": "next dev --experimental-https",
         "build": "next build",
         "start": "next start",
-        "lint": "eslint"
+        "lint": "eslint",
+        "merge": "git checkout prod && git merge dev && git push origin prod && git checkout dev"
     },
     "dependencies": {
         "@supabase/ssr": "^0.8.0",

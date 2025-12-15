@@ -40,51 +40,32 @@ export default function LandingPage() {
                 className='flex flex-col w-full items-center px-6 py-6 gap-6'
             >
                 {/* Information */}
-                <div className='w-full flex flex-col gap-4'>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{
+                        opacity: 1,
+                        transition: { duration: 0.6, delay: 0.3 },
+                    }}
+                    className='w-full flex flex-col gap-4'
+                >
                     <div className='w-full flex flex-col md:flex-row gap-4 md:gap-6'>
                         <div className='flex-1 flex flex-col'>
-                            <motion.h1
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.5, delay: 0.2 * 0 }}
-                                className='text-5xl md:text-6xl lg:text-7xl font-bold'
-                            >
+                            <motion.h1 className='text-5xl md:text-6xl lg:text-7xl font-bold'>
                                 GROUNDS<span className='text-text/60'>.</span>
                                 <br />
                                 COFFEE
                             </motion.h1>
-                            <motion.span
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.5, delay: 0.2 * 1 }}
-                                className='text-xl md:text-2xl lg:text-3xl font-semibold'
-                            >
+                            <motion.span className='text-xl md:text-2xl lg:text-3xl font-semibold'>
                                 Discover Cebu's Best Cafes
                             </motion.span>
                         </div>
                         <div className='flex-1 flex flex-col'>
                             {featured && (
                                 <>
-                                    <motion.h2
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{
-                                            duration: 0.5,
-                                            delay: 0.2 * 2,
-                                        }}
-                                        className='text-4xl md:text-5xl lg:text-6xl font-bold font-serif'
-                                    >
+                                    <motion.h2 className='text-4xl md:text-5xl lg:text-6xl font-bold font-serif'>
                                         Today's Featured
                                     </motion.h2>
-                                    <motion.p
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{
-                                            duration: 0.5,
-                                            delay: 0.2 * 3,
-                                        }}
-                                        className='text-sm md:text-base lg:text-lg my-4 md:my-6'
-                                    >
+                                    <motion.p className='text-sm md:text-base lg:text-lg my-4 md:my-6'>
                                         {featured.description}
                                     </motion.p>
                                     <Link
@@ -100,9 +81,17 @@ export default function LandingPage() {
                             )}
                         </div>
                     </div>
-                </div>
+                </motion.div>
                 {/* Photo */}
-                <div className='w-full relative h-auto aspect-square md:aspect-video'>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{
+                        opacity: 1,
+                        y: 0,
+                        transition: { duration: 0.6, delay: 0.3 + 0.6 * 1 },
+                    }}
+                    className='w-full relative h-auto aspect-square md:aspect-video'
+                >
                     <div className='absolute inset-0 bg-linear-to-b from-black/50 via-black/20 to-transparent z-10' />
                     {featured && (
                         <div className='absolute top-0 z-20 px-4 py-4 max-w-full w-max gap-x-2 text-3xl font-semibold flex flex-row flex-wrap text-background'>
@@ -131,7 +120,7 @@ export default function LandingPage() {
                             draggable={false}
                         />
                     )}
-                </div>
+                </motion.div>
             </section>
             {/* Recently Added */}
             <section className='w-full min-h-max flex flex-col'>
