@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ☕ Grounds
 
-## Getting Started
+**Discover Cebu's Best Cafes** — A community-driven platform for exploring the vibrant coffee culture in Cebu, Philippines.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ✨ Features
+
+-   **Daily Featured Cafes** — Curated highlights that rotate daily
+-   **Interactive Map** — Explore cafes on a Leaflet-powered map with your current location
+-   **Cafe Directory** — Browse and discover cafes with ratings, reviews, and details
+-   **Responsive Design** — Optimized for both mobile and desktop experiences
+
+## 🛠️ Tech Stack
+
+-   **Framework:** [Next.js 16](https://nextjs.org/) with App Router
+-   **Language:** TypeScript
+-   **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
+-   **Backend:** [Supabase](https://supabase.com/) (SSR integration)
+-   **Maps:** [Leaflet](https://leafletjs.com/) + [React Leaflet](https://react-leaflet.js.org/)
+-   **Animations:** [Motion](https://motion.dev/) (Framer Motion)
+-   **Icons:** [Lucide React](https://lucide.dev/)
+-   **Package Manager:** [Bun](https://bun.sh/)
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+-   [Bun](https://bun.sh/) (recommended) or Node.js 18+
+-   Supabase project (for backend functionality)
+
+### Installation
+
+1. **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/AdrianBonpin/grounds-website.git
+    cd grounds-website
+    ```
+
+2. **Install dependencies:**
+
+    ```bash
+    bun install
+    ```
+
+3. **Set up environment variables:**
+
+    Create a `.env.local` file with your Supabase credentials:
+
+    ```env
+    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+    ```
+
+4. **Run the development server:**
+
+    ```bash
+    bun dev
+    ```
+
+    The app will be available at `https://localhost:3000` (HTTPS enabled by default).
+
+## 📜 Scripts
+
+| Command     | Description                         |
+| ----------- | ----------------------------------- |
+| `bun dev`   | Start development server with HTTPS |
+| `bun build` | Build for production                |
+| `bun start` | Start production server             |
+| `bun lint`  | Run ESLint                          |
+| `bun merge` | Merge dev branch to prod and push   |
+
+## 📁 Project Structure
+
+```
+grounds-website/
+├── app/                    # Next.js App Router pages
+│   ├── cafes/              # Cafe directory and details
+│   └── api/                # API routes
+├── components/             # Reusable React components
+├── utils/                  # Utility functions and types
+├── public/                 # Static assets
+└── assets/                 # Project assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🤝 Contributing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📄 License
 
-## Learn More
+This project is private. All rights reserved.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<p align="center">
+  Made with ❤️ for Cebu's coffee community
+</p>
