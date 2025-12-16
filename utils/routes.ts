@@ -12,16 +12,16 @@ export const routes: Route[] = [
         title: 'cafes',
         href: '/cafes',
     },
-    {
-        title: 'events',
-        href: '/events',
-    },
-    {
-        title: 'blog',
-        href: '/blog',
-    },
-    {
-        title: 'about',
-        href: '/about',
-    },
+    // {
+    //     title: 'events',
+    //     href: '/events',
+    // },
+    // {
+    //     title: 'blog',
+    //     href: '/blog',
+    // },
+    // {
+    //     title: 'community',
+    //     href: '/community',
+    // },
 ]

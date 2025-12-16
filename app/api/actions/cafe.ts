@@ -2,7 +2,7 @@
 
 import { getDayOfYear } from "@/utils/featured"
 import { createClient } from "@/utils/supabase/server"
-import { Cafe } from "@/utils/types/cafe"
+import { Cafe, CafeStory } from "@/utils/types/cafe"
 
 export async function getCafeBySlug(slug: string) {
     const db = await createClient()
@@ -122,4 +122,16 @@ export async function getAllCafes(
     const { data: cafes } = await query.range(from, to)
 
     return cafes as Cafe[]
+}
+
+export async function getCafeById(id: string) {
+    const db = await createClient()
+    const { data: cafe } = await db.from("cafes").select("*").eq("id", id).single()
+    return cafe as Cafe
+}
+
+export async function getCafeStory(id: string) {
+    const db = await createClient()
+    const { data: story } = await db.from("cafe_stories").select("*").eq("cafe_id", id).single()
+    return story as CafeStory
 }

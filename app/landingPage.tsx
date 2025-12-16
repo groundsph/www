@@ -125,24 +125,6 @@ export default function LandingPage() {
                     )}
                 </motion.div>
             </section>
-            <button
-                onClick={() => {
-                    addNotification("Info Notification", "info", "Info")
-                    addNotification(
-                        "Success Notification",
-                        "success",
-                        "Success"
-                    )
-                    addNotification("Error Notification", "error", "Error")
-                    addNotification(
-                        "Warning Notification",
-                        "warning",
-                        "Warning"
-                    )
-                }}
-            >
-                Test Notifications
-            </button>
             {/* Recently Added */}
             <section className='w-full min-h-max flex flex-col'>
                 <h2 className='font-semibold font-serif text-2xl px-6'>

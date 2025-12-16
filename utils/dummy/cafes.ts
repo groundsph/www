@@ -125,39 +125,50 @@ export const dummyCafeStories: CafeStory[] = [
         created_at: new Date(),
         updated_at: new Date(),
         cafe_id: dummyCafes[0].id,
-        content: `# Heading 1
-## Heading 2
-### Heading 3
+        content: `# Strange Matcha: Where Japanese Tradition Meets Cebuano Creativity
 
-This is a paragraph of text. It can contain **bold text**, *italic text*, and even ***bold and italic text***.
+Tucked away in the vibrant Molave Community Marketplace, **Strange Matcha** has quickly become one of Cebu's most beloved specialty cafes. What started as a small passion project in 2021 has blossomed into a must-visit destination for matcha enthusiasts and coffee lovers alike.
 
-Here's a list:
-* Item 1
-* Item 2
-  * Sub-item A
-  * Sub-item B
-* Item 3
+## The Story Behind the Name
 
-1. Ordered item one
-2. Ordered item two
-3. Ordered item three
+The name "Strange Matcha" reflects the founders' philosophy—embracing the unconventional. While traditional matcha preparations are honored, the cafe takes creative liberties with unique flavor combinations and presentations that you won't find anywhere else in the city.
 
-\`inline code\` can be used for small snippets.
+> "We wanted to create a space where people could experience matcha in ways they never imagined. Every drink tells a story."
+> — *The Strange Matcha Team*
 
-\`\`\`typescript
-const example = "This is a code block";
-console.log(example);
-\`\`\`
+## What Makes Us Special
 
-You can also include [links](https://example.com) and images:
-![Alt text for image](https://via.placeholder.com/150)
+### Our Matcha
 
-> This is a blockquote.
-> It can span multiple lines.
+We source our ceremonial-grade matcha directly from Uji, Kyoto—one of Japan's most prestigious tea-growing regions. Each batch is stone-ground to preserve its vibrant color and complex flavor profile.
+
+**Signature Drinks:**
+- **The Strange One** — Our flagship drink featuring housemade oat milk, vanilla, and a hint of lavender
+- **Matcha Espresso Fusion** — A bold combination of our premium matcha with locally-roasted espresso
+- **Ube Matcha Latte** — A Filipino-Japanese fusion that's become an instant classic
+
+### Beyond the Cup
+
+While matcha is our heart, we also offer:
+* Freshly baked pastries from local bakeries
+* Light bites perfect for work sessions
+* A curated selection of teas and coffee alternatives
+
+## The Space
+
+Designed with intention, our cafe features:
+- Natural wood elements and plenty of greenery
+- Comfortable seating for solo visitors and groups
+- Dedicated work areas with accessible power outlets
+- A cozy outdoor section for those sunny Cebu afternoons
 
 ---
 
-A horizontal rule.
+## Visit Us
+
+Whether you're seeking a peaceful morning ritual, a productive work session, or simply a unique cafe experience, Strange Matcha welcomes you. We're open daily and can't wait to share our love for matcha with you.
+
+*Follow us on [Instagram](https://instagram.com/strangematcha) for updates and new menu drops!*
 `,
     }
 ]
