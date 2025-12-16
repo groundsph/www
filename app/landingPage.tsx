@@ -8,33 +8,24 @@ import { FeaturedCafe } from "@/utils/types/cafe"
 import { StarIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useCallback, useContext, useEffect, useState } from "react"
+import { useMemo } from "react"
 import { motion } from "motion/react"
-import { NotificationContext } from "@/components/NotificationProvider"
 
 export default function LandingPage() {
-    // Context
-    const { addNotification } = useContext(NotificationContext)
-    // Constants
-    // States
-    const [featured, setFeatured] = useState<FeaturedCafe>()
-    // Functions
-    const getFeaturedCafe = useCallback(async () => {
+    // Computed Values
+    // Computed Values
+    const featured = useMemo<FeaturedCafe | undefined>(() => {
         const cafe = getDailyFeatured(dummyCafes)
-        if (!cafe) return
-        setFeatured({
+        if (!cafe) return undefined
+        return {
             title: cafe.name,
             description: cafe.description,
             image: cafe.thumbnail,
             url: `/cafes/${cafe.slug}`,
             rating: cafe.rating,
             reviews: cafe.reviews,
-        })
-    }, [setFeatured])
-    // Effects
-    useEffect(() => {
-        getFeaturedCafe()
-    }, [getFeaturedCafe])
+        }
+    }, [])
     // Render
     return (
         <>
@@ -59,14 +50,14 @@ export default function LandingPage() {
                                 COFFEE
                             </motion.h1>
                             <motion.span className='text-xl md:text-2xl lg:text-3xl font-semibold'>
-                                Discover Cebu's Best Cafes
+                                Discover Cebu&apos;s Best Cafes
                             </motion.span>
                         </div>
                         <div className='flex-1 flex flex-col'>
                             {featured && (
                                 <>
                                     <motion.h2 className='text-4xl md:text-5xl lg:text-6xl font-bold font-serif'>
-                                        Today's Featured
+                                        Today&apos;s Featured
                                     </motion.h2>
                                     <motion.p className='text-sm md:text-base lg:text-lg my-4 md:my-6'>
                                         {featured.description}

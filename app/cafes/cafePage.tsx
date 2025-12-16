@@ -4,7 +4,7 @@ import { dummyCafes } from "@/utils/dummy/cafes"
 import { getPriceLevel, isOpenNow } from "@/utils/extras"
 import { Cafe } from "@/utils/types/cafe"
 import Image from "next/image"
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import {
     ArrowRight,
@@ -17,12 +17,10 @@ import {
     TreePine,
     BadgeCheck,
 } from "lucide-react"
-import Loading from "@/components/Loading"
 
 export default function CafesPageClient() {
-    // States
-    const [loading, setLoading] = useState(true)
-    const [cafes, setCafes] = useState<Cafe[]>([])
+    // States - initialize directly with dummy data
+    const [cafes] = useState<Cafe[]>(dummyCafes)
 
     // Search & Filter State
     const [search, setSearch] = useState("")
@@ -37,18 +35,6 @@ export default function CafesPageClient() {
         open_now: false,
         price_level: "" as "" | "low" | "medium" | "high",
     })
-
-    // Handler
-    const getCafes = useCallback(async () => {
-        setLoading(true)
-        setCafes(dummyCafes)
-        setLoading(false)
-    }, [])
-
-    // Effect
-    useEffect(() => {
-        getCafes()
-    }, [getCafes])
 
     // Filter Logic
     const filteredCafes = cafes
@@ -228,239 +214,229 @@ export default function CafesPageClient() {
 
             {/* Content */}
             <div className='flex flex-1 flex-col gap-6'>
-                {loading ? (
-                    <Loading />
-                ) : (
-                    <AnimatePresence mode='popLayout'>
-                        {filteredCafes.length > 0 ? (
-                            filteredCafes.map((cafe, idx) => {
-                                const openStatus = isOpenNow(
-                                    cafe.operating_hours
-                                )
-                                return (
-                                    <motion.a
-                                        initial={{ opacity: 0 }}
-                                        animate={{
-                                            opacity: 1,
-                                            transition: {
-                                                duration: 0.5,
-                                                delay: 0.2 * idx,
-                                            },
-                                        }}
-                                        exit={{ opacity: 0 }}
-                                        href={`/cafes/${cafe.slug}`}
-                                        key={cafe.id}
-                                        layout
-                                        className='py-4 px-6 bg-background shadow-lg shadow-black/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0 group'
-                                    >
-                                        <div className='flex-1 flex flex-col md:pr-24'>
-                                            {/* Header: Name, Address, Price, Verified */}
-                                            <div className='flex flex-row'>
-                                                <div className='flex flex-col flex-1'>
-                                                    <h3 className='text-xl md:text-2xl lg:text-3xl font-bold flex flex-row gap-x-2 flex-wrap items-center'>
-                                                        {cafe.name}
-                                                        {cafe.is_verified && (
-                                                            <BadgeCheck className='w-5 h-5' />
-                                                        )}
-                                                    </h3>
-                                                    <p className='text-xs md:text-sm font-semibold text-text/60'>
-                                                        {cafe.address_display}
-                                                    </p>
+                <AnimatePresence mode='popLayout'>
+                    {filteredCafes.length > 0 ? (
+                        filteredCafes.map((cafe, idx) => {
+                            const openStatus = isOpenNow(cafe.operating_hours)
+                            return (
+                                <motion.a
+                                    initial={{ opacity: 0 }}
+                                    animate={{
+                                        opacity: 1,
+                                        transition: {
+                                            duration: 0.5,
+                                            delay: 0.2 * idx,
+                                        },
+                                    }}
+                                    exit={{ opacity: 0 }}
+                                    href={`/cafes/${cafe.slug}`}
+                                    key={cafe.id}
+                                    layout
+                                    className='py-4 px-6 bg-background shadow-lg shadow-black/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0 group'
+                                >
+                                    <div className='flex-1 flex flex-col md:pr-24'>
+                                        {/* Header: Name, Address, Price, Verified */}
+                                        <div className='flex flex-row'>
+                                            <div className='flex flex-col flex-1'>
+                                                <h3 className='text-xl md:text-2xl lg:text-3xl font-bold flex flex-row gap-x-2 flex-wrap items-center'>
+                                                    {cafe.name}
+                                                    {cafe.is_verified && (
+                                                        <BadgeCheck className='w-5 h-5' />
+                                                    )}
+                                                </h3>
+                                                <p className='text-xs md:text-sm font-semibold text-text/60'>
+                                                    {cafe.address_display}
+                                                </p>
+                                            </div>
+                                            <div className='text-xs md:text-sm font-semibold text-background px-3 py-1 bg-secondary h-max rounded-full'>
+                                                {getPriceLevel(
+                                                    cafe.price_level
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Rating & Reviews */}
+                                        <div className='flex flex-row flex-wrap items-center gap-2 mt-2 text-xs md:text-sm'>
+                                            <div className='flex flex-row items-center gap-1'>
+                                                <Star className='w-4 h-4 fill-text text-text' />
+                                                <span className='font-bold'>
+                                                    {cafe.rating.toFixed(1)}
+                                                </span>
+                                            </div>
+                                            <span className='text-text/60'>
+                                                ({cafe.reviews} reviews)
+                                            </span>
+                                            {cafe.roaster && (
+                                                <>
+                                                    <span className='text-text/30'>
+                                                        •
+                                                    </span>
+                                                    <span className='text-text/60'>
+                                                        Roaster: {cafe.roaster}
+                                                    </span>
+                                                </>
+                                            )}
+                                            <div className='flex-1' />
+                                            <div
+                                                className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                                    openStatus.isOpen
+                                                        ? "bg-green-200/40 text-green-700"
+                                                        : "bg-text/10 text-text"
+                                                }`}
+                                            >
+                                                {openStatus.isOpen
+                                                    ? `Open | Closes at ${openStatus.closesAt}`
+                                                    : openStatus.opensAt
+                                                    ? `Closed | Opens at ${openStatus.opensAt}`
+                                                    : "Closed"}
+                                            </div>
+                                        </div>
+
+                                        <div className='h-0.5 w-full bg-text/20 mt-1' />
+
+                                        {/* Amenity Icons */}
+                                        <div className='flex flex-row items-center gap-3 mt-3'>
+                                            {cafe.has_wifi && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='WiFi'
+                                                >
+                                                    <Wifi className='w-4 h-4' />
                                                 </div>
-                                                <div className='text-xs md:text-sm font-semibold text-background px-3 py-1 bg-secondary h-max rounded-full'>
-                                                    {getPriceLevel(
-                                                        cafe.price_level
+                                            )}
+                                            {cafe.has_sockets && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Power Outlets'
+                                                >
+                                                    <Plug className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.has_parking && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Parking'
+                                                >
+                                                    <Car className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.has_aircon && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Air Conditioning'
+                                                >
+                                                    <Wind className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.is_pet_friendly && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Pet Friendly'
+                                                >
+                                                    <PawPrint className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.has_outdoor_seating && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Outdoor Seating'
+                                                >
+                                                    <TreePine className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Description */}
+                                        <p className='text-sm font-semibold text-text mt-2'>
+                                            {cafe.description}
+                                        </p>
+
+                                        {/* Specialty Items */}
+                                        {cafe.specialty &&
+                                            cafe.specialty.length > 0 && (
+                                                <div className='flex flex-row overflow-x-auto gap-1.5 mt-5'>
+                                                    {cafe.specialty.map(
+                                                        (item) => (
+                                                            <span
+                                                                key={item}
+                                                                className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap h-max font-semibold capitalize'
+                                                            >
+                                                                {item}
+                                                            </span>
+                                                        )
                                                     )}
                                                 </div>
-                                            </div>
+                                            )}
 
-                                            {/* Rating & Reviews */}
-                                            <div className='flex flex-row flex-wrap items-center gap-2 mt-2 text-xs md:text-sm'>
-                                                <div className='flex flex-row items-center gap-1'>
-                                                    <Star className='w-4 h-4 fill-text text-text' />
-                                                    <span className='font-bold'>
-                                                        {cafe.rating.toFixed(1)}
+                                        {/* Vibe Tags */}
+                                        {cafe.tags && cafe.tags.length > 0 && (
+                                            <div className='flex flex-row overflow-x-auto gap-1.5 mt-3'>
+                                                {cafe.tags.map((tag) => (
+                                                    <span
+                                                        key={tag}
+                                                        className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap font-semibold rounded-full text-text/80 h-max'
+                                                    >
+                                                        #{tag}
                                                     </span>
-                                                </div>
-                                                <span className='text-text/60'>
-                                                    ({cafe.reviews} reviews)
-                                                </span>
-                                                {cafe.roaster && (
-                                                    <>
-                                                        <span className='text-text/30'>
-                                                            •
-                                                        </span>
-                                                        <span className='text-text/60'>
-                                                            Roaster:{" "}
-                                                            {cafe.roaster}
-                                                        </span>
-                                                    </>
-                                                )}
-                                                <div className='flex-1' />
-                                                <div
-                                                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                                        openStatus.isOpen
-                                                            ? "bg-green-200/40 text-green-700"
-                                                            : "bg-text/10 text-text"
-                                                    }`}
-                                                >
-                                                    {openStatus.isOpen
-                                                        ? `Open | Closes at ${openStatus.closesAt}`
-                                                        : openStatus.opensAt
-                                                        ? `Closed | Opens at ${openStatus.opensAt}`
-                                                        : "Closed"}
-                                                </div>
+                                                ))}
                                             </div>
+                                        )}
 
-                                            <div className='h-0.5 w-full bg-text/20 mt-1' />
-
-                                            {/* Amenity Icons */}
-                                            <div className='flex flex-row items-center gap-3 mt-3'>
-                                                {cafe.has_wifi && (
-                                                    <div
-                                                        className='text-text/70 hover:text-text transition-colors'
-                                                        title='WiFi'
-                                                    >
-                                                        <Wifi className='w-4 h-4' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_sockets && (
-                                                    <div
-                                                        className='text-text/70 hover:text-text transition-colors'
-                                                        title='Power Outlets'
-                                                    >
-                                                        <Plug className='w-4 h-4' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_parking && (
-                                                    <div
-                                                        className='text-text/70 hover:text-text transition-colors'
-                                                        title='Parking'
-                                                    >
-                                                        <Car className='w-4 h-4' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_aircon && (
-                                                    <div
-                                                        className='text-text/70 hover:text-text transition-colors'
-                                                        title='Air Conditioning'
-                                                    >
-                                                        <Wind className='w-4 h-4' />
-                                                    </div>
-                                                )}
-                                                {cafe.is_pet_friendly && (
-                                                    <div
-                                                        className='text-text/70 hover:text-text transition-colors'
-                                                        title='Pet Friendly'
-                                                    >
-                                                        <PawPrint className='w-4 h-4' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_outdoor_seating && (
-                                                    <div
-                                                        className='text-text/70 hover:text-text transition-colors'
-                                                        title='Outdoor Seating'
-                                                    >
-                                                        <TreePine className='w-4 h-4' />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Description */}
-                                            <p className='text-sm font-semibold text-text mt-2'>
-                                                {cafe.description}
-                                            </p>
-
-                                            {/* Specialty Items */}
-                                            {cafe.specialty &&
-                                                cafe.specialty.length > 0 && (
-                                                    <div className='flex flex-row overflow-x-auto gap-1.5 mt-5'>
-                                                        {cafe.specialty.map(
-                                                            (item) => (
-                                                                <span
-                                                                    key={item}
-                                                                    className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap h-max font-semibold capitalize'
-                                                                >
-                                                                    {item}
-                                                                </span>
-                                                            )
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                            {/* Vibe Tags */}
-                                            {cafe.tags &&
-                                                cafe.tags.length > 0 && (
-                                                    <div className='flex flex-row overflow-x-auto gap-1.5 mt-3'>
-                                                        {cafe.tags.map(
-                                                            (tag) => (
-                                                                <span
-                                                                    key={tag}
-                                                                    className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap font-semibold rounded-full text-text/80 h-max'
-                                                                >
-                                                                    #{tag}
-                                                                </span>
-                                                            )
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                            <div className='flex-1' />
-                                            <div className='py-1 w-max flex flex-row items-center gap-2 font-semibold italic text-text/60 mt-4 transition-colors group-hover:text-text relative overflow-clip px-1'>
+                                        <div className='flex-1' />
+                                        <div className='py-1 w-max flex flex-row items-center gap-2 font-semibold italic text-text/60 mt-4 transition-colors group-hover:text-text relative overflow-clip px-1'>
+                                            View Details
+                                            <ArrowRight className='w-4 h-4' />
+                                            <div className='absolute top-0 right-full w-full h-full bg-text transition-transform group-hover:translate-x-full' />
+                                            <div className='absolute top-1/2 -translate-y-1/2 left-0 flex flex-row gap-2 text-background opacity-0 transition-opacity group-hover:opacity-100 items-center px-1'>
                                                 View Details
                                                 <ArrowRight className='w-4 h-4' />
-                                                <div className='absolute top-0 right-full w-full h-full bg-text transition-transform group-hover:translate-x-full' />
-                                                <div className='absolute top-1/2 -translate-y-1/2 left-0 flex flex-row gap-2 text-background opacity-0 transition-opacity group-hover:opacity-100 items-center px-1'>
-                                                    View Details
-                                                    <ArrowRight className='w-4 h-4' />
-                                                </div>
                                             </div>
                                         </div>
-                                        <div className='flex-1 relative object-clip aspect-square md:aspect-auto'>
-                                            <Image
-                                                src={cafe.thumbnail}
-                                                alt=''
-                                                fill
-                                                className='object-cover rounded-2xl'
-                                            />
-                                        </div>
-                                    </motion.a>
-                                )
-                            })
-                        ) : (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className='flex flex-col items-center justify-center py-20 text-center gap-2'
+                                    </div>
+                                    <div className='flex-1 relative object-clip aspect-square md:aspect-auto'>
+                                        <Image
+                                            src={cafe.thumbnail}
+                                            alt=''
+                                            fill
+                                            className='object-cover rounded-2xl'
+                                        />
+                                    </div>
+                                </motion.a>
+                            )
+                        })
+                    ) : (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className='flex flex-col items-center justify-center py-20 text-center gap-2'
+                        >
+                            <p className='text-xl font-serif font-medium'>
+                                No cafes found
+                            </p>
+                            <p className='text-text/50'>
+                                Try adjusting your filters or search terms.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    setSearch("")
+                                    setFilters({
+                                        has_wifi: false,
+                                        has_sockets: false,
+                                        has_parking: false,
+                                        has_aircon: false,
+                                        is_pet_friendly: false,
+                                        has_outdoor_seating: false,
+                                        open_now: false,
+                                        price_level: "",
+                                    })
+                                }}
+                                className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'
                             >
-                                <p className='text-xl font-serif font-medium'>
-                                    No cafes found
-                                </p>
-                                <p className='text-text/50'>
-                                    Try adjusting your filters or search terms.
-                                </p>
-                                <button
-                                    onClick={() => {
-                                        setSearch("")
-                                        setFilters({
-                                            has_wifi: false,
-                                            has_sockets: false,
-                                            has_parking: false,
-                                            has_aircon: false,
-                                            is_pet_friendly: false,
-                                            has_outdoor_seating: false,
-                                            open_now: false,
-                                            price_level: "",
-                                        })
-                                    }}
-                                    className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'
-                                >
-                                    Clear all filters
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                )}
+                                Clear all filters
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </section>
     )

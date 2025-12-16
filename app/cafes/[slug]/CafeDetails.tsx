@@ -1,9 +1,9 @@
 "use client"
 
-import { Cafe, CafeStory, OperatingHours } from "@/utils/types/cafe"
+import { Cafe, OperatingHours } from "@/utils/types/cafe"
 import Image from "next/image"
 import { motion } from "motion/react"
-import { useCallback, useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { dummyCafeStories } from "@/utils/dummy/cafes"
 import {
     ChevronLeftIcon,
@@ -60,27 +60,15 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
     const remainingImages = cafe.gallery && cafe.gallery.slice(3)
 
     // States
-    const [loading, setLoading] = useState(true)
-    const [story, setStory] = useState<CafeStory | null>(null)
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
-    // Handlers
-    const getCafeStory = useCallback(async () => {
-        setLoading(true)
-        const story = dummyCafeStories.find(
-            (story) => story.cafe_id === cafe.id
+    // Computed Values
+    const story = useMemo(() => {
+        return (
+            dummyCafeStories.find((story) => story.cafe_id === cafe.id) ?? null
         )
-        if (!story) {
-            setLoading(false)
-            return
-        }
-        setStory(story)
-        setLoading(false)
-    }, [setStory, cafe.id])
-    // Effects
-    useEffect(() => {
-        getCafeStory()
-    }, [getCafeStory])
+    }, [cafe.id])
+
     // Render
     return (
         <>
@@ -172,9 +160,7 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                     </div>
                     {/* Story */}
                     <div className='w-full'>
-                        {loading ? (
-                            <p>Loading story...</p>
-                        ) : story ? (
+                        {story ? (
                             <MarkdownRender content={story.content} />
                         ) : (
                             <p>No story found</p>
@@ -213,7 +199,7 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                         {/* Map */}
                         <div className='w-full h-auto aspect-video relative flex flex-col items-center justify-center overflow-clip rounded-xl shadow-inner'>
                             <DynamicCafeMiniMap
-                                key={cafe.id + "-" + Date.now()}
+                                key={cafe.id}
                                 cafe={cafe}
                             />
                         </div>
@@ -553,9 +539,9 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                     <div className='flex flex-row gap-4 flex-wrap py-10 w-full'>
                         {remainingImages.map((image, idx) => (
                             <img
-                                key={image + idx + new Date().getTime()}
+                                key={`${cafe.id}-image-${idx}`}
                                 src={image}
-                                alt=''
+                                alt={`${cafe.name} gallery image ${idx + 1}`}
                                 className='max-w-screen md:max-w-md'
                             />
                         ))}
