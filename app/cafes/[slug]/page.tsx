@@ -1,4 +1,4 @@
-import CafeDetails from "@/components/CafeDetails"
+import CafeDetails from "@/app/cafes/[slug]/CafeDetails"
 import { createClient } from "@/utils/supabase/server"
 import Link from "next/link"
 import type { Metadata } from "next"

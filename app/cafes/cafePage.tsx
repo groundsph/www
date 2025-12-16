@@ -35,6 +35,7 @@ export default function CafesPageClient() {
         is_pet_friendly: false,
         has_outdoor_seating: false,
         open_now: false,
+        price_level: "" as "" | "low" | "medium" | "high",
     })
 
     // Handler
@@ -77,6 +78,8 @@ export default function CafesPageClient() {
             const matchesOpen =
                 !filters.open_now ||
                 (cafe.operating_hours && isOpenNow(cafe.operating_hours).isOpen)
+            const matchesPrice =
+                !filters.price_level || cafe.price_level === filters.price_level
 
             return (
                 matchesSearch &&
@@ -86,7 +89,8 @@ export default function CafesPageClient() {
                 matchesAircon &&
                 matchesPet &&
                 matchesOutdoor &&
-                matchesOpen
+                matchesOpen &&
+                matchesPrice
             )
         })
         .sort((a, b) => {
@@ -147,6 +151,29 @@ export default function CafesPageClient() {
                         <option value='reviews'>Most Reviewed</option>
                         <option value='price_low'>Price: Low to High</option>
                         <option value='price_high'>Price: High to Low</option>
+                    </select>
+                    <select
+                        value={filters.price_level}
+                        onChange={(e) =>
+                            setFilters((prev) => ({
+                                ...prev,
+                                price_level: e.target.value as
+                                    | ""
+                                    | "low"
+                                    | "medium"
+                                    | "high",
+                            }))
+                        }
+                        className={`px-3 py-2 rounded-full border bg-background focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all cursor-pointer hover:border-primary ${
+                            filters.price_level
+                                ? "border-text bg-text text-background"
+                                : "border-text/20"
+                        }`}
+                    >
+                        <option value=''>All Prices</option>
+                        <option value='low'>Budget (₱)</option>
+                        <option value='medium'>Mid-Range (₱₱)</option>
+                        <option value='high'>Premium (₱₱₱)</option>
                     </select>
                     {[
                         { key: "open_now", label: "Open Now", icon: null },
@@ -273,7 +300,7 @@ export default function CafesPageClient() {
                                                 <div
                                                     className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                                                         openStatus.isOpen
-                                                            ? "bg-text/10 text-green-700"
+                                                            ? "bg-green-200/40 text-green-700"
                                                             : "bg-text/10 text-text"
                                                     }`}
                                                 >
@@ -423,6 +450,7 @@ export default function CafesPageClient() {
                                             is_pet_friendly: false,
                                             has_outdoor_seating: false,
                                             open_now: false,
+                                            price_level: "",
                                         })
                                     }}
                                     className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'

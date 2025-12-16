@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { DM_Sans, Playfair_Display } from "next/font/google"
 import "./globals.css"
 import Navbar from "@/components/navbar"
+import AuthProvider from "@/components/AuthProvider"
+import NotificationProvider from "@/components/NotificationProvider"
 
 const playfairDisplay = Playfair_Display({
     variable: "--font-playfair-display",
@@ -95,10 +97,14 @@ export default function RootLayout({
             className='overscroll-none'
         >
             <body
-                className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center w-screen relative min-h-screen`}
+                className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen`}
             >
-                <Navbar />
-                {children}
+                <NotificationProvider>
+                    <AuthProvider>
+                        <Navbar />
+                        {children}
+                    </AuthProvider>
+                </NotificationProvider>
             </body>
         </html>
     )

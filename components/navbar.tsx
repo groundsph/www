@@ -9,7 +9,7 @@ export default function Navbar() {
     // Constants
     const curPath = usePathname()
     return (
-        <nav className='w-full bg-background text-text px-4 py-2 flex items-center justify-between z-50 relative'>
+        <nav className='w-full bg-background text-text px-4 py-2 flex items-center justify-between z-50 relative overflow-x-clip'>
             <Link
                 href='/'
                 className={`font-semibold font-serif text-2xl select-none ${

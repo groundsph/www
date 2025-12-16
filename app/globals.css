@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
 @theme {
     /* Colors */
     --color-primary: #74512d;
@@ -8,10 +10,4 @@
     --color-text: #543310;
     /* Defaults */
     --default-transition-duration: 300ms;
-}
-
-@theme inline {
-    /* Fonts */
-    --font-serif: var(--font-playfair-display);
-    --font-sans: var(--font-dm-sans);
 }

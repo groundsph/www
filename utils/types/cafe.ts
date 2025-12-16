@@ -7,6 +7,14 @@ export interface FeaturedCafe {
     reviews: number
 }
 
+export interface CafeStory {
+    id: string,
+    created_at: Date,
+    updated_at: Date,
+    cafe_id: string,
+    content: string,
+}
+
 export interface Cafe {
     id: string,
     created_at: Date,
@@ -50,6 +58,7 @@ export interface Cafe {
     reviews: number,
     is_verified: boolean,
     is_active?: boolean,
+    owner_ids?: string[]
 }
 
 export type OperatingHours = {

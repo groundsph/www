@@ -8,10 +8,13 @@ import { FeaturedCafe } from "@/utils/types/cafe"
 import { StarIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useContext, useEffect, useState } from "react"
 import { motion } from "motion/react"
+import { NotificationContext } from "@/components/NotificationProvider"
 
 export default function LandingPage() {
+    // Context
+    const { addNotification } = useContext(NotificationContext)
     // Constants
     // States
     const [featured, setFeatured] = useState<FeaturedCafe>()
@@ -122,6 +125,24 @@ export default function LandingPage() {
                     )}
                 </motion.div>
             </section>
+            <button
+                onClick={() => {
+                    addNotification("Info Notification", "info", "Info")
+                    addNotification(
+                        "Success Notification",
+                        "success",
+                        "Success"
+                    )
+                    addNotification("Error Notification", "error", "Error")
+                    addNotification(
+                        "Warning Notification",
+                        "warning",
+                        "Warning"
+                    )
+                }}
+            >
+                Test Notifications
+            </button>
             {/* Recently Added */}
             <section className='w-full min-h-max flex flex-col'>
                 <h2 className='font-semibold font-serif text-2xl px-6'>

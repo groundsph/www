@@ -1,4 +1,4 @@
-import { Cafe } from "../types/cafe";
+import { Cafe, CafeStory } from "../types/cafe";
 
 export async function getCafeBySlug(slug: string) {
     // Utilize dummy data for now
@@ -8,7 +8,7 @@ export async function getCafeBySlug(slug: string) {
 
 export const dummyCafes: Cafe[] = [
     {
-        id: crypto.randomUUID(),
+        id: 'strange-matcha-dummy',
         created_at: new Date(),
         updated_at: new Date(),
         // Basic Info
@@ -116,5 +116,48 @@ export const dummyCafes: Cafe[] = [
         reviews: 24,
         is_verified: true,
         is_active: true,
+    }
+]
+
+export const dummyCafeStories: CafeStory[] = [
+    {
+        id: 'strange-matcha-dummy',
+        created_at: new Date(),
+        updated_at: new Date(),
+        cafe_id: dummyCafes[0].id,
+        content: `# Heading 1
+## Heading 2
+### Heading 3
+
+This is a paragraph of text. It can contain **bold text**, *italic text*, and even ***bold and italic text***.
+
+Here's a list:
+* Item 1
+* Item 2
+  * Sub-item A
+  * Sub-item B
+* Item 3
+
+1. Ordered item one
+2. Ordered item two
+3. Ordered item three
+
+\`inline code\` can be used for small snippets.
+
+\`\`\`typescript
+const example = "This is a code block";
+console.log(example);
+\`\`\`
+
+You can also include [links](https://example.com) and images:
+![Alt text for image](https://via.placeholder.com/150)
+
+> This is a blockquote.
+> It can span multiple lines.
+
+---
+
+A horizontal rule.
+`,
     }
 ]
