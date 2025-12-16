@@ -1,7 +1,7 @@
 "use client"
 
 import { routes } from "@/utils/routes"
-import { MenuIcon } from "lucide-react"
+import { ChevronRightIcon, MenuIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -53,18 +53,30 @@ export default function Navbar() {
             </ul>
             {/* Mobile */}
             <div className='md:hidden'>
-                <label htmlFor='mobile-menu'>
-                    <MenuIcon
-                        size={24}
-                        className='text-text cursor-pointer'
-                    />
-                </label>
                 <input
                     id='mobile-menu'
                     type='checkbox'
                     className='hidden peer'
                 />
-                <ul className='absolute top-full left-0 w-full h-max px-4 bg-background text-text hidden peer-checked:block'>
+                <label
+                    htmlFor='mobile-menu'
+                    className='peer-checked:hidden'
+                >
+                    <MenuIcon
+                        size={24}
+                        className='text-text cursor-pointer'
+                    />
+                </label>
+                <label
+                    htmlFor='mobile-menu'
+                    className='peer-not-checked:hidden'
+                >
+                    <ChevronRightIcon
+                        size={24}
+                        className='text-text cursor-pointer'
+                    />
+                </label>
+                <ul className='absolute top-full translate-x-full left-0 w-full h-max px-4 bg-background text-text peer-checked:translate-x-0 border-b-4 border-text/20 transition-all'>
                     {routes.map((route) => (
                         <li
                             key={route.title}

@@ -127,7 +127,7 @@ export default function LandingPage() {
                 <h2 className='font-semibold font-serif text-2xl px-6'>
                     Recently Added Cafes
                 </h2>
-                <div className='flex flex-row gap-8 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10'>
+                <div className='flex flex-row gap-8 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory'>
                     {dummyCafes.map((cafe, idx) => (
                         <RecentCard
                             key={cafe.id}

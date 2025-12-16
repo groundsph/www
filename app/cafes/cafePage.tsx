@@ -352,7 +352,7 @@ export default function CafesPageClient() {
                                                             (item) => (
                                                                 <span
                                                                     key={item}
-                                                                    className='text-xs px-2 py-0.5 bg-primary/10 text-pretty font-semibold capitalize'
+                                                                    className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap h-max font-semibold capitalize'
                                                                 >
                                                                     {item}
                                                                 </span>
@@ -369,7 +369,7 @@ export default function CafesPageClient() {
                                                             (tag) => (
                                                                 <span
                                                                     key={tag}
-                                                                    className='text-xs px-2 py-0.5 bg-primary/10 text-pretty font-semibold rounded-full text-text/80'
+                                                                    className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap font-semibold rounded-full text-text/80 h-max'
                                                                 >
                                                                     #{tag}
                                                                 </span>

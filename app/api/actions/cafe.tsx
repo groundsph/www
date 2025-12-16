@@ -44,6 +44,18 @@ export async function getDailyFeatured() {
     return cafes[dayOfYear % cafes.length]
 }
 
+export async function getRecentAdditions() {
+    const db = await createClient()
+    const { data: cafes } = await db
+        .from("cafes")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_verified", true)
+        .order("created_at", { ascending: false })
+        .limit(10)
+    return cafes as Cafe[]
+}
+
 // Paginated cafes
 export async function getAllCafes(page: number = 1, limit: number = 12) {
     const db = await createClient()
