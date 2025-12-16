@@ -55,21 +55,28 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
     // Constant
     const openStatus = isOpenNow(cafe.operating_hours)
     const firstImage = cafe.gallery && cafe.gallery[0]
-    const nextTwoImages = cafe.gallery && cafe.gallery.slice(1, 3)
+    const secondImage = cafe.gallery && cafe.gallery[1]
+    const thirdImage = cafe.gallery && cafe.gallery[2]
     const remainingImages = cafe.gallery && cafe.gallery.slice(3)
 
     // States
+    const [loading, setLoading] = useState(true)
     const [story, setStory] = useState<CafeStory | null>(null)
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
     // Handlers
     const getCafeStory = useCallback(async () => {
+        setLoading(true)
         const story = dummyCafeStories.find(
             (story) => story.cafe_id === cafe.id
         )
-        if (!story) return
+        if (!story) {
+            setLoading(false)
+            return
+        }
         setStory(story)
-    }, [setStory])
+        setLoading(false)
+    }, [setStory, cafe.id])
     // Effects
     useEffect(() => {
         getCafeStory()
@@ -137,20 +144,20 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                         className='object-cover object-center'
                                     />
                                 </div>
-                                {nextTwoImages && (
+                                {secondImage && (
                                     <div className='w-full h-auto aspect-6/2 flex flex-row gap-2'>
                                         <div className='h-full w-auto aspect-video relative'>
                                             <Image
-                                                src={nextTwoImages[0]}
+                                                src={secondImage}
                                                 alt=''
                                                 fill
                                                 className='object-cover object-center'
                                             />
                                         </div>
-                                        {nextTwoImages[1] && (
+                                        {thirdImage && (
                                             <div className='flex-1 relative'>
                                                 <Image
-                                                    src={nextTwoImages[1]}
+                                                    src={thirdImage}
                                                     alt=''
                                                     fill
                                                     className='object-cover object-center'
@@ -165,10 +172,12 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                     </div>
                     {/* Story */}
                     <div className='w-full'>
-                        {!story ? (
+                        {loading ? (
                             <p>Loading story...</p>
-                        ) : (
+                        ) : story ? (
                             <MarkdownRender content={story.content} />
+                        ) : (
+                            <p>No story found</p>
                         )}
                     </div>
                 </div>
@@ -276,7 +285,8 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                 </ul>
                             </>
                         )}
-                        <div className='font-semibold text-lg text-text/80 mt-2 flex flex-row gap-2'>
+                        <div className='w-full h-0.5 bg-text/10 mt-2' />
+                        <div className='font-semibold text-lg text-text/80 flex flex-row gap-2'>
                             Details{" "}
                             <div className='flex flex-row gap-2 items-center'>
                                 <div
@@ -294,8 +304,10 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                               openStatus.closesAt
                                           )}`
                                         : openStatus.opensAt
-                                        ? `Opens at ${formatTimeTo12Hour(
-                                              openStatus.opensAt
+                                        ? `Opens at ${
+                                              openStatus.opensAt.split(" ")[0]
+                                          } ${formatTimeTo12Hour(
+                                              openStatus.opensAt.split(" ")[1]
                                           )}`
                                         : ""}
                                 </span>
@@ -346,9 +358,9 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                 </ul>
                             </>
                         )}
-
+                        <div className='w-full h-0.5 bg-text/10 mt-2' />
                         {/* Ratings */}
-                        <div className='font-semibold text-lg text-text/80 mt-2 flex flex-row items-center gap-2'>
+                        <div className='font-semibold text-lg text-text/80 flex flex-row items-center gap-2'>
                             Ratings
                             <div className='flex flex-row items-center gap-2'>
                                 <div className='text-sm font-bold px-2 py-0.5 rounded-lg bg-green-200/40 text-green-700 flex flex-row items-center gap-1'>
@@ -357,8 +369,9 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                 </div>
                             </div>
                         </div>
+                        <div className='w-full h-0.5 bg-text/10 mt-2' />
                         {/* Amenities */}
-                        <div className='font-semibold text-lg text-text/80 mt-2'>
+                        <div className='font-semibold text-lg text-text/80'>
                             Amenities
                         </div>
                         <ul className='flex flex-row flex-wrap items-center gap-2 text-sm font-semibold'>
@@ -409,9 +422,9 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                     </li>
                                 )}
                         </ul>
-
+                        <div className='w-full h-0.5 bg-text/10 mt-2' />
                         {/* Extras */}
-                        <div className='font-semibold text-lg text-text/80 mt-2 flex flex-row items-center gap-2'>
+                        <div className='font-semibold text-lg text-text/80 flex flex-row items-center gap-2'>
                             Extras
                             {cafe.serves_food && (
                                 <span className='text-xs text-text/80 bg-secondary/40 px-2 py-1 rounded-lg'>
@@ -463,9 +476,9 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                     </p>
                                 )}
                         </div>
-
+                        <div className='w-full h-0.5 bg-text/10 mt-2' />
                         {/* Operating Hours */}
-                        <div className='font-semibold text-lg text-text/80 mt-2'>
+                        <div className='font-semibold text-lg text-text/80'>
                             Operating Hours
                         </div>
                         {cafe.operating_hours &&

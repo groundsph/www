@@ -13,7 +13,20 @@ export function getPriceLevel(priceLevel: PriceLevel) {
 
 export function formatTimeTo12Hour(time24?: string): string {
     if (!time24) return '';
-    const [hours, minutes] = time24.split(':').map(Number);
+
+    const parts = time24.split(':');
+    if (parts.length !== 2) {
+        return ''; // Invalid format
+    }
+
+    const [hoursStr, minutesStr] = parts;
+    const hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10);
+
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        return ''; // Invalid time values
+    }
+
     const period = hours >= 12 ? 'PM' : 'AM';
     const hours12 = hours % 12 === 0 ? 12 : hours % 12;
     return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;

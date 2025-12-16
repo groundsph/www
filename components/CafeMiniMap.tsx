@@ -11,13 +11,14 @@ interface CafeMiniMapProps {
 }
 
 export default function CafeMiniMap({ cafe }: CafeMiniMapProps) {
-    const [mapKey, setMapKey] = useState(`map-${cafe.id}-${Date.now()}`)
+    const curDate = new Date().getTime()
+    const [mapKey, setMapKey] = useState(`map-${cafe.id}-${curDate}`)
     const [isMounted, setIsMounted] = useState(false)
 
     useEffect(() => {
         setIsMounted(true)
         // Generate new key on mount to ensure fresh map instance
-        setMapKey(`map-${cafe.id}-${Date.now()}`)
+        setMapKey(`map-${cafe.id}-${curDate}`)
     }, [cafe.id])
 
     if (!isMounted) {

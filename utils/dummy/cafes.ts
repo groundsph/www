@@ -116,6 +116,61 @@ export const dummyCafes: Cafe[] = [
         reviews: 24,
         is_verified: true,
         is_active: true,
+    },
+    {
+        id: crypto.randomUUID(),
+        created_at: new Date(),
+        updated_at: new Date(),
+        // Basic Info
+        name: "Commonly Uncommon",
+        slug: "commonly-uncommon",
+        description: "A specialty coffee shop that celebrates the extraordinary in everyday moments. Commonly Uncommon offers thoughtfully crafted beverages and a welcoming atmosphere for those who appreciate the finer details.",
+        thumbnail: "/testing/commonly-uncommon.jpg",
+        gallery: ["/testing/commonly-uncommon.jpg"],
+        website_url: "https://commonlyuncommon.ph",
+        socials: [
+            { title: "Instagram", url: "https://instagram.com/commonlyuncommon" },
+            { title: "Facebook", url: "https://facebook.com/commonlyuncommon" },
+        ],
+        // Contact
+        phone: "+63 917 555 1234",
+        email: "hello@commonlyuncommon.ph",
+        // Location
+        address_display: "IT Park, Lahug, Cebu City",
+        lat: 10.3303,
+        lng: 123.9056,
+        area: "Cebu City",
+        // Hours
+        operating_hours: [
+            { day: "mon", open: "07:00", close: "22:00" },
+            { day: "tue", open: "07:00", close: "22:00" },
+            { day: "wed", open: "07:00", close: "22:00" },
+            { day: "thu", open: "07:00", close: "22:00" },
+            { day: "fri", open: "07:00", close: "23:00" },
+            { day: "sat", open: "08:00", close: "23:00" },
+            { day: "sun", open: "08:00", close: "21:00" },
+        ],
+        // Amenities
+        has_wifi: true,
+        has_sockets: true,
+        has_parking: true,
+        has_aircon: true,
+        is_pet_friendly: true,
+        has_outdoor_seating: false,
+        // Food & Drinks
+        serves_food: true,
+        specialty: ["single origin", "pour-over", "specialty espresso"],
+        // Details
+        price_level: 'medium',
+        payment_methods: "cash card gcash maya",
+        roaster: "In-house Roastery",
+        // Vibe
+        tags: ["minimalist", "work-friendly", "specialty"],
+        // Meta
+        rating: 4.7,
+        reviews: 42,
+        is_verified: true,
+        is_active: true,
     }
 ]
 
