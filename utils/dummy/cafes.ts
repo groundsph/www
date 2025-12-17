@@ -63,7 +63,7 @@ export const dummyCafes: Cafe[] = [
         is_active: true,
     },
     {
-        id: crypto.randomUUID(),
+        id: 'bos-coffee-casa-gorordo-dummy',
         created_at: new Date(),
         updated_at: new Date(),
         // Basic Info
@@ -118,7 +118,7 @@ export const dummyCafes: Cafe[] = [
         is_active: true,
     },
     {
-        id: crypto.randomUUID(),
+        id: 'commonly-uncommon-dummy',
         created_at: new Date(),
         updated_at: new Date(),
         // Basic Info
@@ -224,6 +224,147 @@ Designed with intention, our cafe features:
 Whether you're seeking a peaceful morning ritual, a productive work session, or simply a unique cafe experience, Strange Matcha welcomes you. We're open daily and can't wait to share our love for matcha with you.
 
 *Follow us on [Instagram](https://instagram.com/strangematcha) for updates and new menu drops!*
+`,
+    },
+    {
+        id: 'bos-coffee-casa-gorordo-story',
+        created_at: new Date(),
+        updated_at: new Date(),
+        cafe_id: dummyCafes[1].id,
+        content: `# Bo's Coffee Casa Gorordo: Coffee in a Living Museum
+
+Nestled within the historic walls of Casa Gorordo Museum, **Bo's Coffee Casa Gorordo** offers a truly unique coffee experience—where every sip comes with a side of Cebuano heritage. This isn't just a cafe; it's a journey back to the 1850s.
+
+## A Heritage Setting Like No Other
+
+Casa Gorordo is one of the few remaining Spanish-era houses in Cebu, and Bo's Coffee has transformed a portion of this heritage site into a charming cafe that honors the past while serving the present.
+
+> "Drinking coffee here feels like stepping into a time machine. The wooden floors, the antique furniture, the history in every corner—it's magical."
+> — *A Regular Guest*
+
+## Our Filipino Coffee
+
+As a proudly Cebuano coffee chain, Bo's Coffee sources beans exclusively from Filipino farmers across the archipelago:
+
+**Featured Origins:**
+- **Sagada Arabica** — From the mountains of Mountain Province, known for its bright acidity and citrus notes
+- **Benguet Blend** — A smooth, medium-bodied coffee perfect for everyday drinking
+- **Mt. Apo Peaberry** — Our premium single-origin with rich chocolate undertones
+
+### Brewing Methods
+
+We offer multiple ways to experience Filipino coffee:
+* Pour-over for the purist
+* Cold brew for hot Cebu afternoons
+* Classic espresso-based drinks
+* Traditional *barako* for the bold
+
+## Beyond Coffee
+
+Our menu extends beyond the cup:
+
+- **Local pastries** — Partner bakeshops provide fresh ensaymada and pan de sal
+- **Light meals** — Perfect for museum-goers taking a break
+- **Heritage merchandise** — Take home a piece of Cebu
+
+## The Experience
+
+What makes this location special:
+
+1. **Air-conditioned comfort** in a heritage building
+2. **Outdoor seating** overlooking the garden courtyard
+3. **Museum access** — combine your coffee visit with cultural exploration
+4. **Free WiFi** for the modern visitor
+
+---
+
+## Plan Your Visit
+
+Whether you're a history enthusiast, a coffee lover, or simply seeking a peaceful escape from the city bustle, Bo's Coffee Casa Gorordo welcomes you. We're located at 35 Eduardo Aboitiz St, Parian, Cebu City.
+
+*Connect with us on [Facebook](https://facebook.com/boscoffeeofficial) for updates and events!*
+`,
+    },
+    {
+        id: 'commonly-uncommon-story',
+        created_at: new Date(),
+        updated_at: new Date(),
+        cafe_id: dummyCafes[2].id,
+        content: `# Commonly Uncommon: Extraordinary Coffee for Everyday Moments
+
+In the heart of Cebu's bustling IT Park, **Commonly Uncommon** stands as a sanctuary for those who believe that great coffee doesn't have to be pretentious—it just has to be exceptional.
+
+## The Philosophy
+
+Our name says it all. We find the **extraordinary in the ordinary**, celebrating those small moments that make life special. A perfectly pulled shot of espresso. The first sip of your morning pour-over. The satisfaction of finding *your* coffee.
+
+> "Coffee is commonly consumed. But our approach is uncommon. Every cup is crafted with intention, every bean is sourced with purpose."
+> — *Founders of Commonly Uncommon*
+
+## Our Coffee Journey
+
+### In-House Roastery
+
+What sets us apart is our commitment to **roasting our own beans**. Our in-house roastery allows us to:
+
+- Control every aspect of the roasting process
+- Experiment with unique flavor profiles
+- Ensure peak freshness in every cup
+- Build direct relationships with farmers
+
+**Current Offerings:**
+- **The Uncommon Blend** — Our signature house espresso with notes of dark chocolate and caramel
+- **Single Origins** — Rotating selections from around the world
+- **Pour-Over Flights** — Compare three different origins side by side
+
+### Brewing Excellence
+
+Our baristas are trained to bring out the best in every bean:
+
+* Precision pour-overs using temperature-controlled kettles
+* Specialty espresso with carefully calibrated extraction
+* Signature drinks that push creative boundaries
+* Alternative milk options including housemade oat milk
+
+## The Space
+
+Designed for the modern Cebuano:
+
+### Work-Friendly Environment
+- High-speed WiFi throughout
+- Abundant power outlets at every table
+- Dedicated quiet zones for focused work
+- Meeting-ready spaces for small teams
+
+### Comfort & Atmosphere
+- Minimalist design with warm touches
+- Natural light through floor-to-ceiling windows
+- Air-conditioned throughout
+- Pet-friendly (yes, bring your fur babies!)
+
+## More Than Coffee
+
+**Food Menu:**
+- All-day breakfast items
+- Artisan sandwiches and wraps
+- Locally-sourced pastries
+- Healthy bowl options
+
+**Community Events:**
+- Monthly cupping sessions
+- Latte art workshops
+- Coffee origin talks
+- Local artist showcases
+
+---
+
+## Find Your Uncommon
+
+Whether you're a remote worker seeking your daily office, a coffee enthusiast exploring new flavors, or simply someone who appreciates quality—Commonly Uncommon is your place.
+
+Open daily in IT Park, Lahug, Cebu City.
+
+*Follow our journey on [Instagram](https://instagram.com/commonlyuncommon) for new releases and behind-the-scenes roastery content!*
 `,
     }
 ]
