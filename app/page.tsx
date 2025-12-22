@@ -7,12 +7,12 @@ export default function Home() {
         "@graph": [
             {
                 "@type": "Organization",
-                "@id": "https://cebu.coffee/#organization",
+                "@id": "https://grounds.coffee/#organization",
                 name: "Grounds",
-                url: "https://cebu.coffee",
+                url: "https://grounds.coffee",
                 logo: {
                     "@type": "ImageObject",
-                    url: "https://cebu.coffee/og-image.png",
+                    url: "https://grounds.coffee/og-image.png",
                 },
                 description:
                     "Community-driven cafe database featuring the best cafes in Cebu",
@@ -25,12 +25,12 @@ export default function Home() {
             },
             {
                 "@type": "WebSite",
-                "@id": "https://cebu.coffee/#website",
-                url: "https://cebu.coffee",
+                "@id": "https://grounds.coffee/#website",
+                url: "https://grounds.coffee",
                 name: "Grounds - Discover Cebu's Best Cafes",
                 description: "Discover and explore the best cafes in Cebu",
                 publisher: {
-                    "@id": "https://cebu.coffee/#organization",
+                    "@id": "https://grounds.coffee/#organization",
                 },
                 inLanguage: "en-PH",
             },

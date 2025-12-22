@@ -67,7 +67,7 @@ export default function LandingPage() {
                                         className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group'
                                     >
                                         Learn More
-                                        <div className='absolute opacity-0 left-0 top-1/2 -translate-y-1/2 w-max text-text font-normal font-sans pl-4 transition-all group-hover:translate-x-full group-hover:opacity-100 -z-1'>
+                                        <div className='absolute opacity-0 left-0 top-1/2 -translate-y-1/2 w-max text-text font-normal font-sans pl-4 transition-all group-hover:translate-x-[calc(100%+1rem)] group-hover:opacity-100 -z-1'>
                                             View Details
                                         </div>
                                     </Link>
