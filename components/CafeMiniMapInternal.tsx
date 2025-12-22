@@ -1,12 +1,16 @@
 "use client"
 
-import { Cafe } from "@/utils/types/cafe"
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
 import { Icon } from "leaflet"
 import "leaflet/dist/leaflet.css"
 
 interface CafeMiniMapInternalProps {
-    cafe: Cafe
+    cafe: {
+        id: string
+        name: string
+        lat: number
+        lng: number
+    }
 }
 
 export default function CafeMiniMapInternal({

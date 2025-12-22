@@ -19,20 +19,24 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
     metadataBase: new URL("https://grounds.ph"),
     title: {
-        default: "Grounds - Discover Cebu's Best Cafes",
+        default: "Grounds",
         template: "%s | Grounds",
     },
     description:
-        "Discover and explore the best cafes in Cebu. Community-driven cafe database featuring daily highlights, reviews, events, and blog posts about Cebu's vibrant coffee culture.",
+        "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
     keywords: [
-        "Cebu cafes",
-        "coffee shops Cebu",
-        "best cafes Cebu",
-        "Cebu coffee",
-        "cafe finder Cebu",
-        "coffee culture Cebu",
-        "cafe reviews Cebu",
-        "specialty coffee Cebu",
+        "Philippines cafes",
+        "coffee shops Philippines",
+        "best cafes Philippines",
+        "cafe finder",
+        "cafe discovery",
+        "specialty coffee Philippines",
+        "cafe reviews",
+        "coffee culture Philippines",
+        "local cafes near me",
+        "third wave coffee",
+        "cafe guide Philippines",
+        "coffee community",
     ],
     authors: [{ name: "Grounds" }],
     creator: "Grounds",
@@ -47,9 +51,9 @@ export const metadata: Metadata = {
         locale: "en_PH",
         url: "https://grounds.ph",
         siteName: "Grounds",
-        title: "Grounds - Discover Cebu's Best Cafes",
+        title: "Grounds",
         description:
-            "Discover and explore the best cafes in Cebu. Community-driven cafe database featuring daily highlights, reviews, events, and blog posts.",
+            "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
         images: [
             {
                 url: "/og-image.png",
@@ -61,9 +65,9 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: "summary_large_image",
-        title: "Grounds - Discover Cebu's Best Cafes",
+        title: "Grounds",
         description:
-            "Discover and explore the best cafes in Cebu. Community-driven cafe database featuring daily highlights, reviews, events, and blog posts.",
+            "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
         images: ["/og-image.png"],
         creator: "@adrianbonpin",
     },

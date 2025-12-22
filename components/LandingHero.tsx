@@ -49,17 +49,23 @@ export default function LandingHero({ featured }: LandingHeroProps) {
                                 <motion.p className='text-sm md:text-base lg:text-lg my-4 md:my-6'>
                                     {featured.description}
                                 </motion.p>
-                                {featured.slug && (
+                                <div className='w-full flex flex-row gap-4 items-center'>
+                                    {featured.slug && (
+                                        <Link
+                                            href={`/cafes/${featured.slug}`}
+                                            className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl'
+                                        >
+                                            Learn More
+                                        </Link>
+                                    )}
+                                    <span className='text-text/60'>or</span>
                                     <Link
-                                        href={`/cafes/${featured.slug}`}
+                                        href='/map'
                                         className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl'
                                     >
-                                        Learn More
-                                        <div className='absolute opacity-0 left-0 top-1/2 -translate-y-1/2 w-max text-text font-normal font-sans pl-4 transition-all group-hover:translate-x-[calc(100%+1rem)] group-hover:opacity-100 -z-1'>
-                                            View Details
-                                        </div>
+                                        Find Cafes Near Me
                                     </Link>
-                                )}
+                                </div>
                             </>
                         )}
                     </div>

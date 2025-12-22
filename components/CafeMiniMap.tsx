@@ -1,7 +1,6 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { Cafe } from "@/utils/types/cafe"
 
 const CafeMiniMapInternal = dynamic(() => import("./CafeMiniMapInternal"), {
     ssr: false,
@@ -13,7 +12,12 @@ const CafeMiniMapInternal = dynamic(() => import("./CafeMiniMapInternal"), {
 })
 
 interface CafeMiniMapProps {
-    cafe: Cafe
+    cafe: {
+        id: string
+        name: string
+        lat: number
+        lng: number
+    }
 }
 
 export default function CafeMiniMap({ cafe }: CafeMiniMapProps) {

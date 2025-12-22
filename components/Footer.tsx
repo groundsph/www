@@ -43,6 +43,30 @@ export default function Footer() {
                             ))}
                             <li>
                                 <Link
+                                    href='/map'
+                                    className='text-background/80 hover:text-background transition-colors'
+                                >
+                                    Nearby Me
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    href='/business'
+                                    className='text-background/80 hover:text-background transition-colors'
+                                >
+                                    For Business
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    href='/support'
+                                    className='text-background/80 hover:text-background transition-colors'
+                                >
+                                    Support Us
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
                                     href='/auth'
                                     className='text-background/80 hover:text-background transition-colors'
                                 >

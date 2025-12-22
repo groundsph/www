@@ -1,6 +1,6 @@
 "use client"
 
-import { CafeSocial, OperatingHour, OperatingHours } from "@/utils/types/cafe"
+import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
 import { CafeWithRatings } from "@/utils/types/extra"
 import Image from "next/image"
 import { motion } from "motion/react"

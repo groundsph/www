@@ -39,13 +39,7 @@ export default function Navbar() {
             {/* Accounts */}
             <ul className='gap-4 hidden md:flex'>
                 <li>
-                    <Link
-                        href='/auth'
-                        className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center'
-                    >
-                        <UserRoundIcon size={20} />
-                        Login
-                    </Link>
+                    <Auth />
                 </li>
             </ul>
             {/* Mobile */}
@@ -97,15 +91,25 @@ export default function Navbar() {
                         </li>
                     ))}
                     <li className='my-4'>
-                        <Link
-                            href='/auth'
-                            className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center'
-                        >
-                            Login
-                        </Link>
+                        <Auth />
                     </li>
                 </ul>
             </div>
         </nav>
+    )
+}
+
+function Auth() {
+    return (
+        <Link
+            href='/auth'
+            className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center'
+        >
+            <UserRoundIcon
+                size={20}
+                className='text-text hidden md:inline'
+            />
+            Login
+        </Link>
     )
 }
