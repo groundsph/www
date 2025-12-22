@@ -77,12 +77,13 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                 className='w-full min-h-[calc(100vh-20rem)] flex flex-col relative'
             >
                 {/* Image */}
-                <div className='absolute w-full h-full bg-linear-to-r from-black/70 to-transparent'>
+                <div className='absolute w-full h-full bg-linear-to-r from-black/70 to-transparent select-none'>
                     <Image
                         src={cafe.thumbnail}
                         alt=''
                         fill
                         className='object-cover object-center -z-1'
+                        draggable={false}
                     />
                 </div>
                 {/* Details */}
@@ -197,7 +198,7 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                             Cafe Info
                         </h2>
                         {/* Map */}
-                        <div className='w-full h-auto aspect-video relative flex flex-col items-center justify-center overflow-clip rounded-xl shadow-inner'>
+                        <div className='w-full h-auto aspect-video relative flex flex-col items-center justify-center overflow-clip rounded-xl border-2 border-text/10'>
                             <DynamicCafeMiniMap
                                 key={cafe.id}
                                 cafe={cafe}

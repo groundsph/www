@@ -1,7 +1,7 @@
 "use client"
 
 import { routes } from "@/utils/routes"
-import { ChevronRightIcon, MenuIcon } from "lucide-react"
+import { ChevronRightIcon, MenuIcon, UserRoundIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -12,11 +12,7 @@ export default function Navbar() {
         <nav className='w-full bg-background text-text px-4 py-2 flex items-center justify-between z-50 relative overflow-x-clip'>
             <Link
                 href='/'
-                className={`font-semibold font-serif text-2xl select-none ${
-                    curPath === "/"
-                        ? "text-transparent select-auto"
-                        : "text-text"
-                } transition-colors`}
+                className={`font-semibold font-serif text-2xl select-none`}
                 draggable={false}
                 title='Go to Home'
             >
@@ -45,9 +41,10 @@ export default function Navbar() {
                 <li>
                     <Link
                         href='/auth'
-                        className='hover:text-text/60 transition-colors font-serif'
+                        className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center'
                     >
-                        login
+                        <UserRoundIcon size={20} />
+                        Login
                     </Link>
                 </li>
             </ul>
@@ -102,12 +99,9 @@ export default function Navbar() {
                     <li className='my-4'>
                         <Link
                             href='/auth'
-                            className='hover:text-text/60 transition-colors font-serif cursor-pointer text-2xl'
-                            onClick={() => {
-                                document.getElementById("mobile-menu")?.click()
-                            }}
+                            className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center'
                         >
-                            login
+                            Login
                         </Link>
                     </li>
                 </ul>
