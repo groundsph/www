@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
 import { DM_Sans, Playfair_Display } from "next/font/google"
 import "./globals.css"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/Footer"
 import AuthProvider from "@/components/AuthProvider"
+import LayoutWrapper from "@/components/LayoutWrapper"
 import NotificationProvider from "@/components/NotificationProvider"
 
 const playfairDisplay = Playfair_Display({
@@ -106,9 +105,7 @@ export default function RootLayout({
             >
                 <NotificationProvider>
                     <AuthProvider>
-                        <Navbar />
-                        {children}
-                        <Footer />
+                        <LayoutWrapper>{children}</LayoutWrapper>
                     </AuthProvider>
                 </NotificationProvider>
             </body>

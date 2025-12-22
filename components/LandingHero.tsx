@@ -5,12 +5,15 @@ import { StarIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "motion/react"
+import { useContext } from "react"
+import { AuthContext } from "./AuthProvider"
 
 interface LandingHeroProps {
     featured: CafeWithRatings | null
 }
 
 export default function LandingHero({ featured }: LandingHeroProps) {
+    const { profile } = useContext(AuthContext)
     return (
         <section
             id='hero'

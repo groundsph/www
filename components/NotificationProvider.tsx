@@ -98,11 +98,11 @@ export default function NotificationProvider({
                         }}
                         whileHover={{ opacity: 0.8 }}
                         onClick={() => removeNotification(id)}
-                        className={`fixed bottom-6 right-6 px-3 w-[80svw] md:max-w-lg py-2 select-none cursor-pointer rounded-lg bg-secondary/20 border-2 text-text backdrop-blur-sm flex flex-col gap-1
-                            ${type === "success" ? "border-green-500/20" : ""}
-                            ${type === "error" ? "border-red-500/20" : ""}
-                            ${type === "warning" ? "border-orange-500/20" : ""}
-                            ${type === "info" ? "border-secondary/20" : ""}
+                        className={`fixed bottom-6 right-6 px-3 w-[80svw] md:max-w-lg py-2 select-none cursor-pointer rounded-lg bg-background border-2 text-text backdrop-blur-sm flex flex-col gap-1
+                            ${type === "success" ? "border-green-500/60" : ""}
+                            ${type === "error" ? "border-red-500/60" : ""}
+                            ${type === "warning" ? "border-orange-500/60" : ""}
+                            ${type === "info" ? "border-secondary/60" : ""}
                             `}
                     >
                         <p className='font-bold text-xs opacity-60'>{title}</p>

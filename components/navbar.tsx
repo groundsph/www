@@ -1,9 +1,17 @@
 "use client"
 
+import { AuthContext } from "@/components/AuthProvider"
 import { routes } from "@/utils/routes"
-import { ChevronRightIcon, MenuIcon, UserRoundIcon } from "lucide-react"
+import { createLocalClient } from "@/utils/supabase/client"
+import {
+    ChevronRightIcon,
+    LogOutIcon,
+    MenuIcon,
+    UserRoundIcon,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useContext } from "react"
 
 export default function Navbar() {
     // Constants
@@ -100,13 +108,52 @@ export default function Navbar() {
 }
 
 function Auth() {
+    const authContext = useContext(AuthContext)
+    const user = authContext?.user
+    const profile = authContext?.profile
+    const supabase = createLocalClient()
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut()
+    }
+
+    if (user && profile) {
+        return (
+            <div className='flex flex-row gap-3 items-center'>
+                <Link
+                    href='/profile'
+                    className='font-serif text-text/80 hover:text-text transition-colors flex flex-row gap-1 items-center'
+                    title='View Profile'
+                >
+                    <span className='hidden md:inline'>
+                        {profile?.username}
+                    </span>
+                    <span className='md:hidden'>Profile</span>
+                </Link>
+                <button
+                    onClick={handleSignOut}
+                    className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center cursor-pointer hover:bg-text/20 rounded-md p-1'
+                    title='Sign out'
+                >
+                    <LogOutIcon
+                        size={16}
+                        strokeWidth={3}
+                        className='text-text'
+                    />
+                    <span className='md:hidden'>Sign out</span>
+                </button>
+            </div>
+        )
+    }
+
     return (
         <Link
             href='/auth'
-            className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center'
+            className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center cursor-pointer hover:bg-text/20 rounded-md p-1'
         >
             <UserRoundIcon
-                size={20}
+                size={16}
+                strokeWidth={3}
                 className='text-text hidden md:inline'
             />
             Login
