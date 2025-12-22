@@ -1,6 +1,5 @@
 import "@/app/map.css"
 import { getDailyFeatured, getAllCafes } from "@/app/api/actions/cafe"
-import CafeMapWrapper from "@/components/CafeMapWrapper"
 import LandingHero from "@/components/LandingHero"
 import RecentCard from "@/components/RecentCard"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -62,8 +61,8 @@ export default async function Home() {
                     Found a spot we missed?
                 </h2>
                 <p className='max-w-md text-background text-center font-medium z-1'>
-                    Help the community discover the best coffee spots in Cebu by
-                    sharing your favorite cafe.
+                    Help the community discover the best coffee spots by sharing
+                    your favorite cafe.
                 </p>
                 <Link
                     href='/submit'

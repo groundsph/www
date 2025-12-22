@@ -1,6 +1,6 @@
 # ☕ Grounds
 
-**Discover Cebu's Best Cafes** — A community-driven platform for exploring the vibrant coffee culture in Cebu, Philippines.
+**Discover the Philippines' Best Cafes** — A community-driven platform for exploring the vibrant coffee culture across the Philippines.
 
 ---
 
@@ -18,7 +18,7 @@
 -   **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
 -   **Backend:** [Supabase](https://supabase.com/) (SSR integration)
 -   **Maps:** [Leaflet](https://leafletjs.com/) + [React Leaflet](https://react-leaflet.js.org/)
--   **Animations:** [Motion](https://motion.dev/) (Framer Motion)
+-   **Animations:** [Motion](https://motion.dev/) (Motion UI)
 -   **Icons:** [Lucide React](https://lucide.dev/)
 -   **Package Manager:** [Bun](https://bun.sh/)
 
@@ -95,5 +95,5 @@ This project is private. All rights reserved.
 ---
 
 <p align="center">
-  Made with ❤️ for Cebu's coffee community
+  Made with ❤️ for the Philippine coffee community
 </p>

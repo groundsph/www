@@ -58,7 +58,7 @@ export const metadata: Metadata = {
                 url: "/og-image.png",
                 width: 1200,
                 height: 630,
-                alt: "Grounds - Discover Cebu's Best Cafes",
+                alt: "Grounds - Discover the Philippines' Best Cafes",
             },
         ],
     },
