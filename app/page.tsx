@@ -4,6 +4,8 @@ import CafeMapWrapper from "@/components/CafeMapWrapper"
 import LandingHero from "@/components/LandingHero"
 import RecentCard from "@/components/RecentCard"
 import { CafeWithRatings } from "@/utils/types/extra"
+import Link from "next/link"
+import { SearchIcon } from "lucide-react"
 
 export default async function Home() {
     const jsonLd = {
@@ -52,6 +54,25 @@ export default async function Home() {
             />
             <LandingHero featured={featured} />
 
+            <section className='w-full min-h-max bg-secondary mb-4 flex flex-col items-center justify-center py-10 gap-4 px-6 overflow-clip relative'>
+                {/* BG */}
+                <SearchIcon className='absolute h-[140%] aspect-square w-auto text-background/10' />
+                {/* Content */}
+                <h2 className='font-serif text-3xl md:text-5xl font-semibold z-1 text-center'>
+                    Found a spot we missed?
+                </h2>
+                <p className='max-w-md text-background text-center font-medium z-1'>
+                    Help the community discover the best coffee spots in Cebu by
+                    sharing your favorite cafe.
+                </p>
+                <Link
+                    href='/submit'
+                    className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg text-nowrap text-xl z-1'
+                >
+                    Submit a Cafe
+                </Link>
+            </section>
+
             {/* Recently Added */}
             <section className='w-full min-h-max flex flex-col'>
                 <h2 className='font-semibold font-serif text-2xl px-6'>
@@ -67,13 +88,6 @@ export default async function Home() {
                     ))}
                 </div>
             </section>
-
-            {/* Interactive Map */}
-            {/* <section className='w-full min-h-screen p-4 flex justify-center'>
-                <div className='bg-secondary/20 border-2 border-white/10 w-full flex-1 rounded-md overflow-clip'>
-                    <CafeMapWrapper cafes={recentlyAdded} />
-                </div>
-            </section> */}
         </>
     )
 }

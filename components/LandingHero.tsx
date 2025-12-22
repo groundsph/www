@@ -52,11 +52,11 @@ export default function LandingHero({ featured }: LandingHeroProps) {
                                 <motion.p className='text-sm md:text-base lg:text-lg my-4 md:my-6'>
                                     {featured.description}
                                 </motion.p>
-                                <div className='w-full flex flex-row gap-4 items-center'>
+                                <div className='w-full flex flex-row gap-4 items-center flex-wrap'>
                                     {featured.slug && (
                                         <Link
                                             href={`/cafes/${featured.slug}`}
-                                            className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl'
+                                            className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap'
                                         >
                                             Learn More
                                         </Link>
@@ -64,7 +64,7 @@ export default function LandingHero({ featured }: LandingHeroProps) {
                                     <span className='text-text/60'>or</span>
                                     <Link
                                         href='/map'
-                                        className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl'
+                                        className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap'
                                     >
                                         Find Cafes Near Me
                                     </Link>
