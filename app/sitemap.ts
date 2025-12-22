@@ -3,7 +3,7 @@ import { routes } from '@/utils/routes'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = 'https://grounds.coffee'
+    const baseUrl = 'https://grounds.ph'
 
     // Static pages from routes.ts
     const staticPages: MetadataRoute.Sitemap = routes.map((route) => ({

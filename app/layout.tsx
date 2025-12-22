@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-    metadataBase: new URL("https://grounds.coffee"),
+    metadataBase: new URL("https://grounds.ph"),
     title: {
         default: "Grounds - Discover Cebu's Best Cafes",
         template: "%s | Grounds",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     openGraph: {
         type: "website",
         locale: "en_PH",
-        url: "https://grounds.coffee",
+        url: "https://grounds.ph",
         siteName: "Grounds",
         title: "Grounds - Discover Cebu's Best Cafes",
         description:

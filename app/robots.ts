@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-    const baseUrl = 'https://grounds.coffee'
+    const baseUrl = 'https://grounds.ph'
 
     return {
         rules: {
