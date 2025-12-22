@@ -1,7 +1,11 @@
 import "@/app/map.css"
-import LandingPage from "./landingPage"
+import { getDailyFeatured, getAllCafes } from "@/app/api/actions/cafe"
+import CafeMapWrapper from "@/components/CafeMapWrapper"
+import LandingHero from "@/components/LandingHero"
+import RecentCard from "@/components/RecentCard"
+import { CafeWithRatings } from "@/utils/types/extra"
 
-export default function Home() {
+export default async function Home() {
     const jsonLd = {
         "@context": "https://schema.org",
         "@graph": [
@@ -36,6 +40,9 @@ export default function Home() {
             },
         ],
     }
+    // Fetch data using server actions
+    const featured = (await getDailyFeatured()) as CafeWithRatings | null
+    const recentlyAdded = (await getAllCafes(1, 10, {})) as CafeWithRatings[]
 
     return (
         <>
@@ -43,7 +50,30 @@ export default function Home() {
                 type='application/ld+json'
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <LandingPage />
+            <LandingHero featured={featured} />
+
+            {/* Recently Added */}
+            <section className='w-full min-h-max flex flex-col'>
+                <h2 className='font-semibold font-serif text-2xl px-6'>
+                    Recently Added Cafes
+                </h2>
+                <div className='flex flex-row gap-8 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory'>
+                    {recentlyAdded.map((cafe, idx) => (
+                        <RecentCard
+                            key={cafe.id || idx}
+                            cafe={cafe}
+                            idx={idx}
+                        />
+                    ))}
+                </div>
+            </section>
+
+            {/* Interactive Map */}
+            {/* <section className='w-full min-h-screen p-4 flex justify-center'>
+                <div className='bg-secondary/20 border-2 border-white/10 w-full flex-1 rounded-md overflow-clip'>
+                    <CafeMapWrapper cafes={recentlyAdded} />
+                </div>
+            </section> */}
         </>
     )
 }

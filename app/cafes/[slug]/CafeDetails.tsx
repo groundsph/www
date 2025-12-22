@@ -1,10 +1,11 @@
 "use client"
 
-import { Cafe, OperatingHours } from "@/utils/types/cafe"
+import { CafeSocial, OperatingHour, OperatingHours } from "@/utils/types/cafe"
+import { CafeWithRatings } from "@/utils/types/extra"
 import Image from "next/image"
 import { motion } from "motion/react"
-import { useMemo, useState } from "react"
-import { dummyCafeStories } from "@/utils/dummy/cafes"
+import { useState } from "react"
+
 import {
     ChevronLeftIcon,
     ChevronRightIcon,
@@ -21,7 +22,7 @@ import dynamic from "next/dynamic"
 import MarkdownRender from "@/components/MarkdownRender"
 
 // Day mapping for display
-const DAY_NAMES: Record<OperatingHours["day"], string> = {
+const DAY_NAMES: Record<OperatingHour["day"], string> = {
     mon: "Monday",
     tue: "Tuesday",
     wed: "Wednesday",
@@ -31,7 +32,7 @@ const DAY_NAMES: Record<OperatingHours["day"], string> = {
     sun: "Sunday",
 }
 
-const DAY_ORDER: OperatingHours["day"][] = [
+const DAY_ORDER: OperatingHour["day"][] = [
     "mon",
     "tue",
     "wed",
@@ -51,7 +52,7 @@ const DynamicCafeMiniMap = dynamic(() => import("@/components/CafeMiniMap"), {
     ),
 })
 
-export default function CafeDetails({ cafe }: { cafe: Cafe }) {
+export default function CafeDetails({ cafe }: { cafe: CafeWithRatings }) {
     // Constant
     const openStatus = isOpenNow(cafe.operating_hours)
     const firstImage = cafe.gallery && cafe.gallery[0]
@@ -63,11 +64,8 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
     // Computed Values
-    const story = useMemo(() => {
-        return (
-            dummyCafeStories.find((story) => story.cafe_id === cafe.id) ?? null
-        )
-    }, [cafe.id])
+    const story = cafe.story
+    const socials = (cafe.socials as unknown as CafeSocial[]) ?? []
 
     // Render
     return (
@@ -97,11 +95,25 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                         >
                             {cafe.name}
                         </motion.h1>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5, delay: 0.2 * 1 }}
+                            className='flex flex-row items-center gap-2 mt-2 font-serif'
+                        >
+                            <span className='px-2 py-0.5 rounded-md bg-background/20 text-sm font-semibold'>
+                                {cafe.city_municipality}
+                            </span>
+                            <span className='text-background/60'>•</span>
+                            <span className='font-semibold text-lg'>
+                                {cafe.province}
+                            </span>
+                        </motion.div>
                         <motion.h2
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.5, delay: 0.2 * 1 }}
-                            className='font-serif font-semibold max-w-md'
+                            className='font-serif font-medium text-background/80 max-w-md mt-1 text-sm'
                         >
                             {cafe.address_display}
                         </motion.h2>
@@ -222,13 +234,13 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                                 {cafe.website_url}
                             </a>
                         )}
-                        {cafe.socials && cafe.socials.length > 0 && (
+                        {socials && socials.length > 0 && (
                             <>
                                 <p className='text-sm font-semibold text-text/60'>
                                     Socials
                                 </p>
                                 <ul className='flex flex-row items-center gap-4 overflow-x-auto text-sm font-semibold text-text/60'>
-                                    {cafe.socials.map((social) => (
+                                    {socials.map((social) => (
                                         <li key={social.title}>
                                             <a
                                                 href={social.url}
@@ -352,7 +364,10 @@ export default function CafeDetails({ cafe }: { cafe: Cafe }) {
                             <div className='flex flex-row items-center gap-2'>
                                 <div className='text-sm font-bold px-2 py-0.5 rounded-lg bg-green-200/40 text-green-700 flex flex-row items-center gap-1'>
                                     <StarIcon className='w-4 h-4 fill-current' />{" "}
-                                    {cafe.rating} / 10
+                                    {cafe.average_rating
+                                        ? cafe.average_rating.toFixed(1)
+                                        : "-"}{" "}
+                                    / 10
                                 </div>
                             </div>
                         </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Cafe } from "@/utils/types/cafe"
+import { CafeWithRatings } from "@/utils/types/extra"
 import dynamic from "next/dynamic"
 
 const CafeMap = dynamic(() => import("@/components/CafeMap"), {
@@ -13,7 +13,7 @@ const CafeMap = dynamic(() => import("@/components/CafeMap"), {
 })
 
 interface CafeMapWrapperProps {
-    cafes: Cafe[]
+    cafes: CafeWithRatings[]
 }
 
 export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {

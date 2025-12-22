@@ -1,6 +1,7 @@
-import { OperatingHours, PriceLevel } from "./types/cafe";
+import { OperatingHours, OperatingHour } from "./types/cafe";
+import { Database } from "./types/database.types";
 
-export function getPriceLevel(priceLevel: PriceLevel) {
+export function getPriceLevel(priceLevel: Database["public"]["Enums"]["price_level"]) {
     switch (priceLevel) {
         case "low":
             return "₱";
@@ -35,13 +36,13 @@ export function formatTimeTo12Hour(time24?: string): string {
 /**
  * Check if a cafe is currently open based on operating hours
  */
-export function isOpenNow(operatingHours?: OperatingHours[]): { isOpen: boolean; closesAt?: string; opensAt?: string } {
+export function isOpenNow(operatingHours?: OperatingHours | null): { isOpen: boolean; closesAt?: string; opensAt?: string } {
     if (!operatingHours || operatingHours.length === 0) {
         return { isOpen: false };
     }
 
     const now = new Date();
-    const days: Array<OperatingHours['day']> = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const days: Array<OperatingHour['day']> = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     const currentDay = days[now.getDay()];
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 

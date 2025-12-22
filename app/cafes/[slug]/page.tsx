@@ -2,17 +2,16 @@ import CafeDetails from "@/app/cafes/[slug]/CafeDetails"
 import { createClient } from "@/utils/supabase/server"
 import Link from "next/link"
 import type { Metadata } from "next"
-import { dummyCafes } from "@/utils/dummy/cafes"
+import { getCafeBySlug } from "@/app/api/actions/cafe"
+import { CafeWithRatings } from "@/utils/types/extra"
 
 export async function generateMetadata({
     params,
 }: {
     params: Promise<{ slug: string }>
 }): Promise<Metadata> {
-    const db = await createClient()
     const { slug } = await params
-    // const cafe = (await db.from("cafes").select("*").eq("slug", slug).single()).data
-    const cafe = dummyCafes.find((cafe) => cafe.slug === slug)
+    const cafe = await getCafeBySlug(slug)
 
     if (!cafe) {
         return {
@@ -59,7 +58,7 @@ export async function generateMetadata({
 }
 
 // JSON-LD Structured Data for CafeOrCoffeeShop
-function generateJsonLd(cafe: (typeof dummyCafes)[number]) {
+function generateJsonLd(cafe: CafeWithRatings) {
     const dayMapping: Record<string, string> = {
         mon: "Monday",
         tue: "Tuesday",
@@ -102,10 +101,10 @@ function generateJsonLd(cafe: (typeof dummyCafes)[number]) {
                 : cafe.price_level === "medium"
                 ? "₱₱"
                 : "₱₱₱",
-        aggregateRating: cafe.rating
+        aggregateRating: cafe.average_rating
             ? {
                   "@type": "AggregateRating",
-                  ratingValue: cafe.rating,
+                  ratingValue: cafe.average_rating,
                   bestRating: 10,
                   worstRating: 1,
               }
@@ -152,10 +151,8 @@ export default async function CafePage({
     params: Promise<{ slug: string }>
 }) {
     // Constants
-    const db = await createClient()
     const { slug } = await params
-    // const cafe = (await db.from("cafes").select("*").eq("slug", slug).single()).data
-    const cafe = dummyCafes.find((cafe) => cafe.slug === slug)
+    const cafe = await getCafeBySlug(slug)
     if (!cafe)
         return (
             <section

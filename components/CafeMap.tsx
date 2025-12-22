@@ -1,6 +1,6 @@
 "use client"
 
-import { Cafe } from "@/utils/types/cafe"
+import { CafeWithRatings } from "@/utils/types/extra"
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet"
 import { Icon, DivIcon } from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -10,7 +10,7 @@ import Image from "next/image"
 import { StarIcon } from "lucide-react"
 
 interface CafeMapProps {
-    cafes: Cafe[]
+    cafes: CafeWithRatings[]
 }
 
 // Component to handle location updates
@@ -87,50 +87,61 @@ export default function CafeMap({ cafes }: CafeMapProps) {
             className='h-full w-full z-10'
             style={{ minHeight: "500px" }}
         >
-            {/* Carto Positron - clean, minimal map style */}
-            <TileLayer
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-            />
-            <LocationMarker />
-            {cafes.map((cafe) => (
-                <Marker
-                    key={cafe.id}
-                    position={[cafe.lat, cafe.lng]}
-                    icon={customIcon}
-                >
-                    <Popup>
-                        <div className='flex flex-col gap-2'>
-                            <Link
-                                href={`/cafes/${cafe.slug}`}
-                                className='font-serif font-semibold text-text hover:underline text-lg'
-                            >
-                                {cafe.name}
-                            </Link>
-                            <div className='relative w-full h-auto aspect-video overflow-clip rounded-lg'>
-                                <Image
-                                    src={cafe.thumbnail}
-                                    alt={cafe.name}
-                                    fill
-                                    className='object-cover'
-                                />
-                            </div>
-                            <div className='flex flex-row gap-2 items-center'>
-                                <div className='flex flex-row gap-2 items-center text-base font-semibold opacity-80'>
-                                    <StarIcon className='w-4 h-4 fill-primary' />
-                                    {cafe.rating}/10
+            {cafes
+                .filter(
+                    (
+                        c
+                    ): c is CafeWithRatings & {
+                        lat: number
+                        lng: number
+                        slug: string
+                        name: string
+                    } =>
+                        c.lat != null &&
+                        c.lng != null &&
+                        c.slug != null &&
+                        c.name != null
+                )
+                .map((cafe) => (
+                    <Marker
+                        key={cafe.id}
+                        position={[cafe.lat, cafe.lng]}
+                        icon={customIcon}
+                    >
+                        <Popup>
+                            <div className='flex flex-col gap-2'>
+                                <Link
+                                    href={`/cafes/${cafe.slug}`}
+                                    className='font-serif font-semibold text-text hover:underline text-lg'
+                                >
+                                    {cafe.name}
+                                </Link>
+                                <div className='relative w-full h-auto aspect-video overflow-clip rounded-lg bg-secondary/10'>
+                                    {cafe.thumbnail && (
+                                        <img
+                                            src={cafe.thumbnail}
+                                            alt={cafe.name}
+                                            className='object-cover w-full h-full'
+                                        />
+                                    )}
                                 </div>
-                                <span className='text-text/60 opacity-80'>
-                                    {cafe.reviews} reviews
-                                </span>
+                                <div className='flex flex-row gap-2 items-center'>
+                                    <div className='flex flex-row gap-2 items-center text-base font-semibold opacity-80'>
+                                        <StarIcon className='w-4 h-4 fill-primary' />
+                                        {cafe.average_rating?.toFixed(1) ||
+                                            "N/A"}
+                                    </div>
+                                    <span className='text-text/60 opacity-80'>
+                                        {cafe.total_reviews || 0} reviews
+                                    </span>
+                                </div>
+                                <p className='text-text/60'>
+                                    {cafe.address_display}
+                                </p>
                             </div>
-                            <p className='text-text/60'>
-                                {cafe.address_display}
-                            </p>
-                        </div>
-                    </Popup>
-                </Marker>
-            ))}
+                        </Popup>
+                    </Marker>
+                ))}
         </MapContainer>
     )
 }

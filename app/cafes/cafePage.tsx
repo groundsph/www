@@ -1,10 +1,7 @@
 "use client"
 
-import { dummyCafes } from "@/utils/dummy/cafes"
 import { getPriceLevel, isOpenNow } from "@/utils/extras"
-import { Cafe } from "@/utils/types/cafe"
 import Image from "next/image"
-import { useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import {
     ArrowRight,
@@ -18,9 +15,15 @@ import {
     BadgeCheck,
 } from "lucide-react"
 
+import { getAllCafes } from "@/app/api/actions/cafe"
+import { CafeWithRatings } from "@/utils/types/extra"
+import { useEffect, useState, useTransition } from "react"
+
 export default function CafesPageClient() {
-    // States - initialize directly with dummy data
-    const [cafes] = useState<Cafe[]>(dummyCafes)
+    // States
+    const [cafes, setCafes] = useState<CafeWithRatings[]>([])
+    const [loading, setLoading] = useState(true)
+    const [isPending, startTransition] = useTransition()
 
     // Search & Filter State
     const [search, setSearch] = useState("")
@@ -37,66 +40,44 @@ export default function CafesPageClient() {
     })
 
     // Filter Logic
-    const filteredCafes = cafes
-        .filter((cafe) => {
-            // Text Search
-            const searchLower = search.toLowerCase()
-            const matchesSearch =
-                search === "" ||
-                cafe.name.toLowerCase().includes(searchLower) ||
-                cafe.address_display.toLowerCase().includes(searchLower) ||
-                cafe.roaster?.toLowerCase().includes(searchLower) ||
-                cafe.tags?.some((tag) =>
-                    tag.toLowerCase().includes(searchLower)
-                ) ||
-                cafe.specialty?.some((specialty) =>
-                    specialty.toLowerCase().includes(searchLower)
-                )
+    useEffect(() => {
+        const fetchCafes = async () => {
+            // Only set loading true if it's the first load or if you want a loading spinner on every filter change
+            // For better UX with useTransition, we might keep old data while new data loads
+            startTransition(async () => {
+                const fetchedCafes = await getAllCafes(1, 40, {
+                    search,
+                    has_wifi: filters.has_wifi,
+                    has_sockets: filters.has_sockets,
+                    has_parking: filters.has_parking,
+                    has_aircon: filters.has_aircon,
+                    is_pet_friendly: filters.is_pet_friendly,
+                    has_outdoor_seating: filters.has_outdoor_seating,
+                    price_level: filters.price_level as any,
+                    sortBy: sortBy as any,
+                })
+                setCafes(fetchedCafes)
+                setLoading(false)
+            })
+        }
 
-            // Amenity Filters
-            const matchesWifi = !filters.has_wifi || cafe.has_wifi
-            const matchesSockets = !filters.has_sockets || cafe.has_sockets
-            const matchesParking = !filters.has_parking || cafe.has_parking
-            const matchesAircon = !filters.has_aircon || cafe.has_aircon
-            const matchesPet = !filters.is_pet_friendly || cafe.is_pet_friendly
-            const matchesOutdoor =
-                !filters.has_outdoor_seating || cafe.has_outdoor_seating
-            const matchesOpen =
-                !filters.open_now ||
-                (cafe.operating_hours && isOpenNow(cafe.operating_hours).isOpen)
-            const matchesPrice =
-                !filters.price_level || cafe.price_level === filters.price_level
+        // Debounce search
+        const timeoutId = setTimeout(() => {
+            fetchCafes()
+        }, 500)
 
+        return () => clearTimeout(timeoutId)
+    }, [search, sortBy, filters])
+
+    // Client-side filtering for open_now (since difficult to do server-side effectively without complex logic)
+    const filteredCafes = cafes.filter((cafe) => {
+        if (filters.open_now) {
             return (
-                matchesSearch &&
-                matchesWifi &&
-                matchesSockets &&
-                matchesParking &&
-                matchesAircon &&
-                matchesPet &&
-                matchesOutdoor &&
-                matchesOpen &&
-                matchesPrice
+                cafe.operating_hours && isOpenNow(cafe.operating_hours).isOpen
             )
-        })
-        .sort((a, b) => {
-            switch (sortBy) {
-                case "rating":
-                    return b.rating - a.rating
-                case "reviews":
-                    return b.reviews - a.reviews
-                case "price_low": {
-                    const priceMap = { low: 1, medium: 2, high: 3 }
-                    return priceMap[a.price_level] - priceMap[b.price_level]
-                }
-                case "price_high": {
-                    const priceMap = { low: 1, medium: 2, high: 3 }
-                    return priceMap[b.price_level] - priceMap[a.price_level]
-                }
-                default:
-                    return 0 // Recommended / Default order
-            }
-        })
+        }
+        return true
+    })
 
     const toggleFilter = (key: keyof typeof filters) => {
         setFilters((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -213,9 +194,34 @@ export default function CafesPageClient() {
             </div>
 
             {/* Content */}
-            <div className='flex flex-1 flex-col gap-6'>
+            <div
+                className={`flex flex-1 flex-col gap-6 transition-opacity duration-300 ${
+                    isPending ? "opacity-50 pointer-events-none" : "opacity-100"
+                }`}
+            >
                 <AnimatePresence mode='popLayout'>
-                    {filteredCafes.length > 0 ? (
+                    {loading ? (
+                        // Skeleton Loading
+                        Array.from({ length: 4 }).map((_, i) => (
+                            <div
+                                key={i}
+                                className='py-4 px-6 bg-background shadow-lg shadow-black/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'
+                            >
+                                <div className='flex-1 flex flex-col md:pr-24 gap-4'>
+                                    <div className='flex flex-col gap-2'>
+                                        <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
+                                        <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
+                                    </div>
+                                    <div className='flex gap-2'>
+                                        <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
+                                        <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
+                                    </div>
+                                    <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
+                                </div>
+                                <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
+                            </div>
+                        ))
+                    ) : filteredCafes.length > 0 ? (
                         filteredCafes.map((cafe, idx) => {
                             const openStatus = isOpenNow(cafe.operating_hours)
                             return (
@@ -260,11 +266,14 @@ export default function CafesPageClient() {
                                             <div className='flex flex-row items-center gap-1'>
                                                 <Star className='w-4 h-4 fill-text text-text' />
                                                 <span className='font-bold'>
-                                                    {cafe.rating.toFixed(1)}
+                                                    {cafe.average_rating?.toFixed(
+                                                        1
+                                                    ) || "N/A"}
                                                 </span>
                                             </div>
                                             <span className='text-text/60'>
-                                                ({cafe.reviews} reviews)
+                                                ({cafe.total_reviews || 0}{" "}
+                                                reviews)
                                             </span>
                                             {cafe.roaster && (
                                                 <>
@@ -277,19 +286,21 @@ export default function CafesPageClient() {
                                                 </>
                                             )}
                                             <div className='flex-1' />
-                                            <div
-                                                className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                                    openStatus.isOpen
-                                                        ? "bg-green-200/40 text-green-700"
-                                                        : "bg-text/10 text-text"
-                                                }`}
-                                            >
-                                                {openStatus.isOpen
-                                                    ? `Open | Closes at ${openStatus.closesAt}`
-                                                    : openStatus.opensAt
-                                                    ? `Closed | Opens at ${openStatus.opensAt}`
-                                                    : "Closed"}
-                                            </div>
+                                            {cafe.operating_hours && (
+                                                <div
+                                                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                                        openStatus.isOpen
+                                                            ? "bg-green-200/40 text-green-700"
+                                                            : "bg-text/10 text-text"
+                                                    }`}
+                                                >
+                                                    {openStatus.isOpen
+                                                        ? `Open | Closes at ${openStatus.closesAt}`
+                                                        : openStatus.opensAt
+                                                        ? `Closed | Opens at ${openStatus.opensAt}`
+                                                        : "Closed"}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className='h-0.5 w-full bg-text/20 mt-1' />

@@ -2,74 +2,92 @@
 
 import { getDayOfYear } from "@/utils/featured"
 import { createClient } from "@/utils/supabase/server"
-import { Cafe, CafeStory } from "@/utils/types/cafe"
+import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 
 export async function getCafeBySlug(slug: string) {
     const db = await createClient()
-    const { data: cafe } = await db
+    const { data: cafe, error } = await db
         .from("cafes")
-        .select("*")
+        .select(`
+            *,
+            cafe_rating_stats(average_rating, total_reviews),
+            cafe_stories(*)
+        `)
         .eq("slug", slug)
         .single()
-    if (!cafe) return null
 
-    return cafe as Cafe
+    if (error || !cafe) return null
+
+    // Flatten result
+    const flatCafe = {
+        ...(cafe as any),
+        average_rating: (cafe as any).cafe_rating_stats?.average_rating ?? null,
+        total_reviews: (cafe as any).cafe_rating_stats?.total_reviews ?? null,
+        story: (cafe as any).cafe_stories?.[0] ?? null
+    }
+    delete (flatCafe as any).cafe_rating_stats
+    delete (flatCafe as any).cafe_stories
+
+    return flatCafe as CafeWithRatings
 }
 
 export async function getDailyFeatured() {
     const db = await createClient()
-    const today = new Date().toISOString().split("T")[0]
+    const now = new Date().toISOString()
 
-    // Check if today has manually set featured cafe
+    // 1. Priority: Manual Schedule
     const { data: scheduled } = await db
-        .from("featured_cafes")
-        .select("cafe_id, cafes(*)")
-        .eq("featured_date", today)
-        .single()
+        .from("featured_schedules")
+        .select(`
+            *,
+            cafe:cafes(*, cafe_rating_stats(average_rating, total_reviews))
+        `)
+        .eq("slot_type", "hero")
+        .eq("is_active", true)
+        .lte("start_date", now)
+        .gte("end_date", now)
+        .order("priority", { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-    if (scheduled) return scheduled.cafes
+    if ((scheduled as any)?.cafe) {
+        const c = (scheduled as any).cafe
+        const flat = {
+            ...c,
+            average_rating: c.cafe_rating_stats?.average_rating ?? null,
+            total_reviews: c.cafe_rating_stats?.total_reviews ?? null
+        }
+        delete flat.cafe_rating_stats
+        return flat as CafeWithRatings
+    }
 
-    // If not, Auto-select based on date
+    // 2. Fallback: Algorithmic Selection
+    // Since we need to order by rating, we join cafe_rating_stats and order by its column
     const { data: cafes } = await db
         .from("cafes")
-        .select("*")
-        .eq("is_active", true)
-        .eq("is_verified", true)
-        .order("rating", { ascending: false })
+        .select(`
+            *,
+            cafe_rating_stats(average_rating, total_reviews)
+        `)
+        .eq("is_published", true)
+        .order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
+        .limit(10) // Fetch a pool to rotate
 
     if (!cafes?.length) return null
 
     const dayOfYear = getDayOfYear(new Date())
+    const selected = cafes[dayOfYear % cafes.length] as any
 
-    return cafes[dayOfYear % cafes.length]
+    const flatSelected = {
+        ...selected,
+        average_rating: selected.cafe_rating_stats?.average_rating ?? null,
+        total_reviews: selected.cafe_rating_stats?.total_reviews ?? null
+    }
+    delete flatSelected.cafe_rating_stats
+
+    return flatSelected as CafeWithRatings
 }
 
-export async function getRecentAdditions() {
-    const db = await createClient()
-    const { data: cafes } = await db
-        .from("cafes")
-        .select("*")
-        .eq("is_active", true)
-        .eq("is_verified", true)
-        .order("created_at", { ascending: false })
-        .limit(10)
-    return cafes as Cafe[]
-}
-
-// Filter options for getAllCafes
-export interface CafeFilters {
-    has_wifi?: boolean
-    has_sockets?: boolean
-    has_parking?: boolean
-    has_aircon?: boolean
-    is_pet_friendly?: boolean
-    has_outdoor_seating?: boolean
-    price_level?: "low" | "medium" | "high"
-    search?: string
-    sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high"
-}
-
-// Paginated cafes with filters
 export async function getAllCafes(
     page: number = 1,
     limit: number = 12,
@@ -79,13 +97,26 @@ export async function getAllCafes(
     const from = (page - 1) * limit
     const to = from + limit - 1
 
+    // Use RPC for Full-Text Search if query exists
+    if (filters.search) {
+        const { data: searchResults } = await db.rpc('search_cafes', {
+            query_text: filters.search
+        } as any)
+        // Search results might miss ratings, return as is for now or fetch ratings separately. 
+        // For simplicity and to match type, we'll assume null ratings if missing.
+        return (searchResults || []).slice(from, to + 1).map(c => ({
+            ...(c as any),
+            average_rating: null,
+            total_reviews: null
+        })) as CafeWithRatings[]
+    }
+
     let query = db
         .from("cafes")
-        .select("*")
-        .eq("is_active", true)
-        .eq("is_verified", true)
+        .select("*, cafe_rating_stats(average_rating, total_reviews)")
+        .eq("is_published", true)
 
-    // Apply amenity filters
+    // Filters
     if (filters.has_wifi) query = query.eq("has_wifi", true)
     if (filters.has_sockets) query = query.eq("has_sockets", true)
     if (filters.has_parking) query = query.eq("has_parking", true)
@@ -94,26 +125,13 @@ export async function getAllCafes(
     if (filters.has_outdoor_seating) query = query.eq("has_outdoor_seating", true)
     if (filters.price_level) query = query.eq("price_level", filters.price_level)
 
-    // Apply text search (searches name and address)
-    if (filters.search) {
-        query = query.or(
-            `name.ilike.%${filters.search}%,address_display.ilike.%${filters.search}%`
-        )
-    }
-
-    // Apply sorting
+    // Sorting
     switch (filters.sortBy) {
         case "rating":
-            query = query.order("rating", { ascending: false })
+            query = query.order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
             break
         case "reviews":
-            query = query.order("reviews", { ascending: false })
-            break
-        case "price_low":
-            query = query.order("price_level", { ascending: true })
-            break
-        case "price_high":
-            query = query.order("price_level", { ascending: false })
+            query = query.order("total_reviews", { referencedTable: 'cafe_rating_stats', ascending: false })
             break
         default:
             query = query.order("created_at", { ascending: false })
@@ -121,17 +139,13 @@ export async function getAllCafes(
 
     const { data: cafes } = await query.range(from, to)
 
-    return cafes as Cafe[]
-}
-
-export async function getCafeById(id: string) {
-    const db = await createClient()
-    const { data: cafe } = await db.from("cafes").select("*").eq("id", id).single()
-    return cafe as Cafe
-}
-
-export async function getCafeStory(id: string) {
-    const db = await createClient()
-    const { data: story } = await db.from("cafe_stories").select("*").eq("cafe_id", id).single()
-    return story as CafeStory
+    return (cafes || []).map((c: any) => {
+        const flat = {
+            ...c,
+            average_rating: c.cafe_rating_stats?.average_rating ?? null,
+            total_reviews: c.cafe_rating_stats?.total_reviews ?? null
+        }
+        delete flat.cafe_rating_stats
+        return flat
+    }) as CafeWithRatings[]
 }

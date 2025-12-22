@@ -1,77 +1,57 @@
-export interface FeaturedCafe {
-    title: string
-    description: string
-    image: string
-    url: string
-    rating: number
-    reviews: number
+export type OperatingHour = {
+    day: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+    open: string;
+    close: string;
+    is_closed?: boolean;
 }
 
-export interface CafeStory {
-    id: string,
-    created_at: Date,
-    updated_at: Date,
-    cafe_id: string,
-    content: string,
+export type OperatingHours = OperatingHour[];
+
+export type CafeSocial = {
+    title: string;
+    url: string;
 }
 
 export interface Cafe {
     id: string;
     created_at: Date;
-    updated_at?: Date;
-    is_published: boolean; // Keep this for your moderation buffer!
-
-    // Ownership & Monetization
-    is_claimed: boolean;
-    membership_tier: 'free' | 'basic' | 'premium';
-    featured_until?: Date;
-    owner_ids?: string[];
-    contributor_id?: string; // Links to the user who "Scouted" it
-
-    // Basic Info
+    updated_at: Date;
     name: string;
     slug: string;
     description: string;
     thumbnail: string;
-    gallery?: string[];
-
-    // Standardized Location (Vital for National Search)
-    region: string;           // e.g., "Region VII"
-    province: string;         // e.g., "Cebu"
-    city_municipality: string;// e.g., "Cebu City"
+    gallery: string[];
+    website_url?: string;
+    socials?: CafeSocial[];
+    phone?: string;
+    email?: string;
     address_display: string;
     lat: number;
     lng: number;
-
-    // Amenities (Added suggested "Vibe" tags)
+    area: string;
+    operating_hours: OperatingHours;
     has_wifi: boolean;
     has_sockets: boolean;
     has_parking: boolean;
-    has_aircon?: boolean;
-    is_pet_friendly?: boolean;
-    has_outdoor_seating?: boolean;
-    is_work_friendly?: boolean; // Specific tag for digital nomads
-
-    // Coffee Specifics
+    has_aircon: boolean;
+    is_pet_friendly: boolean;
+    has_outdoor_seating: boolean;
+    serves_food: boolean;
+    specialty?: string[];
+    price_level: "low" | "medium" | "high";
+    payment_methods?: string;
     roaster?: string;
-    brew_methods?: string[]; // e.g., ["V60", "Cold Brew", "Siphon"]
-    price_level: PriceLevel;
-
-    // Verification
-    is_verified: boolean; // Your "Grounds Approved" badge
-    is_active: boolean;   // To handle temporary closures
+    tags?: string[];
+    rating: number;
+    reviews: number;
+    is_verified: boolean;
+    is_active: boolean;
 }
 
-export type OperatingHours = {
-    day: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun',
-    open: string,
-    close: string,
-    is_closed?: boolean,
+export interface CafeStory {
+    id: string;
+    created_at: Date;
+    updated_at: Date;
+    cafe_id: string;
+    content: string;
 }
-
-export type CafeSocial = {
-    title: string,
-    url: string,
-}
-
-export type PriceLevel = 'low' | 'medium' | 'high'
