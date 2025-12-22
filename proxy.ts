@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server"
 // Routes that require authentication
 const protectedRoutes = ["/submit", "/profile"]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
     })
