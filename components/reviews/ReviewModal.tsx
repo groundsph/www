@@ -123,57 +123,48 @@ export default function ReviewModal({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className='fixed inset-0 bg-black/10 z-50 backdrop-blur-sm'
+                        className='fixed inset-0 bg-black/40 z-50 backdrop-blur-sm'
                     />
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className='fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-background text-text rounded-2xl shadow-2xl z-50 flex flex-col max-h-[90vh] overflow-hidden border border-text/10'
+                        className='fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl mx-4 bg-background text-text rounded-xl shadow-2xl z-50 flex flex-col max-h-[90vh] overflow-hidden border border-text/10'
                     >
-                        <div className='p-8 md:p-12 overflow-y-auto custom-scrollbar relative'>
-                            {/* Paper Texture Effect - Keeping subtle for "magazine" feel but using theme colors */}
-                            <div
-                                className='absolute inset-0 opacity-[0.03] pointer-events-none'
-                                style={{
-                                    backgroundImage: `radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)`,
-                                    backgroundSize: "24px 24px",
-                                }}
-                            />
-
-                            <div className='relative z-10 flex flex-col items-center gap-8'>
+                        <div className='p-6 md:p-8 overflow-y-auto custom-scrollbar relative'>
+                            <div className='flex flex-col items-center gap-6'>
                                 {/* Close Button */}
                                 <button
                                     onClick={onClose}
-                                    className='absolute -top-2 -right-2 p-2 hover:bg-text/5 rounded-full transition-colors text-text/40 hover:text-text cursor-pointer'
+                                    className='absolute top-4 right-4 p-2 hover:bg-text/10 rounded-lg transition-colors text-text/40 hover:text-text cursor-pointer'
                                 >
-                                    <XIcon className='w-6 h-6' />
+                                    <XIcon className='w-5 h-5' />
                                 </button>
 
                                 {/* Title Section */}
-                                <div className='text-center space-y-2'>
-                                    <span className='text-xs font-bold tracking-widest uppercase text-text/40'>
+                                <div className='text-center space-y-1'>
+                                    <span className='text-xs font-medium tracking-wide uppercase text-text/50'>
                                         {existingReview
-                                            ? "Edit Your Entry"
-                                            : "New Entry"}
+                                            ? "Edit Review"
+                                            : "Write a Review"}
                                     </span>
-                                    <h2 className='text-3xl md:text-4xl font-serif font-bold text-text'>
+                                    <h2 className='text-2xl md:text-3xl font-serif font-semibold text-text'>
                                         {cafeName}
                                     </h2>
-                                    <p className='text-text/60 font-serif italic'>
-                                        How was your experience?
-                                    </p>
                                 </div>
 
                                 {/* Rating Section */}
-                                <div className='flex flex-col items-center gap-3 w-full py-4 border-y border-text/10'>
+                                <div className='flex flex-col items-center gap-2 w-full py-4 bg-text/5 rounded-xl border border-text/10'>
+                                    <span className='text-xs font-medium text-text/50 uppercase tracking-wide'>
+                                        Your Rating
+                                    </span>
                                     <StarRating
                                         rating={rating}
                                         onRatingChange={setRating}
                                         size='lg'
                                         totalStars={5}
                                     />
-                                    <span className='text-sm font-medium text-text/40'>
+                                    <span className='text-sm font-medium text-text/60'>
                                         {rating === 0
                                             ? "Tap to rate"
                                             : rating === 5
@@ -187,27 +178,30 @@ export default function ReviewModal({
                                 </div>
 
                                 {/* Review Content */}
-                                <div className='w-full space-y-4'>
+                                <div className='w-full space-y-2'>
+                                    <label className='text-sm font-medium text-text/60'>
+                                        Your Review
+                                    </label>
                                     <div className='relative'>
                                         <textarea
                                             value={comment}
                                             onChange={(e) =>
                                                 setComment(e.target.value)
                                             }
-                                            placeholder='Write your story here...'
-                                            className='w-full min-h-[200px] bg-transparent text-lg font-serif leading-relaxed placeholder:text-text/20 focus:outline-hidden p-0 resize-none border-b border-dashed border-text/10 focus:border-text/30 transition-colors text-text'
+                                            placeholder='Share your experience...'
+                                            className='w-full min-h-[160px] bg-text/5 text-base leading-relaxed placeholder:text-text/30 focus:outline-none p-4 resize-none rounded-xl border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
                                         />
-                                        <div className='absolute bottom-2 right-0 text-xs text-text/30 font-mono'>
-                                            {comment.length} chars
+                                        <div className='absolute bottom-3 right-3 text-xs text-text/40'>
+                                            {comment.length} characters
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Photos */}
-                                <div className='w-full space-y-3'>
-                                    <label className='text-sm font-bold uppercase tracking-wider text-text/40 flex items-center gap-2'>
-                                        <span>Capture the Moment</span>
-                                        <span className='text-[10px] font-normal normal-case opacity-50'>
+                                <div className='w-full space-y-2'>
+                                    <label className='text-sm font-medium text-text/60 flex items-center gap-2'>
+                                        Add Photos
+                                        <span className='text-xs text-text/40'>
                                             (Optional)
                                         </span>
                                     </label>
@@ -223,28 +217,25 @@ export default function ReviewModal({
                                     <motion.div
                                         initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className='w-full text-center text-sm text-red-500 font-serif italic bg-red-500/5 p-3 rounded-lg border border-red-500/10'
+                                        className='w-full text-center text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200'
                                     >
-                                        "{error}"
+                                        {error}
                                     </motion.div>
                                 )}
 
                                 {/* Submit Action */}
-                                <div className='w-full pt-4'>
+                                <div className='w-full pt-2'>
                                     <button
                                         onClick={handleSubmit}
                                         disabled={isSubmitting}
-                                        className='group w-full py-4 bg-primary text-white rounded-lg font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden cursor-pointer'
+                                        className='w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer'
                                     >
-                                        <div className='absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300' />
-                                        <span className='relative flex items-center gap-2'>
-                                            {isSubmitting && (
-                                                <Loader2 className='w-5 h-5 animate-spin' />
-                                            )}
-                                            {existingReview
-                                                ? "Update Review"
-                                                : "Publish"}
-                                        </span>
+                                        {isSubmitting && (
+                                            <Loader2 className='w-5 h-5 animate-spin' />
+                                        )}
+                                        {existingReview
+                                            ? "Update Review"
+                                            : "Submit Review"}
                                     </button>
                                 </div>
                             </div>

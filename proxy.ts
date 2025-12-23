@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-// Routes that require authentication
-const protectedRoutes = ["/submit", "/profile"]
+// Routes that require authentication (exact match)
+const protectedRoutesExact = ["/profile"]
+// Routes that require authentication (prefix match)
+const protectedRoutesPrefixes = ["/submit"]
 
 export async function proxy(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -40,9 +42,9 @@ export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // Check if the route is protected
-    const isProtectedRoute = protectedRoutes.some((route) =>
-        pathname.startsWith(route)
-    )
+    const isProtectedRoute =
+        protectedRoutesExact.includes(pathname) ||
+        protectedRoutesPrefixes.some((route) => pathname.startsWith(route))
 
     // Redirect to auth if accessing protected route without being logged in
     if (isProtectedRoute && !user) {

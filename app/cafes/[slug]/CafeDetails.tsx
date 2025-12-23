@@ -295,7 +295,7 @@ export default function CafeDetails({
                             : "left-[calc(100%-0.5rem)] md:left-auto md:translate-x-0 items-start"
                     }`}
                 >
-                    <div className='w-lg max-w-[calc(100svw-1rem)] bg-background rounded-2xl border border-text/10 shadow-sm min-h-screen px-3 py-2 flex flex-col gap-2'>
+                    <div className='w-lg max-w-[calc(100svw-1rem)] bg-text/5 rounded-xl border border-text/10 min-h-screen px-4 py-4 flex flex-col gap-3'>
                         {/* Mobile */}
                         <div
                             className={`w-max h-full absolute md:hidden -left-5 top-2 transform-all z-10 ${
@@ -314,7 +314,7 @@ export default function CafeDetails({
                             </div>
                         </div>
                         {/* Sidebar Content */}
-                        <h2 className='text-xl font-semibold pl-4 md:pl-0'>
+                        <h2 className='text-xl font-semibold font-serif pl-4 md:pl-0'>
                             Cafe Info
                         </h2>
                         {/* Map */}
@@ -392,8 +392,8 @@ export default function CafeDetails({
                                 </ul>
                             </>
                         )}
-                        <div className='w-full h-0.5 bg-text/10 mt-2' />
-                        <div className='font-semibold text-lg text-text/80 flex flex-row gap-2'>
+                        <div className='border-b border-text/10 my-3' />
+                        <div className='font-semibold text-lg font-serif text-text flex flex-row gap-2'>
                             Details{" "}
                             <div className='flex flex-row gap-2 items-center'>
                                 <div
@@ -465,9 +465,9 @@ export default function CafeDetails({
                                 </ul>
                             </>
                         )}
-                        <div className='w-full h-0.5 bg-text/10 mt-2' />
+                        <div className='border-b border-text/10 my-3' />
                         {/* Ratings */}
-                        <div className='font-semibold text-lg text-text/80 flex flex-row items-center gap-2'>
+                        <div className='font-semibold text-lg font-serif text-text flex flex-row items-center gap-2'>
                             Ratings
                             <div className='flex flex-row items-center gap-2'>
                                 <div className='text-sm font-bold px-2 py-0.5 rounded-lg bg-green-200/40 text-green-700 flex flex-row items-center gap-1'>
@@ -479,9 +479,9 @@ export default function CafeDetails({
                                 </div>
                             </div>
                         </div>
-                        <div className='w-full h-0.5 bg-text/10 mt-2' />
+                        <div className='border-b border-text/10 my-3' />
                         {/* Amenities */}
-                        <div className='font-semibold text-lg text-text/80'>
+                        <div className='font-semibold text-lg font-serif text-text'>
                             Amenities
                         </div>
                         <ul className='flex flex-row flex-wrap items-center gap-2 text-sm font-semibold'>
@@ -532,9 +532,9 @@ export default function CafeDetails({
                                     </li>
                                 )}
                         </ul>
-                        <div className='w-full h-0.5 bg-text/10 mt-2' />
+                        <div className='border-b border-text/10 my-3' />
                         {/* Extras */}
-                        <div className='font-semibold text-lg text-text/80 flex flex-row items-center gap-2'>
+                        <div className='font-semibold text-lg font-serif text-text flex flex-row items-center gap-2'>
                             Extras
                             {cafe.serves_food && (
                                 <span className='text-xs text-text/80 bg-secondary/40 px-2 py-1 rounded-lg'>
@@ -586,9 +586,9 @@ export default function CafeDetails({
                                     </p>
                                 )}
                         </div>
-                        <div className='w-full h-0.5 bg-text/10 mt-2' />
+                        <div className='border-b border-text/10 my-3' />
                         {/* Operating Hours */}
-                        <div className='font-semibold text-lg text-text/80'>
+                        <div className='font-semibold text-lg font-serif text-text'>
                             Operating Hours
                         </div>
                         {cafe.operating_hours &&
@@ -686,7 +686,7 @@ export default function CafeDetails({
                                         )}
                                     </div>
                                 )}
-                                <div className='h-1 w-full bg-text/40' />
+                                <div className='border-b border-text/20' />
                             </>
                         )}
                     </div>
@@ -700,11 +700,16 @@ export default function CafeDetails({
                     </div>
 
                     {/* Reviews Section */}
-                    <div className='w-full mt-8'>
+                    <section className='w-full mt-10'>
                         <div className='flex flex-row items-center justify-between mb-6'>
-                            <h3 className='text-2xl font-serif font-bold'>
+                            <h2 className='text-xl font-semibold font-serif flex items-center gap-2'>
                                 Reviews
-                            </h3>
+                                {reviews.length > 0 && (
+                                    <span className='text-sm font-normal text-text/60'>
+                                        ({reviews.length})
+                                    </span>
+                                )}
+                            </h2>
                             {user ? (
                                 <button
                                     onClick={() => setIsReviewOpen(true)}
@@ -750,22 +755,22 @@ export default function CafeDetails({
                                 ))}
                             </div>
                         ) : (
-                            <div className='bg-text/5 rounded-xl p-8 text-center text-text/50'>
-                                No reviews yet. Be the first to share your
-                                experience!
+                            <div className='bg-text/5 rounded-xl border border-text/10 p-8 text-center'>
+                                <p className='text-text/60 font-medium'>
+                                    No reviews yet. Be the first to share your
+                                    experience!
+                                </p>
                             </div>
                         )}
-                    </div>
+                    </section>
                 </div>
             </section>
             {remainingImages && remainingImages.length > 0 && (
                 <section
                     id='images'
-                    className='px-4 py-10 w-full'
+                    className='px-4 py-10 w-full max-w-7xl mx-auto'
                 >
-                    <div className='font-semibold text-lg text-text/80'>
-                        Images
-                    </div>
+                    <h2 className='text-xl font-semibold font-serif'>Images</h2>
                     <div className='flex flex-row gap-4 flex-wrap py-10 w-full'>
                         {remainingImages.map((image, idx) => (
                             <img
