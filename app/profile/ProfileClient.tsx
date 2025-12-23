@@ -1,0 +1,642 @@
+"use client"
+
+import { AuthContext } from "@/components/AuthProvider"
+import {
+    getAllBadges,
+    getCafesByIds,
+    getProfileWithBadges,
+    updateProfile,
+} from "@/app/api/actions/profile"
+import { ProfileWithBadges, Tables } from "@/utils/types/extra"
+import { motion, AnimatePresence } from "motion/react"
+import {
+    Award,
+    Camera,
+    Check,
+    Coffee,
+    Edit2,
+    Heart,
+    MapPin,
+    Medal,
+    MessageSquare,
+    Shield,
+    Sparkles,
+    Star,
+    User,
+    X,
+} from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useContext, useEffect, useState } from "react"
+
+type BadgeDefinition = Tables<"badge_definitions">
+
+// Scout rank display config
+const rankConfig = {
+    novice: { label: "Novice Scout", icon: User, color: "text-secondary" },
+    expert: { label: "Expert Scout", icon: Medal, color: "text-primary" },
+    vanguard: {
+        label: "Vanguard Scout",
+        icon: Shield,
+        color: "text-amber-600",
+    },
+}
+
+export default function ProfileClient() {
+    const router = useRouter()
+    const authContext = useContext(AuthContext)
+    const { user, profile: authProfile, refreshProfile } = authContext
+
+    // States
+    const [profileData, setProfileData] = useState<ProfileWithBadges | null>(
+        null
+    )
+    const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])
+    const [loading, setLoading] = useState(true)
+    const [isEditing, setIsEditing] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
+
+    // Edit form states
+    const [editDisplayName, setEditDisplayName] = useState("")
+    const [editBio, setEditBio] = useState("")
+
+    // Passport cafe data
+    const [visitedCafes, setVisitedCafes] = useState<
+        { name: string; slug: string }[]
+    >([])
+    const [wishlistCafes, setWishlistCafes] = useState<
+        { name: string; slug: string }[]
+    >([])
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!user && !loading) {
+            router.push("/auth")
+        }
+    }, [user, loading, router])
+
+    // Fetch profile data
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!user) return
+
+            try {
+                const [profile, badges] = await Promise.all([
+                    getProfileWithBadges(user.id),
+                    getAllBadges(),
+                ])
+
+                setProfileData(profile)
+                setAllBadges(badges)
+
+                if (profile) {
+                    setEditDisplayName(profile.display_name)
+                    setEditBio(profile.bio || "")
+
+                    // Fetch passport cafes
+                    if (profile.passport) {
+                        const [visited, wishlist] = await Promise.all([
+                            getCafesByIds(profile.passport.visited_ids || []),
+                            getCafesByIds(profile.passport.wishlist_ids || []),
+                        ])
+                        setVisitedCafes(
+                            visited.map((c) => ({ name: c.name, slug: c.slug }))
+                        )
+                        setWishlistCafes(
+                            wishlist.map((c) => ({
+                                name: c.name,
+                                slug: c.slug,
+                            }))
+                        )
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching profile:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchData()
+    }, [user])
+
+    // Handle save
+    const handleSave = async () => {
+        setIsSaving(true)
+        try {
+            const result = await updateProfile({
+                display_name: editDisplayName,
+                bio: editBio,
+            })
+
+            if (result.success) {
+                await refreshProfile()
+                setProfileData((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              display_name: editDisplayName,
+                              bio: editBio,
+                          }
+                        : null
+                )
+                setIsEditing(false)
+            }
+        } catch (error) {
+            console.error("Error saving profile:", error)
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    // Cancel edit
+    const handleCancel = () => {
+        setEditDisplayName(profileData?.display_name || "")
+        setEditBio(profileData?.bio || "")
+        setIsEditing(false)
+    }
+
+    if (loading || !user) {
+        return (
+            <main className='w-full min-h-screen px-4 py-8'>
+                <div className='max-w-7xl mx-auto'>
+                    {/* Header skeleton */}
+                    <div className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
+                        <div className='w-28 h-28 bg-text/10 rounded-full animate-pulse' />
+                        <div className='flex-1 flex flex-col items-center md:items-start gap-3'>
+                            <div className='h-8 w-48 bg-text/10 rounded-lg animate-pulse' />
+                            <div className='h-5 w-32 bg-text/5 rounded-lg animate-pulse' />
+                            <div className='h-4 w-64 bg-text/5 rounded-lg animate-pulse' />
+                        </div>
+                    </div>
+                    {/* Badges skeleton */}
+                    <div className='mt-10'>
+                        <div className='h-6 w-40 bg-text/10 rounded-lg animate-pulse mb-4' />
+                        <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4'>
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div
+                                    key={i}
+                                    className='aspect-square bg-text/5 rounded-xl animate-pulse'
+                                />
+                            ))}
+                        </div>
+                    </div>
+                    {/* Stats skeleton */}
+                    <div className='mt-10'>
+                        <div className='h-6 w-32 bg-text/10 rounded-lg animate-pulse mb-4' />
+                        <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <div
+                                    key={i}
+                                    className='h-28 bg-text/5 rounded-xl animate-pulse'
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </main>
+        )
+    }
+
+    if (!profileData) {
+        return (
+            <main className='w-full min-h-screen flex items-center justify-center px-4'>
+                <div className='text-center'>
+                    <p className='text-xl font-serif'>Profile not found</p>
+                    <Link
+                        href='/'
+                        className='text-primary hover:underline mt-2 inline-block'
+                    >
+                        Go home
+                    </Link>
+                </div>
+            </main>
+        )
+    }
+
+    const stats = profileData.stats
+    const passport = profileData.passport
+    const earnedBadgeIds = new Set(profileData.badges.map((b) => b.badge_id))
+    const RankIcon = stats?.scout_rank
+        ? rankConfig[stats.scout_rank].icon
+        : User
+
+    return (
+        <main className='w-full min-h-screen px-4 py-8'>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='max-w-7xl mx-auto'
+            >
+                {/* Profile Header */}
+                <section className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
+                    {/* Avatar */}
+                    <div className='relative'>
+                        <div className='w-28 h-28 rounded-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden border-4 border-background'>
+                            {profileData.avatar_url ? (
+                                <Image
+                                    src={profileData.avatar_url}
+                                    alt={profileData.display_name}
+                                    fill
+                                    className='object-cover'
+                                />
+                            ) : (
+                                <User className='w-12 h-12 text-text/40' />
+                            )}
+                        </div>
+                        {profileData.is_supporter && (
+                            <div
+                                className='absolute -bottom-1 -right-1 bg-amber-500 text-white p-1.5 rounded-full shadow-lg'
+                                title='Supporter'
+                            >
+                                <Sparkles className='w-4 h-4' />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Info */}
+                    <div className='flex-1 flex flex-col items-center md:items-start gap-1'>
+                        <div className='flex flex-row items-center gap-3'>
+                            {isEditing ? (
+                                <input
+                                    type='text'
+                                    value={editDisplayName}
+                                    onChange={(e) =>
+                                        setEditDisplayName(e.target.value)
+                                    }
+                                    className='text-2xl md:text-3xl font-bold font-serif bg-transparent border-b-2 border-primary focus:outline-none px-1'
+                                    placeholder='Display Name'
+                                />
+                            ) : (
+                                <h1 className='text-2xl md:text-3xl font-bold font-serif'>
+                                    {profileData.display_name}
+                                </h1>
+                            )}
+                            {!isEditing && (
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
+                                    title='Edit Profile'
+                                >
+                                    <Edit2 className='w-4 h-4' />
+                                </button>
+                            )}
+                        </div>
+                        <p className='text-text/60 font-medium'>
+                            @{profileData.username}
+                        </p>
+
+                        {/* Bio */}
+                        {isEditing ? (
+                            <textarea
+                                value={editBio}
+                                onChange={(e) => setEditBio(e.target.value)}
+                                className='w-full mt-2 p-2 bg-text/5 border border-text/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none'
+                                placeholder='Write something about yourself...'
+                                rows={3}
+                            />
+                        ) : (
+                            <p className='text-text/80 mt-2 text-center md:text-left max-w-md'>
+                                {profileData.bio || "No bio yet"}
+                            </p>
+                        )}
+
+                        {/* Edit Actions */}
+                        <AnimatePresence>
+                            {isEditing && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className='flex flex-row gap-2 mt-3'
+                                >
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className='flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer'
+                                    >
+                                        <Check className='w-4 h-4' />
+                                        {isSaving ? "Saving..." : "Save"}
+                                    </button>
+                                    <button
+                                        onClick={handleCancel}
+                                        disabled={isSaving}
+                                        className='flex items-center gap-1.5 px-4 py-2 bg-text/10 rounded-lg font-medium hover:bg-text/20 transition-colors cursor-pointer'
+                                    >
+                                        <X className='w-4 h-4' />
+                                        Cancel
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Member Info */}
+                        <div className='flex flex-row flex-wrap gap-3 mt-3 text-sm text-text/60'>
+                            {profileData.is_supporter &&
+                                profileData.support_since && (
+                                    <span className='flex items-center gap-1 text-amber-600 font-medium'>
+                                        <Sparkles className='w-3.5 h-3.5' />
+                                        Supporter since{" "}
+                                        {new Date(
+                                            profileData.support_since
+                                        ).toLocaleDateString("en-US", {
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
+                                    </span>
+                                )}
+                            {profileData.created_at && (
+                                <span>
+                                    Member since{" "}
+                                    {new Date(
+                                        profileData.created_at
+                                    ).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        year: "numeric",
+                                    })}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Badges Collection - Moved to top */}
+                <section className='mt-10'>
+                    <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
+                        <Medal className='w-5 h-5' />
+                        Badge Collection
+                        <span className='text-sm font-normal text-text/60'>
+                            ({profileData.badges.length}/{allBadges.length}{" "}
+                            earned)
+                        </span>
+                    </h2>
+                    <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4'>
+                        {allBadges.map((badge) => {
+                            const isEarned = earnedBadgeIds.has(badge.id)
+                            const rarityColors = {
+                                common: "bg-text/5 border-text/20",
+                                rare: "bg-primary/5 border-primary/30",
+                                legendary:
+                                    "bg-secondary/10 border-secondary/50",
+                            }
+
+                            return (
+                                <motion.div
+                                    key={badge.id}
+                                    whileHover={{ scale: 1.05 }}
+                                    className={`relative aspect-square rounded-xl p-3 flex flex-col items-center justify-center text-center border-2 transition-all ${
+                                        isEarned
+                                            ? `${rarityColors[badge.rarity]} shadow-sm`
+                                            : "bg-text/5 border-text/10 opacity-40 grayscale"
+                                    }`}
+                                    title={`${badge.name}${isEarned ? " ✓" : " (locked)"}\n${badge.description}`}
+                                >
+                                    {badge.image_url ? (
+                                        <Image
+                                            src={badge.image_url}
+                                            alt={badge.name}
+                                            width={48}
+                                            height={48}
+                                            className='mb-1'
+                                        />
+                                    ) : (
+                                        <Award
+                                            className={`w-10 h-10 mb-1 ${isEarned ? "text-primary" : "text-text/30"}`}
+                                        />
+                                    )}
+                                    <span className='text-xs font-semibold leading-tight line-clamp-2'>
+                                        {badge.name}
+                                    </span>
+                                    {isEarned && (
+                                        <div className='absolute -top-1 -right-1 bg-primary text-white p-0.5 rounded-full'>
+                                            <Check className='w-3 h-3' />
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )
+                        })}
+                    </div>
+                    {allBadges.length === 0 && (
+                        <p className='text-center text-text/60 py-8'>
+                            No badges available yet
+                        </p>
+                    )}
+                </section>
+
+                {/* Stats Grid - Cleaned up icons */}
+                <section className='mt-10'>
+                    <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
+                        <Award className='w-5 h-5' />
+                        Your Stats
+                    </h2>
+                    <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                        {/* Scout Rank */}
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                            <div
+                                className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
+                            >
+                                <RankIcon
+                                    className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text/40"}`}
+                                />
+                            </div>
+                            <span className='text-lg font-bold capitalize'>
+                                {stats?.scout_rank || "Novice"}
+                            </span>
+                            <span className='text-xs text-text/60'>
+                                Scout Rank
+                            </span>
+                        </div>
+                        {/* Reviews - Clickable */}
+                        <a
+                            href='#reviews'
+                            className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-text/20 transition-colors cursor-pointer'
+                        >
+                            <div className='p-2 bg-primary/10 rounded-lg mb-2'>
+                                <MessageSquare className='w-6 h-6 text-primary' />
+                            </div>
+                            <span className='text-2xl font-bold'>
+                                {stats?.total_reviews ?? 0}
+                            </span>
+                            <span className='text-xs text-text/60'>
+                                Reviews
+                            </span>
+                        </a>
+                        {/* Photos */}
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                            <div className='p-2 bg-secondary/10 rounded-lg mb-2'>
+                                <Camera className='w-6 h-6 text-secondary' />
+                            </div>
+                            <span className='text-2xl font-bold'>
+                                {stats?.total_photos ?? 0}
+                            </span>
+                            <span className='text-xs text-text/60'>Photos</span>
+                        </div>
+                        {/* Scouted */}
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                            <div className='p-2 bg-text/10 rounded-lg mb-2'>
+                                <Coffee className='w-6 h-6 text-text/70' />
+                            </div>
+                            <span className='text-2xl font-bold'>
+                                {stats?.total_scouted ?? 0}
+                            </span>
+                            <span className='text-xs text-text/60'>
+                                Scouted
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Passport Section */}
+                <section className='mt-10'>
+                    <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
+                        <MapPin className='w-5 h-5' />
+                        Coffee Passport
+                    </h2>
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                        {/* Visited */}
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-5 hover:border-text/20 transition-colors'>
+                            <div className='flex items-center gap-2 mb-4'>
+                                <div className='p-2 bg-primary/10 rounded-lg'>
+                                    <Star className='w-5 h-5 text-primary' />
+                                </div>
+                                <span className='font-semibold text-text'>
+                                    Visited
+                                </span>
+                                <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                                    {passport?.visited_ids?.length ?? 0}
+                                </span>
+                            </div>
+                            {visitedCafes.length > 0 ? (
+                                <ul className='space-y-1.5 text-sm'>
+                                    {visitedCafes.slice(0, 5).map((cafe) => (
+                                        <li key={cafe.slug}>
+                                            <Link
+                                                href={`/cafes/${cafe.slug}`}
+                                                className='text-text/70 hover:text-primary transition-colors'
+                                            >
+                                                {cafe.name}
+                                            </Link>
+                                        </li>
+                                    ))}
+                                    {visitedCafes.length > 5 && (
+                                        <li className='text-text/50 font-medium'>
+                                            +{visitedCafes.length - 5} more
+                                        </li>
+                                    )}
+                                </ul>
+                            ) : (
+                                <p className='text-sm text-text/40'>
+                                    No visits yet
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Wishlist */}
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-5 hover:border-text/20 transition-colors'>
+                            <div className='flex items-center gap-2 mb-4'>
+                                <div className='p-2 bg-secondary/20 rounded-lg'>
+                                    <Heart className='w-5 h-5 text-secondary' />
+                                </div>
+                                <span className='font-semibold text-text'>
+                                    Wishlist
+                                </span>
+                                <span className='ml-auto bg-secondary/20 text-secondary text-sm font-bold px-2.5 py-1 rounded-full'>
+                                    {passport?.wishlist_ids?.length ?? 0}
+                                </span>
+                            </div>
+                            {wishlistCafes.length > 0 ? (
+                                <ul className='space-y-1.5 text-sm'>
+                                    {wishlistCafes.slice(0, 5).map((cafe) => (
+                                        <li key={cafe.slug}>
+                                            <Link
+                                                href={`/cafes/${cafe.slug}`}
+                                                className='text-text/70 hover:text-secondary transition-colors'
+                                            >
+                                                {cafe.name}
+                                            </Link>
+                                        </li>
+                                    ))}
+                                    {wishlistCafes.length > 5 && (
+                                        <li className='text-text/50 font-medium'>
+                                            +{wishlistCafes.length - 5} more
+                                        </li>
+                                    )}
+                                </ul>
+                            ) : (
+                                <p className='text-sm text-text/40'>
+                                    No cafes in wishlist
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Favorite Region */}
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-5 hover:border-text/20 transition-colors'>
+                            <div className='flex items-center gap-2 mb-4'>
+                                <div className='p-2 bg-text/10 rounded-lg'>
+                                    <MapPin className='w-5 h-5 text-text/70' />
+                                </div>
+                                <span className='font-semibold text-text'>
+                                    Favorite Region
+                                </span>
+                            </div>
+                            {passport?.favorite_region ? (
+                                <p className='text-lg font-bold text-text'>
+                                    {passport.favorite_region}
+                                </p>
+                            ) : (
+                                <p className='text-sm text-text/40'>
+                                    Not set yet
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Reviews Section */}
+                <section
+                    id='reviews'
+                    className='mt-10'
+                >
+                    <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
+                        <MessageSquare className='w-5 h-5' />
+                        Your Reviews
+                    </h2>
+                    <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                        {stats?.total_reviews && stats.total_reviews > 0 ? (
+                            <div className='text-center py-4'>
+                                <p className='text-text/60 mb-4'>
+                                    You&apos;ve written {stats.total_reviews}{" "}
+                                    review{stats.total_reviews > 1 ? "s" : ""}
+                                </p>
+                                <p className='text-sm text-text/40'>
+                                    Review viewing coming soon
+                                </p>
+                            </div>
+                        ) : (
+                            <div className='text-center py-8'>
+                                <MessageSquare className='w-12 h-12 text-text/20 mx-auto mb-4' />
+                                <p className='text-text/60 font-medium'>
+                                    No reviews yet
+                                </p>
+                                <p className='text-sm text-text/40 mt-1'>
+                                    Share your thoughts on cafes you&apos;ve
+                                    visited
+                                </p>
+                                <Link
+                                    href='/cafes'
+                                    className='inline-block mt-4 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                                >
+                                    Explore Cafes
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* Bottom Spacing */}
+                <div className='h-16' />
+            </motion.div>
+        </main>
+    )
+}

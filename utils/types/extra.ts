@@ -24,3 +24,27 @@ export interface CafeFilters {
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";
 }
+
+// Profile Stats JSON structure
+export interface ProfileStats {
+    scout_rank: Database['public']['Enums']['scout_rank'];
+    total_photos: number;
+    total_reviews: number;
+    total_scouted: number;
+}
+
+// Profile Passport JSON structure
+export interface ProfilePassport {
+    visited_ids: string[];
+    wishlist_ids: string[];
+    favorite_region: string;
+}
+
+// Profile with badges type
+export type ProfileWithBadges = Tables<'profiles'> & {
+    stats: ProfileStats | null;
+    passport: ProfilePassport | null;
+    badges: (Tables<'user_badges'> & {
+        badge: Tables<'badge_definitions'>;
+    })[];
+}

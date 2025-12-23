@@ -2,7 +2,7 @@ import { Construction } from "lucide-react"
 import Link from "next/link"
 
 export const metadata = {
-    title: "Blog | Grounds",
+    title: "Blog",
     description:
         "Coffee stories, guides, and news from the Philippines - Coming Soon",
 }

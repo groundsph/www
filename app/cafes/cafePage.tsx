@@ -189,13 +189,13 @@ export default function CafesPageClient() {
 
             {/* Controls - Compact Row */}
             <div className='flex flex-col gap-3'>
-                <div className='flex flex-row gap-2'>
+                <div className='flex flex-row gap-2 flex-wrap'>
                     <input
                         type='text'
                         placeholder='Search cafes...'
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className='flex-1 min-w-0 px-4 py-2 rounded-lg border border-text/20 bg-transparent focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all text-sm'
+                        className='flex-1 min-w-40 px-4 py-2 rounded-lg border border-text/20 bg-transparent focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all text-sm'
                     />
                     <button
                         onClick={() => setFiltersOpen(!filtersOpen)}
@@ -208,7 +208,7 @@ export default function CafesPageClient() {
                         <SlidersHorizontal className='w-4 h-4' />
                         <span className='hidden sm:inline'>Filters</span>
                         {activeFilterCount > 0 && (
-                            <span className='bg-background text-text text-xs font-bold px-1.5 py-0.5 rounded-full'>
+                            <span className='bg-background text-text text-xs font-bold px-2 md:px-1.5 py-0.5 rounded-full'>
                                 {activeFilterCount}
                             </span>
                         )}
@@ -222,28 +222,27 @@ export default function CafesPageClient() {
                         <option value='rating'>Highest Rated</option>
                         <option value='reviews'>Most Reviewed</option>
                     </select>
-                </div>
-
-                {/* Location Badge */}
-                {userLocation && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className='flex flex-row items-center gap-2'
-                    >
-                        <button
-                            onClick={() => toggleFilter("near_me")}
-                            className={`flex flex-row items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
-                                filters.near_me
-                                    ? "bg-text text-background border-text"
-                                    : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
-                            }`}
+                    {/* Location Badge */}
+                    {userLocation && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className='flex flex-row items-center gap-2'
                         >
-                            <MapPinIcon className='w-3.5 h-3.5' />
-                            Near {userLocation.city || userLocation.region}
-                        </button>
-                    </motion.div>
-                )}
+                            <button
+                                onClick={() => toggleFilter("near_me")}
+                                className={`flex flex-row items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all border cursor-pointer ${
+                                    filters.near_me
+                                        ? "bg-text text-background border-text"
+                                        : "bg-transparent text-text border-text/20 hover:border-text/50"
+                                }`}
+                            >
+                                <MapPinIcon className='w-4 h-4' />
+                                Near {userLocation.city || userLocation.region}
+                            </button>
+                        </motion.div>
+                    )}
+                </div>
 
                 {/* Expandable Filters Panel */}
                 <AnimatePresence>
