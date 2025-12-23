@@ -52,3 +52,80 @@ export type ProfileWithBadges = Tables<'profiles'> & {
         badge: Tables<'badge_definitions'>;
     })[];
 }
+
+// Cafe Submission Form Data
+export interface CafeSubmission {
+    // Step 1: Basic Info
+    name: string;
+    description: string;
+    thumbnail: File | null;
+    gallery: File[];
+
+    // Step 2: Location
+    region: string;
+    province: string;
+    city_municipality: string;
+    area: string;
+    address_display: string;
+    lat: number | null;
+    lng: number | null;
+
+    // Step 3: Amenities & Features
+    has_wifi: boolean;
+    has_sockets: boolean;
+    has_parking: boolean;
+    has_aircon: boolean;
+    is_pet_friendly: boolean;
+    has_outdoor_seating: boolean;
+    serves_food: boolean;
+    is_work_friendly: boolean;
+    price_level: Database['public']['Enums']['price_level'];
+    payment_methods: string;
+    specialty: string[];
+    tags: string[];
+    brew_methods: string[];
+    roaster: string;
+
+    // Step 4: Operating Hours
+    operating_hours: OperatingHours;
+
+    // Step 5: Contact & Socials
+    website_url: string;
+    phone: string;
+    email: string;
+    socials: CafeSocial[];
+}
+
+// Default empty submission for form initialization
+export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
+    name: '',
+    description: '',
+    thumbnail: null,
+    gallery: [],
+    region: '',
+    province: '',
+    city_municipality: '',
+    area: '',
+    address_display: '',
+    lat: null,
+    lng: null,
+    has_wifi: false,
+    has_sockets: false,
+    has_parking: false,
+    has_aircon: false,
+    is_pet_friendly: false,
+    has_outdoor_seating: false,
+    serves_food: false,
+    is_work_friendly: false,
+    price_level: 'medium',
+    payment_methods: '',
+    specialty: [],
+    tags: [],
+    brew_methods: [],
+    roaster: '',
+    operating_hours: [],
+    website_url: '',
+    phone: '',
+    email: '',
+    socials: [],
+};

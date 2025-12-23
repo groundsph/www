@@ -4,7 +4,67 @@ import { createClient } from "@/utils/supabase/server"
 
 const AVATAR_BUCKET = "avatars"
 const REVIEW_BUCKET = "reviews"
+const CAFE_BUCKET = "cafes"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const MAX_CAFE_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+
+/**
+ * Upload a cafe image to Supabase Storage
+ * File is stored at: cafes/{userId}/{timestamp}-{random}.{ext}
+ * Used for both thumbnail and gallery images during cafe submission
+ */
+export async function uploadCafeImage(formData: FormData): Promise<{
+    success: boolean
+    url?: string
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Get current user
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    const file = formData.get("image") as File | null
+    if (!file) {
+        return { success: false, error: "No file provided" }
+    }
+
+    // Validate file type
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    const isValidType = ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExt)
+
+    if (!isValidType) {
+        return { success: false, error: "Invalid file type (JPEG, PNG, WebP, GIF only)" }
+    }
+
+    // Validate size
+    if (file.size > MAX_CAFE_IMAGE_SIZE) {
+        return { success: false, error: "File too large (max 5MB)" }
+    }
+
+    // Generate unique filename
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${user.id}/${fileName}`
+
+    const { error: uploadError } = await db.storage
+        .from(CAFE_BUCKET)
+        .upload(filePath, file)
+
+    if (uploadError) {
+        console.error("Cafe image upload error:", uploadError)
+        return { success: false, error: "Upload failed" }
+    }
+
+    const { data: urlData } = db.storage
+        .from(CAFE_BUCKET)
+        .getPublicUrl(filePath)
+
+    return { success: true, url: urlData.publicUrl }
+}
+
+
 
 /**
  * Upload a review image to Supabase Storage

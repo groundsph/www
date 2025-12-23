@@ -10,12 +10,14 @@ interface ImageUploadProps {
     value: (string | File)[]
     onChange: (files: (string | File)[]) => void
     disabled?: boolean
+    maxImages?: number // 0 or undefined = unlimited
 }
 
 export default function ImageUpload({
     value = [], // Default to empty array to be safe
     onChange,
     disabled,
+    maxImages = 3, // Default to 3 for backwards compatibility, 0 = unlimited
 }: ImageUploadProps) {
     const [previewUrls, setPreviewUrls] = useState<Map<File, string>>(new Map())
 
@@ -45,17 +47,18 @@ export default function ImageUpload({
         (acceptedFiles: File[]) => {
             if (acceptedFiles.length === 0) return
 
-            // Filter out files that are already in value to prevent duplicates if needed
-            // But usually we just append. Checking logic might be complex with File objects equality
-
-            const remainingSlots = 3 - value.length
-            const filesToAdd = acceptedFiles.slice(0, remainingSlots)
-
-            if (filesToAdd.length > 0) {
-                onChange([...value, ...filesToAdd])
+            // If maxImages is 0 or not set, allow unlimited
+            if (maxImages === 0) {
+                onChange([...value, ...acceptedFiles])
+            } else {
+                const remainingSlots = maxImages - value.length
+                const filesToAdd = acceptedFiles.slice(0, remainingSlots)
+                if (filesToAdd.length > 0) {
+                    onChange([...value, ...filesToAdd])
+                }
             }
         },
-        [onChange, value]
+        [onChange, value, maxImages]
     )
 
     const removeImage = (itemToRemove: string | File) => {
@@ -81,7 +84,7 @@ export default function ImageUpload({
             "image/gif": [],
         },
         maxSize: 5 * 1024 * 1024, // 5MB
-        disabled: disabled || value.length >= 3, // Max 3 images
+        disabled: disabled || (maxImages > 0 && value.length >= maxImages),
         multiple: true,
     })
 
@@ -111,7 +114,7 @@ export default function ImageUpload({
                 ))}
             </div>
 
-            {value.length < 3 && (
+            {(maxImages === 0 || value.length < maxImages) && (
                 <div
                     {...getRootProps()}
                     className={cn(
@@ -131,7 +134,8 @@ export default function ImageUpload({
                             Click to upload images
                         </p>
                         <p className='text-xs text-text/50'>
-                            JPG, PNG, WebP up to 5MB (Max 3)
+                            JPG, PNG, WebP up to 5MB
+                            {maxImages > 0 ? ` (Max ${maxImages})` : ""}
                         </p>
                     </div>
                 </div>

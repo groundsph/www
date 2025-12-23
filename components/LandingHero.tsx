@@ -8,7 +8,6 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
 import { useContext, useEffect, useState } from "react"
 import { AuthContext } from "./AuthProvider"
-import { NotificationContext } from "./NotificationProvider"
 
 interface LandingHeroProps {
     featured: CafeWithRatings | null
@@ -17,9 +16,6 @@ interface LandingHeroProps {
 export default function LandingHero({
     featured: initialFeatured,
 }: LandingHeroProps) {
-    // Notifications
-    const { addNotification } = useContext(NotificationContext)
-
     const { profile } = useContext(AuthContext)
     const [featured, setFeatured] = useState<CafeWithRatings | null>(
         initialFeatured
@@ -213,25 +209,6 @@ export default function LandingHero({
                     )}
                 </AnimatePresence>
             </motion.div>
-            {/* Test notifications */}
-            <button
-                onClick={() => {
-                    addNotification(
-                        "Success notification",
-                        "success",
-                        "success"
-                    )
-                    addNotification("Error notification", "error", "error")
-                    addNotification("Info notification", "info", "info")
-                    addNotification(
-                        "Warning notification",
-                        "warning",
-                        "warning"
-                    )
-                }}
-            >
-                Test Notifications
-            </button>
         </section>
     )
 }

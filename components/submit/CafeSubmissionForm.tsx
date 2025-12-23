@@ -1,0 +1,1595 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { motion, AnimatePresence } from "motion/react"
+import {
+    ChevronLeft,
+    ChevronRight,
+    Check,
+    Loader2,
+    MapPin,
+    Coffee,
+    Clock,
+    Phone,
+    Settings,
+    Send,
+    Wifi,
+    Plug,
+    Car,
+    Wind,
+    Dog,
+    Sun,
+    Utensils,
+} from "lucide-react"
+import { cn } from "@/utils/cn"
+import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
+import {
+    PHILIPPINES_LOCATIONS,
+    getProvincesForRegion,
+    getCitiesForProvince,
+    CAFE_VIBE_TAGS,
+    CAFE_SPECIALTIES,
+    BREW_METHODS,
+    PAYMENT_METHODS,
+} from "@/utils/data/philippines"
+import { uploadCafeImage } from "@/utils/supabase/storage"
+import { submitCafe } from "@/app/api/actions/submit"
+import ImageUpload from "@/components/reviews/ImageUpload"
+import AmenityToggles from "./AmenityToggles"
+import OperatingHoursEditor from "./OperatingHoursEditor"
+import SocialLinksEditor from "./SocialLinksEditor"
+import LocationPicker from "./LocationPicker"
+
+const STEPS = [
+    { id: 1, title: "Basic Info", icon: Coffee },
+    { id: 2, title: "Location", icon: MapPin },
+    { id: 3, title: "Amenities", icon: Settings },
+    { id: 4, title: "Hours", icon: Clock },
+    { id: 5, title: "Contact", icon: Phone },
+    { id: 6, title: "Submit", icon: Send },
+]
+
+const DRAFT_KEY = "grounds_cafe_submission_draft"
+
+interface CafeSubmissionFormProps {
+    onSuccess?: (cafeId: string, slug: string) => void
+}
+
+export default function CafeSubmissionForm({
+    onSuccess,
+}: CafeSubmissionFormProps) {
+    const [currentStep, setCurrentStep] = useState(1)
+    const [formData, setFormData] = useState<CafeSubmission>(
+        DEFAULT_CAFE_SUBMISSION
+    )
+    const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
+    const [galleryFiles, setGalleryFiles] = useState<File[]>([])
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState(false)
+
+    // Custom comma-separated inputs
+    const [customPaymentMethods, setCustomPaymentMethods] = useState("")
+    const [customSpecialties, setCustomSpecialties] = useState("")
+    const [customTags, setCustomTags] = useState("")
+
+    // Load draft from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem(DRAFT_KEY)
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved)
+                // Don't restore file objects, just form data
+                setFormData({ ...DEFAULT_CAFE_SUBMISSION, ...parsed })
+            } catch (e) {
+                console.error("Failed to load draft:", e)
+            }
+        }
+    }, [])
+
+    // Save draft to localStorage when form data changes
+    useEffect(() => {
+        const { thumbnail, gallery, ...savable } = formData
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(savable))
+    }, [formData])
+
+    const clearDraft = () => {
+        localStorage.removeItem(DRAFT_KEY)
+    }
+
+    const updateFormData = useCallback(
+        <K extends keyof CafeSubmission>(key: K, value: CafeSubmission[K]) => {
+            setFormData((prev) => ({ ...prev, [key]: value }))
+        },
+        []
+    )
+
+    const validateStep = (step: number): string | null => {
+        switch (step) {
+            case 1:
+                if (!formData.name.trim()) return "Cafe name is required"
+                if (!thumbnailFile) return "Thumbnail image is required"
+                break
+            case 2:
+                if (!formData.region) return "Please select a region"
+                if (!formData.province) return "Please select a province"
+                if (!formData.city_municipality) return "Please select a city"
+                if (!formData.address_display.trim())
+                    return "Address is required"
+                if (formData.lat === null || formData.lng === null)
+                    return "Please set the location coordinates"
+                break
+        }
+        return null
+    }
+
+    const nextStep = () => {
+        const validationError = validateStep(currentStep)
+        if (validationError) {
+            setError(validationError)
+            return
+        }
+        setError(null)
+        setCurrentStep((prev) => Math.min(prev + 1, STEPS.length))
+    }
+
+    const prevStep = () => {
+        setError(null)
+        setCurrentStep((prev) => Math.max(prev - 1, 1))
+    }
+
+    const handleSubmit = async () => {
+        setIsSubmitting(true)
+        setError(null)
+
+        try {
+            // Upload thumbnail
+            if (!thumbnailFile) {
+                throw new Error("Thumbnail is required")
+            }
+
+            const thumbnailFormData = new FormData()
+            thumbnailFormData.append("image", thumbnailFile)
+            const thumbnailResult = await uploadCafeImage(thumbnailFormData)
+
+            if (!thumbnailResult.success || !thumbnailResult.url) {
+                throw new Error(
+                    thumbnailResult.error || "Failed to upload thumbnail"
+                )
+            }
+
+            // Upload gallery images
+            const galleryUrls: string[] = []
+            for (const file of galleryFiles) {
+                const galleryFormData = new FormData()
+                galleryFormData.append("image", file)
+                const result = await uploadCafeImage(galleryFormData)
+                if (result.success && result.url) {
+                    galleryUrls.push(result.url)
+                }
+            }
+
+            // Submit cafe
+            const result = await submitCafe(
+                formData,
+                thumbnailResult.url,
+                galleryUrls
+            )
+
+            if (!result.success) {
+                throw new Error(result.error || "Failed to submit cafe")
+            }
+
+            // Success!
+            clearDraft()
+            setSuccess(true)
+            onSuccess?.(result.cafeId!, result.slug!)
+        } catch (err: any) {
+            setError(err.message || "An error occurred")
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    // Get available provinces and cities based on selections
+    const availableProvinces = formData.region
+        ? getProvincesForRegion(formData.region)
+        : []
+    const availableCities =
+        formData.region && formData.province
+            ? getCitiesForProvince(formData.region, formData.province)
+            : []
+
+    if (success) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className='text-center py-12'
+            >
+                <div className='w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6'>
+                    <Check className='w-8 h-8 text-green-600' />
+                </div>
+                <h2 className='text-2xl font-bold font-serif mb-2'>
+                    Submission Received!
+                </h2>
+                <p className='text-text/60 max-w-md mx-auto'>
+                    Thank you for contributing to Grounds! Your cafe submission
+                    is now under review. We&apos;ll notify you once it&apos;s
+                    approved and live on the platform.
+                </p>
+            </motion.div>
+        )
+    }
+
+    return (
+        <div className='w-full'>
+            {/* Progress Steps */}
+            <div className='flex items-center justify-between mb-8 overflow-x-auto pb-2'>
+                {STEPS.map((step, idx) => {
+                    const Icon = step.icon
+                    const isActive = currentStep === step.id
+                    const isComplete = currentStep > step.id
+
+                    return (
+                        <div
+                            key={step.id}
+                            className='flex items-center'
+                        >
+                            <div
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-2 rounded-xl transition-all",
+                                    isActive && "bg-primary/10 text-primary",
+                                    isComplete && "text-green-600",
+                                    !isActive && !isComplete && "text-text/40"
+                                )}
+                            >
+                                <div
+                                    className={cn(
+                                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                                        isActive && "bg-primary text-white",
+                                        isComplete &&
+                                            "bg-green-100 text-green-600",
+                                        !isActive && !isComplete && "bg-text/10"
+                                    )}
+                                >
+                                    {isComplete ? (
+                                        <Check className='w-4 h-4' />
+                                    ) : (
+                                        step.id
+                                    )}
+                                </div>
+                                <span className='hidden md:block text-sm font-medium whitespace-nowrap'>
+                                    {step.title}
+                                </span>
+                            </div>
+                            {idx < STEPS.length - 1 && (
+                                <div
+                                    className={cn(
+                                        "w-8 h-0.5 mx-1",
+                                        currentStep > step.id
+                                            ? "bg-green-300"
+                                            : "bg-text/10"
+                                    )}
+                                />
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Error Display */}
+            <AnimatePresence>
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className='mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm'
+                    >
+                        {error}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Step Content */}
+            <div className='min-h-[400px]'>
+                <AnimatePresence mode='wait'>
+                    <motion.div
+                        key={currentStep}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        {/* Step 1: Basic Info */}
+                        {currentStep === 1 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Basic Information
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        Tell us about the cafe
+                                    </p>
+                                </div>
+
+                                <div className='space-y-4'>
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Cafe Name{" "}
+                                            <span className='text-red-500'>
+                                                *
+                                            </span>
+                                        </label>
+                                        <input
+                                            type='text'
+                                            value={formData.name}
+                                            onChange={(e) =>
+                                                updateFormData(
+                                                    "name",
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder='e.g. The Coffee House'
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Description
+                                        </label>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={(e) =>
+                                                updateFormData(
+                                                    "description",
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder='Describe what makes this cafe special...'
+                                            rows={4}
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none'
+                                        />
+                                        <p className='text-xs text-text/40 mt-1'>
+                                            {formData.description.length}{" "}
+                                            characters
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Cover Photo{" "}
+                                            <span className='text-red-500'>
+                                                *
+                                            </span>
+                                        </label>
+                                        {thumbnailFile ? (
+                                            <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-text/20 bg-text/5'>
+                                                <img
+                                                    src={URL.createObjectURL(
+                                                        thumbnailFile
+                                                    )}
+                                                    alt='Thumbnail preview'
+                                                    className='w-full h-full object-cover'
+                                                />
+                                                <button
+                                                    type='button'
+                                                    onClick={() =>
+                                                        setThumbnailFile(null)
+                                                    }
+                                                    className='absolute top-3 right-3 px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5'
+                                                >
+                                                    <svg
+                                                        xmlns='http://www.w3.org/2000/svg'
+                                                        width='16'
+                                                        height='16'
+                                                        viewBox='0 0 24 24'
+                                                        fill='none'
+                                                        stroke='currentColor'
+                                                        strokeWidth='2'
+                                                        strokeLinecap='round'
+                                                        strokeLinejoin='round'
+                                                    >
+                                                        <path d='M3 6h18' />
+                                                        <path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6' />
+                                                        <path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2' />
+                                                    </svg>
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <label className='flex flex-col items-center justify-center w-full aspect-video rounded-xl border-2 border-dashed border-text/20 bg-text/5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer'>
+                                                <div className='flex flex-col items-center gap-2 text-text/50'>
+                                                    <svg
+                                                        xmlns='http://www.w3.org/2000/svg'
+                                                        width='40'
+                                                        height='40'
+                                                        viewBox='0 0 24 24'
+                                                        fill='none'
+                                                        stroke='currentColor'
+                                                        strokeWidth='1.5'
+                                                        strokeLinecap='round'
+                                                        strokeLinejoin='round'
+                                                    >
+                                                        <rect
+                                                            width='18'
+                                                            height='18'
+                                                            x='3'
+                                                            y='3'
+                                                            rx='2'
+                                                            ry='2'
+                                                        />
+                                                        <circle
+                                                            cx='9'
+                                                            cy='9'
+                                                            r='2'
+                                                        />
+                                                        <path d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21' />
+                                                    </svg>
+                                                    <span className='font-medium'>
+                                                        Click to upload
+                                                        thumbnail
+                                                    </span>
+                                                    <span className='text-xs'>
+                                                        JPG, PNG, WebP up to 5MB
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type='file'
+                                                    accept='image/jpeg,image/png,image/webp,image/gif'
+                                                    className='hidden'
+                                                    onChange={(e) => {
+                                                        const file =
+                                                            e.target.files?.[0]
+                                                        if (file)
+                                                            setThumbnailFile(
+                                                                file
+                                                            )
+                                                        e.target.value = "" // Reset for re-selection
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                        <p className='text-xs text-text/40 mt-2'>
+                                            This will be the main image shown in
+                                            cafe listings
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Gallery Images{" "}
+                                            <span className='text-text/40'>
+                                                (optional)
+                                            </span>
+                                        </label>
+                                        <ImageUpload
+                                            value={galleryFiles}
+                                            onChange={(files) =>
+                                                setGalleryFiles(
+                                                    files.filter(
+                                                        (f): f is File =>
+                                                            f instanceof File
+                                                    )
+                                                )
+                                            }
+                                            maxImages={0}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 2: Location */}
+                        {currentStep === 2 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Location
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        Where is the cafe located?
+                                    </p>
+                                </div>
+
+                                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Region{" "}
+                                            <span className='text-red-500'>
+                                                *
+                                            </span>
+                                        </label>
+                                        <select
+                                            value={formData.region}
+                                            onChange={(e) => {
+                                                updateFormData(
+                                                    "region",
+                                                    e.target.value
+                                                )
+                                                updateFormData("province", "")
+                                                updateFormData(
+                                                    "city_municipality",
+                                                    ""
+                                                )
+                                            }}
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                        >
+                                            <option value=''>
+                                                Select region
+                                            </option>
+                                            {PHILIPPINES_LOCATIONS.regions.map(
+                                                (r) => (
+                                                    <option
+                                                        key={r.name}
+                                                        value={r.name}
+                                                    >
+                                                        {r.name}
+                                                    </option>
+                                                )
+                                            )}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Province{" "}
+                                            <span className='text-red-500'>
+                                                *
+                                            </span>
+                                        </label>
+                                        <select
+                                            value={formData.province}
+                                            onChange={(e) => {
+                                                updateFormData(
+                                                    "province",
+                                                    e.target.value
+                                                )
+                                                updateFormData(
+                                                    "city_municipality",
+                                                    ""
+                                                )
+                                            }}
+                                            disabled={!formData.region}
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none disabled:opacity-50'
+                                        >
+                                            <option value=''>
+                                                Select province
+                                            </option>
+                                            {availableProvinces.map((p) => (
+                                                <option
+                                                    key={p.name}
+                                                    value={p.name}
+                                                >
+                                                    {p.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            City/Municipality{" "}
+                                            <span className='text-red-500'>
+                                                *
+                                            </span>
+                                        </label>
+                                        <select
+                                            value={formData.city_municipality}
+                                            onChange={(e) =>
+                                                updateFormData(
+                                                    "city_municipality",
+                                                    e.target.value
+                                                )
+                                            }
+                                            disabled={!formData.province}
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none disabled:opacity-50'
+                                        >
+                                            <option value=''>
+                                                Select city
+                                            </option>
+                                            {availableCities.map((c) => (
+                                                <option
+                                                    key={c}
+                                                    value={c}
+                                                >
+                                                    {c}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Area/Neighborhood
+                                    </label>
+                                    <input
+                                        type='text'
+                                        value={formData.area}
+                                        onChange={(e) =>
+                                            updateFormData(
+                                                "area",
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder='e.g. IT Park, Ayala Center'
+                                        className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Full Address{" "}
+                                        <span className='text-red-500'>*</span>
+                                    </label>
+                                    <input
+                                        type='text'
+                                        value={formData.address_display}
+                                        onChange={(e) =>
+                                            updateFormData(
+                                                "address_display",
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder='e.g. 123 Main Street, Brgy. Example'
+                                        className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Map Location{" "}
+                                        <span className='text-red-500'>*</span>
+                                    </label>
+                                    <LocationPicker
+                                        lat={formData.lat}
+                                        lng={formData.lng}
+                                        onChange={(lat, lng) => {
+                                            updateFormData("lat", lat)
+                                            updateFormData("lng", lng)
+                                        }}
+                                        onAddressChange={(addr) => {
+                                            if (!formData.address_display) {
+                                                updateFormData(
+                                                    "address_display",
+                                                    addr
+                                                )
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Amenities */}
+                        {currentStep === 3 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Amenities & Features
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        What does this cafe offer?
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-3'>
+                                        Amenities
+                                    </label>
+                                    <AmenityToggles
+                                        values={{
+                                            has_wifi: formData.has_wifi,
+                                            has_sockets: formData.has_sockets,
+                                            has_parking: formData.has_parking,
+                                            has_aircon: formData.has_aircon,
+                                            is_pet_friendly:
+                                                formData.is_pet_friendly,
+                                            has_outdoor_seating:
+                                                formData.has_outdoor_seating,
+                                            serves_food: formData.serves_food,
+                                            is_work_friendly:
+                                                formData.is_work_friendly,
+                                        }}
+                                        onChange={(key, value) =>
+                                            updateFormData(
+                                                key as keyof CafeSubmission,
+                                                value as any
+                                            )
+                                        }
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Price Level
+                                    </label>
+                                    <div className='flex gap-3'>
+                                        {(
+                                            ["low", "medium", "high"] as const
+                                        ).map((level) => (
+                                            <button
+                                                key={level}
+                                                type='button'
+                                                onClick={() =>
+                                                    updateFormData(
+                                                        "price_level",
+                                                        level
+                                                    )
+                                                }
+                                                className={cn(
+                                                    "flex-1 py-3 rounded-xl border-2 font-medium transition-all cursor-pointer",
+                                                    formData.price_level ===
+                                                        level
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-text/10 text-text/60 hover:border-text/30"
+                                                )}
+                                            >
+                                                {level === "low" && "₱"}
+                                                {level === "medium" && "₱₱"}
+                                                {level === "high" && "₱₱₱"}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Payment Methods
+                                    </label>
+                                    <div className='flex flex-wrap gap-2 mb-3'>
+                                        {PAYMENT_METHODS.map((method) => {
+                                            const isSelected =
+                                                formData.payment_methods.includes(
+                                                    method
+                                                )
+                                            return (
+                                                <button
+                                                    key={method}
+                                                    type='button'
+                                                    onClick={() => {
+                                                        const current =
+                                                            formData.payment_methods
+                                                                .split(",")
+                                                                .map((s) =>
+                                                                    s.trim()
+                                                                )
+                                                                .filter(Boolean)
+                                                        const updated =
+                                                            isSelected
+                                                                ? current.filter(
+                                                                      (m) =>
+                                                                          m !==
+                                                                          method
+                                                                  )
+                                                                : [
+                                                                      ...current,
+                                                                      method,
+                                                                  ]
+                                                        updateFormData(
+                                                            "payment_methods",
+                                                            updated.join(", ")
+                                                        )
+                                                    }}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-full text-sm font-medium capitalize transition-all cursor-pointer",
+                                                        isSelected
+                                                            ? "bg-primary text-white"
+                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
+                                                    )}
+                                                >
+                                                    {method.replace("_", " ")}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <input
+                                        type='text'
+                                        value={customPaymentMethods}
+                                        onChange={(e) =>
+                                            setCustomPaymentMethods(
+                                                e.target.value
+                                            )
+                                        }
+                                        onBlur={() => {
+                                            if (customPaymentMethods.trim()) {
+                                                const current =
+                                                    formData.payment_methods
+                                                        .split(",")
+                                                        .map((s) => s.trim())
+                                                        .filter(Boolean)
+                                                const custom =
+                                                    customPaymentMethods
+                                                        .split(",")
+                                                        .map((s) => s.trim())
+                                                        .filter(Boolean)
+                                                const merged = [
+                                                    ...new Set([
+                                                        ...current,
+                                                        ...custom,
+                                                    ]),
+                                                ]
+                                                updateFormData(
+                                                    "payment_methods",
+                                                    merged.join(", ")
+                                                )
+                                                setCustomPaymentMethods("")
+                                            }
+                                        }}
+                                        placeholder='Add more (comma separated): e.g. PayPal, Grab Pay'
+                                        className='w-full px-4 py-2 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                    />
+                                    {/* Show selected payment methods */}
+                                    {formData.payment_methods && (
+                                        <div className='flex flex-wrap gap-2 mt-3'>
+                                            {formData.payment_methods
+                                                .split(",")
+                                                .map((m) => m.trim())
+                                                .filter(Boolean)
+                                                .map((method) => (
+                                                    <span
+                                                        key={method}
+                                                        className='inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-medium capitalize'
+                                                    >
+                                                        {method.replace(
+                                                            /_/g,
+                                                            " "
+                                                        )}
+                                                        <button
+                                                            type='button'
+                                                            onClick={() => {
+                                                                const updated =
+                                                                    formData.payment_methods
+                                                                        .split(
+                                                                            ","
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                m
+                                                                            ) =>
+                                                                                m.trim()
+                                                                        )
+                                                                        .filter(
+                                                                            (
+                                                                                m
+                                                                            ) =>
+                                                                                m &&
+                                                                                m !==
+                                                                                    method
+                                                                        )
+                                                                        .join(
+                                                                            ", "
+                                                                        )
+                                                                updateFormData(
+                                                                    "payment_methods",
+                                                                    updated
+                                                                )
+                                                            }}
+                                                            className='ml-0.5 hover:text-red-500 cursor-pointer'
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Specialties
+                                    </label>
+                                    <div className='flex flex-wrap gap-2 mb-3'>
+                                        {CAFE_SPECIALTIES.map((spec) => {
+                                            const isSelected =
+                                                formData.specialty.includes(
+                                                    spec
+                                                )
+                                            return (
+                                                <button
+                                                    key={spec}
+                                                    type='button'
+                                                    onClick={() => {
+                                                        const updated =
+                                                            isSelected
+                                                                ? formData.specialty.filter(
+                                                                      (s) =>
+                                                                          s !==
+                                                                          spec
+                                                                  )
+                                                                : [
+                                                                      ...formData.specialty,
+                                                                      spec,
+                                                                  ]
+                                                        updateFormData(
+                                                            "specialty",
+                                                            updated
+                                                        )
+                                                    }}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-full text-sm font-medium capitalize transition-all cursor-pointer",
+                                                        isSelected
+                                                            ? "bg-primary text-white"
+                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
+                                                    )}
+                                                >
+                                                    {spec.replace("_", " ")}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <input
+                                        type='text'
+                                        value={customSpecialties}
+                                        onChange={(e) =>
+                                            setCustomSpecialties(e.target.value)
+                                        }
+                                        onBlur={() => {
+                                            if (customSpecialties.trim()) {
+                                                const custom = customSpecialties
+                                                    .split(",")
+                                                    .map((s) =>
+                                                        s
+                                                            .trim()
+                                                            .toLowerCase()
+                                                            .replace(
+                                                                /\s+/g,
+                                                                "_"
+                                                            )
+                                                    )
+                                                    .filter(Boolean)
+                                                const merged = [
+                                                    ...new Set([
+                                                        ...formData.specialty,
+                                                        ...custom,
+                                                    ]),
+                                                ]
+                                                updateFormData(
+                                                    "specialty",
+                                                    merged
+                                                )
+                                                setCustomSpecialties("")
+                                            }
+                                        }}
+                                        placeholder='Add more (comma separated): e.g. cold brew, single origin'
+                                        className='w-full px-4 py-2 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                    />
+                                    {/* Show selected specialties */}
+                                    {formData.specialty.length > 0 && (
+                                        <div className='flex flex-wrap gap-2 mt-3'>
+                                            {formData.specialty.map((spec) => (
+                                                <span
+                                                    key={spec}
+                                                    className='inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-medium'
+                                                >
+                                                    {spec.replace(/_/g, " ")}
+                                                    <button
+                                                        type='button'
+                                                        onClick={() =>
+                                                            updateFormData(
+                                                                "specialty",
+                                                                formData.specialty.filter(
+                                                                    (s) =>
+                                                                        s !==
+                                                                        spec
+                                                                )
+                                                            )
+                                                        }
+                                                        className='ml-0.5 hover:text-red-500 cursor-pointer'
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Vibe Tags
+                                    </label>
+                                    <div className='flex flex-wrap gap-2 mb-3'>
+                                        {CAFE_VIBE_TAGS.map((tag) => {
+                                            const isSelected =
+                                                formData.tags.includes(tag)
+                                            return (
+                                                <button
+                                                    key={tag}
+                                                    type='button'
+                                                    onClick={() => {
+                                                        const updated =
+                                                            isSelected
+                                                                ? formData.tags.filter(
+                                                                      (t) =>
+                                                                          t !==
+                                                                          tag
+                                                                  )
+                                                                : [
+                                                                      ...formData.tags,
+                                                                      tag,
+                                                                  ]
+                                                        updateFormData(
+                                                            "tags",
+                                                            updated
+                                                        )
+                                                    }}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-full text-sm font-medium capitalize transition-all cursor-pointer",
+                                                        isSelected
+                                                            ? "bg-secondary text-text"
+                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
+                                                    )}
+                                                >
+                                                    {tag.replace("_", " ")}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <input
+                                        type='text'
+                                        value={customTags}
+                                        onChange={(e) =>
+                                            setCustomTags(e.target.value)
+                                        }
+                                        onBlur={() => {
+                                            if (customTags.trim()) {
+                                                const custom = customTags
+                                                    .split(",")
+                                                    .map((s) =>
+                                                        s
+                                                            .trim()
+                                                            .toLowerCase()
+                                                            .replace(
+                                                                /\s+/g,
+                                                                "_"
+                                                            )
+                                                    )
+                                                    .filter(Boolean)
+                                                const merged = [
+                                                    ...new Set([
+                                                        ...formData.tags,
+                                                        ...custom,
+                                                    ]),
+                                                ]
+                                                updateFormData("tags", merged)
+                                                setCustomTags("")
+                                            }
+                                        }}
+                                        placeholder='Add more (comma separated): e.g. hidden gem, rooftop'
+                                        className='w-full px-4 py-2 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                    />
+                                    {/* Show selected tags */}
+                                    {formData.tags.length > 0 && (
+                                        <div className='flex flex-wrap gap-2 mt-3'>
+                                            {formData.tags.map((tag) => (
+                                                <span
+                                                    key={tag}
+                                                    className='inline-flex items-center gap-1 px-2.5 py-1 bg-secondary/20 text-text border border-secondary/30 rounded-full text-xs font-medium'
+                                                >
+                                                    {tag.replace(/_/g, " ")}
+                                                    <button
+                                                        type='button'
+                                                        onClick={() =>
+                                                            updateFormData(
+                                                                "tags",
+                                                                formData.tags.filter(
+                                                                    (t) =>
+                                                                        t !==
+                                                                        tag
+                                                                )
+                                                            )
+                                                        }
+                                                        className='ml-0.5 hover:text-red-500 cursor-pointer'
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Brew Methods
+                                    </label>
+                                    <div className='flex flex-wrap gap-2'>
+                                        {BREW_METHODS.map((method) => {
+                                            const isSelected =
+                                                formData.brew_methods.includes(
+                                                    method
+                                                )
+                                            return (
+                                                <button
+                                                    key={method}
+                                                    type='button'
+                                                    onClick={() => {
+                                                        const updated =
+                                                            isSelected
+                                                                ? formData.brew_methods.filter(
+                                                                      (m) =>
+                                                                          m !==
+                                                                          method
+                                                                  )
+                                                                : [
+                                                                      ...formData.brew_methods,
+                                                                      method,
+                                                                  ]
+                                                        updateFormData(
+                                                            "brew_methods",
+                                                            updated
+                                                        )
+                                                    }}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer",
+                                                        isSelected
+                                                            ? "bg-primary/20 text-primary border border-primary/30"
+                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
+                                                    )}
+                                                >
+                                                    {method}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Roaster / Coffee Source
+                                    </label>
+                                    <input
+                                        type='text'
+                                        value={formData.roaster}
+                                        onChange={(e) =>
+                                            updateFormData(
+                                                "roaster",
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder='e.g. Local roaster, Yardstick Coffee'
+                                        className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 4: Operating Hours */}
+                        {currentStep === 4 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Operating Hours
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        When is the cafe open?
+                                    </p>
+                                </div>
+
+                                <OperatingHoursEditor
+                                    value={formData.operating_hours}
+                                    onChange={(hours) =>
+                                        updateFormData("operating_hours", hours)
+                                    }
+                                />
+                            </div>
+                        )}
+
+                        {/* Step 5: Contact & Socials */}
+                        {currentStep === 5 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Contact & Socials
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        How can people reach this cafe?
+                                    </p>
+                                </div>
+
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Website
+                                        </label>
+                                        <input
+                                            type='url'
+                                            value={formData.website_url}
+                                            onChange={(e) =>
+                                                updateFormData(
+                                                    "website_url",
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder='https://...'
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Phone
+                                        </label>
+                                        <input
+                                            type='tel'
+                                            value={formData.phone}
+                                            onChange={(e) =>
+                                                updateFormData(
+                                                    "phone",
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder='+63 XXX XXX XXXX'
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Email
+                                    </label>
+                                    <input
+                                        type='email'
+                                        value={formData.email}
+                                        onChange={(e) =>
+                                            updateFormData(
+                                                "email",
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder='cafe@example.com'
+                                        className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Social Links
+                                    </label>
+                                    <SocialLinksEditor
+                                        value={formData.socials}
+                                        onChange={(socials) =>
+                                            updateFormData("socials", socials)
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 6: Review & Submit - Live Preview */}
+                        {currentStep === 6 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Submit & Preview
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        These are some of the details of the
+                                        cafe you entered
+                                    </p>
+                                </div>
+
+                                {/* LIVE PREVIEW CARD */}
+                                <div className='bg-background rounded-2xl border border-text/10 overflow-hidden shadow-lg'>
+                                    {/* Hero Header with Background Image */}
+                                    <div className='relative h-64 md:h-80 bg-text/10'>
+                                        {thumbnailFile ? (
+                                            <img
+                                                src={URL.createObjectURL(
+                                                    thumbnailFile
+                                                )}
+                                                alt={
+                                                    formData.name ||
+                                                    "Cafe preview"
+                                                }
+                                                className='w-full h-full object-cover'
+                                            />
+                                        ) : (
+                                            <div className='w-full h-full flex items-center justify-center text-text/30'>
+                                                <MapPin className='w-16 h-16' />
+                                            </div>
+                                        )}
+                                        <div className='absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent' />
+                                        <div className='absolute bottom-0 left-0 right-0 p-6'>
+                                            <div className='flex items-center gap-2 mb-2'>
+                                                {formData.price_level && (
+                                                    <span className='px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs font-medium'>
+                                                        {formData.price_level ===
+                                                            "low" && "₱"}
+                                                        {formData.price_level ===
+                                                            "medium" && "₱₱"}
+                                                        {formData.price_level ===
+                                                            "high" && "₱₱₱"}
+                                                    </span>
+                                                )}
+                                                {formData.has_wifi && (
+                                                    <span className='px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs'>
+                                                        WiFi
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h1 className='text-2xl md:text-3xl font-serif font-bold text-white mb-1'>
+                                                {formData.name || "Cafe Name"}
+                                            </h1>
+                                            <p className='text-white/80 text-sm flex items-center gap-1'>
+                                                <MapPin className='w-3.5 h-3.5' />
+                                                {formData.address_display ||
+                                                    `${formData.area ? formData.area + ", " : ""}${formData.city_municipality}, ${formData.province}`}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Content Area */}
+                                    <div className='p-6 space-y-6'>
+                                        {/* About Section */}
+                                        {formData.description && (
+                                            <div>
+                                                <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                    About
+                                                </h2>
+                                                <p className='text-text/70 leading-relaxed'>
+                                                    {formData.description}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Amenities */}
+                                        {(formData.has_wifi ||
+                                            formData.has_sockets ||
+                                            formData.has_parking ||
+                                            formData.has_aircon ||
+                                            formData.is_pet_friendly ||
+                                            formData.has_outdoor_seating ||
+                                            formData.serves_food) && (
+                                            <div>
+                                                <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                    Amenities
+                                                </h2>
+                                                <div className='flex flex-wrap gap-2'>
+                                                    {formData.has_wifi && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Wifi className='w-4 h-4 text-primary' />{" "}
+                                                            WiFi
+                                                        </span>
+                                                    )}
+                                                    {formData.has_sockets && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Plug className='w-4 h-4 text-primary' />{" "}
+                                                            Power Outlets
+                                                        </span>
+                                                    )}
+                                                    {formData.has_parking && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Car className='w-4 h-4 text-primary' />{" "}
+                                                            Parking
+                                                        </span>
+                                                    )}
+                                                    {formData.has_aircon && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Wind className='w-4 h-4 text-primary' />{" "}
+                                                            Air Conditioned
+                                                        </span>
+                                                    )}
+                                                    {formData.is_pet_friendly && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Dog className='w-4 h-4 text-primary' />{" "}
+                                                            Pet Friendly
+                                                        </span>
+                                                    )}
+                                                    {formData.has_outdoor_seating && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Sun className='w-4 h-4 text-primary' />{" "}
+                                                            Outdoor Seating
+                                                        </span>
+                                                    )}
+                                                    {formData.serves_food && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Utensils className='w-4 h-4 text-primary' />{" "}
+                                                            Serves Food
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Specialties & Tags */}
+                                        {(formData.specialty.length > 0 ||
+                                            formData.tags.length > 0) && (
+                                            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                                                {formData.specialty.length >
+                                                    0 && (
+                                                    <div>
+                                                        <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                            Specialties
+                                                        </h2>
+                                                        <div className='flex flex-wrap gap-2'>
+                                                            {formData.specialty.map(
+                                                                (s) => (
+                                                                    <span
+                                                                        key={s}
+                                                                        className='px-3 py-1 bg-primary/10 text-primary rounded-full text-sm capitalize'
+                                                                    >
+                                                                        {s.replace(
+                                                                            /_/g,
+                                                                            " "
+                                                                        )}
+                                                                    </span>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {formData.tags.length > 0 && (
+                                                    <div>
+                                                        <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                            Vibe
+                                                        </h2>
+                                                        <div className='flex flex-wrap gap-2'>
+                                                            {formData.tags.map(
+                                                                (t) => (
+                                                                    <span
+                                                                        key={t}
+                                                                        className='px-3 py-1 bg-secondary/30 text-text rounded-full text-sm capitalize'
+                                                                    >
+                                                                        {t.replace(
+                                                                            /_/g,
+                                                                            " "
+                                                                        )}
+                                                                    </span>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Gallery Preview */}
+                                        {galleryFiles.length > 0 && (
+                                            <div>
+                                                <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                    Gallery
+                                                </h2>
+                                                <div className='flex gap-2 overflow-x-auto pb-2'>
+                                                    {galleryFiles
+                                                        .slice(0, 5)
+                                                        .map((file, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                className='w-24 h-24 rounded-lg overflow-hidden shrink-0'
+                                                            >
+                                                                <img
+                                                                    src={URL.createObjectURL(
+                                                                        file
+                                                                    )}
+                                                                    alt={`Gallery ${idx + 1}`}
+                                                                    className='w-full h-full object-cover'
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    {galleryFiles.length >
+                                                        5 && (
+                                                        <div className='w-24 h-24 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
+                                                            <span className='text-text/50 text-sm font-medium'>
+                                                                +
+                                                                {galleryFiles.length -
+                                                                    5}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Contact Info */}
+                                        {(formData.phone ||
+                                            formData.email ||
+                                            formData.website_url ||
+                                            formData.socials.length > 0) && (
+                                            <div>
+                                                <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                    Contact
+                                                </h2>
+                                                <div className='flex flex-wrap gap-4 text-sm'>
+                                                    {formData.phone && (
+                                                        <span className='text-text/70'>
+                                                            {formData.phone}
+                                                        </span>
+                                                    )}
+                                                    {formData.email && (
+                                                        <span className='text-text/70'>
+                                                            {formData.email}
+                                                        </span>
+                                                    )}
+                                                    {formData.website_url && (
+                                                        <span className='text-primary'>
+                                                            {
+                                                                formData.website_url
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {formData.socials.length >
+                                                    0 && (
+                                                    <div className='flex flex-wrap gap-2 mt-2'>
+                                                        {formData.socials.map(
+                                                            (s, i) => (
+                                                                <span
+                                                                    key={i}
+                                                                    className='text-xs text-text/50 capitalize'
+                                                                >
+                                                                    {s.title}
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Submission Note */}
+                                <div className='bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800'>
+                                    <strong>Note:</strong> Your submission will
+                                    be reviewed by our team before being
+                                    published. This usually takes 1-2 business
+                                    days. We may contact you for additional
+                                    information.
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className='flex justify-between mt-8 pt-6 border-t border-text/10'>
+                <button
+                    type='button'
+                    onClick={prevStep}
+                    disabled={currentStep === 1}
+                    className='flex items-center gap-2 px-6 py-3 text-text/60 hover:text-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
+                >
+                    <ChevronLeft className='w-5 h-5' />
+                    Previous
+                </button>
+
+                {currentStep < STEPS.length ? (
+                    <button
+                        type='button'
+                        onClick={nextStep}
+                        className='flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors cursor-pointer'
+                    >
+                        Next
+                        <ChevronRight className='w-5 h-5' />
+                    </button>
+                ) : (
+                    <button
+                        type='button'
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className='flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer'
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className='w-5 h-5 animate-spin' />
+                                Submitting...
+                            </>
+                        ) : (
+                            <>
+                                <Send className='w-5 h-5' />
+                                Submit Cafe
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+        </div>
+    )
+}
