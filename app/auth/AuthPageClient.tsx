@@ -7,7 +7,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useState, useEffect, useContext } from "react"
 
-type AuthMode = "signin" | "signup" | "username"
+type AuthMode = "signin" | "signup" | "username" | "reset"
 
 export default function AuthPageClient() {
     // Context
@@ -30,6 +30,7 @@ export default function AuthPageClient() {
     const [username, setUsername] = useState("")
     const [displayName, setDisplayName] = useState("")
     const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState<string | null>(null)
 
     // Effects
     useEffect(() => {
@@ -141,6 +142,38 @@ export default function AuthPageClient() {
         }
     }
 
+    const handlePasswordReset = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setError(null)
+        setSuccess(null)
+
+        try {
+            const response = await fetch("/api/auth/reset-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to send reset email")
+            }
+
+            setSuccess(data.message)
+            setEmail("")
+        } catch (err: unknown) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Failed to send reset email"
+            )
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     // Render
     return (
         <main className='w-full min-h-screen flex items-center justify-center px-4 py-12'>
@@ -168,12 +201,20 @@ export default function AuthPageClient() {
                         {mode === "signin" && "Login to your Account"}
                         {mode === "signup" && "Create your Account"}
                         {mode === "username" && "Set Up Your Profile"}
+                        {mode === "reset" && "Reset Your Password"}
                     </h2>
 
                     {/* Error Message */}
                     {error && (
                         <div className='bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm'>
                             {error}
+                        </div>
+                    )}
+
+                    {/* Success Message */}
+                    {success && (
+                        <div className='bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg mb-4 text-sm'>
+                            {success}
                         </div>
                     )}
 
@@ -216,7 +257,7 @@ export default function AuthPageClient() {
                             <button
                                 type='submit'
                                 disabled={isLoading}
-                                className='w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg'
+                                className='w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer'
                             >
                                 {isLoading ? "Saving..." : "Complete Sign Up"}
                             </button>
@@ -224,7 +265,7 @@ export default function AuthPageClient() {
                     )}
 
                     {/* Sign In / Sign Up Forms */}
-                    {mode !== "username" && (
+                    {(mode === "signin" || mode === "signup") && (
                         <>
                             <form
                                 onSubmit={
@@ -280,15 +321,31 @@ export default function AuthPageClient() {
                                 <button
                                     type='submit'
                                     disabled={isLoading}
-                                    className='w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg'
+                                    className='w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer'
                                 >
                                     {isLoading
                                         ? "Loading..."
                                         : mode === "signin"
-                                        ? "Sign in"
-                                        : "Sign up"}
+                                          ? "Sign in"
+                                          : "Sign up"}
                                 </button>
                             </form>
+
+                            {/* Forgot Password Link */}
+                            {mode === "signin" && (
+                                <p className='text-center mt-4'>
+                                    <button
+                                        onClick={() => {
+                                            setMode("reset")
+                                            setError(null)
+                                            setSuccess(null)
+                                        }}
+                                        className='text-text/60 text-sm hover:text-primary transition-colors cursor-pointer'
+                                    >
+                                        Forgot your password?
+                                    </button>
+                                </p>
+                            )}
 
                             {/* Toggle Mode */}
                             <p className='text-center text-text/60 mt-6 text-sm'>
@@ -300,7 +357,7 @@ export default function AuthPageClient() {
                                                 setMode("signup")
                                                 setError(null)
                                             }}
-                                            className='text-primary font-semibold hover:underline'
+                                            className='text-primary font-semibold hover:underline cursor-pointer'
                                         >
                                             Sign up
                                         </button>
@@ -313,12 +370,63 @@ export default function AuthPageClient() {
                                                 setMode("signin")
                                                 setError(null)
                                             }}
-                                            className='text-primary font-semibold hover:underline'
+                                            className='text-primary font-semibold hover:underline cursor-pointer'
                                         >
                                             Sign in
                                         </button>
                                     </>
                                 )}
+                            </p>
+                        </>
+                    )}
+
+                    {/* Password Reset Form */}
+                    {mode === "reset" && (
+                        <>
+                            <form
+                                onSubmit={handlePasswordReset}
+                                className='space-y-4'
+                            >
+                                <p className='text-text/70 text-sm mb-4'>
+                                    Enter your email address and we&apos;ll send
+                                    you a link to reset your password.
+                                </p>
+                                <div>
+                                    <input
+                                        type='email'
+                                        placeholder='juan@ground.com'
+                                        value={email}
+                                        onChange={(e) =>
+                                            setEmail(e.target.value)
+                                        }
+                                        className='w-full px-4 py-3 rounded-xl border border-secondary/30 bg-tertiary/50 text-text placeholder:text-text/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all'
+                                        disabled={isLoading}
+                                        required
+                                    />
+                                </div>
+                                <button
+                                    type='submit'
+                                    disabled={isLoading}
+                                    className='w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer'
+                                >
+                                    {isLoading
+                                        ? "Sending..."
+                                        : "Send Reset Link"}
+                                </button>
+                            </form>
+
+                            <p className='text-center text-text/60 mt-6 text-sm'>
+                                Remember your password?{" "}
+                                <button
+                                    onClick={() => {
+                                        setMode("signin")
+                                        setError(null)
+                                        setSuccess(null)
+                                    }}
+                                    className='text-primary font-semibold hover:underline'
+                                >
+                                    Sign in
+                                </button>
                             </p>
                         </>
                     )}

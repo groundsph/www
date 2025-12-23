@@ -101,7 +101,7 @@ export default function LandingHero({
                                 COFFEE
                             </span>
                         </motion.h1>
-                        <motion.span className='text-xl md:text-2xl lg:text-3xl font-semibold'>
+                        <motion.span className='text-lg md:text-2xl lg:text-3xl font-semibold'>
                             Discover the finest cafes across the archipelago
                         </motion.span>
                     </div>
@@ -109,7 +109,7 @@ export default function LandingHero({
                         {featured && (
                             <>
                                 <div className='flex flex-col gap-1'>
-                                    <motion.h2 className='text-4xl md:text-5xl lg:text-6xl font-bold font-serif'>
+                                    <motion.h2 className='text-2xl md:text-5xl lg:text-6xl font-bold font-serif'>
                                         Today&apos;s Featured
                                     </motion.h2>
                                     {isLocalFeatured && locationName && (
@@ -141,7 +141,7 @@ export default function LandingHero({
                                     {featured.slug && (
                                         <Link
                                             href={`/cafes/${featured.slug}`}
-                                            className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap'
+                                            className='px-4 py-1 w-max text-sm md:text-base bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap'
                                         >
                                             Learn More
                                         </Link>
@@ -149,7 +149,7 @@ export default function LandingHero({
                                     <span className='text-text/60'>or</span>
                                     <Link
                                         href='/map'
-                                        className='px-4 py-1 w-max bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap flex flex-row gap-2 items-center'
+                                        className='px-4 py-1 w-max text-sm md:text-base bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap flex flex-row gap-2 items-center'
                                     >
                                         Find Cafes Near Me
                                         <span className='relative flex h-2 w-2'>
