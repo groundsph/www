@@ -23,8 +23,11 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useContext, useEffect, useState } from "react"
 import MarkdownRender from "@/components/MarkdownRender"
+import { AuthContext } from "@/components/AuthProvider"
+import ReviewItem from "@/components/reviews/ReviewItem"
+import Passport from "@/components/profile/Passport"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -46,6 +49,7 @@ interface PublicProfileClientProps {
 export default function PublicProfileClient({
     profile,
 }: PublicProfileClientProps) {
+    const { user } = useContext(AuthContext)
     // States
     const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])
     const [loading, setLoading] = useState(true)
@@ -66,7 +70,7 @@ export default function PublicProfileClient({
                 const [badges, userReviews, visited, wishlist] =
                     await Promise.all([
                         getAllBadges(),
-                        getUserReviews(profile.id),
+                        getUserReviews(profile.id, user?.id),
                         getCafesByIds(profile.passport?.visited_ids || []),
                         getCafesByIds(profile.passport?.wishlist_ids || []),
                     ])
@@ -90,7 +94,7 @@ export default function PublicProfileClient({
         }
 
         fetchData()
-    }, [profile])
+    }, [profile, user])
 
     const stats = profile.stats
     const passport = profile.passport
@@ -317,108 +321,10 @@ export default function PublicProfileClient({
 
                 {/* Passport Section */}
                 <section className='mt-10'>
-                    <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
-                        <MapPin className='w-5 h-5' />
-                        Coffee Passport
-                    </h2>
-                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                        {/* Visited */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-5'>
-                            <div className='flex items-center gap-2 mb-4'>
-                                <div className='p-2 bg-primary/10 rounded-lg'>
-                                    <Star className='w-5 h-5 text-primary' />
-                                </div>
-                                <span className='font-semibold text-text'>
-                                    Visited
-                                </span>
-                                <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
-                                    {passport?.visited_ids?.length ?? 0}
-                                </span>
-                            </div>
-                            {visitedCafes.length > 0 ? (
-                                <ul className='space-y-1.5 text-sm'>
-                                    {visitedCafes.slice(0, 5).map((cafe) => (
-                                        <li key={cafe.slug}>
-                                            <Link
-                                                href={`/cafes/${cafe.slug}`}
-                                                className='text-text/70 hover:text-primary transition-colors'
-                                            >
-                                                {cafe.name}
-                                            </Link>
-                                        </li>
-                                    ))}
-                                    {visitedCafes.length > 5 && (
-                                        <li className='text-text/50 font-medium'>
-                                            +{visitedCafes.length - 5} more
-                                        </li>
-                                    )}
-                                </ul>
-                            ) : (
-                                <p className='text-sm text-text/40'>
-                                    No visits yet
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Wishlist */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-5'>
-                            <div className='flex items-center gap-2 mb-4'>
-                                <div className='p-2 bg-secondary/20 rounded-lg'>
-                                    <Heart className='w-5 h-5 text-secondary' />
-                                </div>
-                                <span className='font-semibold text-text'>
-                                    Wishlist
-                                </span>
-                                <span className='ml-auto bg-secondary/20 text-secondary text-sm font-bold px-2.5 py-1 rounded-full'>
-                                    {passport?.wishlist_ids?.length ?? 0}
-                                </span>
-                            </div>
-                            {wishlistCafes.length > 0 ? (
-                                <ul className='space-y-1.5 text-sm'>
-                                    {wishlistCafes.slice(0, 5).map((cafe) => (
-                                        <li key={cafe.slug}>
-                                            <Link
-                                                href={`/cafes/${cafe.slug}`}
-                                                className='text-text/70 hover:text-secondary transition-colors'
-                                            >
-                                                {cafe.name}
-                                            </Link>
-                                        </li>
-                                    ))}
-                                    {wishlistCafes.length > 5 && (
-                                        <li className='text-text/50 font-medium'>
-                                            +{wishlistCafes.length - 5} more
-                                        </li>
-                                    )}
-                                </ul>
-                            ) : (
-                                <p className='text-sm text-text/40'>
-                                    No cafes in wishlist
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Favorite Region */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-5'>
-                            <div className='flex items-center gap-2 mb-4'>
-                                <div className='p-2 bg-text/10 rounded-lg'>
-                                    <MapPin className='w-5 h-5 text-text/70' />
-                                </div>
-                                <span className='font-semibold text-text'>
-                                    Favorite Region
-                                </span>
-                            </div>
-                            {passport?.favorite_region ? (
-                                <p className='text-lg font-bold text-text'>
-                                    {passport.favorite_region}
-                                </p>
-                            ) : (
-                                <p className='text-sm text-text/40'>
-                                    Not set yet
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                    <Passport
+                        visited={visitedCafes}
+                        wishlist={wishlistCafes}
+                    />
                 </section>
 
                 {/* Reviews Section */}
@@ -441,43 +347,59 @@ export default function PublicProfileClient({
                     </h2>
 
                     {reviews.length > 0 ? (
-                        <div className='grid gap-4'>
+                        <div className='flex flex-col gap-6'>
                             {reviews.map((review) => (
                                 <div
                                     key={review.id}
-                                    className='bg-text/5 border border-text/10 rounded-xl p-5 flex flex-col gap-3'
+                                    className='bg-text/5 border border-text/10 rounded-xl p-5 flex flex-col gap-4'
                                 >
-                                    {/* Cafe info line */}
-                                    <div className='flex flex-row justify-between items-start'>
-                                        <div>
+                                    {/* Cafe info line - Added Link and visual context */}
+                                    <div className='flex items-center gap-2 pb-4 border-b border-text/10'>
+                                        <div className='relative w-10 h-10 rounded-lg overflow-hidden shrink-0'>
+                                            {review.cafe?.thumbnail ? (
+                                                <Image
+                                                    src={review.cafe.thumbnail}
+                                                    alt={review.cafe.name}
+                                                    fill
+                                                    className='object-cover'
+                                                />
+                                            ) : (
+                                                <div className='w-full h-full bg-secondary/20 flex items-center justify-center'>
+                                                    <Coffee className='w-5 h-5 text-secondary' />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className='flex flex-col'>
+                                            <span className='text-xs text-text/60'>
+                                                Review for
+                                            </span>
                                             <Link
                                                 href={`/cafes/${review.cafe.slug}`}
-                                                className='font-bold text-lg hover:text-primary transition-colors'
+                                                className='font-bold text-lg hover:text-primary transition-colors leading-tight'
                                             >
                                                 {review.cafe.name}
                                             </Link>
-                                            <div className='flex items-center gap-1 text-xs text-text/50 mt-1'>
-                                                {new Date(
-                                                    review.created_at
-                                                ).toLocaleDateString("en-US", {
-                                                    month: "long",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })}
-                                            </div>
-                                        </div>
-                                        <div className='px-2 py-1 bg-primary/10 rounded-lg flex items-center gap-1 text-sm font-bold text-primary'>
-                                            <Star className='w-3.5 h-3.5 fill-current' />
-                                            {review.rating}/10
                                         </div>
                                     </div>
 
-                                    {/* Comment */}
-                                    <div className='text-sm text-text/80'>
-                                        <MarkdownRender
-                                            content={review.comment}
-                                        />
-                                    </div>
+                                    {/* Use ReviewItem for the actual content */}
+                                    <ReviewItem
+                                        review={{
+                                            ...review,
+                                            author: {
+                                                display_name:
+                                                    profile.display_name,
+                                                username: profile.username,
+                                                avatar_url: profile.avatar_url,
+                                            },
+                                            // Handle is_liked from our fetch
+                                            review_interactions:
+                                                review.is_liked && user
+                                                    ? [{ user_id: user.id }]
+                                                    : [],
+                                        }}
+                                        currentUser={user}
+                                    />
                                 </div>
                             ))}
                         </div>

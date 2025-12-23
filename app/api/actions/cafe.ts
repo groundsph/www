@@ -250,6 +250,9 @@ export async function getReviewsByCafeId(cafeId: string) {
             comment,
             created_at,
             user_id,
+            images,
+            likes_count,
+            review_interactions(user_id, interaction_type),
             author:profiles(display_name, username, avatar_url)
         `)
         .eq("cafe_id", cafeId)

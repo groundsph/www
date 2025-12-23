@@ -17,11 +17,17 @@ import {
     SnowflakeIcon,
     PawPrintIcon,
     SunIcon,
-    User,
+    Heart,
+    MapPin,
+    CheckCircle,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
 import MarkdownRender from "@/components/MarkdownRender"
+import { useContext, useEffect } from "react"
+import { AuthContext } from "@/components/AuthProvider"
+import ReviewModal from "@/components/reviews/ReviewModal"
+import ReviewItem from "@/components/reviews/ReviewItem"
 
 // Day mapping for display
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -54,12 +60,16 @@ const DynamicCafeMiniMap = dynamic(() => import("@/components/CafeMiniMap"), {
     ),
 })
 
-interface Review {
+export interface Review {
     id: string
     rating: number
     comment: string
     created_at: string | null
     user_id: string
+    images?: string[] | null
+    likes_count?: number | null
+    review_interactions?: any[] // Simplified for now
+    is_edited?: boolean
     author: {
         display_name: string
         username: string
@@ -88,6 +98,88 @@ export default function CafeDetails({
     const story = cafe.story
     const socials = (cafe.socials as unknown as CafeSocial[]) ?? []
 
+    // Auth & Reviews
+    const authContext = useContext(AuthContext)
+    const user = authContext?.user
+    const [isReviewOpen, setIsReviewOpen] = useState(false)
+    const [editingReview, setEditingReview] = useState<Review | undefined>(
+        undefined
+    )
+
+    // Wishlist Logic
+    const [isInWishlist, setIsInWishlist] = useState(() => {
+        // Initial state from profile passport if available in context
+        // Since we don't have full profile in context usually, we might rely on props or useEffect
+        // For now, let's just default false and fetch, OR check if user has passport loaded
+        // Optimization: checking specific passed profile data would be better
+        return false
+    })
+
+    // We need to check initial wishlist status.
+    // Ideally pass this as prop or fetch. For simplicity, let's fetch in useEffect or use context
+    // Actually, let's check authContext.profile?.passport
+    useEffect(() => {
+        if (authContext?.profile?.passport) {
+            const passport = authContext.profile.passport as any
+            if (passport.wishlist_ids) {
+                setIsInWishlist(passport.wishlist_ids.includes(cafe.id))
+            }
+        }
+    }, [authContext?.profile, cafe.id])
+
+    const handleWishlistToggle = async () => {
+        if (!user) return // Should redirect to login ideally
+
+        // Optimistic update
+        const newState = !isInWishlist
+        setIsInWishlist(newState)
+
+        try {
+            // Dynamic import to avoid circular dep issues in some setups, though here it's fine
+            const { toggleWishlist } = await import("@/app/api/actions/profile")
+            await toggleWishlist(cafe.id)
+            // Refresh profile context to keep it in sync
+            authContext.refreshProfile()
+            setIsInWishlist(!newState)
+        } catch (error) {
+            console.error("Wishlist toggle failed", error)
+            setIsInWishlist(!newState)
+        }
+    }
+
+    // Visited Logic
+    const [isVisited, setIsVisited] = useState(false)
+
+    useEffect(() => {
+        if (authContext?.profile?.passport) {
+            const passport = authContext.profile.passport as any
+            if (passport.visited_ids) {
+                setIsVisited(passport.visited_ids.includes(cafe.id))
+            }
+        }
+    }, [authContext?.profile, cafe.id])
+
+    const handleVisitedToggle = async () => {
+        if (!user) return
+
+        const newState = !isVisited
+        setIsVisited(newState)
+
+        try {
+            const { toggleVisited } = await import("@/app/api/actions/profile")
+            await toggleVisited(cafe.id)
+            authContext.refreshProfile()
+        } catch (error) {
+            console.error("Visited toggle failed", error)
+            setIsVisited(!newState)
+        }
+    }
+
+    // Find if user has reviewed
+    const userReview = user
+        ? reviews.find((r) => r.user_id === user.id)
+        : undefined
+
     // Render
     return (
         <>
@@ -112,9 +204,52 @@ export default function CafeDetails({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.5, delay: 0.2 * 0 }}
-                            className='text-2xl md:text-5xl font-bold'
+                            className='text-2xl md:text-5xl font-bold flex items-center justify-between gap-4'
                         >
                             {cafe.name}
+
+                            {/* Action Buttons */}
+                            <div className='flex items-center gap-2'>
+                                {user && (
+                                    <>
+                                        {/* Visited Button */}
+                                        <button
+                                            onClick={handleVisitedToggle}
+                                            className='p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                                            title={
+                                                isVisited
+                                                    ? "Remove from Visited"
+                                                    : "Mark as Visited"
+                                            }
+                                        >
+                                            {isVisited ? (
+                                                <CheckCircle className='w-6 h-6 fill-primary text-white' />
+                                            ) : (
+                                                <MapPin className='w-6 h-6 text-white group-hover:text-primary' />
+                                            )}
+                                        </button>
+
+                                        {/* Wishlist Button */}
+                                        <button
+                                            onClick={handleWishlistToggle}
+                                            className='p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                                            title={
+                                                isInWishlist
+                                                    ? "Remove from Wishlist"
+                                                    : "Add to Wishlist"
+                                            }
+                                        >
+                                            <Heart
+                                                className={`w-6 h-6 transition-colors ${
+                                                    isInWishlist
+                                                        ? "fill-red-500 text-red-500"
+                                                        : "text-white group-hover:text-red-400"
+                                                }`}
+                                            />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </motion.h1>
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -153,140 +288,6 @@ export default function CafeDetails({
                 id='body'
                 className='w-full flex flex-col md:flex-row items-start justify-start px-4 py-4 relative md:gap-4 overflow-x-clip'
             >
-                <div className='flex-1 w-full md:w-auto flex flex-col gap-2'>
-                    {/* Images */}
-                    <div className='w-full h-max flex flex-col gap-2'>
-                        {firstImage && (
-                            <>
-                                <div className='w-full h-auto aspect-video relative'>
-                                    <Image
-                                        src={firstImage}
-                                        alt=''
-                                        fill
-                                        className='object-cover object-center'
-                                    />
-                                </div>
-                                {secondImage && (
-                                    <div className='w-full h-auto aspect-6/2 flex flex-row gap-2'>
-                                        <div className='h-full w-auto aspect-video relative'>
-                                            <Image
-                                                src={secondImage}
-                                                alt=''
-                                                fill
-                                                className='object-cover object-center'
-                                            />
-                                        </div>
-                                        {thirdImage && (
-                                            <div className='flex-1 relative'>
-                                                <Image
-                                                    src={thirdImage}
-                                                    alt=''
-                                                    fill
-                                                    className='object-cover object-center'
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                <div className='h-1 w-full bg-text/40' />
-                            </>
-                        )}
-                    </div>
-                    {/* Story */}
-                    <div className='w-full'>
-                        {story ? (
-                            <MarkdownRender content={story.content} />
-                        ) : (
-                            <p>No story found</p>
-                        )}
-                    </div>
-
-                    {/* Reviews Section */}
-                    <div className='w-full mt-8'>
-                        <h3 className='text-2xl font-serif font-bold mb-6'>
-                            Reviews
-                        </h3>
-                        {reviews.length > 0 ? (
-                            <div className='flex flex-col gap-6'>
-                                {reviews.map((review) => (
-                                    <div
-                                        key={review.id}
-                                        className='border-b border-text/10 pb-6 last:border-0 last:pb-0'
-                                    >
-                                        <div className='flex items-center justify-between mb-3'>
-                                            <Link
-                                                href={`/profile/${review.author.username}`}
-                                                className='flex items-center gap-2 group'
-                                            >
-                                                <div className='relative w-10 h-10 rounded-full overflow-hidden bg-text/5 border border-text/10 group-hover:border-primary transition-colors'>
-                                                    {review.author
-                                                        .avatar_url ? (
-                                                        <Image
-                                                            src={
-                                                                review.author
-                                                                    .avatar_url
-                                                            }
-                                                            alt={
-                                                                review.author
-                                                                    .display_name
-                                                            }
-                                                            fill
-                                                            className='object-cover'
-                                                        />
-                                                    ) : (
-                                                        <div className='w-full h-full flex items-center justify-center'>
-                                                            <User className='w-5 h-5 text-text/40' />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className='flex flex-col'>
-                                                    <span className='font-semibold text-sm group-hover:text-primary transition-colors'>
-                                                        {
-                                                            review.author
-                                                                .display_name
-                                                        }
-                                                    </span>
-                                                    <span className='text-xs text-text/50'>
-                                                        @
-                                                        {review.author.username}
-                                                    </span>
-                                                </div>
-                                            </Link>
-                                            <div className='flex flex-col items-end'>
-                                                <div className='flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-lg text-sm font-bold'>
-                                                    <StarIcon className='w-3.5 h-3.5 fill-current' />
-                                                    {review.rating}/10
-                                                </div>
-                                                <span className='text-xs text-text/40 mt-1'>
-                                                    {new Date(
-                                                        review.created_at || ""
-                                                    ).toLocaleDateString(
-                                                        "en-US",
-                                                        {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                            year: "numeric",
-                                                        }
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className='text-sm text-text/80 pl-12'>
-                                            <MarkdownRender
-                                                content={review.comment}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className='bg-text/5 rounded-xl p-8 text-center text-text/50'>
-                                No reviews yet. Be the first to share your
-                                experience!
-                            </div>
-                        )}
-                    </div>
-                </div>
                 <div
                     className={`w-full md:w-auto absolute top-2 md:top-0 z-10 md:relative transition-transform flex flex-col px-2 md:px-0 ${
                         sidebarOpen
@@ -474,7 +475,7 @@ export default function CafeDetails({
                                     {cafe.average_rating
                                         ? cafe.average_rating.toFixed(1)
                                         : "-"}{" "}
-                                    / 10
+                                    / 5
                                 </div>
                             </div>
                         </div>
@@ -647,6 +648,112 @@ export default function CafeDetails({
                             <p className='text-sm text-text/50'>
                                 Hours not available
                             </p>
+                        )}
+                    </div>
+                </div>
+                <div className='flex-1 w-full md:w-auto flex flex-col gap-2'>
+                    {/* Images */}
+                    <div className='w-full h-max flex flex-col gap-2'>
+                        {firstImage && (
+                            <>
+                                <div className='w-full h-auto aspect-video relative'>
+                                    <Image
+                                        src={firstImage}
+                                        alt=''
+                                        fill
+                                        className='object-cover object-center'
+                                    />
+                                </div>
+                                {secondImage && (
+                                    <div className='w-full h-auto aspect-6/2 flex flex-row gap-2'>
+                                        <div className='h-full w-auto aspect-video relative'>
+                                            <Image
+                                                src={secondImage}
+                                                alt=''
+                                                fill
+                                                className='object-cover object-center'
+                                            />
+                                        </div>
+                                        {thirdImage && (
+                                            <div className='flex-1 relative'>
+                                                <Image
+                                                    src={thirdImage}
+                                                    alt=''
+                                                    fill
+                                                    className='object-cover object-center'
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className='h-1 w-full bg-text/40' />
+                            </>
+                        )}
+                    </div>
+                    {/* Story */}
+                    <div className='w-full'>
+                        {story ? (
+                            <MarkdownRender content={story.content} />
+                        ) : (
+                            <p>No story found</p>
+                        )}
+                    </div>
+
+                    {/* Reviews Section */}
+                    <div className='w-full mt-8'>
+                        <div className='flex flex-row items-center justify-between mb-6'>
+                            <h3 className='text-2xl font-serif font-bold'>
+                                Reviews
+                            </h3>
+                            {user ? (
+                                <button
+                                    onClick={() => setIsReviewOpen(true)}
+                                    className='px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer'
+                                >
+                                    {userReview
+                                        ? "Edit Review"
+                                        : "Write a Review"}
+                                </button>
+                            ) : (
+                                <Link
+                                    href={`/auth?redirect=/cafes/${cafe.slug}`}
+                                    className='px-4 py-2 bg-secondary/50 text-text text-sm font-bold rounded-xl hover:bg-secondary/70 transition-colors'
+                                >
+                                    Login to Review
+                                </Link>
+                            )}
+                        </div>
+                        <ReviewModal
+                            isOpen={isReviewOpen}
+                            onClose={() => {
+                                setIsReviewOpen(false)
+                                setEditingReview(undefined)
+                            }}
+                            cafeId={cafe.id}
+                            cafeName={cafe.name}
+                            existingReview={editingReview || userReview}
+                        />
+                        {reviews.length > 0 ? (
+                            <div className='flex flex-col gap-6'>
+                                {reviews.map((review) => (
+                                    <ReviewItem
+                                        key={review.id}
+                                        review={review}
+                                        currentUser={user}
+                                        onEdit={(r) => {
+                                            if (user) {
+                                                setEditingReview(r)
+                                                setIsReviewOpen(true)
+                                            }
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className='bg-text/5 rounded-xl p-8 text-center text-text/50'>
+                                No reviews yet. Be the first to share your
+                                experience!
+                            </div>
                         )}
                     </div>
                 </div>

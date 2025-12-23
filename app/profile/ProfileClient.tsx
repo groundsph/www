@@ -5,6 +5,7 @@ import {
     getAllBadges,
     getCafesByIds,
     getProfileWithBadges,
+    getUserReviews,
     updateProfile,
 } from "@/app/api/actions/profile"
 import { uploadAvatar } from "@/utils/supabase/storage"
@@ -31,6 +32,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useContext, useEffect, useRef, useState } from "react"
+import ReviewItem from "@/components/reviews/ReviewItem"
+import Passport from "@/components/profile/Passport"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -56,6 +59,7 @@ export default function ProfileClient() {
     )
     const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])
     const [loading, setLoading] = useState(true)
+    const [reviews, setReviews] = useState<any[]>([])
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
 
@@ -95,13 +99,15 @@ export default function ProfileClient() {
             if (!user) return
 
             try {
-                const [profile, badges] = await Promise.all([
+                const [profile, badges, userReviews] = await Promise.all([
                     getProfileWithBadges(user.id),
                     getAllBadges(),
+                    getUserReviews(user.id, user.id),
                 ])
 
                 setProfileData(profile)
                 setAllBadges(badges)
+                setReviews(userReviews)
 
                 if (profile) {
                     setEditDisplayName(profile.display_name)
@@ -688,153 +694,104 @@ export default function ProfileClient() {
 
                 {/* Passport Section */}
                 <section className='mt-10'>
-                    <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
-                        <MapPin className='w-5 h-5' />
-                        Coffee Passport
-                    </h2>
-                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                        {/* Visited */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-5 hover:border-text/20 transition-colors'>
-                            <div className='flex items-center gap-2 mb-4'>
-                                <div className='p-2 bg-primary/10 rounded-lg'>
-                                    <Star className='w-5 h-5 text-primary' />
-                                </div>
-                                <span className='font-semibold text-text'>
-                                    Visited
-                                </span>
-                                <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
-                                    {passport?.visited_ids?.length ?? 0}
-                                </span>
-                            </div>
-                            {visitedCafes.length > 0 ? (
-                                <ul className='space-y-1.5 text-sm'>
-                                    {visitedCafes.slice(0, 5).map((cafe) => (
-                                        <li key={cafe.slug}>
-                                            <Link
-                                                href={`/cafes/${cafe.slug}`}
-                                                className='text-text/70 hover:text-primary transition-colors'
-                                            >
-                                                {cafe.name}
-                                            </Link>
-                                        </li>
-                                    ))}
-                                    {visitedCafes.length > 5 && (
-                                        <li className='text-text/50 font-medium'>
-                                            +{visitedCafes.length - 5} more
-                                        </li>
-                                    )}
-                                </ul>
-                            ) : (
-                                <p className='text-sm text-text/40'>
-                                    No visits yet
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Wishlist */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-5 hover:border-text/20 transition-colors'>
-                            <div className='flex items-center gap-2 mb-4'>
-                                <div className='p-2 bg-secondary/20 rounded-lg'>
-                                    <Heart className='w-5 h-5 text-secondary' />
-                                </div>
-                                <span className='font-semibold text-text'>
-                                    Wishlist
-                                </span>
-                                <span className='ml-auto bg-secondary/20 text-secondary text-sm font-bold px-2.5 py-1 rounded-full'>
-                                    {passport?.wishlist_ids?.length ?? 0}
-                                </span>
-                            </div>
-                            {wishlistCafes.length > 0 ? (
-                                <ul className='space-y-1.5 text-sm'>
-                                    {wishlistCafes.slice(0, 5).map((cafe) => (
-                                        <li key={cafe.slug}>
-                                            <Link
-                                                href={`/cafes/${cafe.slug}`}
-                                                className='text-text/70 hover:text-secondary transition-colors'
-                                            >
-                                                {cafe.name}
-                                            </Link>
-                                        </li>
-                                    ))}
-                                    {wishlistCafes.length > 5 && (
-                                        <li className='text-text/50 font-medium'>
-                                            +{wishlistCafes.length - 5} more
-                                        </li>
-                                    )}
-                                </ul>
-                            ) : (
-                                <p className='text-sm text-text/40'>
-                                    No cafes in wishlist
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Favorite Region */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-5 hover:border-text/20 transition-colors'>
-                            <div className='flex items-center gap-2 mb-4'>
-                                <div className='p-2 bg-text/10 rounded-lg'>
-                                    <MapPin className='w-5 h-5 text-text/70' />
-                                </div>
-                                <span className='font-semibold text-text'>
-                                    Favorite Region
-                                </span>
-                            </div>
-                            {passport?.favorite_region ? (
-                                <p className='text-lg font-bold text-text'>
-                                    {passport.favorite_region}
-                                </p>
-                            ) : (
-                                <p className='text-sm text-text/40'>
-                                    Not set yet
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                    <Passport
+                        visited={visitedCafes}
+                        wishlist={wishlistCafes}
+                        isOwnProfile={true}
+                    />
                 </section>
 
-                {/* Reviews Section */}
                 <section
                     id='reviews'
                     className='mt-10'
                 >
                     <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
-                        <MessageSquare className='w-5 h-5' />
-                        Your Reviews
-                    </h2>
-                    <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
-                        {stats?.total_reviews && stats.total_reviews > 0 ? (
-                            <div className='text-center py-4'>
-                                <p className='text-text/60 mb-4'>
-                                    You&apos;ve written {stats.total_reviews}{" "}
-                                    review{stats.total_reviews > 1 ? "s" : ""}
-                                </p>
-                                <p className='text-sm text-text/40'>
-                                    Review viewing coming soon
-                                </p>
-                            </div>
+                        {reviews.length > 0 ? (
+                            <>
+                                <MessageSquare className='w-5 h-5' />
+                                Reviews
+                                <span className='text-sm font-normal text-text/60'>
+                                    ({reviews.length})
+                                </span>
+                            </>
                         ) : (
-                            <div className='text-center py-8'>
-                                <MessageSquare className='w-12 h-12 text-text/20 mx-auto mb-4' />
-                                <p className='text-text/60 font-medium'>
-                                    No reviews yet
-                                </p>
-                                <p className='text-sm text-text/40 mt-1'>
-                                    Share your thoughts on cafes you&apos;ve
-                                    visited
-                                </p>
-                                <Link
-                                    href='/cafes'
-                                    className='inline-block mt-4 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
-                                >
-                                    Explore Cafes
-                                </Link>
-                            </div>
+                            "Reviews"
                         )}
-                    </div>
-                </section>
+                    </h2>
 
-                {/* Bottom Spacing */}
-                <div className='h-16' />
+                    {reviews.length > 0 ? (
+                        <div className='flex flex-col gap-6'>
+                            {reviews.map((review) => (
+                                <div
+                                    key={review.id}
+                                    className='bg-text/5 border border-text/10 rounded-xl p-5 flex flex-col gap-4'
+                                >
+                                    {/* Cafe info line - Added Link and visual context */}
+                                    <div className='flex items-center gap-2 pb-4 border-b border-text/10'>
+                                        <div className='relative w-10 h-10 rounded-lg overflow-hidden shrink-0'>
+                                            {review.cafe?.thumbnail ? (
+                                                <Image
+                                                    src={review.cafe.thumbnail}
+                                                    alt={review.cafe.name}
+                                                    fill
+                                                    className='object-cover'
+                                                />
+                                            ) : (
+                                                <div className='w-full h-full bg-secondary/20 flex items-center justify-center'>
+                                                    <Coffee className='w-5 h-5 text-secondary' />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className='flex flex-col'>
+                                            <span className='text-xs text-text/60'>
+                                                Review for
+                                            </span>
+                                            <Link
+                                                href={`/cafes/${review.cafe.slug}`}
+                                                className='font-bold text-lg hover:text-primary transition-colors leading-tight'
+                                            >
+                                                {review.cafe.name}
+                                            </Link>
+                                        </div>
+                                    </div>
+
+                                    {/* Use ReviewItem for the actual content */}
+                                    {/* We need to reconstruct the author object since ReviewItem expects it */}
+                                    <ReviewItem
+                                        review={{
+                                            ...review,
+                                            author: {
+                                                display_name:
+                                                    profileData.display_name,
+                                                username: profileData.username,
+                                                avatar_url:
+                                                    profileData.avatar_url,
+                                            },
+                                            // Handle is_liked from our fetch
+                                            review_interactions: review.is_liked
+                                                ? [{ user_id: user.id }]
+                                                : [],
+                                        }}
+                                        currentUser={user}
+                                        // On profile page, we might restrict editing? Or allow it?
+                                        // Since it's the "Manage Profile" page, editing seems appropriate.
+                                        // However, providing the `onEdit` handler requires the Modal state which is currently not fully set up here.
+                                        // For now, let's keep it read-only-ish or just delete.
+                                        // ReviewItem handles delete internally if currentUser matches.
+                                        // Edit requires a modal parent.
+                                        // Let's omit `onEdit` for now to simplify, or if needed, we can add it later.
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                            <p className='text-text/60 font-medium'>
+                                You haven&apos;t written any reviews yet.
+                            </p>
+                        </div>
+                    )}
+                </section>
             </motion.div>
         </main>
     )

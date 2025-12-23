@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     return {
-        title: `${profile.display_name} (@${profile.username}) | Grounds`,
+        title: `${profile.display_name} (@${profile.username})`,
         description:
             profile.bio ||
             `Check out ${profile.display_name}'s coffee profile on Grounds.`,

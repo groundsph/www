@@ -3,14 +3,14 @@
 import { createClient } from "@/utils/supabase/server"
 
 const AVATAR_BUCKET = "avatars"
+const REVIEW_BUCKET = "reviews"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 
 /**
- * Upload a user's avatar to Supabase Storage
- * File is stored at: avatars/{userId}/avatar.{ext}
+ * Upload a review image to Supabase Storage
+ * File is stored at: reviews/{userId}/{timestamp}-{random}.{ext}
  */
-export async function uploadAvatar(formData: FormData): Promise<{
+export async function uploadReviewImage(formData: FormData): Promise<{
     success: boolean
     url?: string
     error?: string
@@ -23,44 +23,100 @@ export async function uploadAvatar(formData: FormData): Promise<{
         return { success: false, error: "Not authenticated" }
     }
 
+    const file = formData.get("image") as File | null
+    if (!file) {
+        return { success: false, error: "No file provided" }
+    }
+
+    // Validate file type
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    const isValidType = ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExt)
+
+    if (!isValidType) {
+        return { success: false, error: "Invalid file type" }
+    }
+
+    // Limit size 5MB
+    const MAX_REVIEW_IMAGE_SIZE = 5 * 1024 * 1024
+    if (file.size > MAX_REVIEW_IMAGE_SIZE) {
+        return { success: false, error: "File too large (max 5MB)" }
+    }
+
+    // Generate unique filename
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${user.id}/${fileName}`
+
+    const { error: uploadError } = await db.storage
+        .from(REVIEW_BUCKET)
+        .upload(filePath, file)
+
+    if (uploadError) {
+        console.error("Upload error:", uploadError)
+        return { success: false, error: "Upload failed" }
+    }
+
+    const { data: urlData } = db.storage
+        .from(REVIEW_BUCKET)
+        .getPublicUrl(filePath)
+
+    return { success: true, url: urlData.publicUrl }
+}
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+
+/**
+ * Upload an avatar to Supabase Storage
+ * File is stored at: avatars/{userId}/{timestamp}.{ext}
+ */
+export async function uploadAvatar(formData: FormData): Promise<{
+    success: boolean
+    url?: string
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Get current user
+    const {
+        data: { user },
+    } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
     const file = formData.get("avatar") as File | null
     if (!file) {
         return { success: false, error: "No file provided" }
     }
 
-    // Validate file type - check both file.type and extension for canvas blobs
+    // Validate file type
     const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
-    const isValidType = ALLOWED_TYPES.includes(file.type) ||
-        ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExt)
+    const isValidType = ALLOWED_TYPES.includes(file.type) || ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExt)
 
     if (!isValidType) {
-        return { success: false, error: "Invalid file type. Use JPEG, PNG, WebP, or GIF" }
+        return { success: false, error: "Invalid file type (JPEG, PNG, WebP, GIF)" }
     }
 
-    // Validate file size
+    // Validate size
     if (file.size > MAX_FILE_SIZE) {
-        return { success: false, error: "File too large. Maximum 2MB" }
+        return { success: false, error: "File too large (max 2MB)" }
     }
 
-    // Always use jpg since we convert on client side
-    const filePath = `${user.id}/avatar.jpg`
+    // Generate unique filename
+    const fileName = `${Date.now()}.${fileExt}`
+    const filePath = `${user.id}/${fileName}`
 
-    console.log("Uploading avatar to:", filePath, "Size:", file.size)
-
-    // Upload new avatar (upsert will overwrite existing)
+    // Upload
     const { error: uploadError } = await db.storage
         .from(AVATAR_BUCKET)
         .upload(filePath, file, {
             upsert: true,
-            contentType: "image/jpeg"
         })
 
     if (uploadError) {
         console.error("Upload error:", uploadError)
-        return { success: false, error: `Upload failed: ${uploadError.message}` }
+        return { success: false, error: "Upload failed" }
     }
 
-    // Get public URL with cache buster
+    // Get public URL
     const { data: urlData } = db.storage
         .from(AVATAR_BUCKET)
         .getPublicUrl(filePath)

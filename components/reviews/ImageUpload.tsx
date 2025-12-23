@@ -1,0 +1,141 @@
+"use client"
+
+import { UploadCloud, X } from "lucide-react"
+import Image from "next/image"
+import { useCallback, useState, useEffect } from "react"
+import { useDropzone } from "react-dropzone"
+import { cn } from "@/utils/cn"
+
+interface ImageUploadProps {
+    value: (string | File)[]
+    onChange: (files: (string | File)[]) => void
+    disabled?: boolean
+}
+
+export default function ImageUpload({
+    value = [], // Default to empty array to be safe
+    onChange,
+    disabled,
+}: ImageUploadProps) {
+    const [previewUrls, setPreviewUrls] = useState<Map<File, string>>(new Map())
+
+    // Clean up object URLs when component unmounts or files change
+    useEffect(() => {
+        return () => {
+            previewUrls.forEach((url) => URL.revokeObjectURL(url))
+        }
+    }, []) // Cleanup on unmount
+
+    const getPreviewUrl = (item: string | File) => {
+        if (typeof item === "string") return item
+
+        if (!previewUrls.has(item)) {
+            const url = URL.createObjectURL(item)
+            setPreviewUrls((prev) => {
+                const newMap = new Map(prev)
+                newMap.set(item, url)
+                return newMap
+            })
+            return url
+        }
+        return previewUrls.get(item)!
+    }
+
+    const onDrop = useCallback(
+        (acceptedFiles: File[]) => {
+            if (acceptedFiles.length === 0) return
+
+            // Filter out files that are already in value to prevent duplicates if needed
+            // But usually we just append. Checking logic might be complex with File objects equality
+
+            const remainingSlots = 3 - value.length
+            const filesToAdd = acceptedFiles.slice(0, remainingSlots)
+
+            if (filesToAdd.length > 0) {
+                onChange([...value, ...filesToAdd])
+            }
+        },
+        [onChange, value]
+    )
+
+    const removeImage = (itemToRemove: string | File) => {
+        onChange(value.filter((item) => item !== itemToRemove))
+
+        // Cleanup preview URL if it's a file
+        if (itemToRemove instanceof File && previewUrls.has(itemToRemove)) {
+            URL.revokeObjectURL(previewUrls.get(itemToRemove)!)
+            setPreviewUrls((prev) => {
+                const newMap = new Map(prev)
+                newMap.delete(itemToRemove)
+                return newMap
+            })
+        }
+    }
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            "image/jpeg": [],
+            "image/png": [],
+            "image/webp": [],
+            "image/gif": [],
+        },
+        maxSize: 5 * 1024 * 1024, // 5MB
+        disabled: disabled || value.length >= 3, // Max 3 images
+        multiple: true,
+    })
+
+    return (
+        <div className='w-full'>
+            <div className='flex flex-row gap-3 mb-4 overflow-x-auto pb-2 min-h-[100px]'>
+                {value.map((item, idx) => (
+                    <div
+                        key={typeof item === "string" ? item : `file-${idx}`}
+                        className='relative w-24 h-24 shrink-0 rounded-lg overflow-hidden border border-text/10'
+                    >
+                        <Image
+                            fill
+                            src={getPreviewUrl(item)}
+                            alt='Review image'
+                            className='object-cover'
+                        />
+                        <button
+                            type='button'
+                            onClick={() => removeImage(item)}
+                            className='absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors cursor-pointer'
+                            disabled={disabled}
+                        >
+                            <X className='w-3 h-3' />
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {value.length < 3 && (
+                <div
+                    {...getRootProps()}
+                    className={cn(
+                        "border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors gap-2 text-center",
+                        isDragActive
+                            ? "border-primary bg-primary/5"
+                            : "border-text/20 hover:border-text/40 hover:bg-text/5",
+                        disabled && "opacity-50 cursor-not-allowed"
+                    )}
+                >
+                    <input {...getInputProps()} />
+                    <div className='p-3 bg-text/5 rounded-full inline-block'>
+                        <UploadCloud className='w-6 h-6 text-text/60' />
+                    </div>
+                    <div className='flex flex-col gap-0.5'>
+                        <p className='text-sm font-semibold text-text/80'>
+                            Click to upload images
+                        </p>
+                        <p className='text-xs text-text/50'>
+                            JPG, PNG, WebP up to 5MB (Max 3)
+                        </p>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
