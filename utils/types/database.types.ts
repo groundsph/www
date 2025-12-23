@@ -1,5 +1,3 @@
-import { CafeStory, OperatingHours } from "./cafe"
-
 export type Json =
   | string
   | number
@@ -49,6 +47,60 @@ export type Database = {
         }
         Relationships: []
       }
+      cafe_menus: {
+        Row: {
+          cafe_id: string
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_signature: boolean | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          cafe_id: string
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_signature?: boolean | null
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          cafe_id?: string
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_signature?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_menus_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafe_menus_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cafe_rating_stats: {
         Row: {
           average_rating: number | null
@@ -89,9 +141,27 @@ export type Database = {
         ]
       }
       cafe_stories: {
-        Row: CafeStory;
-        Insert: Omit<CafeStory, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<CafeStory, 'id'>>;
+        Row: {
+          cafe_id: string
+          content: string
+          created_at: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          cafe_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          cafe_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "cafe_stories_cafe_id_fkey"
@@ -137,7 +207,7 @@ export type Database = {
           lng: number
           membership_tier: Database["public"]["Enums"]["membership_tier"] | null
           name: string
-          operating_hours: OperatingHours | null
+          operating_hours: Json | null
           owner_ids: string[] | null
           payment_methods: string | null
           phone: string | null
@@ -184,7 +254,7 @@ export type Database = {
           | Database["public"]["Enums"]["membership_tier"]
           | null
           name: string
-          operating_hours?: OperatingHours | null
+          operating_hours?: Json | null
           owner_ids?: string[] | null
           payment_methods?: string | null
           phone?: string | null
@@ -231,7 +301,7 @@ export type Database = {
           | Database["public"]["Enums"]["membership_tier"]
           | null
           name?: string
-          operating_hours?: OperatingHours | null
+          operating_hours?: Json | null
           owner_ids?: string[] | null
           payment_methods?: string | null
           phone?: string | null
@@ -562,6 +632,60 @@ export type Database = {
       }
     }
     Functions: {
+      get_cafes_in_bounds: {
+        Args: { ne_lat: number; ne_lng: number; sw_lat: number; sw_lng: number }
+        Returns: {
+          address_display: string
+          area: string | null
+          brew_methods: string[] | null
+          city_municipality: string
+          contributor_id: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          featured_until: string | null
+          gallery: string[] | null
+          has_aircon: boolean | null
+          has_outdoor_seating: boolean | null
+          has_parking: boolean | null
+          has_sockets: boolean | null
+          has_wifi: boolean | null
+          id: string
+          is_active: boolean | null
+          is_claimed: boolean | null
+          is_pet_friendly: boolean | null
+          is_published: boolean | null
+          is_verified: boolean | null
+          is_work_friendly: boolean | null
+          lat: number
+          lng: number
+          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+          name: string
+          operating_hours: Json | null
+          owner_ids: string[] | null
+          payment_methods: string | null
+          phone: string | null
+          price_level: Database["public"]["Enums"]["price_level"]
+          province: string
+          region: string
+          roaster: string | null
+          search_vector: unknown
+          serves_food: boolean | null
+          slug: string
+          socials: Json | null
+          specialty: string[] | null
+          tags: string[] | null
+          thumbnail: string
+          updated_at: string | null
+          website_url: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "cafes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       search_cafes: {
         Args: { query_text: string }
         Returns: {
@@ -591,7 +715,7 @@ export type Database = {
           lng: number
           membership_tier: Database["public"]["Enums"]["membership_tier"] | null
           name: string
-          operating_hours: OperatingHours | null
+          operating_hours: Json | null
           owner_ids: string[] | null
           payment_methods: string | null
           phone: string | null
