@@ -13,6 +13,9 @@ import {
     PawPrint,
     TreePine,
     BadgeCheck,
+    SlidersHorizontal,
+    XIcon,
+    MapPinIcon,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
@@ -24,6 +27,13 @@ export default function CafesPageClient() {
     const [cafes, setCafes] = useState<CafeWithRatings[]>([])
     const [loading, setLoading] = useState(true)
     const [isPending, startTransition] = useTransition()
+    const [filtersOpen, setFiltersOpen] = useState(false)
+
+    // Location State
+    const [userLocation, setUserLocation] = useState<{
+        city?: string
+        region?: string
+    } | null>(null)
 
     // Search & Filter State
     const [search, setSearch] = useState("")
@@ -37,13 +47,42 @@ export default function CafesPageClient() {
         has_outdoor_seating: false,
         open_now: false,
         price_level: "" as "" | "low" | "medium" | "high",
+        near_me: false,
     })
+
+    // Location Detection
+    useEffect(() => {
+        if (!navigator.geolocation) return
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&addressdetails=1`,
+                        { headers: { "User-Agent": "Grounds Coffee App" } }
+                    )
+                    const data = await response.json()
+                    const city =
+                        data.address?.city ||
+                        data.address?.town ||
+                        data.address?.municipality ||
+                        data.address?.village
+                    const region = data.address?.state || data.address?.region
+                    if (city || region) {
+                        setUserLocation({ city, region })
+                    }
+                } catch (error) {
+                    console.error("Failed to get location:", error)
+                }
+            },
+            () => console.log("Location access denied"),
+            { timeout: 10000, maximumAge: 300000 }
+        )
+    }, [])
 
     // Filter Logic
     useEffect(() => {
         const fetchCafes = async () => {
-            // Only set loading true if it's the first load or if you want a loading spinner on every filter change
-            // For better UX with useTransition, we might keep old data while new data loads
             startTransition(async () => {
                 const fetchedCafes = await getAllCafes(1, 40, {
                     search,
@@ -61,7 +100,6 @@ export default function CafesPageClient() {
             })
         }
 
-        // Debounce search
         const timeoutId = setTimeout(() => {
             fetchCafes()
         }, 500)
@@ -69,12 +107,30 @@ export default function CafesPageClient() {
         return () => clearTimeout(timeoutId)
     }, [search, sortBy, filters])
 
-    // Client-side filtering for open_now (since difficult to do server-side effectively without complex logic)
+    // Client-side filtering for open_now and near_me
     const filteredCafes = cafes.filter((cafe) => {
         if (filters.open_now) {
-            return (
-                cafe.operating_hours && isOpenNow(cafe.operating_hours).isOpen
-            )
+            if (
+                !cafe.operating_hours ||
+                !isOpenNow(cafe.operating_hours).isOpen
+            ) {
+                return false
+            }
+        }
+        if (filters.near_me && userLocation) {
+            const cityMatch =
+                userLocation.city &&
+                cafe.city_municipality
+                    ?.toLowerCase()
+                    .includes(userLocation.city.toLowerCase())
+            const regionMatch =
+                userLocation.region &&
+                cafe.region
+                    ?.toLowerCase()
+                    .includes(userLocation.region.toLowerCase())
+            if (!cityMatch && !regionMatch) {
+                return false
+            }
         }
         return true
     })
@@ -82,6 +138,42 @@ export default function CafesPageClient() {
     const toggleFilter = (key: keyof typeof filters) => {
         setFilters((prev) => ({ ...prev, [key]: !prev[key] }))
     }
+
+    // Count active filters (excluding empty values)
+    const activeFilterCount = Object.entries(filters).filter(
+        ([key, value]) =>
+            value === true || (key === "price_level" && value !== "")
+    ).length
+
+    const filterOptions = [
+        { key: "open_now", label: "Open Now", icon: null },
+        { key: "has_wifi", label: "WiFi", icon: <Wifi className='w-4 h-4' /> },
+        {
+            key: "has_sockets",
+            label: "Sockets",
+            icon: <Plug className='w-4 h-4' />,
+        },
+        {
+            key: "has_aircon",
+            label: "Aircon",
+            icon: <Wind className='w-4 h-4' />,
+        },
+        {
+            key: "has_parking",
+            label: "Parking",
+            icon: <Car className='w-4 h-4' />,
+        },
+        {
+            key: "is_pet_friendly",
+            label: "Pet Friendly",
+            icon: <PawPrint className='w-4 h-4' />,
+        },
+        {
+            key: "has_outdoor_seating",
+            label: "Outdoor",
+            icon: <TreePine className='w-4 h-4' />,
+        },
+    ]
 
     // Render
     return (
@@ -95,102 +187,168 @@ export default function CafesPageClient() {
                 </p>
             </div>
 
-            {/* Controls */}
-            <div className='flex flex-col gap-4'>
-                {/* Top Row: Search & Sort */}
-                <input
-                    type='text'
-                    placeholder='Search by name, area, vibe, or specialty...'
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className='flex-1 px-4 py-2 rounded-lg border border-text/20 bg-transparent focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all'
-                />
-
-                {/* Bottom Row: Amenity Filters */}
-                <div className='flex flex-row flex-wrap gap-2'>
+            {/* Controls - Compact Row */}
+            <div className='flex flex-col gap-3'>
+                <div className='flex flex-row gap-2'>
+                    <input
+                        type='text'
+                        placeholder='Search cafes...'
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className='flex-1 min-w-0 px-4 py-2 rounded-lg border border-text/20 bg-transparent focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all text-sm'
+                    />
+                    <button
+                        onClick={() => setFiltersOpen(!filtersOpen)}
+                        className={`flex flex-row items-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer text-sm font-medium ${
+                            filtersOpen || activeFilterCount > 0
+                                ? "bg-text text-background border-text"
+                                : "border-text/20 hover:border-text/50"
+                        }`}
+                    >
+                        <SlidersHorizontal className='w-4 h-4' />
+                        <span className='hidden sm:inline'>Filters</span>
+                        {activeFilterCount > 0 && (
+                            <span className='bg-background text-text text-xs font-bold px-1.5 py-0.5 rounded-full'>
+                                {activeFilterCount}
+                            </span>
+                        )}
+                    </button>
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className='px-3 py-2 rounded-full border border-text/20 bg-background focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all cursor-pointer hover:border-primary'
+                        className='px-3 py-2 rounded-lg border border-text/20 bg-background focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all cursor-pointer text-sm'
                     >
                         <option value='recommended'>Recommended</option>
                         <option value='rating'>Highest Rated</option>
                         <option value='reviews'>Most Reviewed</option>
-                        <option value='price_low'>Price: Low to High</option>
-                        <option value='price_high'>Price: High to Low</option>
                     </select>
-                    <select
-                        value={filters.price_level}
-                        onChange={(e) =>
-                            setFilters((prev) => ({
-                                ...prev,
-                                price_level: e.target.value as
-                                    | ""
-                                    | "low"
-                                    | "medium"
-                                    | "high",
-                            }))
-                        }
-                        className={`px-3 py-2 rounded-full border bg-background focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all cursor-pointer hover:border-primary ${
-                            filters.price_level
-                                ? "border-text bg-text text-background"
-                                : "border-text/20"
-                        }`}
+                </div>
+
+                {/* Location Badge */}
+                {userLocation && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className='flex flex-row items-center gap-2'
                     >
-                        <option value=''>All Prices</option>
-                        <option value='low'>Budget (₱)</option>
-                        <option value='medium'>Mid-Range (₱₱)</option>
-                        <option value='high'>Premium (₱₱₱)</option>
-                    </select>
-                    {[
-                        { key: "open_now", label: "Open Now", icon: null },
-                        {
-                            key: "has_wifi",
-                            label: "WiFi",
-                            icon: <Wifi className='w-4 h-4' />,
-                        },
-                        {
-                            key: "has_sockets",
-                            label: "Sockets",
-                            icon: <Plug className='w-4 h-4' />,
-                        },
-                        {
-                            key: "has_aircon",
-                            label: "Aircon",
-                            icon: <Wind className='w-4 h-4' />,
-                        },
-                        {
-                            key: "has_parking",
-                            label: "Parking",
-                            icon: <Car className='w-4 h-4' />,
-                        },
-                        {
-                            key: "is_pet_friendly",
-                            label: "Pet Friendly",
-                            icon: <PawPrint className='w-4 h-4' />,
-                        },
-                        {
-                            key: "has_outdoor_seating",
-                            label: "Outdoor",
-                            icon: <TreePine className='w-4 h-4' />,
-                        },
-                    ].map(({ key, label, icon }) => (
                         <button
-                            key={key}
-                            onClick={() =>
-                                toggleFilter(key as keyof typeof filters)
-                            }
-                            className={`flex flex-row items-center gap-2 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all border cursor-pointer ${
-                                filters[key as keyof typeof filters]
+                            onClick={() => toggleFilter("near_me")}
+                            className={`flex flex-row items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                filters.near_me
                                     ? "bg-text text-background border-text"
                                     : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
                             }`}
                         >
-                            {icon}
-                            {label}
+                            <MapPinIcon className='w-3.5 h-3.5' />
+                            Near {userLocation.city || userLocation.region}
                         </button>
-                    ))}
-                </div>
+                    </motion.div>
+                )}
+
+                {/* Expandable Filters Panel */}
+                <AnimatePresence>
+                    {filtersOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className='overflow-hidden'
+                        >
+                            <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                <div className='flex flex-row justify-between items-center mb-3'>
+                                    <span className='text-sm font-semibold'>
+                                        Filters
+                                    </span>
+                                    {activeFilterCount > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                setFilters({
+                                                    has_wifi: false,
+                                                    has_sockets: false,
+                                                    has_parking: false,
+                                                    has_aircon: false,
+                                                    is_pet_friendly: false,
+                                                    has_outdoor_seating: false,
+                                                    open_now: false,
+                                                    price_level: "",
+                                                    near_me: false,
+                                                })
+                                            }}
+                                            className='text-xs text-text/60 hover:text-text cursor-pointer'
+                                        >
+                                            Clear all
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Price Filter */}
+                                <div className='mb-3'>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>
+                                        Price Range
+                                    </span>
+                                    <div className='flex flex-row gap-2'>
+                                        {[
+                                            { value: "", label: "All" },
+                                            { value: "low", label: "₱" },
+                                            { value: "medium", label: "₱₱" },
+                                            { value: "high", label: "₱₱₱" },
+                                        ].map(({ value, label }) => (
+                                            <button
+                                                key={value}
+                                                onClick={() =>
+                                                    setFilters((prev) => ({
+                                                        ...prev,
+                                                        price_level:
+                                                            value as any,
+                                                    }))
+                                                }
+                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                                    filters.price_level ===
+                                                    value
+                                                        ? "bg-text text-background border-text"
+                                                        : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Amenity Filters */}
+                                <div>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>
+                                        Amenities
+                                    </span>
+                                    <div className='flex flex-row flex-wrap gap-2'>
+                                        {filterOptions.map(
+                                            ({ key, label, icon }) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() =>
+                                                        toggleFilter(
+                                                            key as keyof typeof filters
+                                                        )
+                                                    }
+                                                    className={`flex flex-row items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                                        filters[
+                                                            key as keyof typeof filters
+                                                        ]
+                                                            ? "bg-text text-background border-text"
+                                                            : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                                    }`}
+                                                >
+                                                    {icon}
+                                                    {label}
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Content */}
@@ -201,7 +359,6 @@ export default function CafesPageClient() {
             >
                 <AnimatePresence mode='popLayout'>
                     {loading ? (
-                        // Skeleton Loading
                         Array.from({ length: 4 }).map((_, i) => (
                             <div
                                 key={i}
@@ -297,8 +454,8 @@ export default function CafesPageClient() {
                                                     {openStatus.isOpen
                                                         ? `Open | Closes at ${openStatus.closesAt}`
                                                         : openStatus.opensAt
-                                                        ? `Closed | Opens at ${openStatus.opensAt}`
-                                                        : "Closed"}
+                                                          ? `Closed | Opens at ${openStatus.opensAt}`
+                                                          : "Closed"}
                                                 </div>
                                             )}
                                         </div>
@@ -439,6 +596,7 @@ export default function CafesPageClient() {
                                         has_outdoor_seating: false,
                                         open_now: false,
                                         price_level: "",
+                                        near_me: false,
                                     })
                                 }}
                                 className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'
