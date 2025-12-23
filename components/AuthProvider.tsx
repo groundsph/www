@@ -17,12 +17,14 @@ export type Profile = Tables<"profiles">
 interface AuthContextType {
     user: User | null
     profile: Profile | null
+    isAdmin: boolean
     refreshProfile: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextType>({
     user: null,
     profile: null,
+    isAdmin: false,
     refreshProfile: async () => {},
 })
 
@@ -101,9 +103,14 @@ export default function AuthProvider({
         )
     }, [supabase.auth, handleAuthChange])
 
+    // Computed values
+    const isAdmin = profile?.role === "admin" || profile?.role === "moderator"
+
     // Render
     return (
-        <AuthContext.Provider value={{ user, profile, refreshProfile }}>
+        <AuthContext.Provider
+            value={{ user, profile, isAdmin, refreshProfile }}
+        >
             {children}
         </AuthContext.Provider>
     )
