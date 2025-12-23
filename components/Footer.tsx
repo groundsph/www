@@ -100,6 +100,12 @@ export default function Footer() {
                             >
                                 Sign In
                             </Link>
+                            <Link
+                                href='/donate'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                Support Us
+                            </Link>
                         </div>
                     </div>
                 </div>
