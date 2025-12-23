@@ -88,6 +88,93 @@ export async function getDailyFeatured() {
     return flatSelected as CafeWithRatings
 }
 
+/**
+ * Get featured cafe based on user's location (city/region)
+ * Priority: 1) Manual schedule for user's region, 2) City match, 3) Region match
+ */
+export async function getLocationFeatured(city?: string, region?: string): Promise<CafeWithRatings | null> {
+    if (!city && !region) return null
+
+    const db = await createClient()
+    const now = new Date().toISOString()
+    const dayOfYear = getDayOfYear(new Date())
+
+    // 1. Check for manual schedule matching user's location (region_context)
+    if (region) {
+        const { data: scheduled } = await db
+            .from("featured_schedules")
+            .select(`
+                *,
+                cafe:cafes(*, cafe_rating_stats(average_rating, total_reviews))
+            `)
+            .eq("slot_type", "hero")
+            .eq("is_active", true)
+            .ilike("region_context", `%${region}%`)
+            .lte("start_date", now)
+            .gte("end_date", now)
+            .order("priority", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if ((scheduled as any)?.cafe) {
+            const c = (scheduled as any).cafe
+            const flat = {
+                ...c,
+                average_rating: c.cafe_rating_stats?.average_rating ?? null,
+                total_reviews: c.cafe_rating_stats?.total_reviews ?? null
+            }
+            delete flat.cafe_rating_stats
+            return flat as CafeWithRatings
+        }
+    }
+
+    // 2. Try city_municipality algorithmic match
+    if (city) {
+        const { data: cityCafes } = await db
+            .from("cafes")
+            .select("*, cafe_rating_stats(average_rating, total_reviews)")
+            .eq("is_published", true)
+            .ilike("city_municipality", `%${city}%`)
+            .order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
+            .limit(10)
+
+        if (cityCafes?.length) {
+            const selected = cityCafes[dayOfYear % cityCafes.length] as any
+            const flat = {
+                ...selected,
+                average_rating: selected.cafe_rating_stats?.average_rating ?? null,
+                total_reviews: selected.cafe_rating_stats?.total_reviews ?? null
+            }
+            delete flat.cafe_rating_stats
+            return flat as CafeWithRatings
+        }
+    }
+
+    // 3. Fallback to region algorithmic match
+    if (region) {
+        const { data: regionCafes } = await db
+            .from("cafes")
+            .select("*, cafe_rating_stats(average_rating, total_reviews)")
+            .eq("is_published", true)
+            .ilike("region", `%${region}%`)
+            .order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
+            .limit(10)
+
+        if (regionCafes?.length) {
+            const selected = regionCafes[dayOfYear % regionCafes.length] as any
+            const flat = {
+                ...selected,
+                average_rating: selected.cafe_rating_stats?.average_rating ?? null,
+                total_reviews: selected.cafe_rating_stats?.total_reviews ?? null
+            }
+            delete flat.cafe_rating_stats
+            return flat as CafeWithRatings
+        }
+    }
+
+    return null
+}
+
 export async function getAllCafes(
     page: number = 1,
     limit: number = 12,

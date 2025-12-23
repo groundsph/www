@@ -81,7 +81,7 @@ export default function NotificationProvider({
                             scale: 0,
                         }}
                         animate={{
-                            opacity: 1,
+                            opacity: 1 - idx * 0.2,
                             scale: 1 - idx * 0.1,
                             zIndex: 100 - idx,
                             y: idx * -10,
@@ -98,11 +98,11 @@ export default function NotificationProvider({
                         }}
                         whileHover={{ opacity: 0.8 }}
                         onClick={() => removeNotification(id)}
-                        className={`fixed bottom-6 right-6 px-3 w-[80svw] md:max-w-lg py-2 select-none cursor-pointer rounded-lg bg-background border-2 text-text backdrop-blur-sm flex flex-col gap-1
-                            ${type === "success" ? "border-green-500/60" : ""}
-                            ${type === "error" ? "border-red-500/60" : ""}
-                            ${type === "warning" ? "border-orange-500/60" : ""}
-                            ${type === "info" ? "border-secondary/60" : ""}
+                        className={`fixed bottom-6 right-6 px-3 w-[80svw] md:max-w-lg py-2 select-none cursor-pointer rounded-xl bg-background border-2 text-text flex flex-col gap-1 shadow-md
+                            ${type === "success" ? "border-green-400/60" : ""}
+                            ${type === "error" ? "border-red-400/60" : ""}
+                            ${type === "warning" ? "border-orange-400/60" : ""}
+                            ${type === "info" ? "border-background" : ""}
                             `}
                     >
                         <p className='font-bold text-xs opacity-60'>{title}</p>

@@ -157,12 +157,12 @@ export default function AuthPageClient() {
                 >
                     <h1 className='text-4xl md:text-5xl font-bold font-serif'>
                         Grounds
-                        <span className='text-primary'>.</span>
+                        <span className='text-primary/80'>.</span>
                     </h1>
                 </Link>
 
                 {/* Card */}
-                <div className='bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-secondary/20'>
+                <div className=''>
                     {/* Title */}
                     <h2 className='text-2xl font-semibold font-serif text-text mb-6'>
                         {mode === "signin" && "Login to your Account"}
@@ -237,7 +237,7 @@ export default function AuthPageClient() {
                                 <div>
                                     <input
                                         type='email'
-                                        placeholder='Email'
+                                        placeholder='juan@ground.com'
                                         value={email}
                                         onChange={(e) =>
                                             setEmail(e.target.value)

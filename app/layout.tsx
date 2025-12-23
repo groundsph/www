@@ -1,9 +1,11 @@
 import type { Metadata } from "next"
 import { DM_Sans, Playfair_Display } from "next/font/google"
+import Script from "next/script"
 import "./globals.css"
 import AuthProvider from "@/components/AuthProvider"
 import LayoutWrapper from "@/components/LayoutWrapper"
 import NotificationProvider from "@/components/NotificationProvider"
+import AnalyticsBanner from "@/components/AnalyticsBanner"
 
 const playfairDisplay = Playfair_Display({
     variable: "--font-playfair-display",
@@ -98,7 +100,7 @@ export default function RootLayout({
     return (
         <html
             lang='en'
-            className='overscroll-none'
+            className=''
         >
             <body
                 className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen`}
@@ -108,6 +110,12 @@ export default function RootLayout({
                         <LayoutWrapper>{children}</LayoutWrapper>
                     </AuthProvider>
                 </NotificationProvider>
+                <AnalyticsBanner />
+                <Script
+                    src='https://analytics.ranlabs.space/api/script.js'
+                    data-site-id='5'
+                    strategy='afterInteractive'
+                />
             </body>
         </html>
     )

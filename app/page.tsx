@@ -6,6 +6,9 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import Link from "next/link"
 import { SearchIcon } from "lucide-react"
 
+// SSR revalidation every hour
+export const revalidate = 3600
+
 export default async function Home() {
     const jsonLd = {
         "@context": "https://schema.org",
@@ -55,7 +58,7 @@ export default async function Home() {
 
             <section className='w-full min-h-max bg-secondary mb-4 flex flex-col items-center justify-center py-10 gap-4 px-6 overflow-clip relative'>
                 {/* BG */}
-                <SearchIcon className='absolute h-[140%] aspect-square w-auto text-background/10' />
+                <SearchIcon className='absolute h-[140%] aspect-square w-auto text-background opacity-10' />
                 {/* Content */}
                 <h2 className='font-serif text-3xl md:text-5xl font-semibold z-1 text-center'>
                     Found a spot we missed?
@@ -77,7 +80,7 @@ export default async function Home() {
                 <h2 className='font-semibold font-serif text-2xl px-6'>
                     Recently Added Cafes
                 </h2>
-                <div className='flex flex-row gap-8 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory'>
+                <div className='flex flex-row gap-8 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory scroll-px-4'>
                     {recentlyAdded.map((cafe, idx) => (
                         <RecentCard
                             key={cafe.id || idx}
