@@ -236,3 +236,25 @@ export async function getAllCafes(
         return flat
     }) as CafeWithRatings[]
 }
+
+/**
+ * Get reviews for a specific cafe
+ */
+export async function getReviewsByCafeId(cafeId: string) {
+    const db = await createClient()
+    const { data: reviews } = await db
+        .from("reviews")
+        .select(`
+            id,
+            rating,
+            comment,
+            created_at,
+            user_id,
+            author:profiles(display_name, username, avatar_url)
+        `)
+        .eq("cafe_id", cafeId)
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+
+    return reviews || []
+}

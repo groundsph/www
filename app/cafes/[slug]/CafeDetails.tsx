@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
 import { CafeWithRatings } from "@/utils/types/extra"
 import Image from "next/image"
@@ -16,6 +17,7 @@ import {
     SnowflakeIcon,
     PawPrintIcon,
     SunIcon,
+    User,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -52,7 +54,26 @@ const DynamicCafeMiniMap = dynamic(() => import("@/components/CafeMiniMap"), {
     ),
 })
 
-export default function CafeDetails({ cafe }: { cafe: CafeWithRatings }) {
+interface Review {
+    id: string
+    rating: number
+    comment: string
+    created_at: string | null
+    user_id: string
+    author: {
+        display_name: string
+        username: string
+        avatar_url: string | null
+    }
+}
+
+export default function CafeDetails({
+    cafe,
+    reviews = [],
+}: {
+    cafe: CafeWithRatings
+    reviews?: Review[]
+}) {
     // Constant
     const openStatus = isOpenNow(cafe.operating_hours)
     const firstImage = cafe.gallery && cafe.gallery[0]
@@ -179,6 +200,92 @@ export default function CafeDetails({ cafe }: { cafe: CafeWithRatings }) {
                             <p>No story found</p>
                         )}
                     </div>
+
+                    {/* Reviews Section */}
+                    <div className='w-full mt-8'>
+                        <h3 className='text-2xl font-serif font-bold mb-6'>
+                            Reviews
+                        </h3>
+                        {reviews.length > 0 ? (
+                            <div className='flex flex-col gap-6'>
+                                {reviews.map((review) => (
+                                    <div
+                                        key={review.id}
+                                        className='border-b border-text/10 pb-6 last:border-0 last:pb-0'
+                                    >
+                                        <div className='flex items-center justify-between mb-3'>
+                                            <Link
+                                                href={`/profile/${review.author.username}`}
+                                                className='flex items-center gap-2 group'
+                                            >
+                                                <div className='relative w-10 h-10 rounded-full overflow-hidden bg-text/5 border border-text/10 group-hover:border-primary transition-colors'>
+                                                    {review.author
+                                                        .avatar_url ? (
+                                                        <Image
+                                                            src={
+                                                                review.author
+                                                                    .avatar_url
+                                                            }
+                                                            alt={
+                                                                review.author
+                                                                    .display_name
+                                                            }
+                                                            fill
+                                                            className='object-cover'
+                                                        />
+                                                    ) : (
+                                                        <div className='w-full h-full flex items-center justify-center'>
+                                                            <User className='w-5 h-5 text-text/40' />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className='flex flex-col'>
+                                                    <span className='font-semibold text-sm group-hover:text-primary transition-colors'>
+                                                        {
+                                                            review.author
+                                                                .display_name
+                                                        }
+                                                    </span>
+                                                    <span className='text-xs text-text/50'>
+                                                        @
+                                                        {review.author.username}
+                                                    </span>
+                                                </div>
+                                            </Link>
+                                            <div className='flex flex-col items-end'>
+                                                <div className='flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-lg text-sm font-bold'>
+                                                    <StarIcon className='w-3.5 h-3.5 fill-current' />
+                                                    {review.rating}/10
+                                                </div>
+                                                <span className='text-xs text-text/40 mt-1'>
+                                                    {new Date(
+                                                        review.created_at || ""
+                                                    ).toLocaleDateString(
+                                                        "en-US",
+                                                        {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            year: "numeric",
+                                                        }
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className='text-sm text-text/80 pl-12'>
+                                            <MarkdownRender
+                                                content={review.comment}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className='bg-text/5 rounded-xl p-8 text-center text-text/50'>
+                                No reviews yet. Be the first to share your
+                                experience!
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div
                     className={`w-full md:w-auto absolute top-2 md:top-0 z-10 md:relative transition-transform flex flex-col px-2 md:px-0 ${
@@ -303,12 +410,12 @@ export default function CafeDetails({ cafe }: { cafe: CafeWithRatings }) {
                                               openStatus.closesAt
                                           )}`
                                         : openStatus.opensAt
-                                        ? `Opens at ${
-                                              openStatus.opensAt.split(" ")[0]
-                                          } ${formatTimeTo12Hour(
-                                              openStatus.opensAt.split(" ")[1]
-                                          )}`
-                                        : ""}
+                                          ? `Opens at ${
+                                                openStatus.opensAt.split(" ")[0]
+                                            } ${formatTimeTo12Hour(
+                                                openStatus.opensAt.split(" ")[1]
+                                            )}`
+                                          : ""}
                                 </span>
                             </div>
                         </div>

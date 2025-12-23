@@ -105,3 +105,70 @@ export async function getCafesByIds(ids: string[]): Promise<CafeWithRatings[]> {
         return flat
     }) as CafeWithRatings[]
 }
+
+/**
+ * Get a user's public profile by username
+ */
+export async function getProfileByUsername(username: string): Promise<ProfileWithBadges | null> {
+    const db = await createClient()
+
+    // Fetch profile by username
+    const { data: profile, error: profileError } = await db
+        .from("profiles")
+        .select("*")
+        .eq("username", username)
+        .single()
+
+    if (profileError || !profile) return null
+
+    // Fetch user's badges with badge definitions
+    const { data: userBadges } = await db
+        .from("user_badges")
+        .select(`
+            *,
+            badge:badge_definitions(*)
+        `)
+        .eq("user_id", profile.id)
+
+    return {
+        ...(profile as any),
+        stats: (profile as any).stats as ProfileStats | null,
+        passport: (profile as any).passport as ProfilePassport | null,
+        badges: (userBadges || []) as ProfileWithBadges['badges']
+    }
+}
+
+/**
+ * Get a user's reviews with cafe info
+ */
+export async function getUserReviews(userId: string): Promise<{
+    id: string
+    rating: number
+    comment: string
+    created_at: string | null
+    cafe: { name: string; slug: string; thumbnail: string } | null
+}[]> {
+    const db = await createClient()
+
+    const { data: reviews } = await db
+        .from("reviews")
+        .select(`
+            id,
+            rating,
+            comment,
+            created_at,
+            cafe:cafes(name, slug, thumbnail)
+        `)
+        .eq("user_id", userId)
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(20)
+
+    return (reviews || []).map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        created_at: r.created_at,
+        cafe: r.cafe
+    }))
+}

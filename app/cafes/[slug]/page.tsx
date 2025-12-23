@@ -1,8 +1,7 @@
 import CafeDetails from "@/app/cafes/[slug]/CafeDetails"
-import { createClient } from "@/utils/supabase/server"
 import Link from "next/link"
 import type { Metadata } from "next"
-import { getCafeBySlug } from "@/app/api/actions/cafe"
+import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 export async function generateMetadata({
@@ -99,8 +98,8 @@ function generateJsonLd(cafe: CafeWithRatings) {
             cafe.price_level === "low"
                 ? "₱"
                 : cafe.price_level === "medium"
-                ? "₱₱"
-                : "₱₱₱",
+                  ? "₱₱"
+                  : "₱₱₱",
         aggregateRating: cafe.average_rating
             ? {
                   "@type": "AggregateRating",
@@ -153,6 +152,8 @@ export default async function CafePage({
     // Constants
     const { slug } = await params
     const cafe = await getCafeBySlug(slug)
+    const reviews = cafe ? await getReviewsByCafeId(cafe.id) : []
+
     if (!cafe)
         return (
             <section
@@ -183,7 +184,10 @@ export default async function CafePage({
                 type='application/ld+json'
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <CafeDetails cafe={cafe} />
+            <CafeDetails
+                cafe={cafe}
+                reviews={reviews}
+            />
         </>
     )
 }
