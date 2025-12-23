@@ -7,6 +7,7 @@ import {
     getProfileWithBadges,
     updateProfile,
 } from "@/app/api/actions/profile"
+import { uploadAvatar } from "@/utils/supabase/storage"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -16,6 +17,7 @@ import {
     Coffee,
     Edit2,
     Heart,
+    Loader2,
     MapPin,
     Medal,
     MessageSquare,
@@ -28,7 +30,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useContext, useEffect, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -60,6 +62,17 @@ export default function ProfileClient() {
     // Edit form states
     const [editDisplayName, setEditDisplayName] = useState("")
     const [editBio, setEditBio] = useState("")
+
+    // Avatar upload
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+    const [avatarError, setAvatarError] = useState<string | null>(null)
+    const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+
+    // Constants for avatar processing
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB input limit (will be resized)
+    const AVATAR_SIZE = 400 // Output size in pixels
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 
     // Passport cafe data
     const [visitedCafes, setVisitedCafes] = useState<
@@ -131,7 +144,6 @@ export default function ProfileClient() {
             })
 
             if (result.success) {
-                await refreshProfile()
                 setProfileData((prev) =>
                     prev
                         ? {
@@ -142,6 +154,8 @@ export default function ProfileClient() {
                         : null
                 )
                 setIsEditing(false)
+                // Refresh in background, don't block UI
+                refreshProfile()
             }
         } catch (error) {
             console.error("Error saving profile:", error)
@@ -233,7 +247,158 @@ export default function ProfileClient() {
                 <section className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
                     {/* Avatar */}
                     <div className='relative'>
-                        <div className='w-28 h-28 rounded-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden border-4 border-background'>
+                        <input
+                            ref={fileInputRef}
+                            type='file'
+                            accept='image/jpeg,image/png,image/webp,image/gif'
+                            className='hidden'
+                            onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+
+                                setAvatarError(null)
+
+                                // Validate file type (handle cases where file.type might be empty)
+                                const fileExt =
+                                    file.name.split(".").pop()?.toLowerCase() ||
+                                    ""
+                                const isValidType =
+                                    ALLOWED_TYPES.includes(file.type) ||
+                                    [
+                                        "jpg",
+                                        "jpeg",
+                                        "png",
+                                        "webp",
+                                        "gif",
+                                    ].includes(fileExt)
+
+                                if (!isValidType) {
+                                    setAvatarError(
+                                        "Please use JPEG, PNG, WebP, or GIF"
+                                    )
+                                    e.target.value = ""
+                                    return
+                                }
+
+                                // Validate file size (generous limit since we'll resize)
+                                if (file.size > MAX_FILE_SIZE) {
+                                    setAvatarError(
+                                        "Image too large. Please use an image under 5MB"
+                                    )
+                                    e.target.value = ""
+                                    return
+                                }
+
+                                setIsUploadingAvatar(true)
+                                setUploadStatus("Loading image...")
+                                try {
+                                    // Load image and resize/crop to square
+                                    const img = document.createElement("img")
+                                    const objectUrl = URL.createObjectURL(file)
+
+                                    await new Promise<void>(
+                                        (resolve, reject) => {
+                                            img.onload = () => resolve()
+                                            img.onerror = () =>
+                                                reject(
+                                                    new Error(
+                                                        "Failed to load image"
+                                                    )
+                                                )
+                                            img.src = objectUrl
+                                        }
+                                    )
+
+                                    setUploadStatus("Cropping & resizing...")
+
+                                    // Create canvas and crop to center square
+                                    const canvas =
+                                        document.createElement("canvas")
+                                    canvas.width = AVATAR_SIZE
+                                    canvas.height = AVATAR_SIZE
+                                    const ctx = canvas.getContext("2d")!
+
+                                    // Calculate crop dimensions (center crop to square)
+                                    const size = Math.min(img.width, img.height)
+                                    const x = (img.width - size) / 2
+                                    const y = (img.height - size) / 2
+
+                                    // Draw cropped and resized image
+                                    ctx.drawImage(
+                                        img,
+                                        x,
+                                        y,
+                                        size,
+                                        size,
+                                        0,
+                                        0,
+                                        AVATAR_SIZE,
+                                        AVATAR_SIZE
+                                    )
+                                    URL.revokeObjectURL(objectUrl)
+
+                                    // Convert to blob
+                                    const blob = await new Promise<Blob>(
+                                        (resolve, reject) => {
+                                            canvas.toBlob(
+                                                (b) =>
+                                                    b
+                                                        ? resolve(b)
+                                                        : reject(
+                                                              new Error(
+                                                                  "Failed to create blob"
+                                                              )
+                                                          ),
+                                                "image/jpeg",
+                                                0.9
+                                            )
+                                        }
+                                    )
+
+                                    setUploadStatus("Uploading...")
+
+                                    // Upload processed image
+                                    const formData = new FormData()
+                                    formData.append(
+                                        "avatar",
+                                        blob,
+                                        "avatar.jpg"
+                                    )
+                                    const result = await uploadAvatar(formData)
+
+                                    if (result.success && result.url) {
+                                        setUploadStatus("Done!")
+                                        setProfileData((prev) =>
+                                            prev
+                                                ? {
+                                                      ...prev,
+                                                      avatar_url: result.url!,
+                                                  }
+                                                : null
+                                        )
+                                        // Refresh in background, don't block UI
+                                        refreshProfile()
+                                    } else {
+                                        setAvatarError(
+                                            result.error || "Upload failed"
+                                        )
+                                    }
+                                } catch (err) {
+                                    console.error("Upload error:", err)
+                                    setAvatarError("Failed to process image")
+                                } finally {
+                                    setIsUploadingAvatar(false)
+                                    setUploadStatus(null)
+                                    e.target.value = ""
+                                }
+                            }}
+                        />
+                        <div
+                            onClick={() =>
+                                isEditing && fileInputRef.current?.click()
+                            }
+                            className={`w-28 h-28 rounded-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden border-4 border-background relative group ${isEditing ? "cursor-pointer" : ""}`}
+                        >
                             {profileData.avatar_url ? (
                                 <Image
                                     src={profileData.avatar_url}
@@ -244,6 +409,22 @@ export default function ProfileClient() {
                             ) : (
                                 <User className='w-12 h-12 text-text/40' />
                             )}
+                            {/* Upload overlay */}
+                            {isEditing && (
+                                <div className='absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full'>
+                                    {isUploadingAvatar ? (
+                                        <Loader2 className='w-8 h-8 text-white animate-spin' />
+                                    ) : (
+                                        <Camera className='w-8 h-8 text-white' />
+                                    )}
+                                </div>
+                            )}
+                            {/* Loading overlay when uploading */}
+                            {isUploadingAvatar && (
+                                <div className='absolute inset-0 bg-black/50 flex items-center justify-center rounded-full'>
+                                    <Loader2 className='w-8 h-8 text-white animate-spin' />
+                                </div>
+                            )}
                         </div>
                         {profileData.is_supporter && (
                             <div
@@ -252,6 +433,24 @@ export default function ProfileClient() {
                             >
                                 <Sparkles className='w-4 h-4' />
                             </div>
+                        )}
+                        {/* Avatar error message */}
+                        {avatarError && (
+                            <p className='absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-red-500 whitespace-nowrap'>
+                                {avatarError}
+                            </p>
+                        )}
+                        {/* Upload status message */}
+                        {uploadStatus && !avatarError && (
+                            <p className='absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium whitespace-nowrap'>
+                                {uploadStatus}
+                            </p>
+                        )}
+                        {/* Edit hint */}
+                        {isEditing && !avatarError && !uploadStatus && (
+                            <p className='absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-text/50 whitespace-nowrap'>
+                                Click to change
+                            </p>
                         )}
                     </div>
 
