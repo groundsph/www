@@ -844,8 +844,9 @@ export async function createBadgeDefinition(badge: {
             description: badge.description.trim(),
             image_url: badge.image_url,
             category: badge.category,
-            rarity: badge.rarity
-        })
+            rarity: badge.rarity,
+            metadata: badge.metadata as any || null
+        } as any)
         .select()
         .single()
 
@@ -868,6 +869,7 @@ export async function updateBadgeDefinition(
         image_url: string
         category: 'achievement' | 'monetary' | 'social'
         rarity: 'common' | 'rare' | 'legendary'
+        metadata: Record<string, unknown> | null
     }>
 ): Promise<AdminActionResult> {
     const db = await createClient()

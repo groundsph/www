@@ -1,6 +1,13 @@
 "use client"
 
 import Image from "next/image"
+import { getLucideIcon } from "./iconUtils"
+
+// Badge metadata structure for icon-based badges
+interface BadgeMetadata {
+    icon_name?: string
+    icon_color?: string
+}
 
 // Minimal badge interface compatible with both database types and BadgeDefinition
 interface Badge {
@@ -10,6 +17,7 @@ interface Badge {
     image_url: string
     category: "achievement" | "monetary" | "social"
     rarity: "common" | "rare" | "legendary"
+    metadata?: BadgeMetadata | null
 }
 
 interface BadgeCardProps {
@@ -54,9 +62,17 @@ export default function BadgeCard({
     onEdit,
     onDelete,
 }: BadgeCardProps) {
+    // Check if this badge uses a Lucide icon
+    const metadata = badge.metadata as BadgeMetadata | null | undefined
+    const iconName = metadata?.icon_name
+    const iconColor = metadata?.icon_color || "#8B4513"
+    const IconComponent = iconName ? getLucideIcon(iconName) : null
+
+    const iconSize = size === "lg" ? 32 : size === "md" ? 24 : 16
+
     return (
         <div className='group relative'>
-            {/* Badge Image Container */}
+            {/* Badge Image/Icon Container */}
             <div
                 className={`
                     ${sizeClasses[size]} 
@@ -72,14 +88,21 @@ export default function BadgeCard({
                         : `${badge.name} - ${badge.description}`
                 }
             >
-                <Image
-                    src={badge.image_url}
-                    alt={badge.name}
-                    width={size === "lg" ? 64 : size === "md" ? 48 : 32}
-                    height={size === "lg" ? 64 : size === "md" ? 48 : 32}
-                    className='object-contain'
-                    unoptimized
-                />
+                {IconComponent ? (
+                    <IconComponent
+                        style={{ color: iconColor }}
+                        className={`w-${iconSize === 32 ? 8 : iconSize === 24 ? 6 : 4} h-${iconSize === 32 ? 8 : iconSize === 24 ? 6 : 4}`}
+                    />
+                ) : (
+                    <Image
+                        src={badge.image_url}
+                        alt={badge.name}
+                        width={size === "lg" ? 64 : size === "md" ? 48 : 32}
+                        height={size === "lg" ? 64 : size === "md" ? 48 : 32}
+                        className='object-contain'
+                        unoptimized
+                    />
+                )}
             </div>
 
             {/* Details Section (for admin view) */}
@@ -159,10 +182,16 @@ export function BadgeCardFull({
     onDelete?: () => void
     onAward?: () => void
 }) {
+    // Check if this badge uses a Lucide icon
+    const metadata = badge.metadata as BadgeMetadata | null | undefined
+    const iconName = metadata?.icon_name
+    const iconColor = metadata?.icon_color || "#8B4513"
+    const IconComponent = iconName ? getLucideIcon(iconName) : null
+
     return (
         <div className='group relative bg-text/5 border border-text/10 rounded-xl p-4 hover:border-text/20 transition-colors'>
             <div className='flex items-start gap-4'>
-                {/* Badge Image */}
+                {/* Badge Image/Icon */}
                 <div
                     className={`
                         w-16 h-16 shrink-0
@@ -171,14 +200,21 @@ export function BadgeCardFull({
                         flex items-center justify-center
                     `}
                 >
-                    <Image
-                        src={badge.image_url}
-                        alt={badge.name}
-                        width={64}
-                        height={64}
-                        className='object-contain'
-                        unoptimized
-                    />
+                    {IconComponent ? (
+                        <IconComponent
+                            style={{ color: iconColor }}
+                            className='w-8 h-8'
+                        />
+                    ) : (
+                        <Image
+                            src={badge.image_url}
+                            alt={badge.name}
+                            width={64}
+                            height={64}
+                            className='object-contain'
+                            unoptimized
+                        />
+                    )}
                 </div>
 
                 {/* Badge Info */}

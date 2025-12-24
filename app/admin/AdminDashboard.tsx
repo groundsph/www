@@ -56,6 +56,7 @@ import {
 import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
+import IconPicker from "@/components/badges/IconPicker"
 
 interface AdminDashboardProps {
     pendingCafes: CafeWithRatings[]
@@ -107,6 +108,12 @@ export default function AdminDashboard({
         null
     )
     const [badgeLoading, setBadgeLoading] = useState(false)
+    // Icon mode state
+    const [useIconMode, setUseIconMode] = useState(false)
+    const [selectedIconName, setSelectedIconName] = useState<string | null>(
+        null
+    )
+    const [selectedIconColor, setSelectedIconColor] = useState("#8B4513")
     const [badgeError, setBadgeError] = useState<string | null>(null)
 
     // Badge awarding state
@@ -300,7 +307,22 @@ export default function AdminDashboard({
                 category: badge.category,
                 rarity: badge.rarity,
             })
-            setBadgeImagePreview(badge.image_url)
+            // Check if badge uses icon mode
+            const metadata = badge.metadata as {
+                icon_name?: string
+                icon_color?: string
+            } | null
+            if (metadata?.icon_name) {
+                setUseIconMode(true)
+                setSelectedIconName(metadata.icon_name)
+                setSelectedIconColor(metadata.icon_color || "#8B4513")
+                setBadgeImagePreview(null)
+            } else {
+                setUseIconMode(false)
+                setSelectedIconName(null)
+                setSelectedIconColor("#8B4513")
+                setBadgeImagePreview(badge.image_url)
+            }
         } else {
             setEditingBadge(null)
             setBadgeForm({
@@ -310,6 +332,9 @@ export default function AdminDashboard({
                 category: "achievement",
                 rarity: "common",
             })
+            setUseIconMode(false)
+            setSelectedIconName(null)
+            setSelectedIconColor("#8B4513")
             setBadgeImagePreview(null)
         }
         setBadgeImageFile(null)
@@ -323,6 +348,9 @@ export default function AdminDashboard({
         setBadgeImageFile(null)
         setBadgeImagePreview(null)
         setBadgeError(null)
+        setUseIconMode(false)
+        setSelectedIconName(null)
+        setSelectedIconColor("#8B4513")
     }
 
     const handleBadgeImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -359,28 +387,44 @@ export default function AdminDashboard({
         try {
             let imageUrl = badgeForm.image_url
 
-            // Upload new image if selected
-            if (badgeImageFile) {
-                const formData = new FormData()
-                formData.append("image", badgeImageFile)
-                const uploadResult = await uploadBadgeImage(formData)
-
-                if (!uploadResult.success) {
-                    setBadgeError(
-                        uploadResult.error || "Failed to upload image"
-                    )
+            // If using icon mode, validate icon selection and use placeholder URL
+            if (useIconMode) {
+                if (!selectedIconName) {
+                    setBadgeError("Please select an icon")
                     setBadgeLoading(false)
                     return
                 }
+                // Use a placeholder URL for icon-based badges
+                imageUrl = `/icon-badge-placeholder.svg`
+            } else {
+                // Image mode - upload new image if selected
+                if (badgeImageFile) {
+                    const formData = new FormData()
+                    formData.append("image", badgeImageFile)
+                    const uploadResult = await uploadBadgeImage(formData)
 
-                imageUrl = uploadResult.url!
+                    if (!uploadResult.success) {
+                        setBadgeError(
+                            uploadResult.error || "Failed to upload image"
+                        )
+                        setBadgeLoading(false)
+                        return
+                    }
+
+                    imageUrl = uploadResult.url!
+                }
+
+                if (!imageUrl) {
+                    setBadgeError("Badge image is required")
+                    setBadgeLoading(false)
+                    return
+                }
             }
 
-            if (!imageUrl) {
-                setBadgeError("Badge image is required")
-                setBadgeLoading(false)
-                return
-            }
+            // Build metadata object
+            const metadata = useIconMode
+                ? { icon_name: selectedIconName, icon_color: selectedIconColor }
+                : null
 
             if (editingBadge) {
                 // Update existing badge
@@ -390,6 +434,7 @@ export default function AdminDashboard({
                     image_url: imageUrl,
                     category: badgeForm.category,
                     rarity: badgeForm.rarity,
+                    metadata,
                 })
 
                 if (!result.success) {
@@ -402,7 +447,12 @@ export default function AdminDashboard({
                 setBadges((prev) =>
                     prev.map((b) =>
                         b.id === editingBadge.id
-                            ? { ...b, ...badgeForm, image_url: imageUrl }
+                            ? {
+                                  ...b,
+                                  ...badgeForm,
+                                  image_url: imageUrl,
+                                  metadata,
+                              }
                             : b
                     )
                 )
@@ -414,6 +464,7 @@ export default function AdminDashboard({
                     image_url: imageUrl,
                     category: badgeForm.category,
                     rarity: badgeForm.rarity,
+                    metadata: metadata || undefined,
                 })
 
                 if (!result.success || !result.badge) {
@@ -1427,52 +1478,106 @@ export default function AdminDashboard({
                         </div>
 
                         <div className='p-6 space-y-4'>
-                            {/* Badge Image */}
+                            {/* Badge Type Toggle */}
                             <div>
                                 <label className='block text-sm font-medium mb-2'>
-                                    Badge Image (128×128 PNG)
+                                    Badge Type
                                 </label>
-                                <div className='flex items-center gap-4'>
-                                    {/* Preview */}
-                                    <div className='w-20 h-20 rounded-xl border-2 border-dashed border-text/20 flex items-center justify-center overflow-hidden bg-text/5'>
-                                        {badgeImagePreview ? (
-                                            <Image
-                                                src={badgeImagePreview}
-                                                alt='Badge preview'
-                                                width={80}
-                                                height={80}
-                                                className='object-contain'
-                                                unoptimized
-                                            />
-                                        ) : (
-                                            <Upload className='w-8 h-8 text-text/30' />
-                                        )}
-                                    </div>
-
-                                    {/* Upload Button */}
-                                    <div className='flex-1'>
-                                        <label className='block'>
-                                            <span className='inline-flex items-center gap-2 px-4 py-2 bg-text/5 border border-text/10 rounded-lg cursor-pointer hover:bg-text/10 transition'>
-                                                <Upload className='w-4 h-4' />
-                                                {badgeImageFile
-                                                    ? "Change Image"
-                                                    : "Upload Image"}
-                                            </span>
-                                            <input
-                                                type='file'
-                                                accept='image/png'
-                                                onChange={
-                                                    handleBadgeImageChange
-                                                }
-                                                className='hidden'
-                                            />
-                                        </label>
-                                        <p className='text-xs text-text/40 mt-1'>
-                                            PNG only, 128×128px, max 500KB
-                                        </p>
-                                    </div>
+                                <div className='grid grid-cols-2 gap-2'>
+                                    <button
+                                        type='button'
+                                        onClick={() => {
+                                            setUseIconMode(false)
+                                            setSelectedIconName(null)
+                                        }}
+                                        className={`px-3 py-2 rounded-lg border text-sm font-medium transition ${
+                                            !useIconMode
+                                                ? "bg-primary/10 border-primary text-primary"
+                                                : "bg-text/5 border-text/10 text-text/60 hover:bg-text/10"
+                                        }`}
+                                    >
+                                        <Upload className='w-4 h-4 inline-block mr-2' />
+                                        Image Upload
+                                    </button>
+                                    <button
+                                        type='button'
+                                        onClick={() => {
+                                            setUseIconMode(true)
+                                            setBadgeImageFile(null)
+                                            setBadgeImagePreview(null)
+                                        }}
+                                        className={`px-3 py-2 rounded-lg border text-sm font-medium transition ${
+                                            useIconMode
+                                                ? "bg-primary/10 border-primary text-primary"
+                                                : "bg-text/5 border-text/10 text-text/60 hover:bg-text/10"
+                                        }`}
+                                    >
+                                        <Award className='w-4 h-4 inline-block mr-2' />
+                                        Lucide Icon
+                                    </button>
                                 </div>
                             </div>
+
+                            {/* Badge Image or Icon Picker */}
+                            {useIconMode ? (
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Select Icon
+                                    </label>
+                                    <IconPicker
+                                        selectedIcon={selectedIconName}
+                                        selectedColor={selectedIconColor}
+                                        onIconChange={setSelectedIconName}
+                                        onColorChange={setSelectedIconColor}
+                                    />
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Badge Image (128×128 PNG)
+                                    </label>
+                                    <div className='flex items-center gap-4'>
+                                        {/* Preview */}
+                                        <div className='w-20 h-20 rounded-xl border-2 border-dashed border-text/20 flex items-center justify-center overflow-hidden bg-text/5'>
+                                            {badgeImagePreview ? (
+                                                <Image
+                                                    src={badgeImagePreview}
+                                                    alt='Badge preview'
+                                                    width={80}
+                                                    height={80}
+                                                    className='object-contain'
+                                                    unoptimized
+                                                />
+                                            ) : (
+                                                <Upload className='w-8 h-8 text-text/30' />
+                                            )}
+                                        </div>
+
+                                        {/* Upload Button */}
+                                        <div className='flex-1'>
+                                            <label className='block'>
+                                                <span className='inline-flex items-center gap-2 px-4 py-2 bg-text/5 border border-text/10 rounded-lg cursor-pointer hover:bg-text/10 transition'>
+                                                    <Upload className='w-4 h-4' />
+                                                    {badgeImageFile
+                                                        ? "Change Image"
+                                                        : "Upload Image"}
+                                                </span>
+                                                <input
+                                                    type='file'
+                                                    accept='image/png'
+                                                    onChange={
+                                                        handleBadgeImageChange
+                                                    }
+                                                    className='hidden'
+                                                />
+                                            </label>
+                                            <p className='text-xs text-text/40 mt-1'>
+                                                PNG only, 128×128px, max 500KB
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Name */}
                             <div>

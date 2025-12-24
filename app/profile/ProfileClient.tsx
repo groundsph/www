@@ -36,6 +36,7 @@ import { useRouter } from "next/navigation"
 import { useContext, useEffect, useRef, useState } from "react"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
+import { getLucideIcon } from "@/components/badges/iconUtils"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -725,24 +726,65 @@ export default function ProfileClient() {
                                                                     : "border-2 border-dashed border-text/20 opacity-40 grayscale"
                                                             }`}
                                                         >
-                                                            {badge.image_url ? (
-                                                                <Image
-                                                                    src={
-                                                                        badge.image_url
-                                                                    }
-                                                                    alt={
-                                                                        badge.name
-                                                                    }
-                                                                    width={48}
-                                                                    height={48}
-                                                                    className='object-contain'
-                                                                    unoptimized
-                                                                />
-                                                            ) : (
-                                                                <Award
-                                                                    className={`w-7 h-7 ${isEarned ? "text-primary" : "text-text/20"}`}
-                                                                />
-                                                            )}
+                                                            {(() => {
+                                                                // Check for icon in metadata
+                                                                const metadata =
+                                                                    badge.metadata as {
+                                                                        icon_name?: string
+                                                                        icon_color?: string
+                                                                    } | null
+                                                                const iconName =
+                                                                    metadata?.icon_name
+                                                                const iconColor =
+                                                                    metadata?.icon_color ||
+                                                                    "#8B4513"
+                                                                const IconComponent =
+                                                                    iconName
+                                                                        ? getLucideIcon(
+                                                                              iconName
+                                                                          )
+                                                                        : null
+
+                                                                if (
+                                                                    IconComponent
+                                                                ) {
+                                                                    return (
+                                                                        <IconComponent
+                                                                            style={{
+                                                                                color: iconColor,
+                                                                            }}
+                                                                            className='w-7 h-7'
+                                                                        />
+                                                                    )
+                                                                } else if (
+                                                                    badge.image_url
+                                                                ) {
+                                                                    return (
+                                                                        <Image
+                                                                            src={
+                                                                                badge.image_url
+                                                                            }
+                                                                            alt={
+                                                                                badge.name
+                                                                            }
+                                                                            width={
+                                                                                48
+                                                                            }
+                                                                            height={
+                                                                                48
+                                                                            }
+                                                                            className='object-contain'
+                                                                            unoptimized
+                                                                        />
+                                                                    )
+                                                                } else {
+                                                                    return (
+                                                                        <Award
+                                                                            className={`w-7 h-7 ${isEarned ? "text-primary" : "text-text/20"}`}
+                                                                        />
+                                                                    )
+                                                                }
+                                                            })()}
                                                         </div>
 
                                                         {/* Badge Name */}
@@ -759,11 +801,9 @@ export default function ProfileClient() {
                                                         {/* Hover Tooltip */}
                                                         <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10'>
                                                             <div className='bg-text text-background text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap max-w-[200px]'>
-                                                                <div className='font-semibold'>
-                                                                    {badge.name}
-                                                                </div>
+                                                                {/* Rarity */}
                                                                 <div
-                                                                    className={`text-[10px] font-medium ${
+                                                                    className={`text-[10px] font-bold uppercase tracking-wide ${
                                                                         badge.rarity ===
                                                                         "legendary"
                                                                             ? "text-amber-300"
@@ -773,20 +813,48 @@ export default function ProfileClient() {
                                                                               : "text-background/70"
                                                                     }`}
                                                                 >
-                                                                    {badge.rarity
-                                                                        .charAt(
-                                                                            0
-                                                                        )
-                                                                        .toUpperCase() +
-                                                                        badge.rarity.slice(
-                                                                            1
-                                                                        )}
+                                                                    {
+                                                                        badge.rarity
+                                                                    }
                                                                 </div>
-                                                                <div className='text-background/60 text-[10px] mt-1 whitespace-normal'>
+                                                                {/* Description */}
+                                                                <div className='text-background/80 text-[10px] mt-1 whitespace-normal'>
                                                                     {
                                                                         badge.description
                                                                     }
                                                                 </div>
+                                                                {/* Earned at (for earned badges) */}
+                                                                {isEarned &&
+                                                                    (() => {
+                                                                        const earnedBadge =
+                                                                            profileData.badges.find(
+                                                                                (
+                                                                                    b
+                                                                                ) =>
+                                                                                    b.badge_id ===
+                                                                                    badge.id
+                                                                            )
+                                                                        if (
+                                                                            earnedBadge?.awarded_at
+                                                                        ) {
+                                                                            return (
+                                                                                <div className='text-background/50 text-[10px] mt-1'>
+                                                                                    Earned:{" "}
+                                                                                    {new Date(
+                                                                                        earnedBadge.awarded_at
+                                                                                    ).toLocaleDateString(
+                                                                                        "en-US",
+                                                                                        {
+                                                                                            month: "short",
+                                                                                            day: "numeric",
+                                                                                            year: "numeric",
+                                                                                        }
+                                                                                    )}
+                                                                                </div>
+                                                                            )
+                                                                        }
+                                                                        return null
+                                                                    })()}
                                                                 {!isEarned && (
                                                                     <div className='text-background/40 text-[10px] mt-1 italic'>
                                                                         Not

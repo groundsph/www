@@ -108,16 +108,9 @@ export default function CafeDetails({
 
     // Wishlist Logic
     const [isInWishlist, setIsInWishlist] = useState(() => {
-        // Initial state from profile passport if available in context
-        // Since we don't have full profile in context usually, we might rely on props or useEffect
-        // For now, let's just default false and fetch, OR check if user has passport loaded
-        // Optimization: checking specific passed profile data would be better
         return false
     })
 
-    // We need to check initial wishlist status.
-    // Ideally pass this as prop or fetch. For simplicity, let's fetch in useEffect or use context
-    // Actually, let's check authContext.profile?.passport
     useEffect(() => {
         if (authContext?.profile?.passport) {
             const passport = authContext.profile.passport as any
@@ -207,55 +200,12 @@ export default function CafeDetails({
                             className='text-2xl md:text-5xl font-bold flex items-center justify-between gap-4'
                         >
                             {cafe.name}
-
-                            {/* Action Buttons */}
-                            <div className='flex items-center gap-2'>
-                                {user && (
-                                    <>
-                                        {/* Visited Button */}
-                                        <button
-                                            onClick={handleVisitedToggle}
-                                            className='p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
-                                            title={
-                                                isVisited
-                                                    ? "Remove from Visited"
-                                                    : "Mark as Visited"
-                                            }
-                                        >
-                                            {isVisited ? (
-                                                <CheckCircle className='w-6 h-6 fill-primary text-white' />
-                                            ) : (
-                                                <MapPin className='w-6 h-6 text-white group-hover:text-primary' />
-                                            )}
-                                        </button>
-
-                                        {/* Wishlist Button */}
-                                        <button
-                                            onClick={handleWishlistToggle}
-                                            className='p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
-                                            title={
-                                                isInWishlist
-                                                    ? "Remove from Wishlist"
-                                                    : "Add to Wishlist"
-                                            }
-                                        >
-                                            <Heart
-                                                className={`w-6 h-6 transition-colors ${
-                                                    isInWishlist
-                                                        ? "fill-red-500 text-red-500"
-                                                        : "text-white group-hover:text-red-400"
-                                                }`}
-                                            />
-                                        </button>
-                                    </>
-                                )}
-                            </div>
                         </motion.h1>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.5, delay: 0.2 * 1 }}
-                            className='flex flex-row items-center gap-2 mt-2 font-serif'
+                            className='flex flex-row items-center gap-2 mt-2 font-serif w-full'
                         >
                             <span className='px-2 py-0.5 rounded-md bg-background/20 text-sm font-semibold'>
                                 {cafe.city_municipality}
@@ -273,19 +223,68 @@ export default function CafeDetails({
                         >
                             {cafe.address_display}
                         </motion.h2>
+                        {/* Action Buttons */}
+                        <div className='flex items-center gap-2 w-full max-w-md mt-2'>
+                            {user && (
+                                <>
+                                    {/* Visited Button */}
+                                    <button
+                                        onClick={handleVisitedToggle}
+                                        className='p-2 flex-1 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer flex flex-row text-nowrap items-center gap-2 justify-center font-bold'
+                                        title={
+                                            isVisited
+                                                ? "Remove from Visited"
+                                                : "Mark as Visited"
+                                        }
+                                    >
+                                        {isVisited ? (
+                                            <CheckCircle className='w-5 h-5 text-white' />
+                                        ) : (
+                                            <MapPin className='w-5 h-5 text-white' />
+                                        )}
+                                        {isVisited
+                                            ? "Remove from Visited"
+                                            : "Mark as Visited"}
+                                    </button>
+
+                                    {/* Wishlist Button */}
+                                    <button
+                                        onClick={handleWishlistToggle}
+                                        className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                                        title={
+                                            isInWishlist
+                                                ? "Remove from Wishlist"
+                                                : "Add to Wishlist"
+                                        }
+                                    >
+                                        <Heart
+                                            className={`w-6 h-6 transition-colors ${
+                                                isInWishlist
+                                                    ? "fill-red-500 text-red-500"
+                                                    : "text-white group-hover:text-red-400"
+                                            }`}
+                                        />
+                                    </button>
+                                </>
+                            )}
+                        </div>
                         <motion.p
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.5, delay: 0.2 * 2 }}
-                            className='max-w-md mt-8'
+                            className='max-w-lg mt-6'
                         >
                             {cafe.description}
                         </motion.p>
                     </div>
                 </div>
             </section>
+            {/* <section
+                id='content'
+                className='w-full p-4'
+            ></section> */}
             <section
-                id='body'
+                id='old-body'
                 className='w-full flex flex-col md:flex-row items-start justify-start px-4 py-4 relative md:gap-4 overflow-x-clip'
             >
                 <div
@@ -319,10 +318,10 @@ export default function CafeDetails({
                         </h2>
                         {/* Map */}
                         <div className='w-full h-auto aspect-video relative flex flex-col items-center justify-center overflow-clip rounded-xl border-2 border-text/10'>
-                            <DynamicCafeMiniMap
+                            {/* <DynamicCafeMiniMap
                                 key={cafe.id}
                                 cafe={cafe}
-                            />
+                            /> */}
                         </div>
                         <a
                             href={`https://www.google.com/maps/search/?api=1&query=${cafe.address_display}`}
