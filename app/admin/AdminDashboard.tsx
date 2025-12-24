@@ -130,6 +130,8 @@ export default function AdminDashboard({
             awarded_at: string | null
         }[]
     >([])
+    const [badgeUsersTotal, setBadgeUsersTotal] = useState(0)
+    const [badgeUsersHasMore, setBadgeUsersHasMore] = useState(false)
     const [awardLoading, setAwardLoading] = useState(false)
     const [searchLoading, setSearchLoading] = useState(false)
 
@@ -457,11 +459,26 @@ export default function AdminDashboard({
         setUserSearchQuery("")
         setUserSearchResults([])
         setUsersWithBadge([])
+        setBadgeUsersTotal(0)
+        setBadgeUsersHasMore(false)
         setShowAwardModal(true)
 
-        // Fetch users who already have this badge
-        const users = await getUsersWithBadge(badge.id)
-        setUsersWithBadge(users)
+        // Fetch users who already have this badge (first page)
+        const result = await getUsersWithBadge(badge.id, 20, 0)
+        setUsersWithBadge(result.users)
+        setBadgeUsersTotal(result.total)
+        setBadgeUsersHasMore(result.hasMore)
+    }
+
+    const loadMoreBadgeUsers = async () => {
+        if (!awardingBadge || !badgeUsersHasMore) return
+        const result = await getUsersWithBadge(
+            awardingBadge.id,
+            20,
+            usersWithBadge.length
+        )
+        setUsersWithBadge((prev) => [...prev, ...result.users])
+        setBadgeUsersHasMore(result.hasMore)
     }
 
     const closeAwardModal = () => {
@@ -470,6 +487,8 @@ export default function AdminDashboard({
         setUserSearchQuery("")
         setUserSearchResults([])
         setUsersWithBadge([])
+        setBadgeUsersTotal(0)
+        setBadgeUsersHasMore(false)
     }
 
     const handleUserSearch = async (query: string) => {
@@ -1648,66 +1667,77 @@ export default function AdminDashboard({
                             {/* Users with this Badge */}
                             <div>
                                 <h3 className='text-sm font-medium mb-2'>
-                                    Users with this Badge (
-                                    {usersWithBadge.length})
+                                    Users with this Badge ({badgeUsersTotal})
                                 </h3>
                                 {usersWithBadge.length === 0 ? (
                                     <p className='text-text/40 text-sm'>
                                         No users have this badge yet
                                     </p>
                                 ) : (
-                                    <div className='border border-text/10 rounded-lg divide-y divide-text/10 max-h-60 overflow-y-auto'>
-                                        {usersWithBadge.map((user) => (
-                                            <div
-                                                key={user.user_id}
-                                                className='flex items-center gap-3 p-3 hover:bg-text/5'
-                                            >
-                                                <div className='w-8 h-8 rounded-full bg-text/10 overflow-hidden'>
-                                                    {user.avatar_url ? (
-                                                        <Image
-                                                            src={
-                                                                user.avatar_url
-                                                            }
-                                                            alt={
-                                                                user.display_name
-                                                            }
-                                                            width={32}
-                                                            height={32}
-                                                            className='object-cover w-full h-full'
-                                                        />
-                                                    ) : (
-                                                        <div className='w-full h-full flex items-center justify-center text-text/30 text-sm'>
-                                                            {user.display_name?.[0]?.toUpperCase() ||
-                                                                "?"}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className='flex-1 min-w-0'>
-                                                    <p className='font-medium truncate'>
-                                                        {user.display_name}
-                                                    </p>
-                                                    <p className='text-xs text-text/40'>
-                                                        @{user.username} •{" "}
-                                                        {user.awarded_at &&
-                                                            new Date(
-                                                                user.awarded_at
-                                                            ).toLocaleDateString()}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={() =>
-                                                        handleRevokeBadge(
-                                                            user.user_id
-                                                        )
-                                                    }
-                                                    disabled={awardLoading}
-                                                    className='px-3 py-1 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition text-sm disabled:opacity-50'
+                                    <>
+                                        <div className='border border-text/10 rounded-lg divide-y divide-text/10 max-h-60 overflow-y-auto'>
+                                            {usersWithBadge.map((user) => (
+                                                <div
+                                                    key={user.user_id}
+                                                    className='flex items-center gap-3 p-3 hover:bg-text/5'
                                                 >
-                                                    Revoke
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
+                                                    <div className='w-8 h-8 rounded-full bg-text/10 overflow-hidden'>
+                                                        {user.avatar_url ? (
+                                                            <Image
+                                                                src={
+                                                                    user.avatar_url
+                                                                }
+                                                                alt={
+                                                                    user.display_name
+                                                                }
+                                                                width={32}
+                                                                height={32}
+                                                                className='object-cover w-full h-full'
+                                                            />
+                                                        ) : (
+                                                            <div className='w-full h-full flex items-center justify-center text-text/30 text-sm'>
+                                                                {user.display_name?.[0]?.toUpperCase() ||
+                                                                    "?"}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className='flex-1 min-w-0'>
+                                                        <p className='font-medium truncate'>
+                                                            {user.display_name}
+                                                        </p>
+                                                        <p className='text-xs text-text/40'>
+                                                            @{user.username} •{" "}
+                                                            {user.awarded_at &&
+                                                                new Date(
+                                                                    user.awarded_at
+                                                                ).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleRevokeBadge(
+                                                                user.user_id
+                                                            )
+                                                        }
+                                                        disabled={awardLoading}
+                                                        className='px-3 py-1 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition text-sm disabled:opacity-50'
+                                                    >
+                                                        Revoke
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {badgeUsersHasMore && (
+                                            <button
+                                                onClick={loadMoreBadgeUsers}
+                                                className='mt-2 w-full text-sm text-primary hover:underline'
+                                            >
+                                                Load more (
+                                                {usersWithBadge.length} of{" "}
+                                                {badgeUsersTotal})
+                                            </button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

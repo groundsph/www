@@ -1088,20 +1088,28 @@ export async function searchUsersForBadge(query: string): Promise<{
 }
 
 /**
- * Get users who have a specific badge
+ * Get users who have a specific badge with pagination
  */
-export async function getUsersWithBadge(badgeId: string): Promise<{
-    user_id: string
-    username: string
-    display_name: string
-    avatar_url: string | null
-    awarded_at: string | null
-}[]> {
+export async function getUsersWithBadge(
+    badgeId: string,
+    limit: number = 20,
+    offset: number = 0
+): Promise<{
+    users: {
+        user_id: string
+        username: string
+        display_name: string
+        avatar_url: string | null
+        awarded_at: string | null
+    }[]
+    total: number
+    hasMore: boolean
+}> {
     const db = await createClient()
 
     // Verify admin access
     const { data: { user } } = await db.auth.getUser()
-    if (!user) return []
+    if (!user) return { users: [], total: 0, hasMore: false }
 
     const { data: profile } = await db
         .from('profiles')
@@ -1110,9 +1118,18 @@ export async function getUsersWithBadge(badgeId: string): Promise<{
         .single()
 
     if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
-        return []
+        return { users: [], total: 0, hasMore: false }
     }
 
+    // Get total count
+    const { count } = await db
+        .from('user_badges')
+        .select('*', { count: 'exact', head: true })
+        .eq('badge_id', badgeId)
+
+    const total = count || 0
+
+    // Get paginated users
     const { data: userBadges, error } = await db
         .from('user_badges')
         .select(`
@@ -1126,18 +1143,25 @@ export async function getUsersWithBadge(badgeId: string): Promise<{
         `)
         .eq('badge_id', badgeId)
         .order('awarded_at', { ascending: false })
+        .range(offset, offset + limit - 1)
 
     if (error) {
         console.error("Error fetching users with badge:", error)
-        return []
+        return { users: [], total: 0, hasMore: false }
     }
 
-    return (userBadges || []).map(ub => ({
+    const users = (userBadges || []).map(ub => ({
         user_id: ub.user_id,
         awarded_at: ub.awarded_at,
         username: (ub.profile as any)?.username || '',
         display_name: (ub.profile as any)?.display_name || '',
         avatar_url: (ub.profile as any)?.avatar_url || null
     }))
+
+    return {
+        users,
+        total,
+        hasMore: offset + limit < total
+    }
 }
 

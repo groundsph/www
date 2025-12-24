@@ -15,6 +15,7 @@ import {
     Award,
     Camera,
     Check,
+    ChevronDown,
     Coffee,
     Edit2,
     Heart,
@@ -22,6 +23,7 @@ import {
     MapPin,
     Medal,
     MessageSquare,
+    Share2,
     Shield,
     Sparkles,
     Star,
@@ -85,6 +87,9 @@ export default function ProfileClient() {
     const [wishlistCafes, setWishlistCafes] = useState<
         { name: string; slug: string }[]
     >([])
+
+    // Badge display
+    const [showAllBadges, setShowAllBadges] = useState(false)
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -479,13 +484,42 @@ export default function ProfileClient() {
                                 </h1>
                             )}
                             {!isEditing && (
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
-                                    title='Edit Profile'
-                                >
-                                    <Edit2 className='w-4 h-4' />
-                                </button>
+                                <>
+                                    <button
+                                        onClick={() => setIsEditing(true)}
+                                        className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
+                                        title='Edit Profile'
+                                    >
+                                        <Edit2 className='w-4 h-4' />
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            const profileUrl = `${window.location.origin}/profile/${profileData.username}`
+                                            if (navigator.share) {
+                                                try {
+                                                    await navigator.share({
+                                                        title: `${profileData.display_name}'s Coffee Profile`,
+                                                        text: `Check out ${profileData.display_name}'s coffee journey!`,
+                                                        url: profileUrl,
+                                                    })
+                                                } catch {
+                                                    // User cancelled or error
+                                                }
+                                            } else {
+                                                await navigator.clipboard.writeText(
+                                                    profileUrl
+                                                )
+                                                alert(
+                                                    "Profile link copied to clipboard!"
+                                                )
+                                            }
+                                        }}
+                                        className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
+                                        title='Share Profile'
+                                    >
+                                        <Share2 className='w-4 h-4' />
+                                    </button>
+                                </>
                             )}
                         </div>
                         <p className='text-text/60 font-medium'>
@@ -566,67 +600,234 @@ export default function ProfileClient() {
                     </div>
                 </section>
 
-                {/* Badges Collection - Moved to top */}
+                {/* Badges Collection - Passport Style */}
                 <section className='mt-10'>
-                    <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
+                    <div className='flex items-center gap-2 mb-4'>
                         <Medal className='w-5 h-5' />
-                        Badge Collection
-                        <span className='text-sm font-normal text-text/60'>
-                            ({profileData.badges.length}/{allBadges.length}{" "}
-                            earned)
+                        <h2 className='text-xl font-semibold font-serif'>
+                            Badge Collection
+                        </h2>
+                        <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                            {profileData.badges.length}/{allBadges.length}
                         </span>
-                    </h2>
-                    <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4'>
-                        {allBadges.map((badge) => {
-                            const isEarned = earnedBadgeIds.has(badge.id)
-                            const rarityColors = {
-                                common: "bg-text/5 border-text/20",
-                                rare: "bg-primary/5 border-primary/30",
+                    </div>
+
+                    {/* Showcase Container */}
+                    <div className='bg-text/5 border border-text/10 rounded-xl min-h-max relative p-6'>
+                        {/* Background Texture */}
+                        <div
+                            className='absolute inset-0 opacity-[0.03] pointer-events-none rounded-xl'
+                            style={{
+                                backgroundImage: `radial-gradient(circle at 2px 2px, black 1px, transparent 0)`,
+                                backgroundSize: "24px 24px",
+                            }}
+                        />
+
+                        {(() => {
+                            // Sort badges: earned first, then by rarity (legendary > rare > common)
+                            const rarityOrder = {
+                                legendary: 0,
+                                rare: 1,
+                                common: 2,
+                            }
+                            const sortedBadges = [...allBadges].sort((a, b) => {
+                                const aEarned = earnedBadgeIds.has(a.id)
+                                const bEarned = earnedBadgeIds.has(b.id)
+                                if (aEarned !== bEarned) return aEarned ? -1 : 1
+                                return (
+                                    rarityOrder[a.rarity] -
+                                    rarityOrder[b.rarity]
+                                )
+                            })
+
+                            const earnedBadges = sortedBadges.filter((b) =>
+                                earnedBadgeIds.has(b.id)
+                            )
+                            const unearnedBadges = sortedBadges.filter(
+                                (b) => !earnedBadgeIds.has(b.id)
+                            )
+                            const displayBadges = showAllBadges
+                                ? sortedBadges
+                                : earnedBadges
+
+                            const rarityStyles = {
+                                common: "border-2 border-text/30",
+                                rare: "border-2 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]",
                                 legendary:
-                                    "bg-secondary/10 border-secondary/50",
+                                    "border-2 border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.5)]",
+                            }
+
+                            if (earnedBadges.length === 0 && !showAllBadges) {
+                                return (
+                                    <div className='flex flex-col items-center justify-center py-12 text-center opacity-60'>
+                                        <Award className='w-16 h-16 text-text/20 mb-4' />
+                                        <p className='text-lg font-medium'>
+                                            No badges yet
+                                        </p>
+                                        <p className='text-sm text-text/60 max-w-xs'>
+                                            Earn badges by exploring cafes and
+                                            engaging with the community!
+                                        </p>
+                                        {unearnedBadges.length > 0 && (
+                                            <button
+                                                onClick={() =>
+                                                    setShowAllBadges(true)
+                                                }
+                                                className='mt-4 text-sm text-primary hover:underline cursor-pointer'
+                                            >
+                                                View all {allBadges.length}{" "}
+                                                badges
+                                            </button>
+                                        )}
+                                    </div>
+                                )
                             }
 
                             return (
-                                <motion.div
-                                    key={badge.id}
-                                    whileHover={{ scale: 1.05 }}
-                                    className={`relative aspect-square rounded-xl p-3 flex flex-col items-center justify-center text-center border-2 transition-all ${
-                                        isEarned
-                                            ? `${rarityColors[badge.rarity]} shadow-sm`
-                                            : "bg-text/5 border-text/10 opacity-40 grayscale"
-                                    }`}
-                                    title={`${badge.name}${isEarned ? " ✓" : " (locked)"}\n${badge.description}`}
-                                >
-                                    {badge.image_url ? (
-                                        <Image
-                                            src={badge.image_url}
-                                            alt={badge.name}
-                                            width={48}
-                                            height={48}
-                                            className='mb-1'
-                                        />
-                                    ) : (
-                                        <Award
-                                            className={`w-10 h-10 mb-1 ${isEarned ? "text-primary" : "text-text/30"}`}
-                                        />
+                                <>
+                                    <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6'>
+                                        <AnimatePresence mode='popLayout'>
+                                            {displayBadges.map((badge) => {
+                                                const isEarned =
+                                                    earnedBadgeIds.has(badge.id)
+
+                                                return (
+                                                    <motion.div
+                                                        key={badge.id}
+                                                        layout
+                                                        initial={{
+                                                            opacity: 0,
+                                                            scale: 0.8,
+                                                        }}
+                                                        animate={{
+                                                            opacity: 1,
+                                                            scale: 1,
+                                                        }}
+                                                        exit={{
+                                                            opacity: 0,
+                                                            scale: 0.8,
+                                                        }}
+                                                        whileHover={{
+                                                            scale: isEarned
+                                                                ? 1.1
+                                                                : 1.02,
+                                                        }}
+                                                        className='group relative flex flex-col items-center cursor-default'
+                                                    >
+                                                        {/* Badge Circle */}
+                                                        <div
+                                                            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden flex items-center justify-center bg-background transition-all ${
+                                                                isEarned
+                                                                    ? rarityStyles[
+                                                                          badge
+                                                                              .rarity
+                                                                      ]
+                                                                    : "border-2 border-dashed border-text/20 opacity-40 grayscale"
+                                                            }`}
+                                                        >
+                                                            {badge.image_url ? (
+                                                                <Image
+                                                                    src={
+                                                                        badge.image_url
+                                                                    }
+                                                                    alt={
+                                                                        badge.name
+                                                                    }
+                                                                    width={48}
+                                                                    height={48}
+                                                                    className='object-contain'
+                                                                    unoptimized
+                                                                />
+                                                            ) : (
+                                                                <Award
+                                                                    className={`w-7 h-7 ${isEarned ? "text-primary" : "text-text/20"}`}
+                                                                />
+                                                            )}
+                                                        </div>
+
+                                                        {/* Badge Name */}
+                                                        <span
+                                                            className={`text-[11px] font-semibold mt-2 text-center line-clamp-2 leading-tight max-w-[70px] ${
+                                                                isEarned
+                                                                    ? "text-text"
+                                                                    : "text-text/40"
+                                                            }`}
+                                                        >
+                                                            {badge.name}
+                                                        </span>
+
+                                                        {/* Hover Tooltip */}
+                                                        <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10'>
+                                                            <div className='bg-text text-background text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap max-w-[200px]'>
+                                                                <div className='font-semibold'>
+                                                                    {badge.name}
+                                                                </div>
+                                                                <div
+                                                                    className={`text-[10px] font-medium ${
+                                                                        badge.rarity ===
+                                                                        "legendary"
+                                                                            ? "text-amber-300"
+                                                                            : badge.rarity ===
+                                                                                "rare"
+                                                                              ? "text-blue-300"
+                                                                              : "text-background/70"
+                                                                    }`}
+                                                                >
+                                                                    {badge.rarity
+                                                                        .charAt(
+                                                                            0
+                                                                        )
+                                                                        .toUpperCase() +
+                                                                        badge.rarity.slice(
+                                                                            1
+                                                                        )}
+                                                                </div>
+                                                                <div className='text-background/60 text-[10px] mt-1 whitespace-normal'>
+                                                                    {
+                                                                        badge.description
+                                                                    }
+                                                                </div>
+                                                                {!isEarned && (
+                                                                    <div className='text-background/40 text-[10px] mt-1 italic'>
+                                                                        Not
+                                                                        earned
+                                                                        yet
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className='w-2 h-2 bg-text rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1' />
+                                                        </div>
+                                                    </motion.div>
+                                                )
+                                            })}
+                                        </AnimatePresence>
+                                    </div>
+
+                                    {/* Toggle button */}
+                                    {unearnedBadges.length > 0 && (
+                                        <button
+                                            onClick={() =>
+                                                setShowAllBadges(!showAllBadges)
+                                            }
+                                            className='mt-6 flex items-center gap-1 mx-auto text-sm text-text/60 hover:text-text transition-colors cursor-pointer'
+                                        >
+                                            {showAllBadges ? (
+                                                <>Hide unearned</>
+                                            ) : (
+                                                <>
+                                                    Show all {allBadges.length}{" "}
+                                                    badges
+                                                </>
+                                            )}
+                                            <ChevronDown
+                                                className={`w-4 h-4 transition-transform ${showAllBadges ? "rotate-180" : ""}`}
+                                            />
+                                        </button>
                                     )}
-                                    <span className='text-xs font-semibold leading-tight line-clamp-2'>
-                                        {badge.name}
-                                    </span>
-                                    {isEarned && (
-                                        <div className='absolute -top-1 -right-1 bg-primary text-white p-0.5 rounded-full'>
-                                            <Check className='w-3 h-3' />
-                                        </div>
-                                    )}
-                                </motion.div>
+                                </>
                             )
-                        })}
+                        })()}
                     </div>
-                    {allBadges.length === 0 && (
-                        <p className='text-center text-text/60 py-8'>
-                            No badges available yet
-                        </p>
-                    )}
                 </section>
 
                 {/* Stats Grid - Cleaned up icons */}
