@@ -12,7 +12,7 @@ export default async function MapPage() {
     const cafes = (await getAllCafes(1, 100)) as CafeWithRatings[]
 
     return (
-        <main className='w-full h-screen flex flex-col'>
+        <main className='w-full p-6 h-[calc(100svh-3rem)] flex flex-col'>
             <div className='flex-1 w-full relative'>
                 <CafeMapWrapper cafes={cafes} />
             </div>
