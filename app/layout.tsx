@@ -8,6 +8,7 @@ import LayoutWrapper from "@/components/LayoutWrapper"
 import NotificationProvider from "@/components/NotificationProvider"
 import AnalyticsBanner from "@/components/AnalyticsBanner"
 import NavigationProgress from "@/components/NavigationProgress"
+import BetaBanner from "@/components/BetaBanner"
 
 const playfairDisplay = Playfair_Display({
     variable: "--font-playfair-display",
@@ -110,6 +111,7 @@ export default function RootLayout({
                 <Suspense fallback={null}>
                     <NavigationProgress />
                 </Suspense>
+                <BetaBanner />
                 <NotificationProvider>
                     <AuthProvider>
                         <LayoutWrapper>{children}</LayoutWrapper>

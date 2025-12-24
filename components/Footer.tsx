@@ -25,7 +25,7 @@ export default function Footer() {
                             waiting to be found.
                         </p>
                         <div className='flex items-center gap-4 mt-2'>
-                            <a
+                            {/* <a
                                 href='https://instagram.com/grounds.ph'
                                 target='_blank'
                                 rel='noopener noreferrer'
@@ -33,7 +33,7 @@ export default function Footer() {
                                 aria-label='Instagram'
                             >
                                 <Instagram className='w-5 h-5' />
-                            </a>
+                            </a> */}
                             <a
                                 href='https://facebook.com/grounds.ph'
                                 target='_blank'
