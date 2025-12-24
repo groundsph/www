@@ -46,6 +46,19 @@ export default function AuthPageClient() {
     }, [searchParams])
 
     // Functions
+    const checkPasswordRequirements = (password: string) => {
+        return {
+            length: password.length >= 12,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[^A-Za-z0-9]/.test(password),
+        }
+    }
+
+    const passwordRequirements = checkPasswordRequirements(password)
+    const isPasswordValid = Object.values(passwordRequirements).every(Boolean)
+
     const handleEmailSignIn = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
@@ -72,6 +85,12 @@ export default function AuthPageClient() {
 
         if (password !== confirmPassword) {
             setError("Passwords do not match")
+            setIsLoading(false)
+            return
+        }
+
+        if (!isPasswordValid) {
+            setError("Please fulfill all password requirements")
             setIsLoading(false)
             return
         }
@@ -300,6 +319,55 @@ export default function AuthPageClient() {
                                         disabled={isLoading}
                                         required
                                     />
+                                    {mode === "signup" && (
+                                        <div className='mt-3 space-y-2 p-3 bg-tertiary/30 rounded-lg border border-secondary/20'>
+                                            <p className='text-xs font-semibold text-text/70 uppercase tracking-wider mb-2'>
+                                                Password Requirements
+                                            </p>
+                                            <div className='grid grid-cols-1 gap-1'>
+                                                <div
+                                                    className={`flex items-center gap-2 text-xs ${passwordRequirements.length ? "text-green-600" : "text-text/50"}`}
+                                                >
+                                                    <div
+                                                        className={`w-1.5 h-1.5 rounded-full ${passwordRequirements.length ? "bg-green-500" : "bg-text/30"}`}
+                                                    />
+                                                    At least 12 characters
+                                                </div>
+                                                <div
+                                                    className={`flex items-center gap-2 text-xs ${passwordRequirements.uppercase ? "text-green-600" : "text-text/50"}`}
+                                                >
+                                                    <div
+                                                        className={`w-1.5 h-1.5 rounded-full ${passwordRequirements.uppercase ? "bg-green-500" : "bg-text/30"}`}
+                                                    />
+                                                    One uppercase letter
+                                                </div>
+                                                <div
+                                                    className={`flex items-center gap-2 text-xs ${passwordRequirements.lowercase ? "text-green-600" : "text-text/50"}`}
+                                                >
+                                                    <div
+                                                        className={`w-1.5 h-1.5 rounded-full ${passwordRequirements.lowercase ? "bg-green-500" : "bg-text/30"}`}
+                                                    />
+                                                    One lowercase letter
+                                                </div>
+                                                <div
+                                                    className={`flex items-center gap-2 text-xs ${passwordRequirements.number ? "text-green-600" : "text-text/50"}`}
+                                                >
+                                                    <div
+                                                        className={`w-1.5 h-1.5 rounded-full ${passwordRequirements.number ? "bg-green-500" : "bg-text/30"}`}
+                                                    />
+                                                    One number
+                                                </div>
+                                                <div
+                                                    className={`flex items-center gap-2 text-xs ${passwordRequirements.special ? "text-green-600" : "text-text/50"}`}
+                                                >
+                                                    <div
+                                                        className={`w-1.5 h-1.5 rounded-full ${passwordRequirements.special ? "bg-green-500" : "bg-text/30"}`}
+                                                    />
+                                                    One special character
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 {mode === "signup" && (
                                     <div>
