@@ -3,7 +3,80 @@
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/supabase/storage"
-import { CafeWithRatings } from "@/utils/types/extra"
+import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
+import { Database } from "@/utils/types/database.types"
+
+type ScoutRank = Database['public']['Enums']['scout_rank']
+
+/**
+ * Calculate scout rank based on total published cafes contributed
+ */
+function calculateScoutRank(totalScouted: number): ScoutRank {
+    if (totalScouted >= 10) return 'vanguard'
+    if (totalScouted >= 5) return 'expert'
+    return 'novice'
+}
+
+/**
+ * Update a contributor's scout stats (total_scouted and scout_rank)
+ * Called after a cafe is published, unpublished, or deleted
+ */
+async function updateContributorScoutStats(contributorId: string): Promise<void> {
+    if (!contributorId) return
+
+    const adminDb = await createAdminClient()
+
+    // Count total published cafes for this contributor
+    const { count, error: countError } = await adminDb
+        .from('cafes')
+        .select('*', { count: 'exact', head: true })
+        .eq('contributor_id', contributorId)
+        .eq('is_published', true)
+
+    if (countError) {
+        console.error("Error counting contributor cafes:", countError)
+        return
+    }
+
+    const totalScouted = count ?? 0
+    const newRank = calculateScoutRank(totalScouted)
+
+    // Get current profile stats
+    const { data: profile, error: profileError } = await adminDb
+        .from('profiles')
+        .select('stats')
+        .eq('id', contributorId)
+        .single()
+
+    if (profileError) {
+        console.error("Error fetching contributor profile:", profileError)
+        return
+    }
+
+    // Merge with existing stats
+    const currentStats = (profile?.stats as ProfileStats | null) ?? {
+        scout_rank: 'novice',
+        total_photos: 0,
+        total_reviews: 0,
+        total_scouted: 0
+    }
+
+    const updatedStats: ProfileStats = {
+        ...currentStats,
+        total_scouted: totalScouted,
+        scout_rank: newRank
+    }
+
+    // Update profile with new stats
+    const { error: updateError } = await adminDb
+        .from('profiles')
+        .update({ stats: updatedStats as unknown as Database['public']['Tables']['profiles']['Update']['stats'] })
+        .eq('id', contributorId)
+
+    if (updateError) {
+        console.error("Error updating contributor stats:", updateError)
+    }
+}
 
 /**
  * Check if the current user has admin or moderator role
@@ -94,6 +167,14 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
 
     // Use admin client to bypass RLS for the update
     const adminDb = await createAdminClient()
+
+    // Get contributor_id before updating
+    const { data: cafe } = await adminDb
+        .from('cafes')
+        .select('contributor_id')
+        .eq('id', cafeId)
+        .single()
+
     const { error } = await adminDb
         .from('cafes')
         .update({
@@ -107,8 +188,14 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
         return { success: false, error: "Failed to approve cafe" }
     }
 
+    // Update contributor's scout stats
+    if (cafe?.contributor_id) {
+        await updateContributorScoutStats(cafe.contributor_id)
+    }
+
     return { success: true }
 }
+
 
 /**
  * Reject a cafe submission (delete it and its images)
@@ -133,10 +220,10 @@ export async function rejectCafe(cafeId: string): Promise<AdminActionResult> {
     // Use admin client to bypass RLS
     const adminDb = await createAdminClient()
 
-    // Fetch cafe to get image URLs before deletion
+    // Fetch cafe to get image URLs and contributor info before deletion
     const { data: cafe } = await adminDb
         .from('cafes')
-        .select('thumbnail, gallery')
+        .select('thumbnail, gallery, contributor_id, is_published')
         .eq('id', cafeId)
         .single()
 
@@ -154,6 +241,11 @@ export async function rejectCafe(cafeId: string): Promise<AdminActionResult> {
     if (error) {
         console.error("Error rejecting cafe:", error)
         return { success: false, error: "Failed to reject cafe" }
+    }
+
+    // Update contributor's scout stats if cafe was published
+    if (cafe?.is_published && cafe?.contributor_id) {
+        await updateContributorScoutStats(cafe.contributor_id)
     }
 
     return { success: true }
@@ -329,6 +421,14 @@ export async function unpublishCafe(cafeId: string): Promise<AdminActionResult> 
 
     // Use admin client to bypass RLS for the update
     const adminDb = await createAdminClient()
+
+    // Get contributor_id before unpublishing
+    const { data: cafe } = await adminDb
+        .from('cafes')
+        .select('contributor_id')
+        .eq('id', cafeId)
+        .single()
+
     const { error } = await adminDb
         .from('cafes')
         .update({
@@ -339,6 +439,11 @@ export async function unpublishCafe(cafeId: string): Promise<AdminActionResult> 
     if (error) {
         console.error("Error unpublishing cafe:", error)
         return { success: false, error: "Failed to unpublish cafe" }
+    }
+
+    // Update contributor's scout stats
+    if (cafe?.contributor_id) {
+        await updateContributorScoutStats(cafe.contributor_id)
     }
 
     return { success: true }
