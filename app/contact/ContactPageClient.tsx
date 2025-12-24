@@ -208,10 +208,10 @@ export default function ContactPageClient() {
                     <p className='text-text/50 text-sm'>
                         You can also reach me at{" "}
                         <a
-                            href='mailto:adrianbonpin@gmail.com'
+                            href='mailto:adrianbonpin@grounds.ph'
                             className='text-primary hover:underline'
                         >
-                            adrianbonpin@gmail.com
+                            adrianbonpin@grounds.ph
                         </a>
                     </p>
                 </div>
