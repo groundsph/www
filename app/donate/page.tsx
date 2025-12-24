@@ -1,6 +1,8 @@
 import { Metadata } from "next"
-import { Heart, QrCode, Smartphone, Sparkles } from "lucide-react"
+import { Heart, QrCode, Smartphone } from "lucide-react"
 import Image from "next/image"
+import { createClient } from "@/utils/supabase/server"
+import SupporterSection from "./SupporterSection"
 
 export const metadata: Metadata = {
     title: "Support Grounds",
@@ -10,7 +12,25 @@ export const metadata: Metadata = {
 import qrph from "@/assets/qrph-dono.jpg"
 import gcash from "@/assets/gcash-dono.png"
 
-export default function DonatePage() {
+export default async function DonatePage() {
+    const supabase = await createClient()
+
+    // Get current user and supporter status
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    let isSupporter = false
+    if (user) {
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("is_supporter")
+            .eq("id", user.id)
+            .single()
+
+        isSupporter = profile?.is_supporter ?? false
+    }
+
     return (
         <main className='min-h-screen bg-background py-12 px-6'>
             <div className='max-w-2xl mx-auto'>
@@ -31,6 +51,24 @@ export default function DonatePage() {
 
                 {/* Donation Options */}
                 <div className='space-y-6'>
+                    {/* Polar.sh Supporter Section */}
+                    <SupporterSection
+                        isSupporter={isSupporter}
+                        isLoggedIn={!!user}
+                    />
+
+                    {/* Divider */}
+                    <div className='relative'>
+                        <div className='absolute inset-0 flex items-center'>
+                            <div className='w-full border-t border-text/10'></div>
+                        </div>
+                        <div className='relative flex justify-center text-sm'>
+                            <span className='px-4 bg-background text-text/50'>
+                                or make a one-time donation
+                            </span>
+                        </div>
+                    </div>
+
                     {/* QRPh */}
                     <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                         <div className='flex items-center gap-3 mb-4'>
@@ -47,19 +85,11 @@ export default function DonatePage() {
                             </div>
                         </div>
                         <div className='bg-white rounded-lg p-4 flex items-center justify-center'>
-                            {/* Placeholder for QR code - replace with actual QR image */}
                             <Image
                                 src={qrph}
                                 alt='QRPh QR Code'
                                 className='rounded max-w-md h-auto aspect-square'
                             />
-                            {/* <div className='w-48 h-48 bg-text/5 border-2 border-dashed border-text/20 rounded-lg flex items-center justify-center'>
-                                <p className='text-text/40 text-sm text-center px-4'>
-                                    QRPh QR Code
-                                    <br />
-                                    <span className='text-xs'>Coming soon</span>
-                                </p>
-                            </div> */}
                         </div>
                     </div>
 
@@ -84,37 +114,6 @@ export default function DonatePage() {
                                 alt='GCash QR Code'
                                 className='rounded max-w-md h-auto aspect-square'
                             />
-                            {/* Placeholder for GCash QR - replace with actual QR image */}
-                            {/* <div className='w-48 h-48 bg-text/5 border-2 border-dashed border-text/20 rounded-lg flex items-center justify-center'>
-                                <p className='text-text/40 text-sm text-center px-4'>
-                                    GCash QR Code
-                                    <br />
-                                    <span className='text-xs'>Coming soon</span>
-                                </p>
-                            </div> */}
-                        </div>
-                    </div>
-
-                    {/* Polar.sh - Coming Soon */}
-                    <div className='bg-text/5 border border-text/10 rounded-xl p-6 opacity-60'>
-                        <div className='flex items-center gap-3'>
-                            <div className='w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center'>
-                                <Sparkles className='w-5 h-5 text-purple-500' />
-                            </div>
-                            <div className='flex-1'>
-                                <div className='flex items-center gap-2'>
-                                    <h2 className='font-serif text-xl font-semibold text-text'>
-                                        Polar.sh
-                                    </h2>
-                                    <span className='text-xs bg-text/10 text-text/60 px-2 py-0.5 rounded-full'>
-                                        Coming Soon
-                                    </span>
-                                </div>
-                                <p className='text-text/60 text-sm'>
-                                    Support development through subscriptions
-                                    and one-time donations
-                                </p>
-                            </div>
                         </div>
                     </div>
                 </div>
