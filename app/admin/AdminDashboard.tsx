@@ -43,13 +43,13 @@ import {
     deleteReviewAsAdmin,
     type ReviewForModeration,
     type BadgeDefinition,
-    getAllBadgeDefinitions,
     createBadgeDefinition,
     updateBadgeDefinition,
     deleteBadgeDefinition,
     awardBadgeToUser,
     revokeBadgeFromUser,
     searchUsersForBadge,
+    getUsersWithBadge,
 } from "@/app/api/actions/admin"
 import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -106,6 +106,32 @@ export default function AdminDashboard({
     )
     const [badgeLoading, setBadgeLoading] = useState(false)
     const [badgeError, setBadgeError] = useState<string | null>(null)
+
+    // Badge awarding state
+    const [showAwardModal, setShowAwardModal] = useState(false)
+    const [awardingBadge, setAwardingBadge] = useState<BadgeDefinition | null>(
+        null
+    )
+    const [userSearchQuery, setUserSearchQuery] = useState("")
+    const [userSearchResults, setUserSearchResults] = useState<
+        {
+            id: string
+            username: string
+            display_name: string
+            avatar_url: string | null
+        }[]
+    >([])
+    const [usersWithBadge, setUsersWithBadge] = useState<
+        {
+            user_id: string
+            username: string
+            display_name: string
+            avatar_url: string | null
+            awarded_at: string | null
+        }[]
+    >([])
+    const [awardLoading, setAwardLoading] = useState(false)
+    const [searchLoading, setSearchLoading] = useState(false)
 
     const handleApprove = async (cafeId: string) => {
         setProcessing(cafeId)
@@ -425,6 +451,101 @@ export default function AdminDashboard({
         setProcessing(null)
     }
 
+    // Badge awarding handlers
+    const openAwardModal = async (badge: BadgeDefinition) => {
+        setAwardingBadge(badge)
+        setUserSearchQuery("")
+        setUserSearchResults([])
+        setUsersWithBadge([])
+        setShowAwardModal(true)
+
+        // Fetch users who already have this badge
+        const users = await getUsersWithBadge(badge.id)
+        setUsersWithBadge(users)
+    }
+
+    const closeAwardModal = () => {
+        setShowAwardModal(false)
+        setAwardingBadge(null)
+        setUserSearchQuery("")
+        setUserSearchResults([])
+        setUsersWithBadge([])
+    }
+
+    const handleUserSearch = async (query: string) => {
+        setUserSearchQuery(query)
+
+        if (query.length < 2) {
+            setUserSearchResults([])
+            return
+        }
+
+        setSearchLoading(true)
+        const results = await searchUsersForBadge(query)
+        // Filter out users who already have this badge
+        const filteredResults = results.filter(
+            (user) => !usersWithBadge.some((ub) => ub.user_id === user.id)
+        )
+        setUserSearchResults(filteredResults)
+        setSearchLoading(false)
+    }
+
+    const handleAwardBadge = async (userId: string) => {
+        if (!awardingBadge) return
+
+        setAwardLoading(true)
+        const result = await awardBadgeToUser(userId, awardingBadge.id)
+
+        if (result.success) {
+            // Find user from search results and add to usersWithBadge
+            const user = userSearchResults.find((u) => u.id === userId)
+            if (user) {
+                setUsersWithBadge((prev) => [
+                    {
+                        user_id: user.id,
+                        username: user.username,
+                        display_name: user.display_name,
+                        avatar_url: user.avatar_url,
+                        awarded_at: new Date().toISOString(),
+                    },
+                    ...prev,
+                ])
+            }
+            // Remove from search results
+            setUserSearchResults((prev) => prev.filter((u) => u.id !== userId))
+        } else {
+            alert(result.error || "Failed to award badge")
+        }
+
+        setAwardLoading(false)
+    }
+
+    const handleRevokeBadge = async (userId: string) => {
+        if (!awardingBadge) return
+
+        const user = usersWithBadge.find((u) => u.user_id === userId)
+        if (
+            !confirm(
+                `Revoke "${awardingBadge.name}" badge from ${user?.display_name || user?.username}?`
+            )
+        ) {
+            return
+        }
+
+        setAwardLoading(true)
+        const result = await revokeBadgeFromUser(userId, awardingBadge.id)
+
+        if (result.success) {
+            setUsersWithBadge((prev) =>
+                prev.filter((u) => u.user_id !== userId)
+            )
+        } else {
+            alert(result.error || "Failed to revoke badge")
+        }
+
+        setAwardLoading(false)
+    }
+
     const AMENITY_ICONS = {
         has_wifi: { icon: Wifi, label: "WiFi" },
         has_sockets: { icon: Plug, label: "Power Outlets" },
@@ -534,7 +655,7 @@ export default function AdminDashboard({
             </div>
 
             {/* Tabs */}
-            <div className='flex gap-2 border-b border-text/10 pb-4'>
+            <div className='flex gap-2 border-b border-text/10 pb-4 overflow-x-auto [&_button]:text-nowrap'>
                 <button
                     onClick={() => setActiveTab("pending")}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
@@ -850,7 +971,7 @@ export default function AdminDashboard({
             )}
 
             {/* Cafe List - only for cafe tabs */}
-            {activeTab !== "reviews" && (
+            {activeTab !== "reviews" && activeTab !== "badges" && (
                 <>
                     {currentCafes.length === 0 ? (
                         <div className='text-center py-16 bg-text/5 rounded-xl border border-text/10'>
@@ -1231,6 +1352,7 @@ export default function AdminDashboard({
                                 <BadgeCardFull
                                     key={badge.id}
                                     badge={badge}
+                                    onAward={() => openAwardModal(badge)}
                                     onEdit={() => openBadgeModal(badge)}
                                     onDelete={() => handleDeleteBadge(badge)}
                                 />
@@ -1421,6 +1543,182 @@ export default function AdminDashboard({
                                     <Loader2 className='w-4 h-4 animate-spin' />
                                 )}
                                 {editingBadge ? "Update Badge" : "Create Badge"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Award Badge Modal */}
+            {showAwardModal && awardingBadge && (
+                <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
+                    <div className='bg-background border border-text/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col'>
+                        <div className='p-6 border-b border-text/10'>
+                            <h2 className='text-xl font-semibold font-serif'>
+                                Award Badge
+                            </h2>
+                            <p className='text-text/60 text-sm mt-1'>
+                                Award &quot;{awardingBadge.name}&quot; to users
+                            </p>
+                        </div>
+
+                        <div className='p-6 space-y-6 overflow-y-auto flex-1'>
+                            {/* Search Users */}
+                            <div>
+                                <label className='block text-sm font-medium mb-2'>
+                                    Search Users
+                                </label>
+                                <div className='relative'>
+                                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                    <input
+                                        type='text'
+                                        value={userSearchQuery}
+                                        onChange={(e) =>
+                                            handleUserSearch(e.target.value)
+                                        }
+                                        placeholder='Search by username or display name...'
+                                        className='w-full pl-10 pr-4 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50'
+                                    />
+                                    {searchLoading && (
+                                        <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-text/40' />
+                                    )}
+                                </div>
+
+                                {/* Search Results */}
+                                {userSearchResults.length > 0 && (
+                                    <div className='mt-2 border border-text/10 rounded-lg divide-y divide-text/10'>
+                                        {userSearchResults.map((user) => (
+                                            <div
+                                                key={user.id}
+                                                className='flex items-center gap-3 p-3 hover:bg-text/5'
+                                            >
+                                                <div className='w-8 h-8 rounded-full bg-text/10 overflow-hidden'>
+                                                    {user.avatar_url ? (
+                                                        <Image
+                                                            src={
+                                                                user.avatar_url
+                                                            }
+                                                            alt={
+                                                                user.display_name
+                                                            }
+                                                            width={32}
+                                                            height={32}
+                                                            className='object-cover w-full h-full'
+                                                        />
+                                                    ) : (
+                                                        <div className='w-full h-full flex items-center justify-center text-text/30 text-sm'>
+                                                            {user.display_name?.[0]?.toUpperCase() ||
+                                                                "?"}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className='flex-1 min-w-0'>
+                                                    <p className='font-medium truncate'>
+                                                        {user.display_name}
+                                                    </p>
+                                                    <p className='text-xs text-text/40'>
+                                                        @{user.username}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() =>
+                                                        handleAwardBadge(
+                                                            user.id
+                                                        )
+                                                    }
+                                                    disabled={awardLoading}
+                                                    className='px-3 py-1 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition text-sm disabled:opacity-50'
+                                                >
+                                                    Award
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {userSearchQuery.length >= 2 &&
+                                    userSearchResults.length === 0 &&
+                                    !searchLoading && (
+                                        <p className='mt-2 text-text/40 text-sm'>
+                                            No users found
+                                        </p>
+                                    )}
+                            </div>
+
+                            {/* Users with this Badge */}
+                            <div>
+                                <h3 className='text-sm font-medium mb-2'>
+                                    Users with this Badge (
+                                    {usersWithBadge.length})
+                                </h3>
+                                {usersWithBadge.length === 0 ? (
+                                    <p className='text-text/40 text-sm'>
+                                        No users have this badge yet
+                                    </p>
+                                ) : (
+                                    <div className='border border-text/10 rounded-lg divide-y divide-text/10 max-h-60 overflow-y-auto'>
+                                        {usersWithBadge.map((user) => (
+                                            <div
+                                                key={user.user_id}
+                                                className='flex items-center gap-3 p-3 hover:bg-text/5'
+                                            >
+                                                <div className='w-8 h-8 rounded-full bg-text/10 overflow-hidden'>
+                                                    {user.avatar_url ? (
+                                                        <Image
+                                                            src={
+                                                                user.avatar_url
+                                                            }
+                                                            alt={
+                                                                user.display_name
+                                                            }
+                                                            width={32}
+                                                            height={32}
+                                                            className='object-cover w-full h-full'
+                                                        />
+                                                    ) : (
+                                                        <div className='w-full h-full flex items-center justify-center text-text/30 text-sm'>
+                                                            {user.display_name?.[0]?.toUpperCase() ||
+                                                                "?"}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className='flex-1 min-w-0'>
+                                                    <p className='font-medium truncate'>
+                                                        {user.display_name}
+                                                    </p>
+                                                    <p className='text-xs text-text/40'>
+                                                        @{user.username} •{" "}
+                                                        {user.awarded_at &&
+                                                            new Date(
+                                                                user.awarded_at
+                                                            ).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() =>
+                                                        handleRevokeBadge(
+                                                            user.user_id
+                                                        )
+                                                    }
+                                                    disabled={awardLoading}
+                                                    className='px-3 py-1 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition text-sm disabled:opacity-50'
+                                                >
+                                                    Revoke
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Close Button */}
+                        <div className='p-6 border-t border-text/10'>
+                            <button
+                                onClick={closeAwardModal}
+                                className='w-full px-4 py-2 bg-text/5 border border-text/10 rounded-lg hover:bg-text/10 transition'
+                            >
+                                Done
                             </button>
                         </div>
                     </div>

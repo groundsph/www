@@ -152,10 +152,12 @@ export function BadgeCardFull({
     badge,
     onEdit,
     onDelete,
+    onAward,
 }: {
     badge: Badge
     onEdit?: () => void
     onDelete?: () => void
+    onAward?: () => void
 }) {
     return (
         <div className='group relative bg-text/5 border border-text/10 rounded-xl p-4 hover:border-text/20 transition-colors'>
@@ -207,6 +209,27 @@ export function BadgeCardFull({
 
                 {/* Actions */}
                 <div className='flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+                    {onAward && (
+                        <button
+                            onClick={onAward}
+                            className='p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 transition-colors'
+                            title='Award to users'
+                        >
+                            <svg
+                                className='w-4 h-4'
+                                fill='none'
+                                viewBox='0 0 24 24'
+                                stroke='currentColor'
+                            >
+                                <path
+                                    strokeLinecap='round'
+                                    strokeLinejoin='round'
+                                    strokeWidth={2}
+                                    d='M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12.75 12a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z'
+                                />
+                            </svg>
+                        </button>
+                    )}
                     {onEdit && (
                         <button
                             onClick={onEdit}
