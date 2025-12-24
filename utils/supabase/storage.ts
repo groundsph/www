@@ -1,12 +1,255 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 
 const AVATAR_BUCKET = "avatars"
 const REVIEW_BUCKET = "reviews"
 const CAFE_BUCKET = "cafes"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CAFE_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+
+/**
+ * Extract storage path from a Supabase storage public URL (internal helper)
+ * Example URL: https://xxx.supabase.co/storage/v1/object/public/cafes/userId/file.jpg
+ * Returns: userId/file.jpg
+ */
+function extractStoragePath(url: string, bucket: string): string | null {
+    try {
+        const pattern = new RegExp(`/storage/v1/object/public/${bucket}/(.+)`)
+        const match = url.match(pattern)
+        if (match && match[1]) {
+            // Remove query params (like cache busters)
+            return match[1].split('?')[0]
+        }
+        return null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Delete files from a storage bucket using admin client (bypasses RLS)
+ */
+export async function deleteStorageFiles(bucket: string, paths: string[]): Promise<void> {
+    if (paths.length === 0) return
+
+    const adminDb = await createAdminClient()
+    const { error } = await adminDb.storage.from(bucket).remove(paths)
+
+    if (error) {
+        console.error(`Error deleting files from ${bucket}:`, error)
+    }
+}
+
+/**
+ * Delete cafe images (thumbnail + gallery) from storage
+ */
+export async function deleteCafeImages(thumbnail: string | null, gallery: string[] | null): Promise<void> {
+    const paths: string[] = []
+
+    if (thumbnail) {
+        const path = extractStoragePath(thumbnail, CAFE_BUCKET)
+        if (path) paths.push(path)
+    }
+
+    if (gallery && gallery.length > 0) {
+        for (const url of gallery) {
+            const path = extractStoragePath(url, CAFE_BUCKET)
+            if (path) paths.push(path)
+        }
+    }
+
+    await deleteStorageFiles(CAFE_BUCKET, paths)
+}
+
+/**
+ * Delete review images from storage
+ */
+export async function deleteReviewImages(images: string[] | null): Promise<void> {
+    if (!images || images.length === 0) return
+
+    const paths: string[] = []
+    for (const url of images) {
+        const path = extractStoragePath(url, REVIEW_BUCKET)
+        if (path) paths.push(path)
+    }
+
+    await deleteStorageFiles(REVIEW_BUCKET, paths)
+}
+
+/**
+ * Delete avatar image from storage
+ */
+export async function deleteAvatarImage(avatarUrl: string | null): Promise<void> {
+    if (!avatarUrl) return
+
+    const path = extractStoragePath(avatarUrl, AVATAR_BUCKET)
+    if (path) {
+        await deleteStorageFiles(AVATAR_BUCKET, [path])
+    }
+}
+
+/**
+ * Clean up orphaned images from storage buckets
+ * This finds files in storage that are not referenced in the database
+ * Should be run periodically by admins to free up storage space
+ */
+export async function cleanupOrphanedImages(): Promise<{
+    success: boolean
+    deleted: { cafes: number; reviews: number; avatars: number }
+    error?: string
+}> {
+    const adminDb = await createAdminClient()
+    const deleted = { cafes: 0, reviews: 0, avatars: 0 }
+
+    try {
+        // 1. Clean orphaned cafe images
+        const { data: cafeFiles } = await adminDb.storage.from(CAFE_BUCKET).list('', { limit: 1000 })
+        if (cafeFiles) {
+            // Get all folders (user IDs)
+            for (const folder of cafeFiles) {
+                if (folder.id) continue // Skip if it's a file at root level
+
+                const { data: userFiles } = await adminDb.storage.from(CAFE_BUCKET).list(folder.name, { limit: 1000 })
+                if (!userFiles) continue
+
+                for (const file of userFiles) {
+                    const fullPath = `${folder.name}/${file.name}`
+                    const publicUrl = adminDb.storage.from(CAFE_BUCKET).getPublicUrl(fullPath).data.publicUrl
+
+                    // Check if this URL exists in cafes table
+                    const { data: cafeRef } = await adminDb
+                        .from('cafes')
+                        .select('id')
+                        .or(`thumbnail.eq.${publicUrl},gallery.cs.{${publicUrl}}`)
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (!cafeRef) {
+                        await adminDb.storage.from(CAFE_BUCKET).remove([fullPath])
+                        deleted.cafes++
+                    }
+                }
+            }
+        }
+
+        // 2. Clean orphaned review images
+        const { data: reviewFolders } = await adminDb.storage.from(REVIEW_BUCKET).list('', { limit: 1000 })
+        if (reviewFolders) {
+            for (const folder of reviewFolders) {
+                if (folder.id) continue
+
+                const { data: userFiles } = await adminDb.storage.from(REVIEW_BUCKET).list(folder.name, { limit: 1000 })
+                if (!userFiles) continue
+
+                for (const file of userFiles) {
+                    const fullPath = `${folder.name}/${file.name}`
+                    const publicUrl = adminDb.storage.from(REVIEW_BUCKET).getPublicUrl(fullPath).data.publicUrl
+
+                    // Check if this URL exists in reviews table
+                    const { data: reviewRef } = await adminDb
+                        .from('reviews')
+                        .select('id')
+                        .contains('images', [publicUrl])
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (!reviewRef) {
+                        await adminDb.storage.from(REVIEW_BUCKET).remove([fullPath])
+                        deleted.reviews++
+                    }
+                }
+            }
+        }
+
+        // 3. Clean orphaned avatar images
+        const { data: avatarFolders } = await adminDb.storage.from(AVATAR_BUCKET).list('', { limit: 1000 })
+        if (avatarFolders) {
+            for (const folder of avatarFolders) {
+                if (folder.id) continue
+
+                const { data: userFiles } = await adminDb.storage.from(AVATAR_BUCKET).list(folder.name, { limit: 1000 })
+                if (!userFiles) continue
+
+                for (const file of userFiles) {
+                    const fullPath = `${folder.name}/${file.name}`
+                    const publicUrl = adminDb.storage.from(AVATAR_BUCKET).getPublicUrl(fullPath).data.publicUrl
+                    // Remove cache buster for comparison
+                    const baseUrl = publicUrl.split('?')[0]
+
+                    // Check if this URL exists in profiles table
+                    const { data: profileRef } = await adminDb
+                        .from('profiles')
+                        .select('id')
+                        .like('avatar_url', `${baseUrl}%`)
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (!profileRef) {
+                        await adminDb.storage.from(AVATAR_BUCKET).remove([fullPath])
+                        deleted.avatars++
+                    }
+                }
+            }
+        }
+
+        return { success: true, deleted }
+    } catch (error) {
+        console.error("Error cleaning up orphaned images:", error)
+        return { success: false, deleted, error: "Cleanup failed" }
+    }
+}
+
+/**
+ * Process the avatar deletion queue
+ * This should be called periodically (e.g., via a cron job or admin action)
+ * to delete avatars that were queued when profiles were deleted
+ */
+export async function processAvatarDeletionQueue(): Promise<{
+    success: boolean
+    processed: number
+    error?: string
+}> {
+    const adminDb = await createAdminClient()
+    let processed = 0
+
+    try {
+        // Fetch pending deletions (using type assertion since table may not exist in types)
+        const { data: queue, error: fetchError } = await (adminDb as any)
+            .from('avatar_deletion_queue')
+            .select('id, avatar_url')
+            .limit(100) as { data: { id: string; avatar_url: string }[] | null; error: any }
+
+        if (fetchError) {
+            // Table might not exist yet
+            console.warn("Avatar deletion queue not found or error:", fetchError.message)
+            return { success: true, processed: 0 }
+        }
+
+        if (!queue || queue.length === 0) {
+            return { success: true, processed: 0 }
+        }
+
+        for (const item of queue) {
+            // Delete the avatar from storage
+            await deleteAvatarImage(item.avatar_url)
+
+            // Remove from queue
+            await (adminDb as any)
+                .from('avatar_deletion_queue')
+                .delete()
+                .eq('id', item.id)
+
+            processed++
+        }
+
+        return { success: true, processed }
+    } catch (error) {
+        console.error("Error processing avatar deletion queue:", error)
+        return { success: false, processed, error: "Processing failed" }
+    }
+}
 
 /**
  * Upload a cafe image to Supabase Storage

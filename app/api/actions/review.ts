@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { deleteReviewImages } from "@/utils/supabase/storage"
 import { revalidatePath } from "next/cache"
 
 export async function createReview(
@@ -135,15 +136,20 @@ export async function deleteReview(reviewId: string) {
         return { error: "Unauthorized" }
     }
 
-    // Verify ownership
+    // Verify ownership and get images
     const { data: existing } = await db
         .from("reviews")
-        .select("user_id")
+        .select("user_id, images")
         .eq("id", reviewId)
         .single()
 
     if (!existing || existing.user_id !== user.id) {
         return { error: "Unauthorized" }
+    }
+
+    // Delete review images from storage
+    if (existing.images && existing.images.length > 0) {
+        await deleteReviewImages(existing.images)
     }
 
     const { error } = await db.from("reviews").delete().eq("id", reviewId)

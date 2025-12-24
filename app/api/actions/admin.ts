@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
+import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 /**
@@ -90,7 +92,9 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
         return { success: false, error: "Unauthorized" }
     }
 
-    const { error } = await db
+    // Use admin client to bypass RLS for the update
+    const adminDb = await createAdminClient()
+    const { error } = await adminDb
         .from('cafes')
         .update({
             is_published: true,
@@ -107,7 +111,7 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
 }
 
 /**
- * Reject a cafe submission (delete it)
+ * Reject a cafe submission (delete it and its images)
  */
 export async function rejectCafe(cafeId: string): Promise<AdminActionResult> {
     const db = await createClient()
@@ -126,7 +130,23 @@ export async function rejectCafe(cafeId: string): Promise<AdminActionResult> {
         return { success: false, error: "Unauthorized" }
     }
 
-    const { error } = await db
+    // Use admin client to bypass RLS
+    const adminDb = await createAdminClient()
+
+    // Fetch cafe to get image URLs before deletion
+    const { data: cafe } = await adminDb
+        .from('cafes')
+        .select('thumbnail, gallery')
+        .eq('id', cafeId)
+        .single()
+
+    // Delete images from storage
+    if (cafe) {
+        await deleteCafeImages(cafe.thumbnail, cafe.gallery)
+    }
+
+    // Delete the cafe record
+    const { error } = await adminDb
         .from('cafes')
         .delete()
         .eq('id', cafeId)
@@ -230,7 +250,9 @@ export async function updateCafe(
         return { success: false, error: "Unauthorized" }
     }
 
-    const { error } = await db
+    // Use admin client to bypass RLS for the update
+    const adminDb = await createAdminClient()
+    const { error } = await adminDb
         .from('cafes')
         .update(updates as Record<string, unknown>)
         .eq('id', cafeId)
@@ -291,7 +313,7 @@ export async function getPublishedCafes(): Promise<CafeWithRatings[]> {
 export async function unpublishCafe(cafeId: string): Promise<AdminActionResult> {
     const db = await createClient()
 
-    // Verify admin access
+    // Verify admin access using regular client
     const { data: { user } } = await db.auth.getUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
@@ -305,7 +327,9 @@ export async function unpublishCafe(cafeId: string): Promise<AdminActionResult> 
         return { success: false, error: "Unauthorized" }
     }
 
-    const { error } = await db
+    // Use admin client to bypass RLS for the update
+    const adminDb = await createAdminClient()
+    const { error } = await adminDb
         .from('cafes')
         .update({
             is_published: false
@@ -441,4 +465,60 @@ export async function deleteCafeStory(cafeId: string): Promise<AdminActionResult
     }
 
     return { success: true }
+}
+
+/**
+ * Admin action to clean up orphaned images from storage
+ */
+export async function adminCleanupOrphanedImages(): Promise<{
+    success: boolean
+    deleted?: { cafes: number; reviews: number; avatars: number }
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin') {
+        return { success: false, error: "Admin access required" }
+    }
+
+    const result = await cleanupOrphanedImages()
+    return result
+}
+
+/**
+ * Admin action to process avatar deletion queue
+ */
+export async function adminProcessAvatarQueue(): Promise<{
+    success: boolean
+    processed?: number
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin') {
+        return { success: false, error: "Admin access required" }
+    }
+
+    const result = await processAvatarDeletionQueue()
+    return result
 }

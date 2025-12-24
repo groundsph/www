@@ -7,7 +7,6 @@ import {
     Check,
     X,
     MapPin,
-    Clock,
     Wifi,
     Plug,
     Car,
@@ -25,8 +24,16 @@ import {
     Globe,
     EyeOff,
     Search,
+    Trash2,
+    Loader2,
 } from "lucide-react"
-import { approveCafe, rejectCafe, unpublishCafe } from "@/app/api/actions/admin"
+import {
+    approveCafe,
+    rejectCafe,
+    unpublishCafe,
+    adminCleanupOrphanedImages,
+    adminProcessAvatarQueue,
+} from "@/app/api/actions/admin"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 interface AdminDashboardProps {
@@ -46,6 +53,8 @@ export default function AdminDashboard({
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
+    const [cleanupLoading, setCleanupLoading] = useState(false)
+    const [cleanupMessage, setCleanupMessage] = useState<string | null>(null)
 
     const handleApprove = async (cafeId: string) => {
         setProcessing(cafeId)
@@ -110,6 +119,45 @@ export default function AdminDashboard({
         setProcessing(null)
     }
 
+    const handleCleanupOrphans = async () => {
+        if (
+            !confirm(
+                "This will scan all storage buckets and delete files not referenced in the database. Continue?"
+            )
+        ) {
+            return
+        }
+        setCleanupLoading(true)
+        setCleanupMessage(null)
+        const result = await adminCleanupOrphanedImages()
+        if (result.success && result.deleted) {
+            const total =
+                result.deleted.cafes +
+                result.deleted.reviews +
+                result.deleted.avatars
+            setCleanupMessage(
+                `Cleaned up ${total} orphaned files: ${result.deleted.cafes} cafe images, ${result.deleted.reviews} review images, ${result.deleted.avatars} avatars`
+            )
+        } else {
+            setCleanupMessage(result.error || "Cleanup failed")
+        }
+        setCleanupLoading(false)
+    }
+
+    const handleProcessAvatarQueue = async () => {
+        setCleanupLoading(true)
+        setCleanupMessage(null)
+        const result = await adminProcessAvatarQueue()
+        if (result.success) {
+            setCleanupMessage(
+                `Processed ${result.processed || 0} queued avatar deletions`
+            )
+        } else {
+            setCleanupMessage(result.error || "Processing failed")
+        }
+        setCleanupLoading(false)
+    }
+
     const toggleExpand = (cafeId: string) => {
         setExpandedCafe((prev) => (prev === cafeId ? null : cafeId))
     }
@@ -167,6 +215,49 @@ export default function AdminDashboard({
                     </div>
                     <div className='text-text/60 text-sm'>Published Cafes</div>
                 </div>
+            </div>
+
+            {/* Storage Cleanup */}
+            <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                <h2 className='text-lg font-semibold mb-4 flex items-center gap-2'>
+                    <Trash2 className='w-5 h-5' />
+                    Storage Cleanup
+                </h2>
+                <p className='text-text/60 text-sm mb-4'>
+                    Clean up orphaned images that are no longer referenced in
+                    the database.
+                </p>
+                <div className='flex flex-wrap gap-3'>
+                    <button
+                        onClick={handleCleanupOrphans}
+                        disabled={cleanupLoading}
+                        className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                    >
+                        {cleanupLoading ? (
+                            <Loader2 className='w-4 h-4 animate-spin' />
+                        ) : (
+                            <Trash2 className='w-4 h-4' />
+                        )}
+                        Clean Orphaned Images
+                    </button>
+                    <button
+                        onClick={handleProcessAvatarQueue}
+                        disabled={cleanupLoading}
+                        className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition disabled:opacity-50'
+                    >
+                        {cleanupLoading ? (
+                            <Loader2 className='w-4 h-4 animate-spin' />
+                        ) : (
+                            <Trash2 className='w-4 h-4' />
+                        )}
+                        Process Avatar Queue
+                    </button>
+                </div>
+                {cleanupMessage && (
+                    <div className='mt-4 p-3 bg-text/5 border border-text/10 rounded-lg text-sm'>
+                        {cleanupMessage}
+                    </div>
+                )}
             </div>
 
             {/* Tabs */}
