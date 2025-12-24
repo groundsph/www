@@ -1165,3 +1165,62 @@ export async function getUsersWithBadge(
     }
 }
 
+/**
+ * Award a badge to ALL users
+ * This is a potentially heavy operation, so we do it in chunks
+ */
+export async function awardBadgeToAllUsers(badgeId: string): Promise<{ success: boolean; error?: string }> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // 1. Fetch all user IDs
+    const { data: profiles, error: fetchError } = await adminDb
+        .from('profiles')
+        .select('id')
+
+    if (fetchError) {
+        return { success: false, error: `Failed to fetch users: ${fetchError.message}` }
+    }
+
+    if (!profiles || profiles.length === 0) {
+        return { success: true }
+    }
+
+    const updates = profiles.map(p => ({
+        user_id: p.id,
+        badge_id: badgeId
+    }))
+
+    // 2. Bulk insert chunked
+    const CHUNK_SIZE = 1000
+
+    for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+        const chunk = updates.slice(i, i + CHUNK_SIZE)
+        const { error: insertError } = await adminDb
+            .from('user_badges')
+            .upsert(chunk, { onConflict: 'user_id, badge_id', ignoreDuplicates: true })
+
+        if (insertError) {
+            console.error(`Error awarding badge chunk ${i}:`, insertError)
+            return { success: false, error: `Partial failure at chunk ${i}: ${insertError.message}` }
+        }
+    }
+
+    return { success: true }
+}
+

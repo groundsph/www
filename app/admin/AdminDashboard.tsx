@@ -32,6 +32,7 @@ import {
     Award,
     Plus,
     Upload,
+    Users,
 } from "lucide-react"
 import {
     approveCafe,
@@ -50,6 +51,7 @@ import {
     revokeBadgeFromUser,
     searchUsersForBadge,
     getUsersWithBadge,
+    awardBadgeToAllUsers,
 } from "@/app/api/actions/admin"
 import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -134,6 +136,7 @@ export default function AdminDashboard({
     const [badgeUsersHasMore, setBadgeUsersHasMore] = useState(false)
     const [awardLoading, setAwardLoading] = useState(false)
     const [searchLoading, setSearchLoading] = useState(false)
+    const [isAwardingAll, setIsAwardingAll] = useState(false)
 
     const handleApprove = async (cafeId: string) => {
         setProcessing(cafeId)
@@ -489,6 +492,38 @@ export default function AdminDashboard({
         setUsersWithBadge([])
         setBadgeUsersTotal(0)
         setBadgeUsersHasMore(false)
+    }
+
+    const handleAwardAll = async () => {
+        if (!awardingBadge) return
+
+        const confirmed = window.confirm(
+            `⚠️ CAUTION: You are about to award the "${awardingBadge.name}" badge to ALL users.\n\nThis action cannot be easily undone.\n\nAre you sure you want to proceed?`
+        )
+
+        if (!confirmed) return
+
+        setIsAwardingAll(true)
+        try {
+            const result = await awardBadgeToAllUsers(awardingBadge.id)
+            if (result.success) {
+                alert(
+                    "Successfully started awarding badge to all users. This may take a moment to complete."
+                )
+                // Refresh list
+                const users = await getUsersWithBadge(awardingBadge.id, 20, 0)
+                setUsersWithBadge(users.users)
+                setBadgeUsersTotal(users.total)
+                setBadgeUsersHasMore(users.hasMore)
+            } else {
+                alert("Failed to award badges: " + result.error)
+            }
+        } catch (error) {
+            console.error(error)
+            alert("An error occurred")
+        } finally {
+            setIsAwardingAll(false)
+        }
     }
 
     const handleUserSearch = async (query: string) => {
@@ -1662,6 +1697,29 @@ export default function AdminDashboard({
                                             No users found
                                         </p>
                                     )}
+                            </div>
+
+                            {/* Bulk Actions */}
+                            <div className='pt-4 border-t border-text/10'>
+                                <h3 className='text-sm font-medium mb-3'>
+                                    Bulk Actions
+                                </h3>
+                                <button
+                                    onClick={handleAwardAll}
+                                    disabled={awardLoading || isAwardingAll}
+                                    className='w-full px-4 py-3 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-lg hover:bg-amber-500/20 transition flex items-center justify-center gap-2 font-medium disabled:opacity-50'
+                                >
+                                    {isAwardingAll ? (
+                                        <Loader2 className='w-4 h-4 animate-spin' />
+                                    ) : (
+                                        <Users className='w-4 h-4' />
+                                    )}
+                                    Award to All Users
+                                </button>
+                                <p className='text-xs text-text/40 mt-2 text-center'>
+                                    This will grant the badge to every
+                                    registered user who doesn't have it yet.
+                                </p>
                             </div>
 
                             {/* Users with this Badge */}
