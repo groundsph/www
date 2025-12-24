@@ -4,11 +4,8 @@ import PasswordResetEmail from "@/emails/PasswordResetEmail"
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Email sender - uses ranlabs.space for dev, grounds.ph for prod
-const FROM_EMAIL =
-    process.env.NODE_ENV === "production"
-        ? "Grounds <noreply@grounds.ph>"
-        : "Grounds <noreply@ranlabs.space>"
+// Email sender
+const FROM_EMAIL = "Grounds <noreply@grounds.ph>"
 
 /**
  * Send a password reset email to a user
