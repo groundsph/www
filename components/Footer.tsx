@@ -106,6 +106,12 @@ export default function Footer() {
                             >
                                 Support Us
                             </Link>
+                            <Link
+                                href='/contact'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                Contact
+                            </Link>
                         </div>
                     </div>
                 </div>

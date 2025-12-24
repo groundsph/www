@@ -16,10 +16,12 @@ import {
     SlidersHorizontal,
     XIcon,
     MapPinIcon,
+    Briefcase,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { PHILIPPINES_LOCATIONS } from "@/utils/data/philippines"
 import { useEffect, useState, useTransition } from "react"
 
 export default function CafesPageClient() {
@@ -45,8 +47,10 @@ export default function CafesPageClient() {
         has_aircon: false,
         is_pet_friendly: false,
         has_outdoor_seating: false,
+        is_work_friendly: false,
         open_now: false,
         price_level: "" as "" | "low" | "medium" | "high",
+        region: "",
         near_me: false,
     })
 
@@ -92,7 +96,9 @@ export default function CafesPageClient() {
                     has_aircon: filters.has_aircon,
                     is_pet_friendly: filters.is_pet_friendly,
                     has_outdoor_seating: filters.has_outdoor_seating,
+                    is_work_friendly: filters.is_work_friendly,
                     price_level: filters.price_level as any,
+                    region: filters.region || undefined,
                     sortBy: sortBy as any,
                 })
                 setCafes(fetchedCafes)
@@ -142,7 +148,9 @@ export default function CafesPageClient() {
     // Count active filters (excluding empty values)
     const activeFilterCount = Object.entries(filters).filter(
         ([key, value]) =>
-            value === true || (key === "price_level" && value !== "")
+            value === true ||
+            (key === "price_level" && value !== "") ||
+            (key === "region" && value !== "")
     ).length
 
     const filterOptions = [
@@ -172,6 +180,11 @@ export default function CafesPageClient() {
             key: "has_outdoor_seating",
             label: "Outdoor",
             icon: <TreePine className='w-4 h-4' />,
+        },
+        {
+            key: "is_work_friendly",
+            label: "Work Friendly",
+            icon: <Briefcase className='w-4 h-4' />,
         },
     ]
 
@@ -268,8 +281,10 @@ export default function CafesPageClient() {
                                                     has_aircon: false,
                                                     is_pet_friendly: false,
                                                     has_outdoor_seating: false,
+                                                    is_work_friendly: false,
                                                     open_now: false,
                                                     price_level: "",
+                                                    region: "",
                                                     near_me: false,
                                                 })
                                             }}
@@ -312,6 +327,35 @@ export default function CafesPageClient() {
                                             </button>
                                         ))}
                                     </div>
+                                </div>
+
+                                {/* Region Filter */}
+                                <div className='mb-3'>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>
+                                        Region
+                                    </span>
+                                    <select
+                                        value={filters.region}
+                                        onChange={(e) =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                region: e.target.value,
+                                            }))
+                                        }
+                                        className='w-full px-3 py-2 rounded-lg border border-text/20 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50 cursor-pointer'
+                                    >
+                                        <option value=''>All Regions</option>
+                                        {PHILIPPINES_LOCATIONS.regions.map(
+                                            (r) => (
+                                                <option
+                                                    key={r.name}
+                                                    value={r.name}
+                                                >
+                                                    {r.name}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
                                 </div>
 
                                 {/* Amenity Filters */}
@@ -511,6 +555,14 @@ export default function CafesPageClient() {
                                                     <TreePine className='w-4 h-4' />
                                                 </div>
                                             )}
+                                            {cafe.is_work_friendly && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Work Friendly'
+                                                >
+                                                    <Briefcase className='w-4 h-4' />
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Description */}
@@ -593,8 +645,10 @@ export default function CafesPageClient() {
                                         has_aircon: false,
                                         is_pet_friendly: false,
                                         has_outdoor_seating: false,
+                                        is_work_friendly: false,
                                         open_now: false,
                                         price_level: "",
+                                        region: "",
                                         near_me: false,
                                     })
                                 }}

@@ -210,7 +210,9 @@ export async function getAllCafes(
     if (filters.has_aircon) query = query.eq("has_aircon", true)
     if (filters.is_pet_friendly) query = query.eq("is_pet_friendly", true)
     if (filters.has_outdoor_seating) query = query.eq("has_outdoor_seating", true)
+    if (filters.is_work_friendly) query = query.eq("is_work_friendly", true)
     if (filters.price_level) query = query.eq("price_level", filters.price_level)
+    if (filters.region) query = query.eq("region", filters.region)
 
     // Sorting
     switch (filters.sortBy) {

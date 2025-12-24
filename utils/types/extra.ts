@@ -24,7 +24,9 @@ export interface CafeFilters {
     has_aircon?: boolean;
     is_pet_friendly?: boolean;
     has_outdoor_seating?: boolean;
+    is_work_friendly?: boolean;
     price_level?: Database['public']['Enums']['price_level']; // Uses the actual DB Enum type
+    region?: string;
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";
 }
