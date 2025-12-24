@@ -4,6 +4,31 @@ import { createClient } from "@/utils/supabase/server"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
 
 /**
+ * Check if a username is already taken
+ * Returns { available: true } if username is free, { available: false } if taken
+ */
+export async function checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
+    if (!username || username.trim().length < 3) {
+        return { available: false }
+    }
+
+    const db = await createClient()
+
+    const { data, error } = await db
+        .from("profiles")
+        .select("id")
+        .eq("username", username.trim().toLowerCase())
+        .maybeSingle()
+
+    // If no data and no error, username is available
+    if (!data && !error) {
+        return { available: true }
+    }
+
+    return { available: false }
+}
+
+/**
  * Get a user's profile with their earned badges
  */
 export async function getProfileWithBadges(userId: string): Promise<ProfileWithBadges | null> {

@@ -1,6 +1,7 @@
 "use client"
 
 import { AuthContext } from "@/components/AuthProvider"
+import { checkUsernameAvailability } from "@/app/api/actions/profile"
 import { createLocalClient } from "@/utils/supabase/client"
 import { motion } from "motion/react"
 import Link from "next/link"
@@ -31,6 +32,9 @@ export default function AuthPageClient() {
     const [displayName, setDisplayName] = useState("")
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
+    const [usernameStatus, setUsernameStatus] = useState<
+        "idle" | "checking" | "available" | "taken"
+    >("idle")
 
     // Effects
     useEffect(() => {
@@ -44,6 +48,32 @@ export default function AuthPageClient() {
             setError("Authentication failed. Please try again.")
         }
     }, [searchParams])
+
+    // Debounced username availability check
+    useEffect(() => {
+        if (mode !== "username" || !username.trim()) {
+            setUsernameStatus("idle")
+            return
+        }
+
+        if (username.trim().length < 3) {
+            setUsernameStatus("idle")
+            return
+        }
+
+        setUsernameStatus("checking")
+
+        const timeoutId = setTimeout(async () => {
+            try {
+                const result = await checkUsernameAvailability(username.trim())
+                setUsernameStatus(result.available ? "available" : "taken")
+            } catch {
+                setUsernameStatus("idle")
+            }
+        }, 500)
+
+        return () => clearTimeout(timeoutId)
+    }, [username, mode])
 
     // Functions
     const checkPasswordRequirements = (password: string) => {
@@ -248,17 +278,86 @@ export default function AuthPageClient() {
                                 started.
                             </p>
                             <div>
-                                <input
-                                    type='text'
-                                    placeholder='Username (unique identifier)'
-                                    value={username}
-                                    onChange={(e) =>
-                                        setUsername(e.target.value)
-                                    }
-                                    className='w-full px-4 py-3 rounded-xl border border-secondary/30 bg-tertiary/50 text-text placeholder:text-text/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all'
-                                    disabled={isLoading}
-                                    required
-                                />
+                                <div className='relative'>
+                                    <input
+                                        type='text'
+                                        placeholder='Username (unique identifier)'
+                                        value={username}
+                                        onChange={(e) =>
+                                            setUsername(
+                                                e.target.value
+                                                    .toLowerCase()
+                                                    .replace(/[^a-z0-9_]/g, "")
+                                            )
+                                        }
+                                        className={`w-full px-4 py-3 rounded-xl border bg-tertiary/50 text-text placeholder:text-text/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
+                                            usernameStatus === "taken"
+                                                ? "border-red-400 focus:border-red-400"
+                                                : usernameStatus === "available"
+                                                  ? "border-green-400 focus:border-green-400"
+                                                  : "border-secondary/30 focus:border-primary"
+                                        }`}
+                                        disabled={isLoading}
+                                        required
+                                        minLength={3}
+                                    />
+                                    {/* Status indicator */}
+                                    {username.trim().length >= 3 && (
+                                        <div className='absolute right-3 top-1/2 -translate-y-1/2'>
+                                            {usernameStatus === "checking" && (
+                                                <div className='w-4 h-4 border-2 border-text/30 border-t-primary rounded-full animate-spin' />
+                                            )}
+                                            {usernameStatus === "available" && (
+                                                <svg
+                                                    className='w-5 h-5 text-green-500'
+                                                    fill='none'
+                                                    viewBox='0 0 24 24'
+                                                    stroke='currentColor'
+                                                >
+                                                    <path
+                                                        strokeLinecap='round'
+                                                        strokeLinejoin='round'
+                                                        strokeWidth={2}
+                                                        d='M5 13l4 4L19 7'
+                                                    />
+                                                </svg>
+                                            )}
+                                            {usernameStatus === "taken" && (
+                                                <svg
+                                                    className='w-5 h-5 text-red-500'
+                                                    fill='none'
+                                                    viewBox='0 0 24 24'
+                                                    stroke='currentColor'
+                                                >
+                                                    <path
+                                                        strokeLinecap='round'
+                                                        strokeLinejoin='round'
+                                                        strokeWidth={2}
+                                                        d='M6 18L18 6M6 6l12 12'
+                                                    />
+                                                </svg>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Status message */}
+                                {usernameStatus === "taken" && (
+                                    <p className='text-red-500 text-xs mt-1'>
+                                        This username is already taken
+                                    </p>
+                                )}
+                                {usernameStatus === "available" && (
+                                    <p className='text-green-500 text-xs mt-1'>
+                                        Username is available!
+                                    </p>
+                                )}
+                                {username.trim().length > 0 &&
+                                    username.trim().length < 3 && (
+                                        <p className='text-text/50 text-xs mt-1'>
+                                            Username must be at least 3
+                                            characters
+                                        </p>
+                                    )}
                             </div>
                             <div>
                                 <input
@@ -275,7 +374,11 @@ export default function AuthPageClient() {
                             </div>
                             <button
                                 type='submit'
-                                disabled={isLoading}
+                                disabled={
+                                    isLoading ||
+                                    usernameStatus === "taken" ||
+                                    usernameStatus === "checking"
+                                }
                                 className='w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer'
                             >
                                 {isLoading ? "Saving..." : "Complete Sign Up"}
