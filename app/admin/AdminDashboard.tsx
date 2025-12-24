@@ -29,6 +29,9 @@ import {
     MessageSquare,
     Flag,
     Star,
+    Award,
+    Plus,
+    Upload,
 } from "lucide-react"
 import {
     approveCafe,
@@ -39,32 +42,70 @@ import {
     moderateReview,
     deleteReviewAsAdmin,
     type ReviewForModeration,
+    type BadgeDefinition,
+    getAllBadgeDefinitions,
+    createBadgeDefinition,
+    updateBadgeDefinition,
+    deleteBadgeDefinition,
+    awardBadgeToUser,
+    revokeBadgeFromUser,
+    searchUsersForBadge,
 } from "@/app/api/actions/admin"
+import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { BadgeCardFull } from "@/components/badges/BadgeCard"
 
 interface AdminDashboardProps {
     pendingCafes: CafeWithRatings[]
     publishedCafes: CafeWithRatings[]
     flaggedReviews: ReviewForModeration[]
+    badges: BadgeDefinition[]
 }
 
-type TabType = "pending" | "published" | "reviews"
+type TabType = "pending" | "published" | "reviews" | "badges"
 
 export default function AdminDashboard({
     pendingCafes: initialPending,
     publishedCafes: initialPublished,
     flaggedReviews: initialFlagged,
+    badges: initialBadges,
 }: AdminDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
     const [pendingCafes, setPendingCafes] = useState(initialPending)
     const [publishedCafes, setPublishedCafes] = useState(initialPublished)
     const [flaggedReviews, setFlaggedReviews] = useState(initialFlagged)
+    const [badges, setBadges] = useState(initialBadges)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedReview, setExpandedReview] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [cleanupLoading, setCleanupLoading] = useState(false)
     const [cleanupMessage, setCleanupMessage] = useState<string | null>(null)
+
+    // Badge modal state
+    const [showBadgeModal, setShowBadgeModal] = useState(false)
+    const [editingBadge, setEditingBadge] = useState<BadgeDefinition | null>(
+        null
+    )
+    const [badgeForm, setBadgeForm] = useState<{
+        name: string
+        description: string
+        image_url: string
+        category: "achievement" | "monetary" | "social"
+        rarity: "common" | "rare" | "legendary"
+    }>({
+        name: "",
+        description: "",
+        image_url: "",
+        category: "achievement",
+        rarity: "common",
+    })
+    const [badgeImageFile, setBadgeImageFile] = useState<File | null>(null)
+    const [badgeImagePreview, setBadgeImagePreview] = useState<string | null>(
+        null
+    )
+    const [badgeLoading, setBadgeLoading] = useState(false)
+    const [badgeError, setBadgeError] = useState<string | null>(null)
 
     const handleApprove = async (cafeId: string) => {
         setProcessing(cafeId)
@@ -217,6 +258,173 @@ export default function AdminDashboard({
         setProcessing(null)
     }
 
+    // Badge handlers
+    const openBadgeModal = (badge?: BadgeDefinition) => {
+        if (badge) {
+            setEditingBadge(badge)
+            setBadgeForm({
+                name: badge.name,
+                description: badge.description,
+                image_url: badge.image_url,
+                category: badge.category,
+                rarity: badge.rarity,
+            })
+            setBadgeImagePreview(badge.image_url)
+        } else {
+            setEditingBadge(null)
+            setBadgeForm({
+                name: "",
+                description: "",
+                image_url: "",
+                category: "achievement",
+                rarity: "common",
+            })
+            setBadgeImagePreview(null)
+        }
+        setBadgeImageFile(null)
+        setBadgeError(null)
+        setShowBadgeModal(true)
+    }
+
+    const closeBadgeModal = () => {
+        setShowBadgeModal(false)
+        setEditingBadge(null)
+        setBadgeImageFile(null)
+        setBadgeImagePreview(null)
+        setBadgeError(null)
+    }
+
+    const handleBadgeImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // Validate PNG format
+        if (file.type !== "image/png") {
+            setBadgeError("Badge images must be PNG format")
+            return
+        }
+
+        // Validate size (500KB)
+        if (file.size > 500 * 1024) {
+            setBadgeError("File too large (max 500KB)")
+            return
+        }
+
+        setBadgeImageFile(file)
+        setBadgeError(null)
+
+        // Create preview
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            setBadgeImagePreview(e.target?.result as string)
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const handleSaveBadge = async () => {
+        setBadgeLoading(true)
+        setBadgeError(null)
+
+        try {
+            let imageUrl = badgeForm.image_url
+
+            // Upload new image if selected
+            if (badgeImageFile) {
+                const formData = new FormData()
+                formData.append("image", badgeImageFile)
+                const uploadResult = await uploadBadgeImage(formData)
+
+                if (!uploadResult.success) {
+                    setBadgeError(
+                        uploadResult.error || "Failed to upload image"
+                    )
+                    setBadgeLoading(false)
+                    return
+                }
+
+                imageUrl = uploadResult.url!
+            }
+
+            if (!imageUrl) {
+                setBadgeError("Badge image is required")
+                setBadgeLoading(false)
+                return
+            }
+
+            if (editingBadge) {
+                // Update existing badge
+                const result = await updateBadgeDefinition(editingBadge.id, {
+                    name: badgeForm.name,
+                    description: badgeForm.description,
+                    image_url: imageUrl,
+                    category: badgeForm.category,
+                    rarity: badgeForm.rarity,
+                })
+
+                if (!result.success) {
+                    setBadgeError(result.error || "Failed to update badge")
+                    setBadgeLoading(false)
+                    return
+                }
+
+                // Update local state
+                setBadges((prev) =>
+                    prev.map((b) =>
+                        b.id === editingBadge.id
+                            ? { ...b, ...badgeForm, image_url: imageUrl }
+                            : b
+                    )
+                )
+            } else {
+                // Create new badge
+                const result = await createBadgeDefinition({
+                    name: badgeForm.name,
+                    description: badgeForm.description,
+                    image_url: imageUrl,
+                    category: badgeForm.category,
+                    rarity: badgeForm.rarity,
+                })
+
+                if (!result.success || !result.badge) {
+                    setBadgeError(result.error || "Failed to create badge")
+                    setBadgeLoading(false)
+                    return
+                }
+
+                // Add to local state
+                setBadges((prev) => [...prev, result.badge!])
+            }
+
+            closeBadgeModal()
+        } catch (error) {
+            console.error("Error saving badge:", error)
+            setBadgeError("An unexpected error occurred")
+        }
+
+        setBadgeLoading(false)
+    }
+
+    const handleDeleteBadge = async (badge: BadgeDefinition) => {
+        if (
+            !confirm(
+                `Are you sure you want to delete the "${badge.name}" badge? This will also remove it from all users who have it.`
+            )
+        ) {
+            return
+        }
+
+        setProcessing(badge.id)
+        const result = await deleteBadgeDefinition(badge.id)
+
+        if (result.success) {
+            setBadges((prev) => prev.filter((b) => b.id !== badge.id))
+        } else {
+            alert(result.error || "Failed to delete badge")
+        }
+
+        setProcessing(null)
+    }
+
     const AMENITY_ICONS = {
         has_wifi: { icon: Wifi, label: "WiFi" },
         has_sockets: { icon: Plug, label: "Power Outlets" },
@@ -362,10 +570,21 @@ export default function AdminDashboard({
                     <Flag className='w-4 h-4' />
                     Reviews ({flaggedReviews.length})
                 </button>
+                <button
+                    onClick={() => setActiveTab("badges")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                        activeTab === "badges"
+                            ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
+                            : "bg-text/5 border-text/10 hover:bg-text/10"
+                    }`}
+                >
+                    <Award className='w-4 h-4' />
+                    Badges ({badges.length})
+                </button>
             </div>
 
             {/* Search - only for cafe tabs */}
-            {activeTab !== "reviews" && (
+            {(activeTab === "pending" || activeTab === "published") && (
                 <div className='relative'>
                     <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
                     <input
@@ -979,6 +1198,233 @@ export default function AdminDashboard({
                         </div>
                     )}
                 </>
+            )}
+
+            {/* Badges Management */}
+            {activeTab === "badges" && (
+                <>
+                    {/* Create Badge Button */}
+                    <div className='mb-6'>
+                        <button
+                            onClick={() => openBadgeModal()}
+                            className='flex items-center gap-2 px-4 py-2 bg-amber-500/20 text-amber-500 rounded-lg hover:bg-amber-500/30 transition border border-amber-500/30'
+                        >
+                            <Plus className='w-4 h-4' />
+                            Create Badge
+                        </button>
+                    </div>
+
+                    {/* Badge Grid */}
+                    {badges.length === 0 ? (
+                        <div className='text-center py-16 bg-text/5 rounded-xl border border-text/10'>
+                            <Award className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <p className='text-text/60 text-lg'>
+                                No badges yet
+                            </p>
+                            <p className='text-text/40 text-sm mt-1'>
+                                Create your first badge to get started
+                            </p>
+                        </div>
+                    ) : (
+                        <div className='grid gap-4'>
+                            {badges.map((badge) => (
+                                <BadgeCardFull
+                                    key={badge.id}
+                                    badge={badge}
+                                    onEdit={() => openBadgeModal(badge)}
+                                    onDelete={() => handleDeleteBadge(badge)}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Badge Modal */}
+            {showBadgeModal && (
+                <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'>
+                    <div className='bg-background border border-text/10 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto'>
+                        <div className='p-6 border-b border-text/10'>
+                            <h2 className='text-xl font-semibold font-serif'>
+                                {editingBadge ? "Edit Badge" : "Create Badge"}
+                            </h2>
+                        </div>
+
+                        <div className='p-6 space-y-4'>
+                            {/* Badge Image */}
+                            <div>
+                                <label className='block text-sm font-medium mb-2'>
+                                    Badge Image (128×128 PNG)
+                                </label>
+                                <div className='flex items-center gap-4'>
+                                    {/* Preview */}
+                                    <div className='w-20 h-20 rounded-xl border-2 border-dashed border-text/20 flex items-center justify-center overflow-hidden bg-text/5'>
+                                        {badgeImagePreview ? (
+                                            <Image
+                                                src={badgeImagePreview}
+                                                alt='Badge preview'
+                                                width={80}
+                                                height={80}
+                                                className='object-contain'
+                                                unoptimized
+                                            />
+                                        ) : (
+                                            <Upload className='w-8 h-8 text-text/30' />
+                                        )}
+                                    </div>
+
+                                    {/* Upload Button */}
+                                    <div className='flex-1'>
+                                        <label className='block'>
+                                            <span className='inline-flex items-center gap-2 px-4 py-2 bg-text/5 border border-text/10 rounded-lg cursor-pointer hover:bg-text/10 transition'>
+                                                <Upload className='w-4 h-4' />
+                                                {badgeImageFile
+                                                    ? "Change Image"
+                                                    : "Upload Image"}
+                                            </span>
+                                            <input
+                                                type='file'
+                                                accept='image/png'
+                                                onChange={
+                                                    handleBadgeImageChange
+                                                }
+                                                className='hidden'
+                                            />
+                                        </label>
+                                        <p className='text-xs text-text/40 mt-1'>
+                                            PNG only, 128×128px, max 500KB
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Name */}
+                            <div>
+                                <label className='block text-sm font-medium mb-2'>
+                                    Badge Name
+                                </label>
+                                <input
+                                    type='text'
+                                    value={badgeForm.name}
+                                    onChange={(e) =>
+                                        setBadgeForm((prev) => ({
+                                            ...prev,
+                                            name: e.target.value,
+                                        }))
+                                    }
+                                    placeholder='e.g., First Scout'
+                                    className='w-full px-4 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className='block text-sm font-medium mb-2'>
+                                    Description
+                                </label>
+                                <textarea
+                                    value={badgeForm.description}
+                                    onChange={(e) =>
+                                        setBadgeForm((prev) => ({
+                                            ...prev,
+                                            description: e.target.value,
+                                        }))
+                                    }
+                                    placeholder='What does this badge represent?'
+                                    rows={2}
+                                    className='w-full px-4 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none'
+                                />
+                            </div>
+
+                            {/* Category */}
+                            <div>
+                                <label className='block text-sm font-medium mb-2'>
+                                    Category
+                                </label>
+                                <select
+                                    value={badgeForm.category}
+                                    onChange={(e) =>
+                                        setBadgeForm((prev) => ({
+                                            ...prev,
+                                            category: e.target.value as any,
+                                        }))
+                                    }
+                                    className='w-full px-4 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
+                                >
+                                    <option value='achievement'>
+                                        Achievement
+                                    </option>
+                                    <option value='monetary'>Supporter</option>
+                                    <option value='social'>Social</option>
+                                </select>
+                            </div>
+
+                            {/* Rarity */}
+                            <div>
+                                <label className='block text-sm font-medium mb-2'>
+                                    Rarity
+                                </label>
+                                <div className='grid grid-cols-3 gap-2'>
+                                    {(
+                                        ["common", "rare", "legendary"] as const
+                                    ).map((rarity) => (
+                                        <button
+                                            key={rarity}
+                                            type='button'
+                                            onClick={() =>
+                                                setBadgeForm((prev) => ({
+                                                    ...prev,
+                                                    rarity,
+                                                }))
+                                            }
+                                            className={`px-3 py-2 rounded-lg border text-sm font-medium capitalize transition ${
+                                                badgeForm.rarity === rarity
+                                                    ? rarity === "legendary"
+                                                        ? "bg-amber-500/20 border-amber-500 text-amber-500"
+                                                        : rarity === "rare"
+                                                          ? "bg-blue-500/20 border-blue-500 text-blue-500"
+                                                          : "bg-text/10 border-text/30 text-text"
+                                                    : "bg-text/5 border-text/10 text-text/60 hover:bg-text/10"
+                                            }`}
+                                        >
+                                            {rarity}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Error */}
+                            {badgeError && (
+                                <div className='p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-500'>
+                                    {badgeError}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className='p-6 border-t border-text/10 flex justify-end gap-3'>
+                            <button
+                                onClick={closeBadgeModal}
+                                disabled={badgeLoading}
+                                className='px-4 py-2 bg-text/5 border border-text/10 rounded-lg hover:bg-text/10 transition disabled:opacity-50'
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveBadge}
+                                disabled={
+                                    badgeLoading || !badgeForm.name.trim()
+                                }
+                                className='flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition disabled:opacity-50'
+                            >
+                                {badgeLoading && (
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                )}
+                                {editingBadge ? "Update Badge" : "Create Badge"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

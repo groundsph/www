@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      avatar_deletion_queue: {
+        Row: {
+          avatar_url: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       badge_definitions: {
         Row: {
           category: Database["public"]["Enums"]["badge_category"]

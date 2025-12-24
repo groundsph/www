@@ -748,3 +748,396 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
 
     return { success: true }
 }
+
+// ============================================
+// Badge Management Functions
+// ============================================
+
+export interface BadgeDefinition {
+    id: string
+    name: string
+    description: string
+    image_url: string
+    category: 'achievement' | 'monetary' | 'social'
+    rarity: 'common' | 'rare' | 'legendary'
+    metadata: Record<string, unknown> | null
+    created_at: string | null
+}
+
+/**
+ * Get all badge definitions
+ */
+export async function getAllBadgeDefinitions(): Promise<BadgeDefinition[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const { data: badges, error } = await db
+        .from('badge_definitions')
+        .select('*')
+        .order('rarity', { ascending: true })
+        .order('name', { ascending: true })
+
+    if (error) {
+        console.error("Error fetching badge definitions:", error)
+        return []
+    }
+
+    return badges as BadgeDefinition[]
+}
+
+/**
+ * Create a new badge definition
+ */
+export async function createBadgeDefinition(badge: {
+    name: string
+    description: string
+    image_url: string
+    category: 'achievement' | 'monetary' | 'social'
+    rarity: 'common' | 'rare' | 'legendary'
+    metadata?: Record<string, unknown>
+}): Promise<AdminActionResult & { badge?: BadgeDefinition }> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Validate required fields
+    if (!badge.name?.trim()) {
+        return { success: false, error: "Badge name is required" }
+    }
+    if (!badge.description?.trim()) {
+        return { success: false, error: "Badge description is required" }
+    }
+    if (!badge.image_url?.trim()) {
+        return { success: false, error: "Badge image is required" }
+    }
+
+    const adminDb = await createAdminClient()
+    const { data: newBadge, error } = await adminDb
+        .from('badge_definitions')
+        .insert({
+            name: badge.name.trim(),
+            description: badge.description.trim(),
+            image_url: badge.image_url,
+            category: badge.category,
+            rarity: badge.rarity
+        })
+        .select()
+        .single()
+
+    if (error) {
+        console.error("Error creating badge:", error)
+        return { success: false, error: "Failed to create badge" }
+    }
+
+    return { success: true, badge: newBadge as BadgeDefinition }
+}
+
+/**
+ * Update an existing badge definition
+ */
+export async function updateBadgeDefinition(
+    badgeId: string,
+    updates: Partial<{
+        name: string
+        description: string
+        image_url: string
+        category: 'achievement' | 'monetary' | 'social'
+        rarity: 'common' | 'rare' | 'legendary'
+    }>
+): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+    const { error } = await adminDb
+        .from('badge_definitions')
+        .update(updates as Record<string, unknown>)
+        .eq('id', badgeId)
+
+    if (error) {
+        console.error("Error updating badge:", error)
+        return { success: false, error: "Failed to update badge" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Delete a badge definition
+ * Note: This will cascade delete from user_badges
+ */
+export async function deleteBadgeDefinition(badgeId: string): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Get badge image URL to delete from storage
+    const { data: badge } = await adminDb
+        .from('badge_definitions')
+        .select('image_url')
+        .eq('id', badgeId)
+        .single()
+
+    // Delete from database (cascades to user_badges)
+    const { error } = await adminDb
+        .from('badge_definitions')
+        .delete()
+        .eq('id', badgeId)
+
+    if (error) {
+        console.error("Error deleting badge:", error)
+        return { success: false, error: "Failed to delete badge" }
+    }
+
+    // Delete badge image from storage
+    if (badge?.image_url) {
+        const { deleteBadgeImage } = await import('@/utils/supabase/storage')
+        await deleteBadgeImage(badge.image_url)
+    }
+
+    return { success: true }
+}
+
+/**
+ * Award a badge to a user
+ */
+export async function awardBadgeToUser(
+    userId: string,
+    badgeId: string,
+    evidenceUrl?: string
+): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Check if user already has this badge
+    const { data: existing } = await adminDb
+        .from('user_badges')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('badge_id', badgeId)
+        .single()
+
+    if (existing) {
+        return { success: false, error: "User already has this badge" }
+    }
+
+    // Award the badge
+    const { error } = await adminDb
+        .from('user_badges')
+        .insert({
+            user_id: userId,
+            badge_id: badgeId,
+            evidence_url: evidenceUrl || null,
+            awarded_at: new Date().toISOString()
+        })
+
+    if (error) {
+        console.error("Error awarding badge:", error)
+        return { success: false, error: "Failed to award badge" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Revoke a badge from a user
+ */
+export async function revokeBadgeFromUser(
+    userId: string,
+    badgeId: string
+): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+    const { error } = await adminDb
+        .from('user_badges')
+        .delete()
+        .eq('user_id', userId)
+        .eq('badge_id', badgeId)
+
+    if (error) {
+        console.error("Error revoking badge:", error)
+        return { success: false, error: "Failed to revoke badge" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Search users for badge awarding
+ */
+export async function searchUsersForBadge(query: string): Promise<{
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+}[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    if (!query || query.length < 2) {
+        return []
+    }
+
+    const { data: users, error } = await db
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+        .limit(10)
+
+    if (error) {
+        console.error("Error searching users:", error)
+        return []
+    }
+
+    return users || []
+}
+
+/**
+ * Get users who have a specific badge
+ */
+export async function getUsersWithBadge(badgeId: string): Promise<{
+    user_id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+    awarded_at: string | null
+}[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const { data: userBadges, error } = await db
+        .from('user_badges')
+        .select(`
+            user_id,
+            awarded_at,
+            profile:profiles!user_badges_user_id_fkey(
+                username,
+                display_name,
+                avatar_url
+            )
+        `)
+        .eq('badge_id', badgeId)
+        .order('awarded_at', { ascending: false })
+
+    if (error) {
+        console.error("Error fetching users with badge:", error)
+        return []
+    }
+
+    return (userBadges || []).map(ub => ({
+        user_id: ub.user_id,
+        awarded_at: ub.awarded_at,
+        username: (ub.profile as any)?.username || '',
+        display_name: (ub.profile as any)?.display_name || '',
+        avatar_url: (ub.profile as any)?.avatar_url || null
+    }))
+}
+

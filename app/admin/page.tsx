@@ -4,6 +4,7 @@ import {
     getPendingCafes,
     getPublishedCafes,
     getFlaggedReviews,
+    getAllBadgeDefinitions,
 } from "@/app/api/actions/admin"
 import AdminDashboard from "./AdminDashboard"
 
@@ -19,12 +20,14 @@ export default async function AdminPage() {
         redirect("/")
     }
 
-    // Fetch pending cafes, published cafes, and flagged reviews
-    const [pendingCafes, publishedCafes, flaggedReviews] = await Promise.all([
-        getPendingCafes(),
-        getPublishedCafes(),
-        getFlaggedReviews(),
-    ])
+    // Fetch pending cafes, published cafes, flagged reviews, and badges
+    const [pendingCafes, publishedCafes, flaggedReviews, badges] =
+        await Promise.all([
+            getPendingCafes(),
+            getPublishedCafes(),
+            getFlaggedReviews(),
+            getAllBadgeDefinitions(),
+        ])
 
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
@@ -33,6 +36,7 @@ export default async function AdminPage() {
                     pendingCafes={pendingCafes}
                     publishedCafes={publishedCafes}
                     flaggedReviews={flaggedReviews}
+                    badges={badges}
                 />
             </div>
         </main>

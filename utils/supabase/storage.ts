@@ -6,8 +6,11 @@ import { createAdminClient } from "@/utils/supabase/admin"
 const AVATAR_BUCKET = "avatars"
 const REVIEW_BUCKET = "reviews"
 const CAFE_BUCKET = "cafes"
+const BADGE_BUCKET = "badges"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CAFE_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_BADGE_FILE_SIZE = 500 * 1024 // 500KB
+const BADGE_IMAGE_DIMENSION = 128 // Badge images must be 128x128px
 
 /**
  * Extract storage path from a Supabase storage public URL (internal helper)
@@ -484,4 +487,115 @@ export async function removeAvatar(): Promise<{
     }
 
     return { success: true }
+}
+
+/**
+ * Upload a badge image to Supabase Storage (Admin only)
+ * Requirements: PNG with transparency, 128x128px, max 500KB
+ * File is stored at: badges/{timestamp}-{random}.png
+ */
+export async function uploadBadgeImage(formData: FormData): Promise<{
+    success: boolean
+    url?: string
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Get current user and check admin status
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await db
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    if (!profile || !["admin", "moderator"].includes(profile.role || "")) {
+        return { success: false, error: "Admin access required" }
+    }
+
+    const file = formData.get("image") as File | null
+    if (!file) {
+        return { success: false, error: "No file provided" }
+    }
+
+    // Validate PNG format
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    if (fileExt !== "png" && file.type !== "image/png") {
+        return { success: false, error: "Badge images must be PNG format" }
+    }
+
+    // Validate size
+    if (file.size > MAX_BADGE_FILE_SIZE) {
+        return { success: false, error: "File too large (max 500KB)" }
+    }
+
+    // Validate dimensions by reading image
+    try {
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = new Uint8Array(arrayBuffer)
+
+        // PNG header check and dimension extraction
+        // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+        const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 &&
+            buffer[2] === 0x4E && buffer[3] === 0x47
+
+        if (!isPNG) {
+            return { success: false, error: "Invalid PNG file" }
+        }
+
+        // IHDR chunk starts at byte 8, width at bytes 16-19, height at bytes 20-23
+        const width = (buffer[16] << 24) | (buffer[17] << 16) | (buffer[18] << 8) | buffer[19]
+        const height = (buffer[20] << 24) | (buffer[21] << 16) | (buffer[22] << 8) | buffer[23]
+
+        if (width !== BADGE_IMAGE_DIMENSION || height !== BADGE_IMAGE_DIMENSION) {
+            return {
+                success: false,
+                error: `Badge images must be ${BADGE_IMAGE_DIMENSION}x${BADGE_IMAGE_DIMENSION}px (got ${width}x${height})`
+            }
+        }
+
+        // Generate unique filename (stored at root level, not per-user)
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`
+
+        // Use admin client to bypass potential RLS issues
+        const adminDb = await createAdminClient()
+
+        const { error: uploadError } = await adminDb.storage
+            .from(BADGE_BUCKET)
+            .upload(fileName, file, {
+                contentType: "image/png"
+            })
+
+        if (uploadError) {
+            console.error("Badge image upload error:", uploadError)
+            return { success: false, error: "Upload failed" }
+        }
+
+        const { data: urlData } = adminDb.storage
+            .from(BADGE_BUCKET)
+            .getPublicUrl(fileName)
+
+        return { success: true, url: urlData.publicUrl }
+
+    } catch (error) {
+        console.error("Error processing badge image:", error)
+        return { success: false, error: "Failed to process image" }
+    }
+}
+
+/**
+ * Delete a badge image from storage (Admin only)
+ */
+export async function deleteBadgeImage(imageUrl: string): Promise<void> {
+    if (!imageUrl) return
+
+    const path = extractStoragePath(imageUrl, BADGE_BUCKET)
+    if (path) {
+        await deleteStorageFiles(BADGE_BUCKET, [path])
+    }
 }
