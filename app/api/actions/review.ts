@@ -57,7 +57,7 @@ export async function createReview(
             .single()
 
         if (profile) {
-            const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [] }
+            const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [], favorite_ids: [] }
             const visitedIds = new Set(passport.visited_ids || [])
 
             if (!visitedIds.has(cafeId)) {

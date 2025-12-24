@@ -18,6 +18,7 @@ import {
     PawPrintIcon,
     SunIcon,
     Heart,
+    Bookmark,
     MapPin,
     CheckCircle,
 } from "lucide-react"
@@ -121,22 +122,46 @@ export default function CafeDetails({
     }, [authContext?.profile, cafe.id])
 
     const handleWishlistToggle = async () => {
-        if (!user) return // Should redirect to login ideally
+        if (!user) return
 
-        // Optimistic update
         const newState = !isInWishlist
         setIsInWishlist(newState)
 
         try {
-            // Dynamic import to avoid circular dep issues in some setups, though here it's fine
             const { toggleWishlist } = await import("@/app/api/actions/profile")
             await toggleWishlist(cafe.id)
-            // Refresh profile context to keep it in sync
             authContext.refreshProfile()
-            setIsInWishlist(!newState)
         } catch (error) {
             console.error("Wishlist toggle failed", error)
             setIsInWishlist(!newState)
+        }
+    }
+
+    // Favorites Logic
+    const [isFavorite, setIsFavorite] = useState(false)
+
+    useEffect(() => {
+        if (authContext?.profile?.passport) {
+            const passport = authContext.profile.passport as any
+            if (passport.favorite_ids) {
+                setIsFavorite(passport.favorite_ids.includes(cafe.id))
+            }
+        }
+    }, [authContext?.profile, cafe.id])
+
+    const handleFavoriteToggle = async () => {
+        if (!user) return
+
+        const newState = !isFavorite
+        setIsFavorite(newState)
+
+        try {
+            const { toggleFavorite } = await import("@/app/api/actions/profile")
+            await toggleFavorite(cafe.id)
+            authContext.refreshProfile()
+        } catch (error) {
+            console.error("Favorite toggle failed", error)
+            setIsFavorite(!newState)
         }
     }
 
@@ -247,6 +272,25 @@ export default function CafeDetails({
                                             : "Mark as Visited"}
                                     </button>
 
+                                    {/* Favorite Button */}
+                                    <button
+                                        onClick={handleFavoriteToggle}
+                                        className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                                        title={
+                                            isFavorite
+                                                ? "Remove from Favorites"
+                                                : "Add to Favorites"
+                                        }
+                                    >
+                                        <Heart
+                                            className={`w-6 h-6 transition-colors ${
+                                                isFavorite
+                                                    ? "fill-red-500 text-red-500"
+                                                    : "text-white group-hover:text-red-400"
+                                            }`}
+                                        />
+                                    </button>
+
                                     {/* Wishlist Button */}
                                     <button
                                         onClick={handleWishlistToggle}
@@ -257,11 +301,11 @@ export default function CafeDetails({
                                                 : "Add to Wishlist"
                                         }
                                     >
-                                        <Heart
+                                        <Bookmark
                                             className={`w-6 h-6 transition-colors ${
                                                 isInWishlist
-                                                    ? "fill-red-500 text-red-500"
-                                                    : "text-white group-hover:text-red-400"
+                                                    ? "fill-secondary text-secondary"
+                                                    : "text-white group-hover:text-secondary"
                                             }`}
                                         />
                                     </button>

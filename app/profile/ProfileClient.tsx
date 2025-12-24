@@ -85,6 +85,9 @@ export default function ProfileClient() {
     const [visitedCafes, setVisitedCafes] = useState<
         { name: string; slug: string }[]
     >([])
+    const [favoriteCafes, setFavoriteCafes] = useState<
+        { name: string; slug: string }[]
+    >([])
     const [wishlistCafes, setWishlistCafes] = useState<
         { name: string; slug: string }[]
     >([])
@@ -121,12 +124,26 @@ export default function ProfileClient() {
 
                     // Fetch passport cafes
                     if (profile.passport) {
-                        const [visited, wishlist] = await Promise.all([
-                            getCafesByIds(profile.passport.visited_ids || []),
-                            getCafesByIds(profile.passport.wishlist_ids || []),
-                        ])
+                        const [visited, favorites, wishlist] =
+                            await Promise.all([
+                                getCafesByIds(
+                                    profile.passport.visited_ids || []
+                                ),
+                                getCafesByIds(
+                                    profile.passport.favorite_ids || []
+                                ),
+                                getCafesByIds(
+                                    profile.passport.wishlist_ids || []
+                                ),
+                            ])
                         setVisitedCafes(
                             visited.map((c) => ({ name: c.name, slug: c.slug }))
+                        )
+                        setFavoriteCafes(
+                            favorites.map((c) => ({
+                                name: c.name,
+                                slug: c.slug,
+                            }))
                         )
                         setWishlistCafes(
                             wishlist.map((c) => ({
@@ -965,6 +982,7 @@ export default function ProfileClient() {
                 <section className='mt-10'>
                     <Passport
                         visited={visitedCafes}
+                        favorites={favoriteCafes}
                         wishlist={wishlistCafes}
                         isOwnProfile={true}
                     />

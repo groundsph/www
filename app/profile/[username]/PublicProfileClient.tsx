@@ -62,6 +62,9 @@ export default function PublicProfileClient({
     const [visitedCafes, setVisitedCafes] = useState<
         { name: string; slug: string }[]
     >([])
+    const [favoriteCafes, setFavoriteCafes] = useState<
+        { name: string; slug: string }[]
+    >([])
     const [wishlistCafes, setWishlistCafes] = useState<
         { name: string; slug: string }[]
     >([])
@@ -73,11 +76,12 @@ export default function PublicProfileClient({
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [badges, userReviews, visited, wishlist] =
+                const [badges, userReviews, visited, favorites, wishlist] =
                     await Promise.all([
                         getAllBadges(),
                         getUserReviews(profile.id, user?.id),
                         getCafesByIds(profile.passport?.visited_ids || []),
+                        getCafesByIds(profile.passport?.favorite_ids || []),
                         getCafesByIds(profile.passport?.wishlist_ids || []),
                     ])
 
@@ -85,6 +89,9 @@ export default function PublicProfileClient({
                 setReviews(userReviews)
                 setVisitedCafes(
                     visited.map((c) => ({ name: c.name, slug: c.slug }))
+                )
+                setFavoriteCafes(
+                    favorites.map((c) => ({ name: c.name, slug: c.slug }))
                 )
                 setWishlistCafes(
                     wishlist.map((c) => ({
@@ -597,6 +604,7 @@ export default function PublicProfileClient({
                 <section className='mt-10'>
                     <Passport
                         visited={visitedCafes}
+                        favorites={favoriteCafes}
                         wishlist={wishlistCafes}
                     />
                 </section>

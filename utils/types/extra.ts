@@ -41,7 +41,7 @@ export interface ProfileStats {
 export interface ProfilePassport {
     visited_ids: string[];
     wishlist_ids: string[];
-    favorite_region: string;
+    favorite_ids: string[];
 }
 
 // Profile with badges type

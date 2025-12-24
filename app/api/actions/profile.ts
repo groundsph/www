@@ -213,7 +213,7 @@ export async function toggleWishlist(cafeId: string): Promise<{ added: boolean; 
 
         if (!profile) return { added: false, error: "Profile not found" }
 
-        const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [] }
+        const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [], favorite_ids: [] }
         const wishlistIds = new Set(passport.wishlist_ids || [])
         let added = false
 
@@ -264,7 +264,7 @@ export async function toggleVisited(cafeId: string): Promise<{ visited: boolean;
 
         if (!profile) return { visited: false, error: "Profile not found" }
 
-        const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [] }
+        const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [], favorite_ids: [] }
         const visitedIds = new Set(passport.visited_ids || [])
         let visited = false
 
@@ -292,5 +292,56 @@ export async function toggleVisited(cafeId: string): Promise<{ visited: boolean;
     } catch (error) {
         console.error("Error toggling visited:", error)
         return { visited: false, error: "Failed to update visited list" }
+    }
+}
+
+/**
+ * Toggle a cafe in the user's favorites
+ */
+export async function toggleFavorite(cafeId: string): Promise<{ favorited: boolean; error?: string }> {
+    const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    if (!user) {
+        return { favorited: false, error: "Unauthorized" }
+    }
+
+    try {
+        const { data: profile } = await db
+            .from("profiles")
+            .select("passport")
+            .eq("id", user.id)
+            .single()
+
+        if (!profile) return { favorited: false, error: "Profile not found" }
+
+        const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [], favorite_ids: [] }
+        const favoriteIds = new Set(passport.favorite_ids || [])
+        let favorited = false
+
+        if (favoriteIds.has(cafeId)) {
+            favoriteIds.delete(cafeId)
+            favorited = false
+        } else {
+            favoriteIds.add(cafeId)
+            favorited = true
+        }
+
+        const { error } = await db
+            .from("profiles")
+            .update({
+                passport: {
+                    ...passport,
+                    favorite_ids: Array.from(favoriteIds)
+                }
+            })
+            .eq("id", user.id)
+
+        if (error) throw error
+
+        return { favorited }
+    } catch (error) {
+        console.error("Error toggling favorite:", error)
+        return { favorited: false, error: "Failed to update favorites" }
     }
 }
