@@ -211,7 +211,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                             icon={customIcon}
                         >
                             <Popup className='cafe-popup'>
-                                <div className='w-72 flex flex-col rounded-xl overflow-hidden shadow-lg border border-secondary/20'>
+                                <div className='w-72 max-w-[70svw] flex flex-col rounded-xl overflow-hidden shadow-lg border border-secondary/20 bg-background'>
                                     {/* Image with gradient overlay */}
                                     <div className='relative w-full h-36 overflow-clip rounded-t-xl bg-linear-to-br from-secondary/30 to-secondary/10'>
                                         {cafe.thumbnail && (
@@ -296,7 +296,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                             </div>
                                             <Link
                                                 href={`/cafes/${cafe.slug}`}
-                                                className='group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-background text-xs font-semibold rounded-full transition-all hover:gap-2 shadow-sm'
+                                                className='group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-xs font-semibold rounded-full transition-all hover:gap-2 shadow-sm text-text!'
                                             >
                                                 Explore
                                                 <svg

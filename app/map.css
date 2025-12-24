@@ -1,18 +1,20 @@
 /* Leaflet custom styles using global theme */
 
 .leaflet-popup-content-wrapper {
-    background: transparent;
-    box-shadow: none;
-    border: none;
-    padding: 0;
-    overflow: visible;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
 }
 
 .leaflet-popup-content {
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     font-family: var(--font-sans);
     width: auto !important;
+    max-width: 80svw !important;
 }
 
 .leaflet-popup-tip-container {
