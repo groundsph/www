@@ -243,3 +243,80 @@ export async function toggleReviewLike(reviewId: string) {
         return { liked: true }
     }
 }
+
+const REPORT_THRESHOLD = 3 // Number of reports before auto-flagging
+
+/**
+ * Report a review for inappropriate content
+ * Auto-flags the review if report threshold is reached
+ */
+export async function reportReview(reviewId: string) {
+    const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    if (!user) {
+        return { error: "Unauthorized" }
+    }
+
+    // Check if review exists and user isn't reporting their own review
+    const { data: review } = await db
+        .from("reviews")
+        .select("id, user_id, status")
+        .eq("id", reviewId)
+        .single()
+
+    if (!review) {
+        return { error: "Review not found" }
+    }
+
+    if (review.user_id === user.id) {
+        return { error: "You cannot report your own review" }
+    }
+
+    // Check if user already reported this review
+    const { data: existingReport } = await db
+        .from("review_interactions")
+        .select("id")
+        .eq("review_id", reviewId)
+        .eq("user_id", user.id)
+        .eq("interaction_type", "report")
+        .single()
+
+    if (existingReport) {
+        return { error: "You have already reported this review" }
+    }
+
+    // Insert report interaction
+    const { error: insertError } = await db
+        .from("review_interactions")
+        .insert({
+            review_id: reviewId,
+            user_id: user.id,
+            interaction_type: "report"
+        })
+
+    if (insertError) {
+        console.error("Error reporting review:", insertError)
+        return { error: "Failed to report review" }
+    }
+
+    // Count total reports for this review
+    const { count } = await db
+        .from("review_interactions")
+        .select("id", { count: "exact" })
+        .eq("review_id", reviewId)
+        .eq("interaction_type", "report")
+
+    // Auto-flag if threshold reached and not already flagged/hidden
+    if (count && count >= REPORT_THRESHOLD && review.status === "published") {
+        await db
+            .from("reviews")
+            .update({
+                status: "flagged",
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", reviewId)
+    }
+
+    return { reported: true }
+}

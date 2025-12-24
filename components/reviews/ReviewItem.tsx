@@ -15,7 +15,11 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
-import { toggleReviewLike, deleteReview } from "@/app/api/actions/review"
+import {
+    toggleReviewLike,
+    deleteReview,
+    reportReview,
+} from "@/app/api/actions/review"
 import { useRouter } from "next/navigation"
 import { cn } from "@/utils/cn"
 import MarkdownRender from "@/components/MarkdownRender"
@@ -43,6 +47,8 @@ export default function ReviewItem({
     const [isLiking, setIsLiking] = useState(false)
     const [showMenu, setShowMenu] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [isReporting, setIsReporting] = useState(false)
+    const [hasReported, setHasReported] = useState(false)
 
     // Derived states
     const isOwner = currentUser?.id === review.user_id
@@ -87,6 +93,34 @@ export default function ReviewItem({
         } catch (error) {
             console.error("Delete failed", error)
             setIsDeleting(false)
+        }
+    }
+
+    const handleReport = async () => {
+        if (!currentUser || isReporting || hasReported) return
+
+        if (
+            !confirm(
+                "Are you sure you want to report this review? It will be flagged for moderator review."
+            )
+        ) {
+            return
+        }
+
+        setIsReporting(true)
+        setShowMenu(false)
+
+        try {
+            const result = await reportReview(review.id)
+            if (result.reported) {
+                setHasReported(true)
+            } else if (result.error) {
+                alert(result.error)
+            }
+        } catch (error) {
+            console.error("Report failed", error)
+        } finally {
+            setIsReporting(false)
         }
     }
 
@@ -179,11 +213,20 @@ export default function ReviewItem({
                                         </>
                                     ) : (
                                         <button
-                                            className='w-full px-4 py-2 text-left hover:bg-text/5 flex items-center gap-2 text-text/60 font-medium'
-                                            onClick={() => setShowMenu(false)}
+                                            className='w-full px-4 py-2 text-left hover:bg-red-500/10 flex items-center gap-2 text-text/60 hover:text-red-500 font-medium disabled:opacity-50'
+                                            onClick={handleReport}
+                                            disabled={
+                                                isReporting ||
+                                                hasReported ||
+                                                !currentUser
+                                            }
                                         >
                                             <Flag className='w-3.5 h-3.5' />
-                                            Report
+                                            {hasReported
+                                                ? "Reported"
+                                                : isReporting
+                                                  ? "Reporting..."
+                                                  : "Report"}
                                         </button>
                                     )}
                                 </div>

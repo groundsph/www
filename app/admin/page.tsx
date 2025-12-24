@@ -3,6 +3,7 @@ import {
     isAdmin,
     getPendingCafes,
     getPublishedCafes,
+    getFlaggedReviews,
 } from "@/app/api/actions/admin"
 import AdminDashboard from "./AdminDashboard"
 
@@ -18,10 +19,11 @@ export default async function AdminPage() {
         redirect("/")
     }
 
-    // Fetch both pending and published cafes
-    const [pendingCafes, publishedCafes] = await Promise.all([
+    // Fetch pending cafes, published cafes, and flagged reviews
+    const [pendingCafes, publishedCafes, flaggedReviews] = await Promise.all([
         getPendingCafes(),
         getPublishedCafes(),
+        getFlaggedReviews(),
     ])
 
     return (
@@ -30,6 +32,7 @@ export default async function AdminPage() {
                 <AdminDashboard
                     pendingCafes={pendingCafes}
                     publishedCafes={publishedCafes}
+                    flaggedReviews={flaggedReviews}
                 />
             </div>
         </main>
