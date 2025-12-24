@@ -1,15 +1,33 @@
 "use client"
 
 import { AnimatePresence } from "motion/react"
-import { createContext, useCallback, useState } from "react"
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react"
 import { motion } from "motion/react"
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react"
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface NotificationItem {
     id: string
     title?: string
     message: string
     type: "success" | "error" | "warning" | "info"
+    duration?: number // ms, undefined means no auto-dismiss
+}
+
+export interface NotificationOptions {
+    title?: string
+    duration?: number // ms, set to 0 to disable auto-dismiss
 }
 
 export interface NotificationContextType {
@@ -17,16 +35,18 @@ export interface NotificationContextType {
     addNotification: (
         message: string,
         type: NotificationItem["type"],
-        title?: string
+        options?: NotificationOptions | string // string for backwards compatibility (title)
     ) => void
     removeNotification: (id: string) => void
+    clearAll: () => void
 }
 
-export const NotificationContext = createContext<NotificationContextType>({
-    notifications: [],
-    addNotification: () => {},
-    removeNotification: () => {},
-})
+// ============================================================================
+// Constants
+// ============================================================================
+
+const DEFAULT_DURATION = 5000 // 5 seconds
+const MAX_NOTIFICATIONS = 5
 
 const notificationStyles = {
     success: {
@@ -53,52 +73,148 @@ const notificationStyles = {
         iconColor: "text-text/60",
         bgAccent: "bg-text/5",
     },
+} as const
+
+// ============================================================================
+// Context
+// ============================================================================
+
+export const NotificationContext = createContext<
+    NotificationContextType | undefined
+>(undefined)
+
+/**
+ * Custom hook to access the notification context.
+ * Throws an error if used outside of NotificationProvider.
+ */
+export function useNotification() {
+    const context = useContext(NotificationContext)
+    if (context === undefined) {
+        throw new Error(
+            "useNotification must be used within a NotificationProvider"
+        )
+    }
+    return context
 }
+
+// ============================================================================
+// Provider Component
+// ============================================================================
 
 export default function NotificationProvider({
     children,
 }: {
     children: React.ReactNode
 }) {
-    // Constants
-
     // States
     const [notifications, setNotifications] = useState<NotificationItem[]>([])
 
+    // Refs for tracking timeouts
+    const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            timeoutsRef.current.forEach((timeout) => clearTimeout(timeout))
+            timeoutsRef.current.clear()
+        }
+    }, [])
+
     // Functions
-    const removeNotification = useCallback(
-        (id: string) => {
-            setNotifications((prev) =>
-                prev.filter((notification) => notification.id !== id)
-            )
-        },
-        [setNotifications]
-    )
+    const removeNotification = useCallback((id: string) => {
+        // Clear associated timeout
+        const timeout = timeoutsRef.current.get(id)
+        if (timeout) {
+            clearTimeout(timeout)
+            timeoutsRef.current.delete(id)
+        }
+
+        setNotifications((prev) =>
+            prev.filter((notification) => notification.id !== id)
+        )
+    }, [])
+
+    const clearAll = useCallback(() => {
+        // Clear all timeouts
+        timeoutsRef.current.forEach((timeout) => clearTimeout(timeout))
+        timeoutsRef.current.clear()
+
+        setNotifications([])
+    }, [])
 
     const addNotification = useCallback(
         (
             message: string,
             type: NotificationItem["type"] = "info",
-            title?: string
+            options?: NotificationOptions | string
         ) => {
+            // Handle backwards compatibility with string title parameter
+            const normalizedOptions: NotificationOptions =
+                typeof options === "string"
+                    ? { title: options }
+                    : (options ?? {})
+
+            const { title, duration = DEFAULT_DURATION } = normalizedOptions
+
             const id =
                 Date.now().toString() + Math.random().toString(36).slice(2)
-            const notification = { id, title, message, type }
-            setNotifications((prev) => [notification, ...prev])
-            // setTimeout(() => {
-            //     removeNotification(id)
-            // }, 5000)
+            const notification: NotificationItem = {
+                id,
+                title,
+                message,
+                type,
+                duration,
+            }
+
+            setNotifications((prev) => {
+                // Add new notification and limit to max
+                const updated = [notification, ...prev].slice(
+                    0,
+                    MAX_NOTIFICATIONS
+                )
+
+                // Clear timeouts for removed notifications
+                if (prev.length >= MAX_NOTIFICATIONS) {
+                    const removedIds = prev
+                        .slice(MAX_NOTIFICATIONS - 1)
+                        .map((n) => n.id)
+                    removedIds.forEach((removedId) => {
+                        const timeout = timeoutsRef.current.get(removedId)
+                        if (timeout) {
+                            clearTimeout(timeout)
+                            timeoutsRef.current.delete(removedId)
+                        }
+                    })
+                }
+
+                return updated
+            })
+
+            // Set auto-dismiss timeout if duration > 0
+            if (duration > 0) {
+                const timeout = setTimeout(() => {
+                    removeNotification(id)
+                }, duration)
+                timeoutsRef.current.set(id, timeout)
+            }
         },
-        [setNotifications]
+        [removeNotification]
     )
 
-    // Effects
+    // Memoize context value to prevent unnecessary re-renders
+    const contextValue = useMemo<NotificationContextType>(
+        () => ({
+            notifications,
+            addNotification,
+            removeNotification,
+            clearAll,
+        }),
+        [notifications, addNotification, removeNotification, clearAll]
+    )
 
     // Render
     return (
-        <NotificationContext.Provider
-            value={{ notifications, addNotification, removeNotification }}
-        >
+        <NotificationContext.Provider value={contextValue}>
             {children}
             <AnimatePresence>
                 {notifications.map(({ id, title, message, type }, idx) => {

@@ -318,10 +318,10 @@ export default function CafeDetails({
                         </h2>
                         {/* Map */}
                         <div className='w-full h-auto aspect-video relative flex flex-col items-center justify-center overflow-clip rounded-xl border-2 border-text/10'>
-                            {/* <DynamicCafeMiniMap
+                            <DynamicCafeMiniMap
                                 key={cafe.id}
                                 cafe={cafe}
-                            /> */}
+                            />
                         </div>
                         <a
                             href={`https://www.google.com/maps/search/?api=1&query=${cafe.address_display}`}

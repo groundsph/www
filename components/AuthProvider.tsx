@@ -8,9 +8,10 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useMemo,
     useState,
 } from "react"
-import { NotificationContext } from "./NotificationProvider"
+import { useNotification } from "./NotificationProvider"
 
 export type Profile = Tables<"profiles">
 
@@ -18,6 +19,7 @@ interface AuthContextType {
     user: User | null
     profile: Profile | null
     isAdmin: boolean
+    isLoading: boolean
     refreshProfile: () => Promise<void>
 }
 
@@ -25,8 +27,21 @@ export const AuthContext = createContext<AuthContextType>({
     user: null,
     profile: null,
     isAdmin: false,
+    isLoading: true,
     refreshProfile: async () => {},
 })
+
+/**
+ * Custom hook to access the auth context.
+ * Throws an error if used outside of AuthProvider.
+ */
+export function useAuth() {
+    const context = useContext(AuthContext)
+    if (context === undefined) {
+        throw new Error("useAuth must be used within an AuthProvider")
+    }
+    return context
+}
 
 export default function AuthProvider({
     children,
@@ -34,32 +49,37 @@ export default function AuthProvider({
     children: React.ReactNode
 }) {
     // Context
-    const notificationContext = useContext(NotificationContext)
-    const { addNotification } = notificationContext
+    const { addNotification } = useNotification()
 
-    // Constants
-    const supabase = createLocalClient()
+    // Memoize supabase client to prevent recreation on each render
+    const supabase = useMemo(() => createLocalClient(), [])
 
     // States
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<Profile | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
 
     // Functions
     const fetchProfile = useCallback(
         async (userId: string) => {
-            const { data, error } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", userId)
-                .single()
+            try {
+                const { data, error } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("id", userId)
+                    .single()
 
-            if (error) {
-                console.error("Error fetching profile:", error)
+                if (error) {
+                    console.error("Error fetching profile:", error)
+                    setProfile(null)
+                    return
+                }
+
+                setProfile(data)
+            } catch (err) {
+                console.error("Unexpected error fetching profile:", err)
                 setProfile(null)
-                return
             }
-
-            setProfile(data)
         },
         [supabase]
     )
@@ -80,6 +100,7 @@ export default function AuthProvider({
                     setUser(null)
                     setProfile(null)
                 }
+                setIsLoading(false)
             } else if (event === "SIGNED_IN") {
                 if (session) {
                     setUser(session.user)
@@ -90,27 +111,55 @@ export default function AuthProvider({
                 setUser(null)
                 setProfile(null)
                 addNotification("You are now signed out.", "error")
+            } else if (event === "TOKEN_REFRESHED") {
+                // Silently update user on token refresh
+                if (session) {
+                    setUser(session.user)
+                }
+            } else if (event === "USER_UPDATED") {
+                // Re-fetch profile when user data is updated
+                if (session) {
+                    setUser(session.user)
+                    await fetchProfile(session.user.id)
+                }
             }
         },
-        [setUser, addNotification, fetchProfile]
+        [addNotification, fetchProfile]
     )
 
     // Effects
     useEffect(() => {
-        // Auth State Change
-        supabase.auth.onAuthStateChange((event, session) =>
+        // Subscribe to auth state changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) =>
             handleAuthChange(event, session)
         )
+
+        // Cleanup subscription on unmount to prevent memory leaks
+        return () => {
+            subscription.unsubscribe()
+        }
     }, [supabase.auth, handleAuthChange])
 
     // Computed values
     const isAdmin = profile?.role === "admin" || profile?.role === "moderator"
 
+    // Memoize context value to prevent unnecessary re-renders
+    const contextValue = useMemo<AuthContextType>(
+        () => ({
+            user,
+            profile,
+            isAdmin,
+            isLoading,
+            refreshProfile,
+        }),
+        [user, profile, isAdmin, isLoading, refreshProfile]
+    )
+
     // Render
     return (
-        <AuthContext.Provider
-            value={{ user, profile, isAdmin, refreshProfile }}
-        >
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     )
