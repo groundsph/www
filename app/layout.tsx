@@ -1,11 +1,13 @@
 import type { Metadata } from "next"
 import { DM_Sans, Playfair_Display } from "next/font/google"
 import Script from "next/script"
+import { Suspense } from "react"
 import "./globals.css"
 import AuthProvider from "@/components/AuthProvider"
 import LayoutWrapper from "@/components/LayoutWrapper"
 import NotificationProvider from "@/components/NotificationProvider"
 import AnalyticsBanner from "@/components/AnalyticsBanner"
+import NavigationProgress from "@/components/NavigationProgress"
 
 const playfairDisplay = Playfair_Display({
     variable: "--font-playfair-display",
@@ -105,6 +107,9 @@ export default function RootLayout({
             <body
                 className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen`}
             >
+                <Suspense fallback={null}>
+                    <NavigationProgress />
+                </Suspense>
                 <NotificationProvider>
                     <AuthProvider>
                         <LayoutWrapper>{children}</LayoutWrapper>
