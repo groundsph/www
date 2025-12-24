@@ -14,6 +14,9 @@ import { usePathname } from "next/navigation"
 import { useContext } from "react"
 
 export default function Navbar() {
+    // Context
+    const { user } = useContext(AuthContext)
+
     // Constants
     const curPath = usePathname()
     return (
@@ -43,6 +46,21 @@ export default function Navbar() {
                         </Link>
                     </li>
                 ))}
+                {user && (
+                    <li>
+                        <Link
+                            href='/profile'
+                            className={`${
+                                curPath === "/profile"
+                                    ? "text-text/80"
+                                    : "hover:text-text/60"
+                            } font-semibold transition-colors relative group`}
+                        >
+                            profile
+                            <div className='absolute bottom-0 left-0 w-full h-0.5 bg-transparent group-hover:bg-text/60 transition-colors' />
+                        </Link>
+                    </li>
+                )}
             </ul>
             {/* Accounts */}
             <ul className='gap-4 hidden md:flex'>
@@ -98,6 +116,25 @@ export default function Navbar() {
                             </Link>
                         </li>
                     ))}
+                    {user && (
+                        <li>
+                            <Link
+                                href='/profile'
+                                className={`${
+                                    curPath === "/profile"
+                                        ? "text-text/80"
+                                        : "hover:text-text/60"
+                                } font-semibold transition-colors cursor-pointer text-2xl`}
+                                onClick={() => {
+                                    document
+                                        .getElementById("mobile-menu")
+                                        ?.click()
+                                }}
+                            >
+                                profile
+                            </Link>
+                        </li>
+                    )}
                     <li className='my-4'>
                         <Auth />
                     </li>
@@ -108,9 +145,7 @@ export default function Navbar() {
 }
 
 function Auth() {
-    const authContext = useContext(AuthContext)
-    const user = authContext?.user
-    const profile = authContext?.profile
+    const { user, profile } = useContext(AuthContext)
     const supabase = createLocalClient()
 
     const handleSignOut = async () => {
@@ -119,30 +154,17 @@ function Auth() {
 
     if (user && profile) {
         return (
-            <div className='flex flex-row gap-3 items-center'>
-                <Link
-                    href='/profile'
-                    className='font-serif text-text/80 hover:text-text transition-colors flex flex-row gap-1 items-center'
-                    title='View Profile'
-                >
-                    <span className='hidden md:inline'>
-                        {profile?.username}
-                    </span>
-                    <span className='md:hidden'>Profile</span>
-                </Link>
-                <button
-                    onClick={handleSignOut}
-                    className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center cursor-pointer hover:bg-text/20 rounded-md p-1'
-                    title='Sign out'
-                >
-                    <LogOutIcon
-                        size={16}
-                        strokeWidth={3}
-                        className='text-text'
-                    />
-                    <span className='md:hidden'>Sign out</span>
-                </button>
-            </div>
+            <button
+                onClick={handleSignOut}
+                className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center cursor-pointer hover:bg-text/20 rounded-md p-1'
+            >
+                <LogOutIcon
+                    size={16}
+                    strokeWidth={3}
+                    className='text-text hidden md:inline'
+                />
+                Sign out
+            </button>
         )
     }
 
