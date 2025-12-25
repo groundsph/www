@@ -1627,6 +1627,7 @@ export default function AdminDashboard({
                                     onChange={(e) =>
                                         setBadgeForm((prev) => ({
                                             ...prev,
+                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Form category value
                                             category: e.target.value as any,
                                         }))
                                     }
@@ -1823,7 +1824,8 @@ export default function AdminDashboard({
                                 </button>
                                 <p className='text-xs text-text/40 mt-2 text-center'>
                                     This will grant the badge to every
-                                    registered user who doesn't have it yet.
+                                    registered user who doesn&apos;t have it
+                                    yet.
                                 </p>
                             </div>
 

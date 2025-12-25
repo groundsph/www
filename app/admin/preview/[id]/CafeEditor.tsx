@@ -613,7 +613,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                     <ImagePlus className='w-12 h-12 mx-auto mb-4 opacity-50' />
                                     <p>No gallery images yet</p>
                                     <p className='text-sm mt-1'>
-                                        Click "Add Photos" to upload
+                                        Click &quot;Add Photos&quot; to upload
                                     </p>
                                 </div>
                             )}
