@@ -1,6 +1,7 @@
 "use server"
 
 import { getDayOfYear } from "@/utils/featured"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { createClient } from "@/utils/supabase/server"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 
@@ -262,4 +263,29 @@ export async function getReviewsByCafeId(cafeId: string) {
         .order("created_at", { ascending: false })
 
     return reviews || []
+}
+
+/**
+ * Simple search for cafe name existence check during submission
+ */
+export async function searchCafesSimple(query: string) {
+    if (!query || query.length < 3) return []
+
+    console.log("[searchCafesSimple] Searching for:", query)
+    const db = await createAdminClient()
+
+    // Fuzzy search by name using ilike
+    const { data: cafes, error } = await db
+        .from("cafes")
+        .select("id, name, slug, address_display, thumbnail, is_published")
+        .ilike("name", `%${query}%`)
+        .limit(5)
+
+    if (error) {
+        console.error("[searchCafesSimple] Error:", error)
+        return []
+    }
+
+    console.log("[searchCafesSimple] Found:", cafes?.length)
+    return cafes || []
 }

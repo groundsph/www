@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { MapPin, Search, Crosshair } from "lucide-react"
 import {
     MapContainer,
@@ -64,6 +64,34 @@ function MapController({
     return null
 }
 
+// Component to track map bounds for search biasing
+function MapBoundsLogger({
+    onBoundsChange,
+}: {
+    onBoundsChange: (bounds: string) => void
+}) {
+    const map = useMap()
+    const updateBounds = useCallback(() => {
+        const b = map.getBounds()
+        // Nominatim expects: <x1>,<y1>,<x2>,<y2> (left, top, right, bottom)
+        // lon1, lat1, lon2, lat2
+        onBoundsChange(
+            `${b.getWest()},${b.getNorth()},${b.getEast()},${b.getSouth()}`
+        )
+    }, [map, onBoundsChange])
+
+    useMapEvents({
+        moveend: updateBounds,
+        zoomend: updateBounds,
+    })
+
+    useEffect(() => {
+        updateBounds()
+    }, [updateBounds])
+
+    return null
+}
+
 export default function LocationPickerInner({
     lat,
     lng,
@@ -74,6 +102,8 @@ export default function LocationPickerInner({
     const [isSearching, setIsSearching] = useState(false)
     const [manualLat, setManualLat] = useState(lat?.toString() || "")
     const [manualLng, setManualLng] = useState(lng?.toString() || "")
+    // Search bias viewbox: minLon, maxLat, maxLon, minLat
+    const [viewbox, setViewbox] = useState("")
 
     // Default center (Philippines)
     const defaultCenter: [number, number] = [12.8797, 121.774]
@@ -107,11 +137,47 @@ export default function LocationPickerInner({
 
         setIsSearching(true)
         try {
-            // Use Nominatim for geocoding (free, no API key needed)
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=ph&limit=1`,
-                { headers: { "User-Agent": "Grounds-CafeApp" } }
-            )
+            // First attempt: Strict search within current viewbox
+            let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+                searchQuery
+            )}&countrycodes=ph&limit=1`
+
+            if (viewbox) {
+                // bounded=1 forces results to be within the viewbox
+                const strictUrl = `${url}&viewbox=${viewbox}&bounded=1`
+                console.log(
+                    "[LocationPicker] attempting strict search:",
+                    strictUrl
+                )
+
+                const response = await fetch(strictUrl, {
+                    headers: { "User-Agent": "Grounds-CafeApp" },
+                })
+                const results = await response.json()
+
+                if (results.length > 0) {
+                    const {
+                        lat: newLat,
+                        lon: newLng,
+                        display_name,
+                    } = results[0]
+                    onChange(parseFloat(newLat), parseFloat(newLng))
+                    if (onAddressChange && display_name) {
+                        onAddressChange(display_name)
+                    }
+                    return // Found strict match!
+                }
+            }
+
+            // Fallback: Global/Global-ish search (bounded=0)
+            if (viewbox) {
+                url += `&viewbox=${viewbox}&bounded=0`
+            }
+            console.log("[LocationPicker] attempting fallback search:", url)
+
+            const response = await fetch(url, {
+                headers: { "User-Agent": "Grounds-CafeApp" },
+            })
             const results = await response.json()
 
             if (results.length > 0) {
@@ -179,6 +245,7 @@ export default function LocationPickerInner({
                         lat={lat}
                         lng={lng}
                     />
+                    <MapBoundsLogger onBoundsChange={setViewbox} />
                     {lat && lng && (
                         <Marker
                             position={[lat, lng]}
@@ -267,7 +334,7 @@ export default function LocationPickerInner({
                                         onKeyDown={(e) =>
                                             e.key === "Enter" && handleSearch()
                                         }
-                                        placeholder='e.g. Starbucks IT Park Cebu'
+                                        placeholder='e.g. Starbucks IT Park Cebu (may be incorrect)'
                                         className='w-full pl-10 pr-4 py-2.5 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
                                     />
                                 </div>

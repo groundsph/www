@@ -20,6 +20,7 @@ import {
     Dog,
     Sun,
     Utensils,
+    ExternalLink,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
@@ -34,6 +35,7 @@ import {
 } from "@/utils/data/philippines"
 import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { submitCafe } from "@/app/api/actions/submit"
+import { searchCafesSimple } from "@/app/api/actions/cafe"
 import ImageUpload from "@/components/reviews/ImageUpload"
 import AmenityToggles from "./AmenityToggles"
 import OperatingHoursEditor from "./OperatingHoursEditor"
@@ -72,6 +74,36 @@ export default function CafeSubmissionForm({
     const [customPaymentMethods, setCustomPaymentMethods] = useState("")
     const [customSpecialties, setCustomSpecialties] = useState("")
     const [customTags, setCustomTags] = useState("")
+
+    // Duplicate checking
+    const [possibleDuplicates, setPossibleDuplicates] = useState<any[]>([])
+
+    useEffect(() => {
+        const checkDuplicates = async () => {
+            const trimmedName = formData.name.trim()
+            console.log(
+                "[CafeSubmission] Checking duplicates for:",
+                trimmedName
+            )
+            if (trimmedName.length >= 3) {
+                try {
+                    const results = await searchCafesSimple(trimmedName)
+                    console.log("[CafeSubmission] Results:", results)
+                    setPossibleDuplicates(results)
+                } catch (err) {
+                    console.error(
+                        "[CafeSubmission] Error checking duplicates:",
+                        err
+                    )
+                }
+            } else {
+                setPossibleDuplicates([])
+            }
+        }
+
+        const timer = setTimeout(checkDuplicates, 500)
+        return () => clearTimeout(timer)
+    }, [formData.name])
 
     // Load draft from localStorage on mount
     useEffect(() => {
@@ -350,6 +382,108 @@ export default function CafeSubmissionForm({
                                             placeholder='e.g. The Coffee House'
                                             className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
                                         />
+
+                                        {/* Duplicate Warning */}
+                                        <AnimatePresence>
+                                            {possibleDuplicates.length > 0 && (
+                                                <motion.div
+                                                    initial={{
+                                                        opacity: 0,
+                                                        height: 0,
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        height: "auto",
+                                                    }}
+                                                    exit={{
+                                                        opacity: 0,
+                                                        height: 0,
+                                                    }}
+                                                    className='overflow-hidden'
+                                                >
+                                                    <div className='mt-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl'>
+                                                        <div className='flex items-start gap-2 mb-3'>
+                                                            <div className='p-1.5 bg-yellow-100 rounded-full text-yellow-600'>
+                                                                <Coffee className='w-4 h-4' />
+                                                            </div>
+                                                            <div>
+                                                                <p className='text-sm font-semibold text-yellow-800'>
+                                                                    One or more
+                                                                    cafes with
+                                                                    similar
+                                                                    names
+                                                                    already
+                                                                    exist
+                                                                </p>
+                                                                <p className='text-xs text-yellow-700 mt-1'>
+                                                                    Please check
+                                                                    if the cafe
+                                                                    you're
+                                                                    adding is
+                                                                    already
+                                                                    listed to
+                                                                    avoid
+                                                                    duplicates.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className='space-y-2'>
+                                                            {possibleDuplicates.map(
+                                                                (cafe) => (
+                                                                    <a
+                                                                        key={
+                                                                            cafe.id
+                                                                        }
+                                                                        href={`/cafes/${cafe.slug}`}
+                                                                        target='_blank'
+                                                                        rel='noopener noreferrer'
+                                                                        className='flex items-center gap-3 p-2 bg-white/60 hover:bg-white rounded-lg border border-yellow-100 hover:border-yellow-300 transition-colors group'
+                                                                    >
+                                                                        <div className='w-10 h-10 bg-gray-100 rounded-md overflow-hidden shrink-0'>
+                                                                            {cafe.thumbnail_url ? (
+                                                                                <img
+                                                                                    src={
+                                                                                        cafe.thumbnail_url
+                                                                                    }
+                                                                                    alt={
+                                                                                        cafe.name
+                                                                                    }
+                                                                                    className='w-full h-full object-cover'
+                                                                                />
+                                                                            ) : (
+                                                                                <div className='w-full h-full flex items-center justify-center text-gray-400'>
+                                                                                    <Coffee className='w-5 h-5' />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className='flex-1 min-w-0'>
+                                                                            <div className='flex items-center gap-2'>
+                                                                                <p className='font-semibold text-sm truncate text-gray-900 group-hover:text-primary'>
+                                                                                    {
+                                                                                        cafe.name
+                                                                                    }
+                                                                                </p>
+                                                                                {!cafe.is_published && (
+                                                                                    <span className='text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium'>
+                                                                                        Draft
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <p className='text-xs text-gray-500 truncate'>
+                                                                                {cafe.address_display ||
+                                                                                    "No address provided"}
+                                                                            </p>
+                                                                        </div>
+                                                                        <ExternalLink className='w-4 h-4 text-gray-400 group-hover:text-primary' />
+                                                                    </a>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
 
                                     <div>
