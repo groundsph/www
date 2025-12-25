@@ -11,6 +11,7 @@ import {
     useMemo,
     useState,
 } from "react"
+import { useRouter } from "next/navigation"
 import { useNotification } from "./NotificationProvider"
 
 export type Profile = Tables<"profiles">
@@ -50,6 +51,7 @@ export default function AuthProvider({
 }) {
     // Context
     const { addNotification } = useNotification()
+    const router = useRouter()
 
     // Memoize supabase client to prevent recreation on each render
     const supabase = useMemo(() => createLocalClient(), [])
@@ -58,6 +60,7 @@ export default function AuthProvider({
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<Profile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
+    const [initialized, setInitialized] = useState(false)
 
     // Functions
     const fetchProfile = useCallback(
@@ -92,6 +95,11 @@ export default function AuthProvider({
 
     const handleAuthChange = useCallback(
         async (event: AuthChangeEvent, session: Session | null) => {
+            // Skip if not initialized yet (we handle initial session separately)
+            if (!initialized && event !== "INITIAL_SESSION") {
+                return
+            }
+
             if (event === "INITIAL_SESSION") {
                 if (session) {
                     setUser(session.user)
@@ -101,16 +109,21 @@ export default function AuthProvider({
                     setProfile(null)
                 }
                 setIsLoading(false)
+                setInitialized(true)
             } else if (event === "SIGNED_IN") {
                 if (session) {
                     setUser(session.user)
                     await fetchProfile(session.user.id)
                     addNotification("You are now signed in.", "success")
+                    // Refresh the router to update server components
+                    router.refresh()
                 }
             } else if (event === "SIGNED_OUT") {
                 setUser(null)
                 setProfile(null)
                 addNotification("You are now signed out.", "warning")
+                // Refresh the router to update server components
+                router.refresh()
             } else if (event === "TOKEN_REFRESHED") {
                 // Silently update user on token refresh
                 if (session) {
@@ -124,12 +137,33 @@ export default function AuthProvider({
                 }
             }
         },
-        [addNotification, fetchProfile]
+        [addNotification, fetchProfile, initialized, router]
     )
 
-    // Effects
+    // Initialize session on mount
     useEffect(() => {
-        // Subscribe to auth state changes
+        const initializeAuth = async () => {
+            try {
+                const {
+                    data: { session },
+                } = await supabase.auth.getSession()
+                if (session) {
+                    setUser(session.user)
+                    await fetchProfile(session.user.id)
+                }
+            } catch (error) {
+                console.error("Error initializing auth:", error)
+            } finally {
+                setIsLoading(false)
+                setInitialized(true)
+            }
+        }
+
+        initializeAuth()
+    }, [supabase.auth, fetchProfile])
+
+    // Subscribe to auth state changes
+    useEffect(() => {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((event, session) =>
@@ -141,6 +175,28 @@ export default function AuthProvider({
             subscription.unsubscribe()
         }
     }, [supabase.auth, handleAuthChange])
+
+    // Handle cross-tab auth synchronization via storage events
+    useEffect(() => {
+        const handleStorageChange = (event: StorageEvent) => {
+            // Check if the auth storage key changed
+            if (event.key?.includes("grounds-auth")) {
+                // Re-fetch session to sync state across tabs
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session) {
+                        setUser(session.user)
+                        fetchProfile(session.user.id)
+                    } else {
+                        setUser(null)
+                        setProfile(null)
+                    }
+                })
+            }
+        }
+
+        window.addEventListener("storage", handleStorageChange)
+        return () => window.removeEventListener("storage", handleStorageChange)
+    }, [supabase.auth, fetchProfile])
 
     // Computed values
     const isAdmin = profile?.role === "admin" || profile?.role === "moderator"

@@ -21,6 +21,7 @@ import {
     Trash2,
     ImagePlus,
     Upload,
+    BadgeCheck,
 } from "lucide-react"
 import {
     approveCafe,
@@ -125,6 +126,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             thumbnail: cafe.thumbnail,
             gallery: cafe.gallery,
             slug: cafe.slug,
+            is_verified: cafe.is_verified || false,
         })
         setSaving(false)
         if (result.success) {
@@ -217,7 +219,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
     ]
 
     return (
-        <div className='w-full overflow-hidden space-y-6'>
+        <div className='w-full overflow-hidden space-y-6 [&_button]:cursor-pointer'>
             {/* Header with actions */}
             <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-text/10'>
                 <div className='flex items-center gap-4'>
@@ -322,6 +324,42 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                 {/* Basic Info */}
                 {activeSection === "basic" && (
                     <div className='space-y-6'>
+                        {/* Verified Status Toggle */}
+                        <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'>
+                            <div className='flex items-center gap-3'>
+                                <BadgeCheck
+                                    className={`w-5 h-5 ${cafe.is_verified ? "text-accent" : "text-text/40"}`}
+                                />
+                                <div>
+                                    <p className='font-medium'>Verified Cafe</p>
+                                    <p className='text-sm text-text/60'>
+                                        Verified cafes display a badge on their
+                                        listing
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() =>
+                                    updateField(
+                                        "is_verified",
+                                        !cafe.is_verified
+                                    )
+                                }
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                                    cafe.is_verified
+                                        ? "bg-text/40"
+                                        : "bg-text/20"
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                        cafe.is_verified
+                                            ? "translate-x-6"
+                                            : "translate-x-1"
+                                    }`}
+                                />
+                            </button>
+                        </div>
                         <div>
                             <label className='block text-sm font-medium text-text/60 mb-2'>
                                 Cafe Name *
@@ -360,13 +398,25 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                             </label>
                             <textarea
                                 value={cafe.description || ""}
-                                onChange={(e) =>
-                                    updateField("description", e.target.value)
-                                }
+                                onChange={(e) => {
+                                    if (e.target.value.length <= 300) {
+                                        updateField(
+                                            "description",
+                                            e.target.value
+                                        )
+                                    }
+                                }}
+                                maxLength={300}
                                 rows={4}
                                 className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none'
                                 placeholder='Tell us about this cafe...'
                             />
+                            <p
+                                className={`text-xs mt-1 ${(cafe.description?.length || 0) >= 270 ? "text-orange-500" : "text-text/40"}`}
+                            >
+                                {300 - (cafe.description?.length || 0)}{" "}
+                                characters remaining
+                            </p>
                         </div>
 
                         <div>

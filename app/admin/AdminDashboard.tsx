@@ -691,7 +691,7 @@ export default function AdminDashboard({
         : baseCafes
 
     return (
-        <div className='w-full overflow-hidden space-y-8'>
+        <div className='w-full overflow-hidden space-y-8 [&_button]:cursor-pointer'>
             {/* Header */}
             <div className='border-b border-text/10 pb-6'>
                 <h1 className='text-3xl font-bold font-serif'>
@@ -1177,7 +1177,7 @@ export default function AdminDashboard({
                                                 <div className='flex items-center gap-2'>
                                                     <Link
                                                         href={`/admin/preview/${cafe.id}`}
-                                                        className='p-2 bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition'
+                                                        className='p-2 bg-text/5 text-text rounded-lg hover:bg-text/20 transition'
                                                         title='View & Edit'
                                                     >
                                                         <Eye className='w-5 h-5' />

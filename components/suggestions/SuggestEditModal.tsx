@@ -16,11 +16,19 @@ import {
     Utensils,
     Briefcase,
     ImagePlus,
+    DollarSign,
+    Coffee,
+    Clock,
+    Link as LinkIcon,
+    Check,
 } from "lucide-react"
 import { submitEditSuggestion } from "@/app/api/actions/suggestions"
 import { SuggestableFields } from "@/utils/types/suggestions"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { useRouter } from "next/navigation"
+import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
+import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 
 interface SuggestEditModalProps {
     isOpen: boolean
@@ -41,6 +49,51 @@ const AMENITY_FIELDS = [
 ] as const
 
 type AmenityKey = (typeof AMENITY_FIELDS)[number]["key"]
+
+// Options for multi-select fields
+const BREW_METHOD_OPTIONS = [
+    "espresso",
+    "pour_over",
+    "french_press",
+    "cold_brew",
+    "drip",
+    "aeropress",
+    "moka_pot",
+    "siphon",
+    "chemex",
+    "v60",
+]
+
+const SPECIALTY_OPTIONS = [
+    "single_origin",
+    "latte_art",
+    "specialty_coffee",
+    "matcha",
+    "pastries",
+    "brunch",
+    "desserts",
+    "vegan_options",
+]
+
+const TAG_OPTIONS = [
+    "cozy",
+    "minimalist",
+    "aesthetic",
+    "spacious",
+    "quiet",
+    "lively",
+    "scenic",
+    "instagram_worthy",
+    "hidden_gem",
+    "study_spot",
+    "date_spot",
+]
+
+const PRICE_LEVELS = [
+    { value: "low", label: "₱", description: "Budget-friendly" },
+    { value: "medium", label: "₱₱", description: "Mid-range" },
+    { value: "high", label: "₱₱₱", description: "Premium" },
+] as const
 
 export default function SuggestEditModal({
     isOpen,
@@ -81,12 +134,47 @@ export default function SuggestEditModal({
         })
     }
 
+    // Helper to compare arrays
+    const arraysEqual = (
+        a: unknown[] | undefined,
+        b: unknown[] | undefined
+    ): boolean => {
+        if (!a && !b) return true
+        if (!a || !b) return false
+        if (a.length !== b.length) return false
+        return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort())
+    }
+
+    // Helper to compare objects
+    const objectsEqual = (a: unknown, b: unknown): boolean => {
+        return JSON.stringify(a) === JSON.stringify(b)
+    }
+
     const updateChange = <K extends keyof SuggestableFields>(
         key: K,
         value: SuggestableFields[K]
     ) => {
         setChanges((prev) => {
             const cafeValue = cafe[key as keyof CafeWithRatings]
+
+            // Handle array comparison
+            if (Array.isArray(value) || Array.isArray(cafeValue)) {
+                if (arraysEqual(value as unknown[], cafeValue as unknown[])) {
+                    const { [key]: removed, ...rest } = prev
+                    return rest
+                }
+                return { ...prev, [key]: value }
+            }
+
+            // Handle object comparison (like socials)
+            if (typeof value === "object" && value !== null) {
+                if (objectsEqual(value, cafeValue)) {
+                    const { [key]: removed, ...rest } = prev
+                    return rest
+                }
+                return { ...prev, [key]: value }
+            }
+
             // If value matches current cafe value, remove from changes
             if (value === cafeValue || (value === "" && !cafeValue)) {
                 const { [key]: removed, ...rest } = prev
@@ -111,6 +199,38 @@ export default function SuggestEditModal({
             setChanges((prev) => ({
                 ...prev,
                 [key]: !currentCafeValue,
+            }))
+        }
+    }
+
+    const toggleArrayItem = (
+        key: "brew_methods" | "specialty" | "tags",
+        item: string
+    ) => {
+        const currentCafeValue = (cafe[key] as string[]) ?? []
+        const currentChangeValue = changes[key] as string[] | undefined
+
+        // Get the effective current list
+        const effectiveList = currentChangeValue ?? currentCafeValue
+
+        // Toggle the item
+        let newList: string[]
+        if (effectiveList.includes(item)) {
+            newList = effectiveList.filter((i) => i !== item)
+        } else {
+            newList = [...effectiveList, item]
+        }
+
+        // Check if it matches the original
+        if (arraysEqual(newList, currentCafeValue)) {
+            setChanges((prev) => {
+                const { [key]: removed, ...rest } = prev
+                return rest
+            })
+        } else {
+            setChanges((prev) => ({
+                ...prev,
+                [key]: newList,
             }))
         }
     }
@@ -147,6 +267,22 @@ export default function SuggestEditModal({
     }
 
     const changesCount = Object.keys(changes).length
+
+    // Helper to check if a field has changes
+    const hasChange = (key: keyof SuggestableFields): boolean => {
+        return changes[key] !== undefined
+    }
+
+    // Helper to get effective array value (with changes applied)
+    const getEffectiveArray = (
+        key: "brew_methods" | "specialty" | "tags"
+    ): string[] => {
+        return (
+            (changes[key] as string[] | undefined) ??
+            (cafe[key] as string[]) ??
+            []
+        )
+    }
 
     return (
         <AnimatePresence>
@@ -248,6 +384,35 @@ export default function SuggestEditModal({
 
                                         {expandedSections.has("basic") && (
                                             <div className='p-4 space-y-4'>
+                                                {/* Name */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Cafe Name
+                                                    </label>
+                                                    <input
+                                                        type='text'
+                                                        value={
+                                                            changes.name ??
+                                                            cafe.name ??
+                                                            ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateChange(
+                                                                "name",
+                                                                e.target
+                                                                    .value ||
+                                                                    undefined
+                                                            )
+                                                        }
+                                                        placeholder='Cafe name'
+                                                        className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
+                                                            hasChange("name")
+                                                                ? "border-primary/50 ring-2 ring-primary/20"
+                                                                : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                                                        }`}
+                                                    />
+                                                </div>
+
                                                 {/* Description */}
                                                 <div className='space-y-2'>
                                                     <label className='text-sm font-medium text-text/60'>
@@ -270,8 +435,9 @@ export default function SuggestEditModal({
                                                         placeholder='Describe the cafe...'
                                                         rows={3}
                                                         className={`w-full bg-text/5 text-sm leading-relaxed placeholder:text-text/30 focus:outline-none p-3 resize-none rounded-lg border transition-all text-text ${
-                                                            changes.description !==
-                                                            undefined
+                                                            hasChange(
+                                                                "description"
+                                                            )
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                                                         }`}
@@ -300,8 +466,182 @@ export default function SuggestEditModal({
                                                         }
                                                         placeholder='Full address'
                                                         className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
-                                                            changes.address_display !==
-                                                            undefined
+                                                            hasChange(
+                                                                "address_display"
+                                                            )
+                                                                ? "border-primary/50 ring-2 ring-primary/20"
+                                                                : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                                                        }`}
+                                                    />
+                                                </div>
+
+                                                {/* Area */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Area / Neighborhood
+                                                    </label>
+                                                    <input
+                                                        type='text'
+                                                        value={
+                                                            changes.area ??
+                                                            cafe.area ??
+                                                            ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateChange(
+                                                                "area",
+                                                                e.target
+                                                                    .value ||
+                                                                    undefined
+                                                            )
+                                                        }
+                                                        placeholder='e.g., Makati, BGC, Poblacion'
+                                                        className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
+                                                            hasChange("area")
+                                                                ? "border-primary/50 ring-2 ring-primary/20"
+                                                                : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                                                        }`}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Details Section */}
+                                    <div className='border border-text/10 rounded-lg overflow-hidden'>
+                                        <button
+                                            onClick={() =>
+                                                toggleSection("details")
+                                            }
+                                            className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                                        >
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <DollarSign className='w-4 h-4' />
+                                                Details
+                                            </span>
+                                            {expandedSections.has("details") ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                            ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                            )}
+                                        </button>
+
+                                        {expandedSections.has("details") && (
+                                            <div className='p-4 space-y-4'>
+                                                {/* Price Level */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Price Level
+                                                    </label>
+                                                    <div className='flex gap-2'>
+                                                        {PRICE_LEVELS.map(
+                                                            (level) => {
+                                                                const currentValue =
+                                                                    changes.price_level ??
+                                                                    cafe.price_level
+                                                                const isSelected =
+                                                                    currentValue ===
+                                                                    level.value
+
+                                                                return (
+                                                                    <button
+                                                                        key={
+                                                                            level.value
+                                                                        }
+                                                                        onClick={() =>
+                                                                            updateChange(
+                                                                                "price_level",
+                                                                                level.value as
+                                                                                    | "low"
+                                                                                    | "medium"
+                                                                                    | "high"
+                                                                            )
+                                                                        }
+                                                                        className={`flex-1 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                                                                            isSelected
+                                                                                ? hasChange(
+                                                                                      "price_level"
+                                                                                  )
+                                                                                    ? "border-primary bg-primary/20 text-primary"
+                                                                                    : "border-text/30 bg-text/10 text-text"
+                                                                                : "border-text/10 bg-text/5 text-text/50 hover:border-text/20"
+                                                                        }`}
+                                                                    >
+                                                                        <div className='text-lg font-bold'>
+                                                                            {
+                                                                                level.label
+                                                                            }
+                                                                        </div>
+                                                                        <div className='text-xs opacity-70'>
+                                                                            {
+                                                                                level.description
+                                                                            }
+                                                                        </div>
+                                                                    </button>
+                                                                )
+                                                            }
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Payment Methods */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Payment Methods
+                                                    </label>
+                                                    <input
+                                                        type='text'
+                                                        value={
+                                                            changes.payment_methods ??
+                                                            cafe.payment_methods ??
+                                                            ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateChange(
+                                                                "payment_methods",
+                                                                e.target
+                                                                    .value ||
+                                                                    undefined
+                                                            )
+                                                        }
+                                                        placeholder='e.g., cash, card, gcash, maya'
+                                                        className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
+                                                            hasChange(
+                                                                "payment_methods"
+                                                            )
+                                                                ? "border-primary/50 ring-2 ring-primary/20"
+                                                                : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                                                        }`}
+                                                    />
+                                                    <p className='text-xs text-text/40'>
+                                                        Separate multiple
+                                                        methods with commas
+                                                    </p>
+                                                </div>
+
+                                                {/* Roaster */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Coffee Roaster
+                                                    </label>
+                                                    <input
+                                                        type='text'
+                                                        value={
+                                                            changes.roaster ??
+                                                            cafe.roaster ??
+                                                            ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateChange(
+                                                                "roaster",
+                                                                e.target
+                                                                    .value ||
+                                                                    undefined
+                                                            )
+                                                        }
+                                                        placeholder='e.g., Yardstick, Henry & Sons'
+                                                        className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
+                                                            hasChange("roaster")
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                                                         }`}
@@ -343,11 +683,11 @@ export default function SuggestEditModal({
                                                             const currentValue =
                                                                 cafe[key] ??
                                                                 false
-                                                            const hasChange =
+                                                            const hasChanged =
                                                                 changes[key] !==
                                                                 undefined
                                                             const displayValue =
-                                                                hasChange
+                                                                hasChanged
                                                                     ? changes[
                                                                           key
                                                                       ]
@@ -362,7 +702,7 @@ export default function SuggestEditModal({
                                                                         )
                                                                     }
                                                                     className={`flex items-center gap-2 p-3 rounded-lg border transition-all cursor-pointer text-left ${
-                                                                        hasChange
+                                                                        hasChanged
                                                                             ? displayValue
                                                                                 ? "bg-primary/20 border-primary/40 text-primary"
                                                                                 : "bg-red-500/10 border-red-500/30 text-red-500"
@@ -375,7 +715,7 @@ export default function SuggestEditModal({
                                                                     <span className='text-sm font-medium'>
                                                                         {label}
                                                                     </span>
-                                                                    {hasChange && (
+                                                                    {hasChanged && (
                                                                         <span className='ml-auto text-xs'>
                                                                             {displayValue
                                                                                 ? "Adding"
@@ -386,6 +726,222 @@ export default function SuggestEditModal({
                                                             )
                                                         }
                                                     )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Extras Section */}
+                                    <div className='border border-text/10 rounded-lg overflow-hidden'>
+                                        <button
+                                            onClick={() =>
+                                                toggleSection("extras")
+                                            }
+                                            className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                                        >
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <Coffee className='w-4 h-4' />
+                                                Extras
+                                            </span>
+                                            {expandedSections.has("extras") ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                            ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                            )}
+                                        </button>
+
+                                        {expandedSections.has("extras") && (
+                                            <div className='p-4 space-y-4'>
+                                                {/* Brew Methods */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Brew Methods
+                                                    </label>
+                                                    <div className='flex flex-wrap gap-2'>
+                                                        {BREW_METHOD_OPTIONS.map(
+                                                            (method) => {
+                                                                const isSelected =
+                                                                    getEffectiveArray(
+                                                                        "brew_methods"
+                                                                    ).includes(
+                                                                        method
+                                                                    )
+                                                                const originalHas =
+                                                                    (
+                                                                        cafe.brew_methods ??
+                                                                        []
+                                                                    ).includes(
+                                                                        method
+                                                                    )
+                                                                const isChanged =
+                                                                    isSelected !==
+                                                                    originalHas
+
+                                                                return (
+                                                                    <button
+                                                                        key={
+                                                                            method
+                                                                        }
+                                                                        onClick={() =>
+                                                                            toggleArrayItem(
+                                                                                "brew_methods",
+                                                                                method
+                                                                            )
+                                                                        }
+                                                                        className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
+                                                                            isSelected
+                                                                                ? isChanged
+                                                                                    ? "bg-primary/20 border-primary/40 text-primary"
+                                                                                    : "bg-amber-500/20 border-amber-500/40 text-amber-700"
+                                                                                : isChanged
+                                                                                  ? "bg-red-500/10 border-red-500/30 text-red-500 line-through"
+                                                                                  : "bg-text/5 border-text/10 text-text/50 hover:border-text/20"
+                                                                        }`}
+                                                                    >
+                                                                        {method
+                                                                            .split(
+                                                                                "_"
+                                                                            )
+                                                                            .join(
+                                                                                " "
+                                                                            )}
+                                                                        {isSelected &&
+                                                                            isChanged && (
+                                                                                <Check className='w-3 h-3 inline ml-1' />
+                                                                            )}
+                                                                    </button>
+                                                                )
+                                                            }
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Specialties */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Specialties
+                                                    </label>
+                                                    <div className='flex flex-wrap gap-2'>
+                                                        {SPECIALTY_OPTIONS.map(
+                                                            (item) => {
+                                                                const isSelected =
+                                                                    getEffectiveArray(
+                                                                        "specialty"
+                                                                    ).includes(
+                                                                        item
+                                                                    )
+                                                                const originalHas =
+                                                                    (
+                                                                        cafe.specialty ??
+                                                                        []
+                                                                    ).includes(
+                                                                        item
+                                                                    )
+                                                                const isChanged =
+                                                                    isSelected !==
+                                                                    originalHas
+
+                                                                return (
+                                                                    <button
+                                                                        key={
+                                                                            item
+                                                                        }
+                                                                        onClick={() =>
+                                                                            toggleArrayItem(
+                                                                                "specialty",
+                                                                                item
+                                                                            )
+                                                                        }
+                                                                        className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
+                                                                            isSelected
+                                                                                ? isChanged
+                                                                                    ? "bg-primary/20 border-primary/40 text-primary"
+                                                                                    : "bg-primary/20 border-primary/40 text-text"
+                                                                                : isChanged
+                                                                                  ? "bg-red-500/10 border-red-500/30 text-red-500 line-through"
+                                                                                  : "bg-text/5 border-text/10 text-text/50 hover:border-text/20"
+                                                                        }`}
+                                                                    >
+                                                                        {item
+                                                                            .split(
+                                                                                "_"
+                                                                            )
+                                                                            .join(
+                                                                                " "
+                                                                            )}
+                                                                        {isSelected &&
+                                                                            isChanged && (
+                                                                                <Check className='w-3 h-3 inline ml-1' />
+                                                                            )}
+                                                                    </button>
+                                                                )
+                                                            }
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Tags / Vibe */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Vibe / Tags
+                                                    </label>
+                                                    <div className='flex flex-wrap gap-2'>
+                                                        {TAG_OPTIONS.map(
+                                                            (tag) => {
+                                                                const isSelected =
+                                                                    getEffectiveArray(
+                                                                        "tags"
+                                                                    ).includes(
+                                                                        tag
+                                                                    )
+                                                                const originalHas =
+                                                                    (
+                                                                        cafe.tags ??
+                                                                        []
+                                                                    ).includes(
+                                                                        tag
+                                                                    )
+                                                                const isChanged =
+                                                                    isSelected !==
+                                                                    originalHas
+
+                                                                return (
+                                                                    <button
+                                                                        key={
+                                                                            tag
+                                                                        }
+                                                                        onClick={() =>
+                                                                            toggleArrayItem(
+                                                                                "tags",
+                                                                                tag
+                                                                            )
+                                                                        }
+                                                                        className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
+                                                                            isSelected
+                                                                                ? isChanged
+                                                                                    ? "bg-primary/20 border-primary/40 text-primary"
+                                                                                    : "bg-text/10 border-text/20 text-text/80"
+                                                                                : isChanged
+                                                                                  ? "bg-red-500/10 border-red-500/30 text-red-500 line-through"
+                                                                                  : "bg-text/5 border-text/10 text-text/50 hover:border-text/20"
+                                                                        }`}
+                                                                    >
+                                                                        {tag
+                                                                            .split(
+                                                                                "_"
+                                                                            )
+                                                                            .join(
+                                                                                " "
+                                                                            )}
+                                                                        {isSelected &&
+                                                                            isChanged && (
+                                                                                <Check className='w-3 h-3 inline ml-1' />
+                                                                            )}
+                                                                    </button>
+                                                                )
+                                                            }
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -433,8 +989,7 @@ export default function SuggestEditModal({
                                                         }
                                                         placeholder='Phone number'
                                                         className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
-                                                            changes.phone !==
-                                                            undefined
+                                                            hasChange("phone")
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                                                         }`}
@@ -463,8 +1018,7 @@ export default function SuggestEditModal({
                                                         }
                                                         placeholder='Email address'
                                                         className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
-                                                            changes.email !==
-                                                            undefined
+                                                            hasChange("email")
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                                                         }`}
@@ -493,13 +1047,102 @@ export default function SuggestEditModal({
                                                         }
                                                         placeholder='https://example.com'
                                                         className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
-                                                            changes.website_url !==
-                                                            undefined
+                                                            hasChange(
+                                                                "website_url"
+                                                            )
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                                                         }`}
                                                     />
                                                 </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Operating Hours Section */}
+                                    <div className='border border-text/10 rounded-lg overflow-hidden'>
+                                        <button
+                                            onClick={() =>
+                                                toggleSection("hours")
+                                            }
+                                            className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                                        >
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <Clock className='w-4 h-4' />
+                                                Operating Hours
+                                                {hasChange(
+                                                    "operating_hours"
+                                                ) && (
+                                                    <span className='text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full'>
+                                                        Modified
+                                                    </span>
+                                                )}
+                                            </span>
+                                            {expandedSections.has("hours") ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                            ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                            )}
+                                        </button>
+
+                                        {expandedSections.has("hours") && (
+                                            <div className='p-4'>
+                                                <OperatingHoursEditor
+                                                    value={
+                                                        (changes.operating_hours as OperatingHour[]) ??
+                                                        cafe.operating_hours ??
+                                                        []
+                                                    }
+                                                    onChange={(hours) =>
+                                                        updateChange(
+                                                            "operating_hours",
+                                                            hours
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Social Links Section */}
+                                    <div className='border border-text/10 rounded-lg overflow-hidden'>
+                                        <button
+                                            onClick={() =>
+                                                toggleSection("socials")
+                                            }
+                                            className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                                        >
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <LinkIcon className='w-4 h-4' />
+                                                Social Links
+                                                {hasChange("socials") && (
+                                                    <span className='text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full'>
+                                                        Modified
+                                                    </span>
+                                                )}
+                                            </span>
+                                            {expandedSections.has("socials") ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                            ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                            )}
+                                        </button>
+
+                                        {expandedSections.has("socials") && (
+                                            <div className='p-4'>
+                                                <SocialLinksEditor
+                                                    value={
+                                                        (changes.socials as CafeSocial[]) ??
+                                                        (cafe.socials as CafeSocial[]) ??
+                                                        []
+                                                    }
+                                                    onChange={(socials) =>
+                                                        updateChange(
+                                                            "socials",
+                                                            socials
+                                                        )
+                                                    }
+                                                />
                                             </div>
                                         )}
                                     </div>

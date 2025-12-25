@@ -182,8 +182,7 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
     const { error } = await adminDb
         .from('cafes')
         .update({
-            is_published: true,
-            is_verified: true
+            is_published: true
         })
         .eq('id', cafeId)
 
@@ -384,6 +383,7 @@ export async function updateCafe(
         thumbnail: string | null
         gallery: string[] | null
         slug: string
+        is_verified: boolean
     }>
 ): Promise<AdminActionResult> {
     const db = await createClient()

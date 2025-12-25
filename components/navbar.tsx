@@ -145,11 +145,16 @@ export default function Navbar() {
 }
 
 function Auth() {
-    const { user, profile } = useContext(AuthContext)
+    const { user, profile, isLoading } = useContext(AuthContext)
     const supabase = createLocalClient()
 
     const handleSignOut = async () => {
         await supabase.auth.signOut()
+    }
+
+    // Show nothing while loading to prevent flashing
+    if (isLoading) {
+        return <div className='w-16 h-6 bg-text/10 rounded-md animate-pulse' />
     }
 
     if (user && profile) {
@@ -171,6 +176,7 @@ function Auth() {
     return (
         <Link
             href='/auth'
+            prefetch={true}
             className='hover:text-text/60 transition-colors font-serif flex flex-row gap-1 items-center cursor-pointer hover:bg-text/20 rounded-md p-1'
         >
             <UserRoundIcon

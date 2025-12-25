@@ -585,19 +585,26 @@ export default function CafeSubmissionForm({
                                         </label>
                                         <textarea
                                             value={formData.description}
-                                            onChange={(e) =>
-                                                updateFormData(
-                                                    "description",
-                                                    e.target.value
-                                                )
-                                            }
+                                            onChange={(e) => {
+                                                if (
+                                                    e.target.value.length <= 300
+                                                ) {
+                                                    updateFormData(
+                                                        "description",
+                                                        e.target.value
+                                                    )
+                                                }
+                                            }}
+                                            maxLength={300}
                                             placeholder='Describe what makes this cafe special...'
                                             rows={4}
                                             className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none'
                                         />
-                                        <p className='text-xs text-text/40 mt-1'>
-                                            {formData.description.length}{" "}
-                                            characters
+                                        <p
+                                            className={`text-xs mt-1 ${formData.description.length >= 270 ? "text-orange-500" : "text-text/40"}`}
+                                        >
+                                            {300 - formData.description.length}{" "}
+                                            characters remaining
                                         </p>
                                     </div>
 
