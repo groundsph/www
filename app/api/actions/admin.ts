@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/supabase/storage"
+import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { Database } from "@/utils/types/database.types"
 
@@ -171,10 +172,10 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
     // Use admin client to bypass RLS for the update
     const adminDb = await createAdminClient()
 
-    // Get contributor_id before updating
+    // Get cafe info before updating
     const { data: cafe } = await adminDb
         .from('cafes')
-        .select('contributor_id')
+        .select('name, slug, contributor_id')
         .eq('id', cafeId)
         .single()
 
@@ -191,9 +192,31 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
         return { success: false, error: "Failed to approve cafe" }
     }
 
-    // Update contributor's scout stats
+    // Update contributor's scout stats and send notification email
     if (cafe?.contributor_id) {
         await updateContributorScoutStats(cafe.contributor_id)
+
+        // Get contributor's email and profile info for notification
+        try {
+            const { data: userData } = await adminDb.auth.admin.getUserById(cafe.contributor_id)
+            const { data: contributorProfile } = await adminDb
+                .from('profiles')
+                .select('display_name')
+                .eq('id', cafe.contributor_id)
+                .single()
+
+            if (userData?.user?.email && cafe.name && cafe.slug) {
+                await sendCafeApprovedEmail(
+                    userData.user.email,
+                    cafe.name,
+                    cafe.slug,
+                    contributorProfile?.display_name || undefined
+                )
+            }
+        } catch (emailError) {
+            // Log email error but don't fail the approval
+            console.error("Error sending cafe approval email:", emailError)
+        }
     }
 
     return { success: true }
@@ -203,7 +226,7 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
 /**
  * Reject a cafe submission (delete it and its images)
  */
-export async function rejectCafe(cafeId: string): Promise<AdminActionResult> {
+export async function rejectCafe(cafeId: string, reason?: string): Promise<AdminActionResult> {
     const db = await createClient()
 
     // Verify admin access
@@ -223,12 +246,17 @@ export async function rejectCafe(cafeId: string): Promise<AdminActionResult> {
     // Use admin client to bypass RLS
     const adminDb = await createAdminClient()
 
-    // Fetch cafe to get image URLs and contributor info before deletion
+    // Fetch cafe to get image URLs, name, and contributor info before deletion
     const { data: cafe } = await adminDb
         .from('cafes')
-        .select('thumbnail, gallery, contributor_id, is_published')
+        .select('name, thumbnail, gallery, contributor_id, is_published')
         .eq('id', cafeId)
         .single()
+
+    // Store cafe info for email before deletion
+    const cafeName = cafe?.name
+    const contributorId = cafe?.contributor_id
+    const wasPublished = cafe?.is_published
 
     // Delete images from storage
     if (cafe) {
@@ -247,8 +275,32 @@ export async function rejectCafe(cafeId: string): Promise<AdminActionResult> {
     }
 
     // Update contributor's scout stats if cafe was published
-    if (cafe?.is_published && cafe?.contributor_id) {
-        await updateContributorScoutStats(cafe.contributor_id)
+    if (wasPublished && contributorId) {
+        await updateContributorScoutStats(contributorId)
+    }
+
+    // Send rejection notification email
+    if (contributorId && cafeName) {
+        try {
+            const { data: userData } = await adminDb.auth.admin.getUserById(contributorId)
+            const { data: contributorProfile } = await adminDb
+                .from('profiles')
+                .select('display_name')
+                .eq('id', contributorId)
+                .single()
+
+            if (userData?.user?.email) {
+                await sendCafeRejectedEmail(
+                    userData.user.email,
+                    cafeName,
+                    contributorProfile?.display_name || undefined,
+                    reason
+                )
+            }
+        } catch (emailError) {
+            // Log email error but don't fail the rejection
+            console.error("Error sending cafe rejection email:", emailError)
+        }
     }
 
     return { success: true }

@@ -1,5 +1,7 @@
 import { Resend } from "resend"
 import PasswordResetEmail from "@/emails/PasswordResetEmail"
+import CafeApprovedEmail from "@/emails/CafeApprovedEmail"
+import CafeRejectedEmail from "@/emails/CafeRejectedEmail"
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -27,6 +29,70 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
         return { success: true, messageId: data?.id }
     } catch (err) {
         console.error("Error sending password reset email:", err)
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+        }
+    }
+}
+
+/**
+ * Send a cafe approval notification email
+ */
+export async function sendCafeApprovedEmail(
+    to: string,
+    cafeName: string,
+    cafeSlug: string,
+    submitterName?: string
+) {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `🎉 Your cafe "${cafeName}" has been approved!`,
+            react: CafeApprovedEmail({ cafeName, cafeSlug, submitterName }),
+        })
+
+        if (error) {
+            console.error("Failed to send cafe approved email:", error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, messageId: data?.id }
+    } catch (err) {
+        console.error("Error sending cafe approved email:", err)
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+        }
+    }
+}
+
+/**
+ * Send a cafe rejection notification email
+ */
+export async function sendCafeRejectedEmail(
+    to: string,
+    cafeName: string,
+    submitterName?: string,
+    reason?: string
+) {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `Update on your cafe submission "${cafeName}"`,
+            react: CafeRejectedEmail({ cafeName, submitterName, reason }),
+        })
+
+        if (error) {
+            console.error("Failed to send cafe rejected email:", error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, messageId: data?.id }
+    } catch (err) {
+        console.error("Error sending cafe rejected email:", err)
         return {
             success: false,
             error: err instanceof Error ? err.message : "Unknown error",
