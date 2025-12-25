@@ -9,6 +9,7 @@ import {
     useContext,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react"
 import { useRouter } from "next/navigation"
@@ -61,6 +62,10 @@ export default function AuthProvider({
     const [profile, setProfile] = useState<Profile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
 
+    // Track if we've already shown the sign-in notification to prevent duplicates
+    const hasShownSignInNotification = useRef(false)
+    const wasSignedIn = useRef(false)
+
     // Functions
     const fetchProfile = useCallback(
         async (userId: string): Promise<Profile | null> => {
@@ -92,30 +97,42 @@ export default function AuthProvider({
         }
     }, [user, fetchProfile])
 
-    // Unified auth handler - similar to your old pattern
+    // Unified auth handler
     const handleAuth = useCallback(
         async (
             signedIn: boolean,
             authUser?: User,
-            showNotification?: boolean
+            isExplicitSignIn?: boolean
         ) => {
             if (signedIn && authUser) {
                 setUser(authUser)
                 const profileData = await fetchProfile(authUser.id)
                 setProfile(profileData)
 
-                if (showNotification) {
+                // Only show notification on explicit sign-in (not on page navigation or refresh)
+                // and only if we weren't already signed in
+                if (
+                    isExplicitSignIn &&
+                    !wasSignedIn.current &&
+                    !hasShownSignInNotification.current
+                ) {
                     addNotification("You are now signed in.", "success")
+                    hasShownSignInNotification.current = true
                     router.refresh()
                 }
-            } else {
-                setUser(null)
-                setProfile(null)
 
-                if (showNotification) {
+                wasSignedIn.current = true
+            } else {
+                // Only show sign-out notification if user was previously signed in
+                if (wasSignedIn.current) {
                     addNotification("You are now signed out.", "warning")
                     router.refresh()
                 }
+
+                setUser(null)
+                setProfile(null)
+                wasSignedIn.current = false
+                hasShownSignInNotification.current = false
             }
 
             setIsLoading(false)
@@ -129,18 +146,20 @@ export default function AuthProvider({
             data: { subscription },
         } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === "INITIAL_SESSION") {
-                // Initial load - no notification needed
+                // Initial load - no notification, just set state
                 if (session) {
+                    wasSignedIn.current = true // Mark as already signed in
                     handleAuth(true, session.user, false)
                 } else {
                     handleAuth(false, undefined, false)
                 }
             } else if (event === "SIGNED_IN") {
+                // Only show notification if this is a fresh sign-in
                 if (session) {
                     handleAuth(true, session.user, true)
                 }
             } else if (event === "SIGNED_OUT") {
-                handleAuth(false, undefined, true)
+                handleAuth(false, undefined, false)
             } else if (
                 event === "TOKEN_REFRESHED" ||
                 event === "USER_UPDATED"
@@ -161,7 +180,8 @@ export default function AuthProvider({
     // Handle cross-tab auth synchronization via storage events
     useEffect(() => {
         const handleStorageChange = (event: StorageEvent) => {
-            if (event.key?.includes("grounds-auth")) {
+            // Check for Supabase auth cookie changes
+            if (event.key?.includes("sb-") || event.key?.includes("supabase")) {
                 supabase.auth.getSession().then(({ data: { session } }) => {
                     if (session) {
                         handleAuth(true, session.user, false)
