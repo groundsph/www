@@ -710,7 +710,6 @@ export default function ProfileClient() {
                                                 return (
                                                     <motion.div
                                                         key={badge.id}
-                                                        layout
                                                         initial={{
                                                             opacity: 0,
                                                             scale: 0.8,

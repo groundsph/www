@@ -321,7 +321,7 @@ export default function PublicProfileClient({
 
                             return (
                                 <>
-                                    <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6'>
+                                    <motion.div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6'>
                                         <AnimatePresence mode='popLayout'>
                                             {displayBadges.map((badge) => {
                                                 const isEarned =
@@ -330,7 +330,6 @@ export default function PublicProfileClient({
                                                 return (
                                                     <motion.div
                                                         key={badge.id}
-                                                        layout
                                                         initial={{
                                                             opacity: 0,
                                                             scale: 0.8,
@@ -504,7 +503,7 @@ export default function PublicProfileClient({
                                                 )
                                             })}
                                         </AnimatePresence>
-                                    </div>
+                                    </motion.div>
 
                                     {/* Toggle button */}
                                     {unearnedBadges.length > 0 && (
