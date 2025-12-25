@@ -11,7 +11,10 @@ import {
     WifiIcon,
     StarIcon,
     Clock,
+    Check,
+    Share2,
 } from "lucide-react"
+import { useState } from "react"
 import { isOpenNow } from "@/utils/extras"
 import { User } from "@supabase/supabase-js"
 
@@ -37,6 +40,29 @@ export default function CafeHero({
     onToggleWishlist,
 }: CafeHeroProps) {
     const openStatus = isOpenNow(cafe.operating_hours)
+    const [isCopied, setIsCopied] = useState(false)
+
+    const handleShare = async () => {
+        const url = window.location.href
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Check out ${cafe.name} on Grounds`,
+                    url: url,
+                })
+            } catch (err) {
+                console.error("Error sharing:", err)
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(url)
+                setIsCopied(true)
+                setTimeout(() => setIsCopied(false), 2000)
+            } catch (err) {
+                console.error("Failed to copy:", err)
+            }
+        }
+    }
 
     return (
         <section
@@ -138,72 +164,88 @@ export default function CafeHero({
                     </motion.div>
 
                     {/* Action Buttons */}
-                    {user && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.5, delay: 0.25 }}
-                            className='flex items-center gap-2 w-full max-w-md mt-4'
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.25 }}
+                        className='flex items-center gap-2 w-full max-w-md mt-4'
+                    >
+                        {/* Share Button */}
+                        <button
+                            onClick={handleShare}
+                            className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                            title='Share'
                         >
-                            {/* Visited Button */}
-                            <button
-                                onClick={onToggleVisited}
-                                className='p-2 flex-1 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer flex flex-row text-nowrap items-center gap-2 justify-center font-bold'
-                                title={
-                                    isVisited
+                            {isCopied ? (
+                                <Check className='w-6 h-6 text-green-400' />
+                            ) : (
+                                <Share2 className='w-6 h-6 text-white group-hover:text-blue-400 transition-colors' />
+                            )}
+                        </button>
+
+                        {/* User Actions */}
+                        {user && (
+                            <>
+                                {/* Visited Button */}
+                                <button
+                                    onClick={onToggleVisited}
+                                    className='p-2 flex-1 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer flex flex-row text-nowrap items-center gap-2 justify-center font-bold'
+                                    title={
+                                        isVisited
+                                            ? "Remove from Visited"
+                                            : "Mark as Visited"
+                                    }
+                                >
+                                    {isVisited ? (
+                                        <CheckCircle className='w-5 h-5 text-white' />
+                                    ) : (
+                                        <MapPin className='w-5 h-5 text-white' />
+                                    )}
+                                    {isVisited
                                         ? "Remove from Visited"
-                                        : "Mark as Visited"
-                                }
-                            >
-                                {isVisited ? (
-                                    <CheckCircle className='w-5 h-5 text-white' />
-                                ) : (
-                                    <MapPin className='w-5 h-5 text-white' />
-                                )}
-                                {isVisited
-                                    ? "Remove from Visited"
-                                    : "Mark as Visited"}
-                            </button>
+                                        : "Mark as Visited"}
+                                </button>
 
-                            {/* Favorite Button */}
-                            <button
-                                onClick={onToggleFavorite}
-                                className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
-                                title={
-                                    isFavorite
-                                        ? "Remove from Favorites"
-                                        : "Add to Favorites"
-                                }
-                            >
-                                <Heart
-                                    className={`w-6 h-6 transition-colors ${
+                                {/* Favorite Button */}
+                                <button
+                                    onClick={onToggleFavorite}
+                                    className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                                    title={
                                         isFavorite
-                                            ? "fill-red-500 text-red-500"
-                                            : "text-white group-hover:text-red-400"
-                                    }`}
-                                />
-                            </button>
+                                            ? "Remove from Favorites"
+                                            : "Add to Favorites"
+                                    }
+                                >
+                                    <Heart
+                                        className={`w-6 h-6 transition-colors ${
+                                            isFavorite
+                                                ? "fill-red-500 text-red-500"
+                                                : "text-white group-hover:text-red-400"
+                                        }`}
+                                    />
+                                </button>
 
-                            {/* Wishlist Button */}
-                            <button
-                                onClick={onToggleWishlist}
-                                className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
-                                title={
-                                    isInWishlist
-                                        ? "Remove from Wishlist"
-                                        : "Add to Wishlist"
-                                }
-                            >
-                                <Bookmark
-                                    className={`w-6 h-6 transition-colors ${
+                                {/* Wishlist Button */}
+                                <button
+                                    onClick={onToggleWishlist}
+                                    className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                                    title={
                                         isInWishlist
-                                            ? "fill-secondary text-secondary"
-                                            : "text-white group-hover:text-secondary"
-                                    }`}
-                                />
-                            </button>
-                        </motion.div>
-                    )}
+                                            ? "Remove from Wishlist"
+                                            : "Add to Wishlist"
+                                    }
+                                >
+                                    <Bookmark
+                                        className={`w-6 h-6 transition-colors ${
+                                            isInWishlist
+                                                ? "fill-secondary text-secondary"
+                                                : "text-white group-hover:text-secondary"
+                                        }`}
+                                    />
+                                </button>
+                            </>
+                        )}
+                    </motion.div>
 
                     {/* Description */}
                     <motion.p

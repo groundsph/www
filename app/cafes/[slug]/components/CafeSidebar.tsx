@@ -70,7 +70,7 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
 
             {/* Address Link */}
             <a
-                href={`https://www.google.com/maps/search/?api=1&query=${cafe.address_display}`}
+                href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
                 target='_blank'
                 rel='noopener noreferrer'
                 className='text-sm font-semibold text-text/60 hover:text-text/60 transition-colors hover:underline'

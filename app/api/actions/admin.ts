@@ -383,6 +383,7 @@ export async function updateCafe(
         socials: Record<string, unknown>[] | null
         thumbnail: string | null
         gallery: string[] | null
+        slug: string
     }>
 ): Promise<AdminActionResult> {
     const db = await createClient()

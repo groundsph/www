@@ -94,7 +94,7 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
 
             {/* Address & Directions */}
             <a
-                href={`https://www.google.com/maps/search/?api=1&query=${cafe.address_display}`}
+                href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
                 target='_blank'
                 rel='noopener noreferrer'
                 className='flex items-center gap-2 p-3 bg-text/5 rounded-xl hover:bg-text/10 transition-colors'

@@ -124,6 +124,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             socials: cafe.socials || [],
             thumbnail: cafe.thumbnail,
             gallery: cafe.gallery,
+            slug: cafe.slug,
         })
         setSaving(false)
         if (result.success) {
@@ -301,7 +302,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             </div>
 
             {/* Cover Image */}
-            <div className='relative h-48 rounded-xl overflow-hidden bg-text/5'>
+            <div className='relative h-auto aspect-6/2 rounded-xl overflow-hidden bg-text/5'>
                 {cafe.thumbnail ? (
                     <Image
                         src={cafe.thumbnail}
@@ -333,6 +334,24 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                 }
                                 className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
                             />
+                        </div>
+
+                        <div>
+                            <label className='block text-sm font-medium text-text/60 mb-2'>
+                                Slug (URL Path) *
+                            </label>
+                            <input
+                                type='text'
+                                value={cafe.slug}
+                                onChange={(e) =>
+                                    updateField("slug", e.target.value)
+                                }
+                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 font-mono text-sm'
+                            />
+                            <p className='text-xs text-text/40 mt-1'>
+                                Warning: Changing this will break existing links
+                                to the cafe page.
+                            </p>
                         </div>
 
                         <div>
@@ -415,7 +434,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                 Cover Image
                             </label>
                             <div className='relative group'>
-                                <div className='relative h-64 rounded-xl overflow-hidden bg-text/10'>
+                                <div className='relative h-auto aspect-video rounded-xl overflow-hidden bg-text/10'>
                                     {cafe.thumbnail ? (
                                         <Image
                                             src={cafe.thumbnail}
