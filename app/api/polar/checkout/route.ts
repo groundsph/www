@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { polar } from "@/utils/polar"
 import { createClient } from "@/utils/supabase/server"
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
     try {
         const supabase = await createClient()
 

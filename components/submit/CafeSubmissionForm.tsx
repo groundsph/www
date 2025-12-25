@@ -89,7 +89,6 @@ export default function CafeSubmissionForm({
 
     // Save draft to localStorage when form data changes
     useEffect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const {
             thumbnail: _thumbnail,
             gallery: _gallery,
@@ -244,7 +243,7 @@ export default function CafeSubmissionForm({
             {/* Progress Steps */}
             <div className='flex items-center justify-between mb-8 overflow-x-auto pb-2'>
                 {STEPS.map((step, idx) => {
-                    const Icon = step.icon
+                    const _Icon = step.icon
                     const isActive = currentStep === step.id
                     const isComplete = currentStep > step.id
 

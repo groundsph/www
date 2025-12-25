@@ -397,9 +397,9 @@ export function DetailsTabContent({
                                     {cafe.specialty.map((item) => (
                                         <span
                                             key={item}
-                                            className='text-xs bg-primary/20 px-2 py-1 rounded-full capitalize'
+                                            className='text-xs bg-primary/20 px-2 py-1 rounded-full capitalize text-nowrap'
                                         >
-                                            {item}
+                                            {item.split("_").join(" ")}
                                         </span>
                                     ))}
                                 </div>

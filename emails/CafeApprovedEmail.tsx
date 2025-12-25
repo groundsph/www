@@ -45,7 +45,7 @@ export default function CafeApprovedEmail({
     return (
         <Html>
             <Preview>
-                Great news! Your cafe submission "{cafeName}" has been approved!
+                {`Great news! Your cafe submission "${cafeName}" has been approved!`}
             </Preview>
             <Tailwind config={tailwindConfig}>
                 <Head />

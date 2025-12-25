@@ -341,9 +341,9 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                             {cafe.specialty.map((item) => (
                                 <li
                                     key={item}
-                                    className='text-text bg-primary/20 px-2 py-1 rounded-full capitalize'
+                                    className='text-text bg-primary/20 px-2 py-1 rounded-full capitalize text-nowrap'
                                 >
-                                    {item}
+                                    {item.split("_").join(" ")}
                                 </li>
                             ))}
                         </ul>

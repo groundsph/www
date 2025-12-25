@@ -57,6 +57,7 @@ export async function createReview(
             .single()
 
         if (profile) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Passport is stored as JSON in database
             const passport = (profile.passport as any) || { visited_ids: [], wishlist_ids: [], favorite_ids: [] }
             const visitedIds = new Set(passport.visited_ids || [])
 

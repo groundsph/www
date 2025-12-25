@@ -44,7 +44,7 @@ export default function CafeRejectedEmail({
 
     return (
         <Html>
-            <Preview>Update on your cafe submission "{cafeName}"</Preview>
+            <Preview>{`Update on your cafe submission "${cafeName}"`}</Preview>
             <Tailwind config={tailwindConfig}>
                 <Head />
                 <Body className='bg-tertiary font-sans'>

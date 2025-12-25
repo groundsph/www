@@ -30,7 +30,7 @@ export interface Review {
     user_id: string
     images?: string[] | null
     likes_count?: number | null
-    review_interactions?: any[]
+    review_interactions?: { user_id: string; interaction_type: string }[]
     is_edited?: boolean
     author: {
         display_name: string

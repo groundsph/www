@@ -170,7 +170,6 @@ export default function AuthPageClient() {
             // Update profiles table
             const { error: profileError } = await supabase
                 .from("profiles")
-                // @ts-ignore - Supabase types issue
                 .update({
                     username: username.trim(),
                     display_name: displayName.trim(),
