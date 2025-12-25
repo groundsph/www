@@ -34,10 +34,17 @@ export async function proxy(request: NextRequest) {
         }
     )
 
-    // Refresh session if exists
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    // Refresh session if exists - with error handling
+    let user = null
+    try {
+        const {
+            data: { user: authUser },
+        } = await supabase.auth.getUser()
+        user = authUser
+    } catch {
+        // Error fetching user - treat as not logged in
+        user = null
+    }
 
     const { pathname } = request.nextUrl
 

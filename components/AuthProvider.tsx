@@ -2,7 +2,7 @@
 
 import { createLocalClient } from "@/utils/supabase/client"
 import { Tables } from "@/utils/types/database.types"
-import { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
+import { User } from "@supabase/supabase-js"
 import {
     createContext,
     useCallback,
@@ -60,11 +60,10 @@ export default function AuthProvider({
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<Profile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
-    const [initialized, setInitialized] = useState(false)
 
     // Functions
     const fetchProfile = useCallback(
-        async (userId: string) => {
+        async (userId: string): Promise<Profile | null> => {
             try {
                 const { data, error } = await supabase
                     .from("profiles")
@@ -74,14 +73,13 @@ export default function AuthProvider({
 
                 if (error) {
                     console.error("Error fetching profile:", error)
-                    setProfile(null)
-                    return
+                    return null
                 }
 
-                setProfile(data)
+                return data
             } catch (err) {
                 console.error("Unexpected error fetching profile:", err)
-                setProfile(null)
+                return null
             }
         },
         [supabase]
@@ -89,115 +87,86 @@ export default function AuthProvider({
 
     const refreshProfile = useCallback(async () => {
         if (user) {
-            await fetchProfile(user.id)
+            const data = await fetchProfile(user.id)
+            setProfile(data)
         }
     }, [user, fetchProfile])
 
-    const handleAuthChange = useCallback(
-        async (event: AuthChangeEvent, session: Session | null) => {
-            // Skip if not initialized yet (we handle initial session separately)
-            if (!initialized && event !== "INITIAL_SESSION") {
-                return
-            }
+    // Unified auth handler - similar to your old pattern
+    const handleAuth = useCallback(
+        async (
+            signedIn: boolean,
+            authUser?: User,
+            showNotification?: boolean
+        ) => {
+            if (signedIn && authUser) {
+                setUser(authUser)
+                const profileData = await fetchProfile(authUser.id)
+                setProfile(profileData)
 
-            if (event === "INITIAL_SESSION") {
-                if (session) {
-                    setUser(session.user)
-                    await fetchProfile(session.user.id)
-                } else {
-                    setUser(null)
-                    setProfile(null)
-                }
-                setIsLoading(false)
-                setInitialized(true)
-            } else if (event === "SIGNED_IN") {
-                if (session) {
-                    setUser(session.user)
-                    await fetchProfile(session.user.id)
+                if (showNotification) {
                     addNotification("You are now signed in.", "success")
-                    // Refresh the router to update server components
                     router.refresh()
                 }
-            } else if (event === "SIGNED_OUT") {
+            } else {
                 setUser(null)
                 setProfile(null)
-                addNotification("You are now signed out.", "warning")
-                // Refresh the router to update server components
-                router.refresh()
-            } else if (event === "TOKEN_REFRESHED") {
-                // Silently update user on token refresh
-                if (session) {
-                    setUser(session.user)
-                }
-            } else if (event === "USER_UPDATED") {
-                // Re-fetch profile when user data is updated
-                if (session) {
-                    setUser(session.user)
-                    await fetchProfile(session.user.id)
+
+                if (showNotification) {
+                    addNotification("You are now signed out.", "warning")
+                    router.refresh()
                 }
             }
+
+            setIsLoading(false)
         },
-        [addNotification, fetchProfile, initialized, router]
+        [addNotification, fetchProfile, router]
     )
 
-    // Initialize session on mount
-    useEffect(() => {
-        const initializeAuth = async () => {
-            try {
-                // Use getUser() instead of getSession() - it validates and refreshes the token
-                const {
-                    data: { user: authUser },
-                    error,
-                } = await supabase.auth.getUser()
-
-                if (authUser && !error) {
-                    setUser(authUser)
-                    await fetchProfile(authUser.id)
-                } else {
-                    // No valid session or error - ensure clean state
-                    setUser(null)
-                    setProfile(null)
-                }
-            } catch (error) {
-                console.error("Error initializing auth:", error)
-                setUser(null)
-                setProfile(null)
-            } finally {
-                setIsLoading(false)
-                setInitialized(true)
-            }
-        }
-
-        initializeAuth()
-    }, [supabase.auth, fetchProfile])
-
-    // Subscribe to auth state changes
+    // Single effect for auth state - handles INITIAL_SESSION and all other events
     useEffect(() => {
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange((event, session) =>
-            handleAuthChange(event, session)
-        )
+        } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === "INITIAL_SESSION") {
+                // Initial load - no notification needed
+                if (session) {
+                    handleAuth(true, session.user, false)
+                } else {
+                    handleAuth(false, undefined, false)
+                }
+            } else if (event === "SIGNED_IN") {
+                if (session) {
+                    handleAuth(true, session.user, true)
+                }
+            } else if (event === "SIGNED_OUT") {
+                handleAuth(false, undefined, true)
+            } else if (
+                event === "TOKEN_REFRESHED" ||
+                event === "USER_UPDATED"
+            ) {
+                // Silently update user on token refresh or user update
+                if (session) {
+                    handleAuth(true, session.user, false)
+                }
+            }
+        })
 
-        // Cleanup subscription on unmount to prevent memory leaks
+        // Cleanup subscription on unmount
         return () => {
             subscription.unsubscribe()
         }
-    }, [supabase.auth, handleAuthChange])
+    }, [supabase.auth, handleAuth])
 
     // Handle cross-tab auth synchronization via storage events
     useEffect(() => {
         const handleStorageChange = (event: StorageEvent) => {
-            // Check if the auth storage key changed
             if (event.key?.includes("grounds-auth")) {
-                // Re-fetch session to sync state across tabs
                 supabase.auth.getSession().then(({ data: { session } }) => {
                     if (session) {
-                        setUser(session.user)
-                        fetchProfile(session.user.id)
+                        handleAuth(true, session.user, false)
                     } else {
-                        setUser(null)
-                        setProfile(null)
+                        handleAuth(false, undefined, false)
                     }
                 })
             }
@@ -205,7 +174,7 @@ export default function AuthProvider({
 
         window.addEventListener("storage", handleStorageChange)
         return () => window.removeEventListener("storage", handleStorageChange)
-    }, [supabase.auth, fetchProfile])
+    }, [supabase.auth, handleAuth])
 
     // Computed values
     const isAdmin = profile?.role === "admin" || profile?.role === "moderator"
