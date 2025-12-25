@@ -51,7 +51,7 @@ const rankConfig = {
 export default function ProfileClient() {
     const router = useRouter()
     const authContext = useContext(AuthContext)
-    const { user, profile: _authProfile, refreshProfile } = authContext
+    const { user, refreshProfile } = authContext
 
     // States
     const [profileData, setProfileData] = useState<ProfileWithBadges | null>(
@@ -257,7 +257,6 @@ export default function ProfileClient() {
     }
 
     const stats = profileData.stats
-    const _passport = profileData.passport // Used for conditional UI checks
     const earnedBadgeIds = new Set(profileData.badges.map((b) => b.badge_id))
     const RankIcon = stats?.scout_rank
         ? rankConfig[stats.scout_rank].icon

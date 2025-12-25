@@ -217,6 +217,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                     {/* Image with gradient overlay */}
                                     <div className='relative w-full h-36 overflow-clip rounded-t-xl bg-linear-to-br from-secondary/30 to-secondary/10'>
                                         {cafe.thumbnail && (
+                                            /* eslint-disable-next-line @next/next/no-img-element -- Leaflet popups don't support next/image */
                                             <img
                                                 src={cafe.thumbnail}
                                                 alt={cafe.name}

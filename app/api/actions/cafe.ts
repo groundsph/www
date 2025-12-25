@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Supabase relational queries return complex nested types that require any for flattening */
 "use server"
 
 import { getDayOfYear } from "@/utils/featured"

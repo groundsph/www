@@ -16,7 +16,7 @@ interface LandingHeroProps {
 export default function LandingHero({
     featured: initialFeatured,
 }: LandingHeroProps) {
-    const { profile: _profile } = useContext(AuthContext)
+    useContext(AuthContext) // Keep context subscription for reactivity
     const [featured, setFeatured] = useState<CafeWithRatings | null>(
         initialFeatured
     )

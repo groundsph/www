@@ -82,6 +82,7 @@ export default function CafeSubmissionForm({
     const [customTags, setCustomTags] = useState("")
 
     // Duplicate checking
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Cafe search results have dynamic shape
     const [possibleDuplicates, setPossibleDuplicates] = useState<any[]>([])
 
     useEffect(() => {
@@ -127,11 +128,8 @@ export default function CafeSubmissionForm({
 
     // Save draft to localStorage when form data changes
     useEffect(() => {
-        const {
-            thumbnail: _thumbnail,
-            gallery: _gallery,
-            ...savable
-        } = formData
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Destructuring to exclude file fields
+        const { thumbnail, gallery, ...savable } = formData
         localStorage.setItem(DRAFT_KEY, JSON.stringify(savable))
     }, [formData])
 
@@ -289,11 +287,8 @@ export default function CafeSubmissionForm({
 
             // 5. Submit cafe data
             console.log("[Cafe Submit] Submitting to server...")
-            const {
-                thumbnail: _t,
-                gallery: _g,
-                ...serializableFormData
-            } = formData
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Destructuring to exclude file fields
+            const { thumbnail, gallery, ...serializableFormData } = formData
             const result = await submitCafe(
                 serializableFormData,
                 thumbnailResult.url,
@@ -361,7 +356,6 @@ export default function CafeSubmissionForm({
             {/* Progress Steps */}
             <div className='flex items-center justify-between mb-8 overflow-x-auto pb-2'>
                 {STEPS.map((step, idx) => {
-                    const _Icon = step.icon
                     const isActive = currentStep === step.id
                     const isComplete = currentStep > step.id
 
@@ -511,7 +505,7 @@ export default function CafeSubmissionForm({
                                                                 <p className='text-xs text-yellow-700 mt-1'>
                                                                     Please check
                                                                     if the cafe
-                                                                    you're
+                                                                    you&apos;re
                                                                     adding is
                                                                     already
                                                                     listed to
@@ -535,6 +529,7 @@ export default function CafeSubmissionForm({
                                                                     >
                                                                         <div className='w-10 h-10 bg-gray-100 rounded-md overflow-hidden shrink-0'>
                                                                             {cafe.thumbnail_url ? (
+                                                                                /* eslint-disable-next-line @next/next/no-img-element -- External URL from search results */
                                                                                 <img
                                                                                     src={
                                                                                         cafe.thumbnail_url
@@ -617,6 +612,7 @@ export default function CafeSubmissionForm({
                                         </label>
                                         {thumbnailFile ? (
                                             <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-text/20 bg-text/5'>
+                                                {/* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */}
                                                 <img
                                                     src={URL.createObjectURL(
                                                         thumbnailFile
@@ -1577,6 +1573,7 @@ export default function CafeSubmissionForm({
                                     {/* Hero Header with Background Image */}
                                     <div className='relative h-64 md:h-80 bg-text/10'>
                                         {thumbnailFile ? (
+                                            /* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */
                                             <img
                                                 src={URL.createObjectURL(
                                                     thumbnailFile
@@ -1785,6 +1782,7 @@ export default function CafeSubmissionForm({
                                                                 key={idx}
                                                                 className='relative w-24 h-24 rounded-lg overflow-hidden shrink-0'
                                                             >
+                                                                {/* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */}
                                                                 <img
                                                                     src={URL.createObjectURL(
                                                                         file

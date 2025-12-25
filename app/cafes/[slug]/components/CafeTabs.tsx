@@ -19,7 +19,7 @@ const TABS: Tab[] = [
 ]
 
 interface CafeTabsProps {
-    children: {
+    tabContent: {
         about: React.ReactNode
         details: React.ReactNode
         reviews: React.ReactNode
@@ -27,7 +27,7 @@ interface CafeTabsProps {
     reviewCount?: number
 }
 
-export default function CafeTabs({ children, reviewCount }: CafeTabsProps) {
+export default function CafeTabs({ tabContent, reviewCount }: CafeTabsProps) {
     const [activeTab, setActiveTab] = useState<TabId>("about")
 
     return (
@@ -78,7 +78,7 @@ export default function CafeTabs({ children, reviewCount }: CafeTabsProps) {
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
                     >
-                        {children[activeTab]}
+                        {tabContent[activeTab]}
                     </motion.div>
                 </AnimatePresence>
             </div>

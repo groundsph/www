@@ -153,7 +153,7 @@ export default function CafeDetails({
             <section className='md:hidden px-4 py-4 w-full'>
                 <CafeTabs
                     reviewCount={reviews.length}
-                    children={{
+                    tabContent={{
                         about: <AboutTabContent cafe={cafe} />,
                         details: (
                             <DetailsTabContent

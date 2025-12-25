@@ -6,26 +6,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = 'https://grounds.ph'
 
     // Non-static pages (reserved for future use)
-    const _nonStaticPages: MetadataRoute.Sitemap = [
-        {
-            url: `${baseUrl}/map`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.8,
-        },
-        {
-            url: `${baseUrl}/business`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.8,
-        },
-        {
-            url: `${baseUrl}/support`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.8,
-        },
-    ]
+    // const nonStaticPages: MetadataRoute.Sitemap = [
+    //     { url: `${baseUrl}/map`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
+    //     { url: `${baseUrl}/business`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
+    //     { url: `${baseUrl}/support`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
+    // ]
 
     // Static pages from routes.ts
     const staticPages: MetadataRoute.Sitemap = routes.map((route) => ({

@@ -106,7 +106,6 @@ export default function PublicProfileClient({
     }, [profile, user])
 
     const stats = profile.stats
-    const _passport = profile.passport // Used for conditional checks
     const earnedBadgeIds = new Set(profile.badges.map((b) => b.badge_id))
     const RankIcon = stats?.scout_rank
         ? rankConfig[stats.scout_rank].icon

@@ -67,8 +67,6 @@ export async function submitEditSuggestion(
     }
 
     // Insert the suggestion
-    // Note: Using type assertion due to Supabase type generation timing issue
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: suggestion, error: insertError } = await db
         .from('cafe_edit_suggestions')
         .insert({
@@ -77,6 +75,7 @@ export async function submitEditSuggestion(
             status: 'pending',
             suggested_changes: changes,
             suggested_images: imageChanges || null,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Using type assertion due to Supabase type generation timing issue
         } as any)
         .select('id')
         .single()

@@ -160,7 +160,8 @@ export default function SuggestEditModal({
             // Handle array comparison
             if (Array.isArray(value) || Array.isArray(cafeValue)) {
                 if (arraysEqual(value as unknown[], cafeValue as unknown[])) {
-                    const { [key]: removed, ...rest } = prev
+                    const rest = { ...prev }
+                    delete rest[key]
                     return rest
                 }
                 return { ...prev, [key]: value }
@@ -169,7 +170,8 @@ export default function SuggestEditModal({
             // Handle object comparison (like socials)
             if (typeof value === "object" && value !== null) {
                 if (objectsEqual(value, cafeValue)) {
-                    const { [key]: removed, ...rest } = prev
+                    const rest = { ...prev }
+                    delete rest[key]
                     return rest
                 }
                 return { ...prev, [key]: value }
@@ -177,7 +179,8 @@ export default function SuggestEditModal({
 
             // If value matches current cafe value, remove from changes
             if (value === cafeValue || (value === "" && !cafeValue)) {
-                const { [key]: removed, ...rest } = prev
+                const rest = { ...prev }
+                delete rest[key]
                 return rest
             }
             return { ...prev, [key]: value }
@@ -191,7 +194,8 @@ export default function SuggestEditModal({
         // If we have a pending change, remove it (revert to original)
         if (currentChangeValue !== undefined) {
             setChanges((prev) => {
-                const { [key]: removed, ...rest } = prev
+                const rest = { ...prev }
+                delete rest[key]
                 return rest
             })
         } else {
@@ -224,7 +228,8 @@ export default function SuggestEditModal({
         // Check if it matches the original
         if (arraysEqual(newList, currentCafeValue)) {
             setChanges((prev) => {
-                const { [key]: removed, ...rest } = prev
+                const rest = { ...prev }
+                delete rest[key]
                 return rest
             })
         } else {
