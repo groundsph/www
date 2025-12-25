@@ -32,7 +32,7 @@ import {
     BREW_METHODS,
     PAYMENT_METHODS,
 } from "@/utils/data/philippines"
-import { uploadCafeImage } from "@/utils/supabase/storage"
+import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { submitCafe } from "@/app/api/actions/submit"
 import ImageUpload from "@/components/reviews/ImageUpload"
 import AmenityToggles from "./AmenityToggles"
@@ -148,14 +148,12 @@ export default function CafeSubmissionForm({
         setError(null)
 
         try {
-            // Upload thumbnail
+            // Upload thumbnail (client-side, direct to Supabase)
             if (!thumbnailFile) {
                 throw new Error("Thumbnail is required")
             }
 
-            const thumbnailFormData = new FormData()
-            thumbnailFormData.append("image", thumbnailFile)
-            const thumbnailResult = await uploadCafeImage(thumbnailFormData)
+            const thumbnailResult = await uploadCafeImageClient(thumbnailFile)
 
             if (!thumbnailResult.success || !thumbnailResult.url) {
                 throw new Error(
@@ -163,20 +161,23 @@ export default function CafeSubmissionForm({
                 )
             }
 
-            // Upload gallery images
+            // Upload gallery images (client-side, direct to Supabase)
             const galleryUrls: string[] = []
             for (const file of galleryFiles) {
-                const galleryFormData = new FormData()
-                galleryFormData.append("image", file)
-                const result = await uploadCafeImage(galleryFormData)
+                const result = await uploadCafeImageClient(file)
                 if (result.success && result.url) {
                     galleryUrls.push(result.url)
                 }
             }
 
-            // Submit cafe
+            // Submit cafe - extract serializable data (exclude File objects)
+            const {
+                thumbnail: _t,
+                gallery: _g,
+                ...serializableFormData
+            } = formData
             const result = await submitCafe(
-                formData,
+                serializableFormData,
                 thumbnailResult.url,
                 galleryUrls
             )

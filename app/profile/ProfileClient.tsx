@@ -8,7 +8,7 @@ import {
     getUserReviews,
     updateProfile,
 } from "@/app/api/actions/profile"
-import { uploadAvatar } from "@/utils/supabase/storage"
+import { uploadAvatarClient } from "@/utils/supabase/storage-client"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -384,14 +384,14 @@ export default function ProfileClient() {
 
                                     setUploadStatus("Uploading...")
 
-                                    // Upload processed image
-                                    const formData = new FormData()
-                                    formData.append(
-                                        "avatar",
-                                        blob,
-                                        "avatar.jpg"
+                                    // Upload processed image - direct to Supabase
+                                    const processedFile = new File(
+                                        [blob],
+                                        "avatar.jpg",
+                                        { type: "image/jpeg" }
                                     )
-                                    const result = await uploadAvatar(formData)
+                                    const result =
+                                        await uploadAvatarClient(processedFile)
 
                                     if (result.success && result.url) {
                                         setUploadStatus("Done!")

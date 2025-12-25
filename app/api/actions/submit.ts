@@ -1,10 +1,11 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
-import { uploadCafeImage } from "@/utils/supabase/storage"
 import { notifyDiscord } from "./notify"
-import { CafeSubmission } from "@/utils/types/extra"
+import { SerializableCafeSubmission } from "@/utils/types/extra"
 import { OperatingHour } from "@/utils/types/cafe"
+import { SupabaseClient } from "@supabase/supabase-js"
+import { Database } from "@/utils/types/database.types"
 
 // Generate a URL-friendly slug from cafe name
 function generateSlug(name: string): string {
@@ -17,7 +18,7 @@ function generateSlug(name: string): string {
 }
 
 // Make slug unique by appending random suffix if needed
-async function ensureUniqueSlug(db: any, baseSlug: string): Promise<string> {
+async function ensureUniqueSlug(db: SupabaseClient<Database>, baseSlug: string): Promise<string> {
     let slug = baseSlug
     let counter = 0
 
@@ -49,14 +50,14 @@ export interface SubmitCafeResult {
  * Cafe is created with is_published: false and needs admin approval
  */
 export async function submitCafe(
-    formData: CafeSubmission,
+    formData: SerializableCafeSubmission,
     thumbnailUrl: string,
     galleryUrls: string[]
 ): Promise<SubmitCafeResult> {
     const db = await createClient()
 
     // Get current user
-    const { data: { user }, error: authError } = await db.auth.getUser()
+    const { data: { user } } = await db.auth.getUser()
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }

@@ -98,6 +98,9 @@ export interface CafeSubmission {
     socials: CafeSocial[];
 }
 
+// Serializable version of CafeSubmission for server actions (excludes File objects)
+export type SerializableCafeSubmission = Omit<CafeSubmission, 'thumbnail' | 'gallery'>;
+
 // Default empty submission for form initialization
 export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     name: '',
