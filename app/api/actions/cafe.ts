@@ -271,7 +271,6 @@ export async function getReviewsByCafeId(cafeId: string) {
 export async function searchCafesSimple(query: string) {
     if (!query || query.length < 3) return []
 
-    console.log("[searchCafesSimple] Searching for:", query)
     const db = await createAdminClient()
 
     // Fuzzy search by name using ilike
@@ -286,6 +285,5 @@ export async function searchCafesSimple(query: string) {
         return []
     }
 
-    console.log("[searchCafesSimple] Found:", cafes?.length)
     return cafes || []
 }

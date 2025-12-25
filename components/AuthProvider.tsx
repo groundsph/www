@@ -110,7 +110,7 @@ export default function AuthProvider({
             } else if (event === "SIGNED_OUT") {
                 setUser(null)
                 setProfile(null)
-                addNotification("You are now signed out.", "error")
+                addNotification("You are now signed out.", "warning")
             } else if (event === "TOKEN_REFRESHED") {
                 // Silently update user on token refresh
                 if (session) {
