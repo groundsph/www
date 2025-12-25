@@ -67,7 +67,7 @@ import { Pencil } from "lucide-react"
 interface AdminDashboardProps {
     pendingCafes: CafeWithRatings[]
     publishedCafes: CafeWithRatings[]
-    flaggedReviews: ReviewForModeration[]
+    reportedReviews: ReviewForModeration[]
     badges: BadgeDefinition[]
     suggestions: EditSuggestion[]
 }
@@ -77,14 +77,14 @@ type TabType = "pending" | "published" | "reviews" | "badges" | "suggestions"
 export default function AdminDashboard({
     pendingCafes: initialPending,
     publishedCafes: initialPublished,
-    flaggedReviews: initialFlagged,
+    reportedReviews: initialReported,
     badges: initialBadges,
     suggestions: initialSuggestions,
 }: AdminDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
     const [pendingCafes, setPendingCafes] = useState(initialPending)
     const [publishedCafes, setPublishedCafes] = useState(initialPublished)
-    const [flaggedReviews, setFlaggedReviews] = useState(initialFlagged)
+    const [reportedReviews, setReportedReviews] = useState(initialReported)
     const [badges, setBadges] = useState(initialBadges)
     const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
@@ -272,7 +272,7 @@ export default function AdminDashboard({
         setProcessing(reviewId)
         const result = await moderateReview(reviewId, "published")
         if (result.success) {
-            setFlaggedReviews((prev) => prev.filter((r) => r.id !== reviewId))
+            setReportedReviews((prev) => prev.filter((r) => r.id !== reviewId))
         } else {
             alert(result.error || "Failed to approve review")
         }
@@ -283,7 +283,7 @@ export default function AdminDashboard({
         setProcessing(reviewId)
         const result = await moderateReview(reviewId, "hidden")
         if (result.success) {
-            setFlaggedReviews((prev) => prev.filter((r) => r.id !== reviewId))
+            setReportedReviews((prev) => prev.filter((r) => r.id !== reviewId))
         } else {
             alert(result.error || "Failed to hide review")
         }
@@ -301,7 +301,7 @@ export default function AdminDashboard({
         setProcessing(reviewId)
         const result = await deleteReviewAsAdmin(reviewId)
         if (result.success) {
-            setFlaggedReviews((prev) => prev.filter((r) => r.id !== reviewId))
+            setReportedReviews((prev) => prev.filter((r) => r.id !== reviewId))
         } else {
             alert(result.error || "Failed to delete review")
         }
@@ -717,14 +717,14 @@ export default function AdminDashboard({
                     <div className='text-text/60 text-sm'>Published Cafes</div>
                 </div>
                 <div
-                    className={`bg-text/5 border rounded-xl p-6 ${flaggedReviews.length > 0 ? "border-red-500/30 bg-red-500/5" : "border-text/10"}`}
+                    className={`bg-text/5 border rounded-xl p-6 ${reportedReviews.length > 0 ? "border-red-500/30 bg-red-500/5" : "border-text/10"}`}
                 >
                     <div
-                        className={`text-4xl font-bold ${flaggedReviews.length > 0 ? "text-red-500" : ""}`}
+                        className={`text-4xl font-bold ${reportedReviews.length > 0 ? "text-red-500" : ""}`}
                     >
-                        {flaggedReviews.length}
+                        {reportedReviews.length}
                     </div>
-                    <div className='text-text/60 text-sm'>Flagged Reviews</div>
+                    <div className='text-text/60 text-sm'>Reported Reviews</div>
                 </div>
             </div>
 
@@ -800,13 +800,13 @@ export default function AdminDashboard({
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
                         activeTab === "reviews"
                             ? "bg-red-500/20 text-red-500 border-red-500/30"
-                            : flaggedReviews.length > 0
+                            : reportedReviews.length > 0
                               ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
                               : "bg-text/5 border-text/10 hover:bg-text/10"
                     }`}
                 >
                     <Flag className='w-4 h-4' />
-                    Reviews ({flaggedReviews.length})
+                    Reviews ({reportedReviews.length})
                 </button>
                 <button
                     onClick={() => setActiveTab("badges")}
@@ -859,7 +859,7 @@ export default function AdminDashboard({
             {/* Reviews Moderation Queue */}
             {activeTab === "reviews" && (
                 <>
-                    {flaggedReviews.length === 0 ? (
+                    {reportedReviews.length === 0 ? (
                         <div className='text-center py-16 bg-text/5 rounded-xl border border-text/10'>
                             <Check className='w-12 h-12 mx-auto text-green-500 mb-4' />
                             <p className='text-text/60 text-lg'>
@@ -871,7 +871,7 @@ export default function AdminDashboard({
                         </div>
                     ) : (
                         <div className='space-y-4'>
-                            {flaggedReviews.map((review) => {
+                            {reportedReviews.map((review) => {
                                 const isExpanded = expandedReview === review.id
                                 const isProcessingThis =
                                     processing === review.id

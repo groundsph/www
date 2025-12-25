@@ -1,6 +1,7 @@
 "use client"
 
 import { AuthContext } from "@/components/AuthProvider"
+import { useNotification } from "@/components/NotificationProvider"
 import {
     getAllBadges,
     getCafesByIds,
@@ -52,6 +53,7 @@ export default function ProfileClient() {
     const router = useRouter()
     const authContext = useContext(AuthContext)
     const { user, refreshProfile } = authContext
+    const { addNotification } = useNotification()
 
     // States
     const [profileData, setProfileData] = useState<ProfileWithBadges | null>(
@@ -181,11 +183,15 @@ export default function ProfileClient() {
                         : null
                 )
                 setIsEditing(false)
+                addNotification("Profile updated successfully", "success")
                 // Refresh in background, don't block UI
                 refreshProfile()
+            } else {
+                addNotification("Failed to update profile", "error")
             }
         } catch (error) {
             console.error("Error saving profile:", error)
+            addNotification("An error occurred while saving", "error")
         } finally {
             setIsSaving(false)
         }

@@ -743,7 +743,90 @@ export interface ReviewForModeration {
 }
 
 /**
- * Get all flagged reviews for moderation
+ * Get all reviews that have been reported (have report interactions)
+ * This includes reviews that haven't reached the auto-flag threshold yet
+ */
+export async function getReportedReviews(): Promise<ReviewForModeration[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const dbAdmin = await createAdminClient()
+
+    // First, get all review IDs that have report interactions
+    const { data: reportedReviewIds } = await dbAdmin
+        .from('review_interactions')
+        .select('review_id')
+        .eq('interaction_type', 'report')
+
+    if (!reportedReviewIds || reportedReviewIds.length === 0) {
+        return []
+    }
+
+    // Get unique review IDs
+    const uniqueReviewIds = [...new Set(reportedReviewIds.map(r => r.review_id))]
+
+    // Fetch the reviews with those IDs
+    const { data: reviews, error } = await dbAdmin
+        .from('reviews')
+        .select(`
+            id,
+            rating,
+            comment,
+            images,
+            status,
+            created_at,
+            updated_at,
+            author:profiles!reviews_user_id_fkey(
+                id,
+                username,
+                display_name,
+                avatar_url
+            ),
+            cafe:cafes!reviews_cafe_id_fkey(
+                id,
+                name,
+                slug,
+                thumbnail
+            )
+        `)
+        .in('id', uniqueReviewIds)
+        .order('updated_at', { ascending: false })
+
+    if (error) {
+        console.error("Error fetching reported reviews:", error)
+        return []
+    }
+
+    // Count reports per review
+    const reportMap = new Map<string, number>()
+    reportedReviewIds.forEach(r => {
+        const current = reportMap.get(r.review_id) || 0
+        reportMap.set(r.review_id, current + 1)
+    })
+
+    return (reviews || []).map(r => ({
+        ...r,
+        author: r.author as ReviewForModeration['author'],
+        cafe: r.cafe as ReviewForModeration['cafe'],
+        report_count: reportMap.get(r.id) || 0
+    })).sort((a, b) => b.report_count - a.report_count) // Sort by most reports first
+}
+
+/**
+ * Get all flagged reviews for moderation (status = 'flagged')
  */
 export async function getFlaggedReviews(): Promise<ReviewForModeration[]> {
     return getReviewsForModeration('flagged')
@@ -772,8 +855,10 @@ export async function getReviewsForModeration(
         return []
     }
 
+    const dbAdmin = await createAdminClient()
+
     // Build query
-    let query = db
+    let query = dbAdmin
         .from('reviews')
         .select(`
             id,
@@ -811,7 +896,7 @@ export async function getReviewsForModeration(
 
     // Get report counts for each review
     const reviewIds = reviews?.map(r => r.id) || []
-    const { data: reportCounts } = await db
+    const { data: reportCounts } = await dbAdmin
         .from('review_interactions')
         .select('review_id')
         .in('review_id', reviewIds)

@@ -582,7 +582,9 @@ export default function CafesPageClient() {
                                                                 key={item}
                                                                 className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap h-max font-semibold capitalize'
                                                             >
-                                                                {item}
+                                                                {item
+                                                                    .split("_")
+                                                                    .join(" ")}
                                                             </span>
                                                         )
                                                     )}
