@@ -214,9 +214,9 @@ export default function CafeSubmissionForm({
 
             setProcessingStatus("Compressing thumbnail...")
             const processedThumbnail = await resizeImage(thumbnailFile, {
-                maxWidth: 1920,
-                maxHeight: 1080,
-                quality: 0.8,
+                maxWidth: 2560,
+                maxHeight: 1600,
+                quality: 0.9,
                 format: "image/webp",
             })
 
@@ -228,9 +228,9 @@ export default function CafeSubmissionForm({
             for (let i = 0; i < galleryFiles.length; i++) {
                 const file = galleryFiles[i]
                 const processed = await resizeImage(file, {
-                    maxWidth: 1920,
-                    maxHeight: 1080,
-                    quality: 0.8,
+                    maxWidth: 2048,
+                    maxHeight: 1536,
+                    quality: 0.85,
                     format: "image/webp",
                 })
                 processedGalleryFiles.push(processed)
