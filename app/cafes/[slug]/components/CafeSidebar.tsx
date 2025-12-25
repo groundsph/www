@@ -193,7 +193,7 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                     <p className='text-sm font-semibold text-text/60'>
                         Payment Methods
                     </p>
-                    <ul className='flex flex-row items-center gap-4 overflow-x-auto text-sm font-semibold text-text/60'>
+                    <ul className='flex flex-row items-center gap-4 flex-wrap text-sm font-semibold text-text/60'>
                         {cafe.payment_methods
                             .split(",")
                             .map((method) => method.trim())
