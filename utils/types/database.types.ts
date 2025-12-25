@@ -68,6 +68,77 @@ export type Database = {
         }
         Relationships: []
       }
+      cafe_edit_suggestions: {
+        Row: {
+          admin_notes: string | null
+          cafe_id: string
+          created_at: string | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_changes: Json
+          suggested_images: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          cafe_id: string
+          created_at?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_changes: Json
+          suggested_images?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          cafe_id?: string
+          created_at?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_changes?: Json
+          suggested_images?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_edit_suggestions_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafe_edit_suggestions_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafe_edit_suggestions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafe_edit_suggestions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cafe_menus: {
         Row: {
           cafe_id: string

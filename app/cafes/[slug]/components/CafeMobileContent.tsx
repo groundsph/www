@@ -20,6 +20,7 @@ import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
 import RatingDistribution from "./RatingDistribution"
 import MarkdownRender from "@/components/MarkdownRender"
+import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
 
 // Day mapping
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -425,6 +426,14 @@ export function DetailsTabContent({
                     </div>
                 </div>
             )}
+
+            {/* Suggest Edit */}
+            <div className='flex justify-center pt-2'>
+                <SuggestEditButton
+                    cafe={cafe}
+                    variant='compact'
+                />
+            </div>
         </div>
     )
 }

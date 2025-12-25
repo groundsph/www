@@ -1,0 +1,72 @@
+import { Database } from './database.types';
+import { OperatingHours, CafeSocial } from './cafe';
+
+export type EditSuggestionStatus = 'pending' | 'approved' | 'rejected';
+
+// What fields can be suggested for editing
+export interface SuggestableFields {
+    name?: string;
+    description?: string;
+    address_display?: string;
+    area?: string;
+    phone?: string;
+    email?: string;
+    website_url?: string;
+    has_wifi?: boolean;
+    has_sockets?: boolean;
+    has_parking?: boolean;
+    has_aircon?: boolean;
+    is_pet_friendly?: boolean;
+    has_outdoor_seating?: boolean;
+    serves_food?: boolean;
+    is_work_friendly?: boolean;
+    price_level?: Database['public']['Enums']['price_level'];
+    payment_methods?: string;
+    specialty?: string[];
+    tags?: string[];
+    brew_methods?: string[];
+    roaster?: string;
+    operating_hours?: OperatingHours;
+    socials?: CafeSocial[];
+}
+
+export interface SuggestedImageChanges {
+    add_to_gallery?: string[];      // URLs of images to add
+    remove_from_gallery?: string[]; // URLs of images to remove
+    new_thumbnail?: string;         // URL of suggested new thumbnail
+}
+
+export interface EditSuggestion {
+    id: string;
+    cafe_id: string;
+    user_id: string;
+    status: EditSuggestionStatus;
+    suggested_changes: SuggestableFields;
+    suggested_images: SuggestedImageChanges | null;
+    admin_notes: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    reviewed_at: string | null;
+    reviewed_by: string | null;
+    // Joined data for display
+    cafe?: {
+        id: string;
+        name: string;
+        slug: string;
+        thumbnail: string;
+    };
+    author?: {
+        id: string;
+        username: string;
+        display_name: string;
+        avatar_url: string | null;
+    };
+}
+
+// Form data for submitting a suggestion (before image upload)
+export interface EditSuggestionFormData {
+    changes: SuggestableFields;
+    newGalleryImages?: File[];
+    removeGalleryImages?: string[];
+    newThumbnail?: File;
+}

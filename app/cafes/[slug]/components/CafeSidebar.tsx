@@ -16,6 +16,7 @@ import {
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
 import RatingDistribution from "./RatingDistribution"
+import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
 
 // Day mapping and order
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -434,6 +435,16 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
             ) : (
                 <p className='text-sm text-text/50'>Hours not available</p>
             )}
+
+            <div className='border-b border-text/10 my-3' />
+
+            {/* Suggest Edit */}
+            <div className='flex justify-center'>
+                <SuggestEditButton
+                    cafe={cafe}
+                    variant='compact'
+                />
+            </div>
         </div>
     )
 }

@@ -2,6 +2,8 @@ import { Resend } from "resend"
 import PasswordResetEmail from "@/emails/PasswordResetEmail"
 import CafeApprovedEmail from "@/emails/CafeApprovedEmail"
 import CafeRejectedEmail from "@/emails/CafeRejectedEmail"
+import SuggestionApprovedEmail from "@/emails/SuggestionApprovedEmail"
+import SuggestionRejectedEmail from "@/emails/SuggestionRejectedEmail"
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -93,6 +95,70 @@ export async function sendCafeRejectedEmail(
         return { success: true, messageId: data?.id }
     } catch (err) {
         console.error("Error sending cafe rejected email:", err)
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+        }
+    }
+}
+
+/**
+ * Send a suggestion approval notification email
+ */
+export async function sendSuggestionApprovedEmail(
+    to: string,
+    cafeName: string,
+    cafeSlug: string,
+    submitterName?: string
+) {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `✨ Your edit for "${cafeName}" has been approved!`,
+            react: SuggestionApprovedEmail({ cafeName, cafeSlug, submitterName }),
+        })
+
+        if (error) {
+            console.error("Failed to send suggestion approved email:", error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, messageId: data?.id }
+    } catch (err) {
+        console.error("Error sending suggestion approved email:", err)
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+        }
+    }
+}
+
+/**
+ * Send a suggestion rejection notification email
+ */
+export async function sendSuggestionRejectedEmail(
+    to: string,
+    cafeName: string,
+    submitterName?: string,
+    reason?: string
+) {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `Update on your suggested edit for "${cafeName}"`,
+            react: SuggestionRejectedEmail({ cafeName, submitterName, reason }),
+        })
+
+        if (error) {
+            console.error("Failed to send suggestion rejected email:", error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, messageId: data?.id }
+    } catch (err) {
+        console.error("Error sending suggestion rejected email:", err)
         return {
             success: false,
             error: err instanceof Error ? err.message : "Unknown error",

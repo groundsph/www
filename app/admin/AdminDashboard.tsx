@@ -53,33 +53,45 @@ import {
     getUsersWithBadge,
     awardBadgeToAllUsers,
 } from "@/app/api/actions/admin"
+import {
+    approveSuggestion,
+    rejectSuggestion,
+} from "@/app/api/actions/suggestions"
+import { EditSuggestion } from "@/utils/types/suggestions"
 import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
+import { Pencil } from "lucide-react"
 
 interface AdminDashboardProps {
     pendingCafes: CafeWithRatings[]
     publishedCafes: CafeWithRatings[]
     flaggedReviews: ReviewForModeration[]
     badges: BadgeDefinition[]
+    suggestions: EditSuggestion[]
 }
 
-type TabType = "pending" | "published" | "reviews" | "badges"
+type TabType = "pending" | "published" | "reviews" | "badges" | "suggestions"
 
 export default function AdminDashboard({
     pendingCafes: initialPending,
     publishedCafes: initialPublished,
     flaggedReviews: initialFlagged,
     badges: initialBadges,
+    suggestions: initialSuggestions,
 }: AdminDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
     const [pendingCafes, setPendingCafes] = useState(initialPending)
     const [publishedCafes, setPublishedCafes] = useState(initialPublished)
     const [flaggedReviews, setFlaggedReviews] = useState(initialFlagged)
     const [badges, setBadges] = useState(initialBadges)
+    const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedReview, setExpandedReview] = useState<string | null>(null)
+    const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
+        null
+    )
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [cleanupLoading, setCleanupLoading] = useState(false)
@@ -807,6 +819,19 @@ export default function AdminDashboard({
                     <Award className='w-4 h-4' />
                     Badges ({badges.length})
                 </button>
+                <button
+                    onClick={() => setActiveTab("suggestions")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                        activeTab === "suggestions"
+                            ? "bg-primary/20 text-primary border-primary/30"
+                            : suggestions.length > 0
+                              ? "bg-primary/10 border-primary/20 text-primary/80 hover:bg-primary/20"
+                              : "bg-text/5 border-text/10 hover:bg-text/10"
+                    }`}
+                >
+                    <Pencil className='w-4 h-4' />
+                    Suggestions ({suggestions.length})
+                </button>
             </div>
 
             {/* Search - only for cafe tabs */}
@@ -1462,6 +1487,237 @@ export default function AdminDashboard({
                                     onDelete={() => handleDeleteBadge(badge)}
                                 />
                             ))}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Suggestions Management */}
+            {activeTab === "suggestions" && (
+                <>
+                    {suggestions.length === 0 ? (
+                        <div className='text-center py-16 bg-text/5 rounded-xl border border-text/10'>
+                            <Pencil className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <h3 className='text-lg font-semibold'>
+                                No pending suggestions
+                            </h3>
+                            <p className='text-text/60 text-sm mt-1'>
+                                User edit suggestions will appear here for
+                                review.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className='space-y-4'>
+                            {suggestions.map((suggestion) => {
+                                const isExpanded =
+                                    expandedSuggestion === suggestion.id
+                                const changesCount = Object.keys(
+                                    suggestion.suggested_changes || {}
+                                ).length
+
+                                return (
+                                    <div
+                                        key={suggestion.id}
+                                        className='bg-white/50 border border-text/10 rounded-xl overflow-hidden'
+                                    >
+                                        {/* Header */}
+                                        <div
+                                            className='p-4 cursor-pointer hover:bg-text/5 transition flex items-center gap-4'
+                                            onClick={() =>
+                                                setExpandedSuggestion(
+                                                    isExpanded
+                                                        ? null
+                                                        : suggestion.id
+                                                )
+                                            }
+                                        >
+                                            {/* Cafe Thumbnail */}
+                                            {suggestion.cafe?.thumbnail && (
+                                                <Image
+                                                    src={
+                                                        suggestion.cafe
+                                                            .thumbnail
+                                                    }
+                                                    alt={
+                                                        suggestion.cafe.name ||
+                                                        "Cafe"
+                                                    }
+                                                    width={56}
+                                                    height={56}
+                                                    className='rounded-lg object-cover'
+                                                />
+                                            )}
+
+                                            <div className='flex-1 min-w-0'>
+                                                <h3 className='font-semibold truncate'>
+                                                    {suggestion.cafe?.name ||
+                                                        "Unknown Cafe"}
+                                                </h3>
+                                                <p className='text-sm text-text/60'>
+                                                    {changesCount} field
+                                                    {changesCount !== 1
+                                                        ? "s"
+                                                        : ""}{" "}
+                                                    to update
+                                                </p>
+                                                <p className='text-xs text-text/40'>
+                                                    Suggested by{" "}
+                                                    {suggestion.author
+                                                        ?.display_name ||
+                                                        suggestion.author
+                                                            ?.username ||
+                                                        "Unknown"}
+                                                    {suggestion.created_at &&
+                                                        ` • ${new Date(suggestion.created_at).toLocaleDateString()}`}
+                                                </p>
+                                            </div>
+
+                                            <div className='flex items-center gap-2'>
+                                                {isExpanded ? (
+                                                    <ChevronUp className='w-5 h-5 text-text/40' />
+                                                ) : (
+                                                    <ChevronDown className='w-5 h-5 text-text/40' />
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Expanded Content */}
+                                        {isExpanded && (
+                                            <div className='border-t border-text/10'>
+                                                {/* Changes Preview */}
+                                                <div className='p-4 bg-text/5'>
+                                                    <h4 className='text-sm font-semibold mb-3'>
+                                                        Proposed Changes
+                                                    </h4>
+                                                    <div className='space-y-2'>
+                                                        {Object.entries(
+                                                            suggestion.suggested_changes ||
+                                                                {}
+                                                        ).map(
+                                                            ([key, value]) => (
+                                                                <div
+                                                                    key={key}
+                                                                    className='flex items-start gap-2 text-sm'
+                                                                >
+                                                                    <span className='font-medium text-text/60 capitalize min-w-[120px]'>
+                                                                        {key.replace(
+                                                                            /_/g,
+                                                                            " "
+                                                                        )}
+                                                                        :
+                                                                    </span>
+                                                                    <span className='text-text break-all'>
+                                                                        {typeof value ===
+                                                                        "boolean"
+                                                                            ? value
+                                                                                ? "Yes"
+                                                                                : "No"
+                                                                            : typeof value ===
+                                                                                "object"
+                                                                              ? JSON.stringify(
+                                                                                    value,
+                                                                                    null,
+                                                                                    2
+                                                                                )
+                                                                              : String(
+                                                                                    value
+                                                                                )}
+                                                                    </span>
+                                                                </div>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className='p-4 flex items-center gap-3 justify-end'>
+                                                    <Link
+                                                        href={`/cafes/${suggestion.cafe?.slug || ""}`}
+                                                        target='_blank'
+                                                        className='flex items-center gap-2 px-3 py-1.5 text-sm bg-text/5 border border-text/10 rounded-lg hover:bg-text/10 transition'
+                                                    >
+                                                        <Eye className='w-4 h-4' />
+                                                        View Cafe
+                                                    </Link>
+                                                    <button
+                                                        onClick={async () => {
+                                                            setProcessing(
+                                                                suggestion.id
+                                                            )
+                                                            const result =
+                                                                await rejectSuggestion(
+                                                                    suggestion.id
+                                                                )
+                                                            if (
+                                                                result.success
+                                                            ) {
+                                                                setSuggestions(
+                                                                    (prev) =>
+                                                                        prev.filter(
+                                                                            (
+                                                                                s
+                                                                            ) =>
+                                                                                s.id !==
+                                                                                suggestion.id
+                                                                        )
+                                                                )
+                                                            }
+                                                            setProcessing(null)
+                                                        }}
+                                                        disabled={
+                                                            processing ===
+                                                            suggestion.id
+                                                        }
+                                                        className='flex items-center gap-2 px-4 py-1.5 text-sm bg-red-500/10 text-red-500 border border-red-500/30 rounded-lg hover:bg-red-500/20 transition disabled:opacity-50'
+                                                    >
+                                                        <X className='w-4 h-4' />
+                                                        Reject
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            setProcessing(
+                                                                suggestion.id
+                                                            )
+                                                            const result =
+                                                                await approveSuggestion(
+                                                                    suggestion.id
+                                                                )
+                                                            if (
+                                                                result.success
+                                                            ) {
+                                                                setSuggestions(
+                                                                    (prev) =>
+                                                                        prev.filter(
+                                                                            (
+                                                                                s
+                                                                            ) =>
+                                                                                s.id !==
+                                                                                suggestion.id
+                                                                        )
+                                                                )
+                                                            }
+                                                            setProcessing(null)
+                                                        }}
+                                                        disabled={
+                                                            processing ===
+                                                            suggestion.id
+                                                        }
+                                                        className='flex items-center gap-2 px-4 py-1.5 text-sm bg-green-500/10 text-green-500 border border-green-500/30 rounded-lg hover:bg-green-500/20 transition disabled:opacity-50'
+                                                    >
+                                                        {processing ===
+                                                        suggestion.id ? (
+                                                            <Loader2 className='w-4 h-4 animate-spin' />
+                                                        ) : (
+                                                            <Check className='w-4 h-4' />
+                                                        )}
+                                                        Approve
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
                         </div>
                     )}
                 </>
