@@ -381,6 +381,8 @@ export async function updateCafe(
         phone: string
         email: string
         socials: Record<string, unknown>[] | null
+        thumbnail: string | null
+        gallery: string[] | null
     }>
 ): Promise<AdminActionResult> {
     const db = await createClient()
@@ -412,6 +414,32 @@ export async function updateCafe(
     }
 
     return { success: true }
+}
+
+/**
+ * Delete a single cafe image from storage (admin only)
+ * Used when admins remove individual images from cafe thumbnail or gallery
+ */
+export async function adminDeleteCafeImage(imageUrl: string): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Import and call the storage delete function
+    const { deleteSingleCafeImage } = await import('@/utils/supabase/storage')
+    return deleteSingleCafeImage(imageUrl)
 }
 
 /**

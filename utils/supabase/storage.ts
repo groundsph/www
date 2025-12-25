@@ -67,6 +67,32 @@ export async function deleteCafeImages(thumbnail: string | null, gallery: string
 }
 
 /**
+ * Delete a single cafe image from storage (Admin only)
+ * Used when removing individual images from cafe thumbnail or gallery
+ */
+export async function deleteSingleCafeImage(imageUrl: string): Promise<{
+    success: boolean
+    error?: string
+}> {
+    if (!imageUrl) {
+        return { success: false, error: "No image URL provided" }
+    }
+
+    const path = extractStoragePath(imageUrl, CAFE_BUCKET)
+    if (!path) {
+        return { success: false, error: "Invalid image URL" }
+    }
+
+    try {
+        await deleteStorageFiles(CAFE_BUCKET, [path])
+        return { success: true }
+    } catch (error) {
+        console.error("Error deleting cafe image:", error)
+        return { success: false, error: "Failed to delete image" }
+    }
+}
+
+/**
  * Delete review images from storage
  */
 export async function deleteReviewImages(images: string[] | null): Promise<void> {

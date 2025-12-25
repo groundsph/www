@@ -19,6 +19,8 @@ import {
     EyeOff,
     FileText,
     Trash2,
+    ImagePlus,
+    Upload,
 } from "lucide-react"
 import {
     approveCafe,
@@ -27,7 +29,9 @@ import {
     unpublishCafe,
     upsertCafeStory,
     deleteCafeStory,
+    adminDeleteCafeImage,
 } from "@/app/api/actions/admin"
+import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import {
@@ -58,8 +62,18 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
     const [activeSection, setActiveSection] = useState<
-        "basic" | "location" | "amenities" | "hours" | "contact" | "story"
+        | "basic"
+        | "images"
+        | "location"
+        | "amenities"
+        | "hours"
+        | "contact"
+        | "story"
     >("basic")
+
+    // Image management state
+    const [uploadingCover, setUploadingCover] = useState(false)
+    const [uploadingGallery, setUploadingGallery] = useState(false)
 
     // Story state
     const [storyContent, setStoryContent] = useState(
@@ -108,6 +122,8 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             phone: cafe.phone || undefined,
             email: cafe.email || undefined,
             socials: cafe.socials || [],
+            thumbnail: cafe.thumbnail,
+            gallery: cafe.gallery,
         })
         setSaving(false)
         if (result.success) {
@@ -184,6 +200,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
 
     const SECTIONS = [
         { id: "basic", title: "Basic Info", icon: Coffee },
+        { id: "images", title: "Images", icon: ImagePlus },
         { id: "location", title: "Location", icon: MapPin },
         { id: "amenities", title: "Amenities", icon: Settings },
         { id: "hours", title: "Hours", icon: Clock },
@@ -386,6 +403,221 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Images Section */}
+                {activeSection === "images" && (
+                    <div className='space-y-8'>
+                        {/* Cover Image */}
+                        <div>
+                            <label className='block text-sm font-medium text-text/60 mb-4'>
+                                Cover Image
+                            </label>
+                            <div className='relative group'>
+                                <div className='relative h-64 rounded-xl overflow-hidden bg-text/10'>
+                                    {cafe.thumbnail ? (
+                                        <Image
+                                            src={cafe.thumbnail}
+                                            alt={cafe.name}
+                                            fill
+                                            className='object-cover'
+                                        />
+                                    ) : (
+                                        <div className='w-full h-full flex items-center justify-center text-text/30'>
+                                            <ImagePlus className='w-12 h-12' />
+                                        </div>
+                                    )}
+
+                                    {/* Overlay with actions */}
+                                    <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-4'>
+                                        <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition'>
+                                            {uploadingCover ? (
+                                                <Loader2 className='w-4 h-4 animate-spin' />
+                                            ) : (
+                                                <Upload className='w-4 h-4' />
+                                            )}
+                                            {cafe.thumbnail
+                                                ? "Change"
+                                                : "Upload"}
+                                            <input
+                                                type='file'
+                                                accept='image/jpeg,image/png,image/webp,image/gif'
+                                                className='hidden'
+                                                disabled={uploadingCover}
+                                                onChange={async (e) => {
+                                                    const file =
+                                                        e.target.files?.[0]
+                                                    if (!file) return
+
+                                                    setUploadingCover(true)
+                                                    const result =
+                                                        await uploadCafeImageClient(
+                                                            file
+                                                        )
+
+                                                    if (
+                                                        result.success &&
+                                                        result.url
+                                                    ) {
+                                                        // Delete old image if exists
+                                                        if (cafe.thumbnail) {
+                                                            await adminDeleteCafeImage(
+                                                                cafe.thumbnail
+                                                            )
+                                                        }
+                                                        updateField(
+                                                            "thumbnail",
+                                                            result.url
+                                                        )
+                                                    } else {
+                                                        alert(
+                                                            result.error ||
+                                                                "Failed to upload image"
+                                                        )
+                                                    }
+
+                                                    setUploadingCover(false)
+                                                    e.target.value = ""
+                                                }}
+                                            />
+                                        </label>
+
+                                        {cafe.thumbnail && (
+                                            <button
+                                                onClick={async () => {
+                                                    if (
+                                                        !confirm(
+                                                            "Remove cover image?"
+                                                        )
+                                                    )
+                                                        return
+                                                    await adminDeleteCafeImage(
+                                                        cafe.thumbnail!
+                                                    )
+                                                    setCafe(
+                                                        (prev) =>
+                                                            ({
+                                                                ...prev,
+                                                                thumbnail: null,
+                                                            }) as unknown as typeof prev
+                                                    )
+                                                    setHasChanges(true)
+                                                }}
+                                                className='flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition'
+                                            >
+                                                <Trash2 className='w-4 h-4' />
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Gallery */}
+                        <div>
+                            <div className='flex items-center justify-between mb-4'>
+                                <label className='text-sm font-medium text-text/60'>
+                                    Gallery ({cafe.gallery?.length || 0} images)
+                                </label>
+                                <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition'>
+                                    {uploadingGallery ? (
+                                        <Loader2 className='w-4 h-4 animate-spin' />
+                                    ) : (
+                                        <ImagePlus className='w-4 h-4' />
+                                    )}
+                                    Add Photos
+                                    <input
+                                        type='file'
+                                        accept='image/jpeg,image/png,image/webp,image/gif'
+                                        multiple
+                                        className='hidden'
+                                        disabled={uploadingGallery}
+                                        onChange={async (e) => {
+                                            const files = Array.from(
+                                                e.target.files || []
+                                            )
+                                            if (files.length === 0) return
+
+                                            setUploadingGallery(true)
+                                            const newUrls: string[] = []
+
+                                            for (const file of files) {
+                                                const result =
+                                                    await uploadCafeImageClient(
+                                                        file
+                                                    )
+                                                if (
+                                                    result.success &&
+                                                    result.url
+                                                ) {
+                                                    newUrls.push(result.url)
+                                                }
+                                            }
+
+                                            if (newUrls.length > 0) {
+                                                updateField("gallery", [
+                                                    ...(cafe.gallery || []),
+                                                    ...newUrls,
+                                                ])
+                                            }
+
+                                            setUploadingGallery(false)
+                                            e.target.value = ""
+                                        }}
+                                    />
+                                </label>
+                            </div>
+
+                            {cafe.gallery && cafe.gallery.length > 0 ? (
+                                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'>
+                                    {cafe.gallery.map((url, idx) => (
+                                        <div
+                                            key={idx}
+                                            className='relative aspect-square rounded-lg overflow-hidden group'
+                                        >
+                                            <Image
+                                                src={url}
+                                                alt={`Gallery ${idx + 1}`}
+                                                fill
+                                                className='object-cover'
+                                            />
+                                            <button
+                                                onClick={async () => {
+                                                    if (
+                                                        !confirm(
+                                                            "Remove this image?"
+                                                        )
+                                                    )
+                                                        return
+                                                    await adminDeleteCafeImage(
+                                                        url
+                                                    )
+                                                    updateField(
+                                                        "gallery",
+                                                        cafe.gallery?.filter(
+                                                            (_, i) => i !== idx
+                                                        ) || []
+                                                    )
+                                                }}
+                                                className='absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-red-600'
+                                            >
+                                                <X className='w-4 h-4' />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className='bg-text/5 border border-text/10 border-dashed rounded-xl p-12 text-center text-text/40'>
+                                    <ImagePlus className='w-12 h-12 mx-auto mb-4 opacity-50' />
+                                    <p>No gallery images yet</p>
+                                    <p className='text-sm mt-1'>
+                                        Click "Add Photos" to upload
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
