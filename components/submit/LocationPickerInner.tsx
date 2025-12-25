@@ -148,41 +148,22 @@ export default function LocationPickerInner({
         [onChange]
     )
 
+    const [showTools, setShowTools] = useState(false)
+
     return (
         <div className='space-y-4'>
-            {/* Search bar */}
-            <div className='flex gap-2'>
-                <div className='flex-1 relative'>
-                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
-                    <input
-                        type='text'
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                        placeholder='Search for a location...'
-                        className='w-full pl-10 pr-4 py-2.5 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
-                    />
+            {/* Selected location indicator - shown at top when location is set */}
+            {lat && lng && (
+                <div className='flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700'>
+                    <MapPin className='w-4 h-4 shrink-0' />
+                    <span className='font-medium'>
+                        Location set: {lat.toFixed(6)}, {lng.toFixed(6)}
+                    </span>
                 </div>
-                <button
-                    type='button'
-                    onClick={handleSearch}
-                    disabled={isSearching}
-                    className='px-4 py-2 bg-primary text-white rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer'
-                >
-                    {isSearching ? "..." : "Search"}
-                </button>
-                <button
-                    type='button'
-                    onClick={getCurrentLocation}
-                    className='p-2.5 bg-text/10 hover:bg-text/20 rounded-xl transition-colors cursor-pointer'
-                    title='Use my location'
-                >
-                    <Crosshair className='w-5 h-5 text-text/60' />
-                </button>
-            </div>
+            )}
 
-            {/* Interactive Map */}
-            <div className='relative w-full aspect-video rounded-xl overflow-hidden border border-text/20'>
+            {/* Interactive Map - Primary focus */}
+            <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-text/20'>
                 <MapContainer
                     center={center}
                     zoom={zoom}
@@ -206,57 +187,148 @@ export default function LocationPickerInner({
                     )}
                 </MapContainer>
 
-                {/* Hint overlay */}
+                {/* Hint overlay - more prominent */}
                 {!lat && !lng && (
-                    <div className='absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20'>
-                        <div className='bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-text/70 shadow-lg'>
-                            Click on the map to set location
+                    <div className='absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30'>
+                        <div className='bg-white px-5 py-3 rounded-xl text-center shadow-lg'>
+                            <MapPin className='w-6 h-6 text-primary mx-auto mb-1' />
+                            <p className='font-semibold text-text'>
+                                Click on the map
+                            </p>
+                            <p className='text-xs text-text/60'>
+                                to set the cafe location
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Use my location button - floating on map */}
+                <button
+                    type='button'
+                    onClick={getCurrentLocation}
+                    className='absolute top-3 right-3 z-1000 p-2.5 bg-white hover:bg-gray-50 rounded-xl shadow-md transition-colors cursor-pointer border border-text/10'
+                    title='Use my current location'
+                >
+                    <Crosshair className='w-5 h-5 text-primary' />
+                </button>
+            </div>
+
+            {/* Helper text */}
+            <p className='text-xs text-text/50 text-center'>
+                Click anywhere on the map to place the marker, or use the
+                location tools below
+            </p>
+
+            {/* Collapsible Location Tools */}
+            <div className='border border-text/15 rounded-xl overflow-hidden'>
+                <button
+                    type='button'
+                    onClick={() => setShowTools(!showTools)}
+                    className='w-full flex items-center justify-between px-4 py-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                >
+                    <span className='text-sm font-medium text-text/70 flex items-center gap-2'>
+                        <Search className='w-4 h-4' />
+                        Location Tools
+                        <span className='text-xs text-text/40 font-normal'>
+                            (optional)
+                        </span>
+                    </span>
+                    <svg
+                        className={`w-4 h-4 text-text/40 transition-transform ${showTools ? "rotate-180" : ""}`}
+                        fill='none'
+                        stroke='currentColor'
+                        viewBox='0 0 24 24'
+                    >
+                        <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth={2}
+                            d='M19 9l-7 7-7-7'
+                        />
+                    </svg>
+                </button>
+
+                {showTools && (
+                    <div className='p-4 space-y-4 border-t border-text/10'>
+                        {/* Search bar */}
+                        <div>
+                            <label className='text-xs font-medium text-text/60 mb-2 block'>
+                                Search by name or address
+                            </label>
+                            <div className='flex gap-2'>
+                                <div className='flex-1 relative'>
+                                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                    <input
+                                        type='text'
+                                        value={searchQuery}
+                                        onChange={(e) =>
+                                            setSearchQuery(e.target.value)
+                                        }
+                                        onKeyDown={(e) =>
+                                            e.key === "Enter" && handleSearch()
+                                        }
+                                        placeholder='e.g. Starbucks IT Park Cebu'
+                                        className='w-full pl-10 pr-4 py-2.5 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                    />
+                                </div>
+                                <button
+                                    type='button'
+                                    onClick={handleSearch}
+                                    disabled={isSearching}
+                                    className='px-4 py-2 bg-primary text-white rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer'
+                                >
+                                    {isSearching ? "..." : "Search"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className='flex items-center gap-3'>
+                            <div className='flex-1 h-px bg-text/10' />
+                            <span className='text-xs text-text/40'>
+                                or enter coordinates
+                            </span>
+                            <div className='flex-1 h-px bg-text/10' />
+                        </div>
+
+                        {/* Manual coordinates input */}
+                        <div className='flex items-center gap-3'>
+                            <div className='flex-1'>
+                                <label className='text-xs font-medium text-text/60 mb-1 block'>
+                                    Latitude
+                                </label>
+                                <input
+                                    type='number'
+                                    step='any'
+                                    value={manualLat}
+                                    onChange={(e) =>
+                                        setManualLat(e.target.value)
+                                    }
+                                    onBlur={handleManualCoordinates}
+                                    placeholder='e.g. 10.3157'
+                                    className='w-full px-3 py-2 border border-text/20 rounded-lg bg-background focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none text-sm'
+                                />
+                            </div>
+                            <div className='flex-1'>
+                                <label className='text-xs font-medium text-text/60 mb-1 block'>
+                                    Longitude
+                                </label>
+                                <input
+                                    type='number'
+                                    step='any'
+                                    value={manualLng}
+                                    onChange={(e) =>
+                                        setManualLng(e.target.value)
+                                    }
+                                    onBlur={handleManualCoordinates}
+                                    placeholder='e.g. 123.8854'
+                                    className='w-full px-3 py-2 border border-text/20 rounded-lg bg-background focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none text-sm'
+                                />
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Manual coordinates input */}
-            <div className='flex items-center gap-3'>
-                <div className='flex-1'>
-                    <label className='text-xs font-medium text-text/60 mb-1 block'>
-                        Latitude
-                    </label>
-                    <input
-                        type='number'
-                        step='any'
-                        value={manualLat}
-                        onChange={(e) => setManualLat(e.target.value)}
-                        onBlur={handleManualCoordinates}
-                        placeholder='e.g. 10.3157'
-                        className='w-full px-3 py-2 border border-text/20 rounded-lg bg-background focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none text-sm'
-                    />
-                </div>
-                <div className='flex-1'>
-                    <label className='text-xs font-medium text-text/60 mb-1 block'>
-                        Longitude
-                    </label>
-                    <input
-                        type='number'
-                        step='any'
-                        value={manualLng}
-                        onChange={(e) => setManualLng(e.target.value)}
-                        onBlur={handleManualCoordinates}
-                        placeholder='e.g. 123.8854'
-                        className='w-full px-3 py-2 border border-text/20 rounded-lg bg-background focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none text-sm'
-                    />
-                </div>
-            </div>
-
-            {/* Coordinates display */}
-            {lat && lng && (
-                <div className='flex items-center gap-2 text-sm text-text/60'>
-                    <MapPin className='w-4 h-4' />
-                    <span>
-                        Selected: {lat.toFixed(6)}, {lng.toFixed(6)}
-                    </span>
-                </div>
-            )}
         </div>
     )
 }

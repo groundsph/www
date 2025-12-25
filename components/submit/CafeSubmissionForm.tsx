@@ -148,12 +148,16 @@ export default function CafeSubmissionForm({
         setError(null)
 
         try {
+            console.log("[Cafe Submit] Starting submission...")
+
             // Upload thumbnail (client-side, direct to Supabase)
             if (!thumbnailFile) {
                 throw new Error("Thumbnail is required")
             }
 
+            console.log("[Cafe Submit] Uploading thumbnail...")
             const thumbnailResult = await uploadCafeImageClient(thumbnailFile)
+            console.log("[Cafe Submit] Thumbnail result:", thumbnailResult)
 
             if (!thumbnailResult.success || !thumbnailResult.url) {
                 throw new Error(
@@ -162,15 +166,19 @@ export default function CafeSubmissionForm({
             }
 
             // Upload gallery images (client-side, direct to Supabase)
+            console.log("[Cafe Submit] Uploading gallery images...")
             const galleryUrls: string[] = []
             for (const file of galleryFiles) {
+                console.log("[Cafe Submit] Uploading gallery image:", file.name)
                 const result = await uploadCafeImageClient(file)
+                console.log("[Cafe Submit] Gallery image result:", result)
                 if (result.success && result.url) {
                     galleryUrls.push(result.url)
                 }
             }
 
             // Submit cafe - extract serializable data (exclude File objects)
+            console.log("[Cafe Submit] Submitting to server...")
             const {
                 thumbnail: _t,
                 gallery: _g,
@@ -181,16 +189,19 @@ export default function CafeSubmissionForm({
                 thumbnailResult.url,
                 galleryUrls
             )
+            console.log("[Cafe Submit] Server result:", result)
 
             if (!result.success) {
                 throw new Error(result.error || "Failed to submit cafe")
             }
 
             // Success!
+            console.log("[Cafe Submit] Success!")
             clearDraft()
             setSuccess(true)
             onSuccess?.(result.cafeId!, result.slug!)
         } catch (err: unknown) {
+            console.error("[Cafe Submit] Error:", err)
             setError(err instanceof Error ? err.message : "An error occurred")
         } finally {
             setIsSubmitting(false)
