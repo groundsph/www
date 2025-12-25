@@ -2,11 +2,9 @@
 
 import { AuthContext } from "@/components/AuthProvider"
 import { useContext } from "react"
-import { useRouter } from "next/navigation"
 import CafeSubmissionForm from "@/components/submit/CafeSubmissionForm"
 
 export default function SubmitPageClient() {
-    const router = useRouter()
     // Context - auth is handled by middleware
     const { profile } = useContext(AuthContext)
 

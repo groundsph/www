@@ -23,10 +23,11 @@ export default function ImageUpload({
 
     // Clean up object URLs when component unmounts or files change
     useEffect(() => {
+        const urls = previewUrls
         return () => {
-            previewUrls.forEach((url) => URL.revokeObjectURL(url))
+            urls.forEach((url) => URL.revokeObjectURL(url))
         }
-    }, []) // Cleanup on unmount
+    }, [previewUrls])
 
     const getPreviewUrl = (item: string | File) => {
         if (typeof item === "string") return item

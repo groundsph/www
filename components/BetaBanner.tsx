@@ -10,6 +10,7 @@ export default function BetaBanner() {
         // Check if user has dismissed the banner
         const dismissed = localStorage.getItem("beta-banner-dismissed")
         if (!dismissed) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: Initialize state from localStorage
             setIsVisible(true)
         }
     }, [])

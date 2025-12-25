@@ -13,10 +13,11 @@ import {
     Clock,
 } from "lucide-react"
 import { isOpenNow } from "@/utils/extras"
+import { User } from "@supabase/supabase-js"
 
 interface CafeHeroProps {
     cafe: CafeWithRatings
-    user: any
+    user: User | null
     isVisited: boolean
     isFavorite: boolean
     isInWishlist: boolean

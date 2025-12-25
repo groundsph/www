@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import Image from "next/image"
 import { getLucideIcon } from "./iconUtils"
 
@@ -66,7 +67,11 @@ export default function BadgeCard({
     const metadata = badge.metadata as BadgeMetadata | null | undefined
     const iconName = metadata?.icon_name
     const iconColor = metadata?.icon_color || "#8B4513"
-    const IconComponent = iconName ? getLucideIcon(iconName) : null
+    // Memoize icon component lookup to avoid creating during render
+    const IconComponent = useMemo(
+        () => (iconName ? getLucideIcon(iconName) : null),
+        [iconName]
+    )
 
     const iconSize = size === "lg" ? 32 : size === "md" ? 24 : 16
 
@@ -89,6 +94,7 @@ export default function BadgeCard({
                 }
             >
                 {IconComponent ? (
+                    /* eslint-disable-next-line react-hooks/static-components -- Dynamic icon rendering is intentional */
                     <IconComponent
                         style={{ color: iconColor }}
                         className={`w-${iconSize === 32 ? 8 : iconSize === 24 ? 6 : 4} h-${iconSize === 32 ? 8 : iconSize === 24 ? 6 : 4}`}
@@ -186,7 +192,11 @@ export function BadgeCardFull({
     const metadata = badge.metadata as BadgeMetadata | null | undefined
     const iconName = metadata?.icon_name
     const iconColor = metadata?.icon_color || "#8B4513"
-    const IconComponent = iconName ? getLucideIcon(iconName) : null
+    // Memoize icon component lookup to avoid creating during render
+    const IconComponent = useMemo(
+        () => (iconName ? getLucideIcon(iconName) : null),
+        [iconName]
+    )
 
     return (
         <div className='group relative bg-text/5 border border-text/10 rounded-xl p-4 hover:border-text/20 transition-colors'>
@@ -201,6 +211,7 @@ export function BadgeCardFull({
                     `}
                 >
                     {IconComponent ? (
+                        /* eslint-disable-next-line react-hooks/static-components -- Dynamic icon rendering is intentional */
                         <IconComponent
                             style={{ color: iconColor }}
                             className='w-8 h-8'

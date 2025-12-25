@@ -1,4 +1,4 @@
-import { Coffee, Instagram, Facebook, Mail } from "lucide-react"
+import { Coffee, Facebook, Mail } from "lucide-react"
 import Link from "next/link"
 
 export default function Footer() {

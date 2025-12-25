@@ -75,7 +75,7 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
             ) : (
                 <div className='w-full bg-text/5 rounded-xl border border-dashed border-text/20 p-6 text-center'>
                     <p className='text-text/50 font-serif italic'>
-                        This cafe's story is yet to be told...
+                        This cafe&apos;s story is yet to be told...
                     </p>
                     <p className='text-text/40 text-sm mt-1'>
                         Check back later for more about {cafe.name}

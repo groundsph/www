@@ -11,6 +11,7 @@ export default function NavigationProgress() {
 
     // Reset when the route changes (navigation complete)
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: Reset state on route change
         setIsNavigating(false)
         setProgress(0)
     }, [pathname, searchParams])
@@ -62,6 +63,7 @@ export default function NavigationProgress() {
         if (!isNavigating) return
 
         // Quick initial progress
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: Progress animation requires setState in effect
         setProgress(30)
 
         const timer1 = setTimeout(() => setProgress(50), 100)

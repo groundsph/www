@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/static-components -- ReviewsSection is an intentional render helper */
 "use client"
 
 import Link from "next/link"
@@ -226,7 +227,7 @@ export default function CafeDetails({
                     ) : (
                         <div className='w-full bg-text/5 rounded-xl border border-dashed border-text/20 p-8 text-center'>
                             <p className='text-text/50 font-serif italic'>
-                                This cafe's story is yet to be told...
+                                This cafe&apos;s story is yet to be told...
                             </p>
                             <p className='text-text/40 text-sm mt-2'>
                                 Check back later for more about {cafe.name}

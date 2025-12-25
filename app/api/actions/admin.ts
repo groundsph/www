@@ -117,8 +117,11 @@ export async function getPendingCafes(): Promise<CafeWithRatings[]> {
         return []
     }
 
+    // Use admin client to bypass RLS for fetching unpublished cafes
+    const adminDb = await createAdminClient()
+
     // Fetch pending cafes with contributor info
-    const { data: cafes, error } = await db
+    const { data: cafes, error } = await adminDb
         .from('cafes')
         .select(`
             *,
@@ -271,7 +274,9 @@ export async function getCafeById(cafeId: string): Promise<CafeWithRatings | nul
         return null
     }
 
-    const { data: cafe, error } = await db
+    const dbAdmin = await createAdminClient()
+
+    const { data: cafe, error } = await dbAdmin
         .from('cafes')
         .select(`
             *,

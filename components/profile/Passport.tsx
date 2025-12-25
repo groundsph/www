@@ -24,7 +24,7 @@ export default function Passport({
     visited,
     favorites,
     wishlist,
-    isOwnProfile = false,
+    isOwnProfile: _isOwnProfile = false,
     className = "",
 }: PassportProps) {
     const [activeTab, setActiveTab] = useState<TabType>("visited")

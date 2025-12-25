@@ -131,6 +131,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
 
     const customIcon = useMemo(() => createCafeIcon(), [createCafeIcon])
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Cluster type from external react-leaflet-cluster library
     const createClusterCustomIcon = function (cluster: any) {
         const count = cluster.getChildCount()
         const size = count > 10 ? 48 : count > 5 ? 42 : 36
@@ -164,6 +165,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
     const [mapKey, setMapKey] = useState("map-init")
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: Force re-render on mount to avoid map initialization issues
         setMapKey(`map-${Date.now()}`)
     }, [])
 

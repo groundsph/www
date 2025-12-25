@@ -219,10 +219,11 @@ export async function processAvatarDeletionQueue(): Promise<{
 
     try {
         // Fetch pending deletions (using type assertion since table may not exist in types)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: queue, error: fetchError } = await (adminDb as any)
             .from('avatar_deletion_queue')
             .select('id, avatar_url')
-            .limit(100) as { data: { id: string; avatar_url: string }[] | null; error: any }
+            .limit(100) as { data: { id: string; avatar_url: string }[] | null; error: { message: string } | null }
 
         if (fetchError) {
             // Table might not exist yet
@@ -239,6 +240,7 @@ export async function processAvatarDeletionQueue(): Promise<{
             await deleteAvatarImage(item.avatar_url)
 
             // Remove from queue
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (adminDb as any)
                 .from('avatar_deletion_queue')
                 .delete()
@@ -431,8 +433,8 @@ export async function uploadAvatar(formData: FormData): Promise<{
     const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`
 
     // Update profile with new avatar URL
-    const { error: updateError } = await (db
-        .from("profiles") as any)
+    const { error: updateError } = await db
+        .from("profiles")
         .update({
             avatar_url: avatarUrl,
             updated_at: new Date().toISOString()
@@ -474,8 +476,8 @@ export async function removeAvatar(): Promise<{
     }
 
     // Clear avatar_url in profile
-    const { error: updateError } = await (db
-        .from("profiles") as any)
+    const { error: updateError } = await db
+        .from("profiles")
         .update({
             avatar_url: null,
             updated_at: new Date().toISOString()

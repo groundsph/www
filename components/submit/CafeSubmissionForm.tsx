@@ -89,7 +89,12 @@ export default function CafeSubmissionForm({
 
     // Save draft to localStorage when form data changes
     useEffect(() => {
-        const { thumbnail, gallery, ...savable } = formData
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const {
+            thumbnail: _thumbnail,
+            gallery: _gallery,
+            ...savable
+        } = formData
         localStorage.setItem(DRAFT_KEY, JSON.stringify(savable))
     }, [formData])
 
@@ -184,8 +189,8 @@ export default function CafeSubmissionForm({
             clearDraft()
             setSuccess(true)
             onSuccess?.(result.cafeId!, result.slug!)
-        } catch (err: any) {
-            setError(err.message || "An error occurred")
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "An error occurred")
         } finally {
             setIsSubmitting(false)
         }
@@ -697,6 +702,7 @@ export default function CafeSubmissionForm({
                                         onChange={(key, value) =>
                                             updateFormData(
                                                 key as keyof CafeSubmission,
+                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                 value as any
                                             )
                                         }

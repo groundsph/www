@@ -5,8 +5,8 @@ import { createClient } from '@/utils/supabase/server'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = 'https://grounds.ph'
 
-    // Non-static pages
-    const nonStaticPages: MetadataRoute.Sitemap = [
+    // Non-static pages (reserved for future use)
+    const _nonStaticPages: MetadataRoute.Sitemap = [
         {
             url: `${baseUrl}/map`,
             lastModified: new Date(),

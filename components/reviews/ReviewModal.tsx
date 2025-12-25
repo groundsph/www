@@ -106,8 +106,10 @@ export default function ReviewModal({
                 router.refresh()
                 onClose()
             }
-        } catch (e: any) {
-            setError(e.message || "An unexpected error occurred")
+        } catch (e: unknown) {
+            setError(
+                e instanceof Error ? e.message : "An unexpected error occurred"
+            )
         } finally {
             setIsSubmitting(false)
         }

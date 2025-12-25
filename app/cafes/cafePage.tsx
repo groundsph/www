@@ -14,7 +14,6 @@ import {
     TreePine,
     BadgeCheck,
     SlidersHorizontal,
-    XIcon,
     MapPinIcon,
     Briefcase,
 } from "lucide-react"
@@ -97,9 +96,9 @@ export default function CafesPageClient() {
                     is_pet_friendly: filters.is_pet_friendly,
                     has_outdoor_seating: filters.has_outdoor_seating,
                     is_work_friendly: filters.is_work_friendly,
-                    price_level: filters.price_level as any,
+                    price_level: filters.price_level || undefined,
                     region: filters.region || undefined,
-                    sortBy: sortBy as any,
+                    sortBy: sortBy as "recommended" | "rating" | "reviews",
                 })
                 setCafes(fetchedCafes)
                 setLoading(false)
@@ -312,8 +311,11 @@ export default function CafesPageClient() {
                                                 onClick={() =>
                                                     setFilters((prev) => ({
                                                         ...prev,
-                                                        price_level:
-                                                            value as any,
+                                                        price_level: value as
+                                                            | ""
+                                                            | "low"
+                                                            | "medium"
+                                                            | "high",
                                                     }))
                                                 }
                                                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${

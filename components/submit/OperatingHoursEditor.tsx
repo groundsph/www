@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { OperatingHour } from "@/utils/types/cafe"
 import { Copy, Clock } from "lucide-react"
 import { cn } from "@/utils/cn"

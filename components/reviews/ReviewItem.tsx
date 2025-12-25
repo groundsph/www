@@ -40,7 +40,7 @@ export default function ReviewItem({
 
     // Check if current user has liked this review
     const isLikedInitially = review.review_interactions?.some(
-        (i: any) =>
+        (i: { user_id: string; interaction_type: string }) =>
             i.user_id === currentUser?.id && i.interaction_type === "like"
     )
     const [isLiked, setIsLiked] = useState(!!isLikedInitially)

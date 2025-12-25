@@ -10,23 +10,18 @@ import { motion, AnimatePresence } from "motion/react"
 import {
     Award,
     Camera,
-    Check,
     ChevronDown,
     Coffee,
-    Heart,
-    MapPin,
     Medal,
     MessageSquare,
     Share2,
     Shield,
     Sparkles,
-    Star,
     User,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useContext, useEffect, useState } from "react"
-import MarkdownRender from "@/components/MarkdownRender"
 import { AuthContext } from "@/components/AuthProvider"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
@@ -56,6 +51,7 @@ export default function PublicProfileClient({
     // States
     const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])
     const [loading, setLoading] = useState(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Reviews include dynamic interaction data
     const [reviews, setReviews] = useState<any[]>([])
 
     // Passport cafe data
@@ -110,7 +106,7 @@ export default function PublicProfileClient({
     }, [profile, user])
 
     const stats = profile.stats
-    const passport = profile.passport
+    const _passport = profile.passport // Used for conditional checks
     const earnedBadgeIds = new Set(profile.badges.map((b) => b.badge_id))
     const RankIcon = stats?.scout_rank
         ? rankConfig[stats.scout_rank].icon
