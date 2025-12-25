@@ -144,15 +144,24 @@ export default function AuthProvider({
     useEffect(() => {
         const initializeAuth = async () => {
             try {
+                // Use getUser() instead of getSession() - it validates and refreshes the token
                 const {
-                    data: { session },
-                } = await supabase.auth.getSession()
-                if (session) {
-                    setUser(session.user)
-                    await fetchProfile(session.user.id)
+                    data: { user: authUser },
+                    error,
+                } = await supabase.auth.getUser()
+
+                if (authUser && !error) {
+                    setUser(authUser)
+                    await fetchProfile(authUser.id)
+                } else {
+                    // No valid session or error - ensure clean state
+                    setUser(null)
+                    setProfile(null)
                 }
             } catch (error) {
                 console.error("Error initializing auth:", error)
+                setUser(null)
+                setProfile(null)
             } finally {
                 setIsLoading(false)
                 setInitialized(true)
