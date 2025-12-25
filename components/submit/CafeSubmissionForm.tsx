@@ -288,7 +288,7 @@ export default function CafeSubmissionForm({
                                 className={cn(
                                     "flex items-center gap-2 px-3 py-2 rounded-xl transition-all",
                                     isActive && "bg-primary/10 text-primary",
-                                    isComplete && "text-green-600",
+                                    isComplete && "text-green-800",
                                     !isActive && !isComplete && "text-text/40"
                                 )}
                             >
@@ -297,7 +297,7 @@ export default function CafeSubmissionForm({
                                         "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
                                         isActive && "bg-primary text-white",
                                         isComplete &&
-                                            "bg-green-100 text-green-600",
+                                            "bg-green-100 text-green-700",
                                         !isActive && !isComplete && "bg-text/10"
                                     )}
                                 >
@@ -316,7 +316,7 @@ export default function CafeSubmissionForm({
                                     className={cn(
                                         "w-8 h-0.5 mx-1",
                                         currentStep > step.id
-                                            ? "bg-green-300"
+                                            ? "bg-green-600"
                                             : "bg-text/10"
                                     )}
                                 />
@@ -368,6 +368,13 @@ export default function CafeSubmissionForm({
                                             Cafe Name{" "}
                                             <span className='text-red-500'>
                                                 *
+                                            </span>
+                                            <span className='block text-xs font-normal text-text/50 mt-1'>
+                                                For branches, use:{" "}
+                                                <span className='font-medium'>
+                                                    Cafe Name - Location
+                                                </span>{" "}
+                                                (e.g. Starbucks - Ayala Center)
                                             </span>
                                         </label>
                                         <input
