@@ -193,14 +193,18 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                         Payment Methods
                     </p>
                     <ul className='flex flex-row items-center gap-4 overflow-x-auto text-sm font-semibold text-text/60'>
-                        {cafe.payment_methods.split(" ").map((method) => (
-                            <li
-                                key={method}
-                                className='text-text capitalize bg-secondary/40 px-2 py-1 rounded-full h-max w-max'
-                            >
-                                {method.split("_").join(" ")}
-                            </li>
-                        ))}
+                        {cafe.payment_methods
+                            .split(",")
+                            .map((method) => method.trim())
+                            .filter(Boolean)
+                            .map((method) => (
+                                <li
+                                    key={method}
+                                    className='text-text capitalize bg-secondary/40 px-2 py-1 rounded-full h-max w-max text-nowrap'
+                                >
+                                    {method.split("_").join(" ")}
+                                </li>
+                            ))}
                     </ul>
                 </>
             )}
