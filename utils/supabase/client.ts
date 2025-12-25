@@ -10,17 +10,11 @@ export function createLocalClient() {
         return supabaseClient;
     }
 
+    // Use default cookie-based storage for SSR compatibility
+    // The @supabase/ssr createBrowserClient automatically handles cookies
     supabaseClient = createBrowserClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-            // Enable cross-tab auth state sync
-            auth: {
-                storageKey: 'grounds-auth',
-                detectSessionInUrl: true,
-                flowType: 'pkce',
-            },
-        }
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
     );
 
     return supabaseClient;
