@@ -33,7 +33,7 @@ import {
     BREW_METHODS,
     PAYMENT_METHODS,
 } from "@/utils/data/philippines"
-import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
+import { uploadCafeImageWithProgress } from "@/utils/supabase/storage-client"
 import { submitCafe } from "@/app/api/actions/submit"
 import { searchCafesSimple } from "@/app/api/actions/cafe"
 import ImageUpload from "@/components/reviews/ImageUpload"
@@ -41,6 +41,7 @@ import AmenityToggles from "./AmenityToggles"
 import OperatingHoursEditor from "./OperatingHoursEditor"
 import SocialLinksEditor from "./SocialLinksEditor"
 import LocationPicker from "./LocationPicker"
+import { resizeImage } from "@/utils/image-processing"
 
 const STEPS = [
     { id: 1, title: "Basic Info", icon: Coffee },
@@ -67,6 +68,11 @@ export default function CafeSubmissionForm({
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
     const [galleryFiles, setGalleryFiles] = useState<File[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false) // For resizing/compression
+    const [uploadProgress, setUploadProgress] = useState<
+        Record<string, number>
+    >({})
+    const [processingStatus, setProcessingStatus] = useState<string>("")
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
 
@@ -140,6 +146,23 @@ export default function CafeSubmissionForm({
         []
     )
 
+    const resetForm = () => {
+        setFormData(DEFAULT_CAFE_SUBMISSION)
+        setThumbnailFile(null)
+        setGalleryFiles([])
+        setUploadProgress({})
+        setProcessingStatus("")
+        setIsProcessing(false)
+        setSuccess(false)
+        setCurrentStep(1)
+        setError(null)
+        setPossibleDuplicates([])
+        setCustomPaymentMethods("")
+        setCustomSpecialties("")
+        setCustomTags("")
+        clearDraft()
+    }
+
     const validateStep = (step: number): string | null => {
         switch (step) {
             case 1:
@@ -167,28 +190,70 @@ export default function CafeSubmissionForm({
         }
         setError(null)
         setCurrentStep((prev) => Math.min(prev + 1, STEPS.length))
+        window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
     const prevStep = () => {
         setError(null)
         setCurrentStep((prev) => Math.max(prev - 1, 1))
+        window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
     const handleSubmit = async () => {
         setIsSubmitting(true)
         setError(null)
+        setUploadProgress({})
+        setProcessingStatus("Preparing images...")
+        setIsProcessing(true)
 
         try {
             console.log("[Cafe Submit] Starting submission...")
 
-            // Upload thumbnail (client-side, direct to Supabase)
+            // 1. Process Thumbnail
             if (!thumbnailFile) {
                 throw new Error("Thumbnail is required")
             }
 
+            setProcessingStatus("Compressing thumbnail...")
+            const processedThumbnail = await resizeImage(thumbnailFile, {
+                maxWidth: 1920,
+                maxHeight: 1080,
+                quality: 0.8,
+                format: "image/webp",
+            })
+
+            // 2. Process Gallery Images
+            setProcessingStatus(
+                `Compressing ${galleryFiles.length} gallery images...`
+            )
+            const processedGalleryFiles: File[] = []
+            for (let i = 0; i < galleryFiles.length; i++) {
+                const file = galleryFiles[i]
+                const processed = await resizeImage(file, {
+                    maxWidth: 1920,
+                    maxHeight: 1080,
+                    quality: 0.8,
+                    format: "image/webp",
+                })
+                processedGalleryFiles.push(processed)
+            }
+
+            setIsProcessing(false)
+            setProcessingStatus("Uploading images...")
+
+            // 3. Upload Thumbnail
             console.log("[Cafe Submit] Uploading thumbnail...")
-            const thumbnailResult = await uploadCafeImageClient(thumbnailFile)
-            console.log("[Cafe Submit] Thumbnail result:", thumbnailResult)
+            setUploadProgress((prev) => ({ ...prev, thumbnail: 0 }))
+
+            const thumbnailResult = await uploadCafeImageWithProgress(
+                processedThumbnail,
+                (progress: number) => {
+                    setUploadProgress((prev) => ({
+                        ...prev,
+                        thumbnail: progress,
+                    }))
+                }
+            )
 
             if (!thumbnailResult.success || !thumbnailResult.url) {
                 throw new Error(
@@ -196,19 +261,33 @@ export default function CafeSubmissionForm({
                 )
             }
 
-            // Upload gallery images (client-side, direct to Supabase)
+            // 4. Upload Gallery Images
             console.log("[Cafe Submit] Uploading gallery images...")
             const galleryUrls: string[] = []
-            for (const file of galleryFiles) {
-                console.log("[Cafe Submit] Uploading gallery image:", file.name)
-                const result = await uploadCafeImageClient(file)
-                console.log("[Cafe Submit] Gallery image result:", result)
+
+            for (let i = 0; i < processedGalleryFiles.length; i++) {
+                const file = processedGalleryFiles[i]
+                const key = `gallery-${i}`
+                setUploadProgress((prev) => ({ ...prev, [key]: 0 }))
+
+                const result = await uploadCafeImageWithProgress(
+                    file,
+                    (progress: number) => {
+                        setUploadProgress((prev) => ({
+                            ...prev,
+                            [key]: progress,
+                        }))
+                    }
+                )
+
                 if (result.success && result.url) {
                     galleryUrls.push(result.url)
                 }
             }
 
-            // Submit cafe - extract serializable data (exclude File objects)
+            setProcessingStatus("Finalizing submission...")
+
+            // 5. Submit cafe data
             console.log("[Cafe Submit] Submitting to server...")
             const {
                 thumbnail: _t,
@@ -220,7 +299,6 @@ export default function CafeSubmissionForm({
                 thumbnailResult.url,
                 galleryUrls
             )
-            console.log("[Cafe Submit] Server result:", result)
 
             if (!result.success) {
                 throw new Error(result.error || "Failed to submit cafe")
@@ -236,6 +314,8 @@ export default function CafeSubmissionForm({
             setError(err instanceof Error ? err.message : "An error occurred")
         } finally {
             setIsSubmitting(false)
+            setIsProcessing(false)
+            setProcessingStatus("")
         }
     }
 
@@ -255,7 +335,7 @@ export default function CafeSubmissionForm({
                 animate={{ opacity: 1, scale: 1 }}
                 className='text-center py-12'
             >
-                <div className='w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6'>
+                <div className='w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-6'>
                     <Check className='w-8 h-8 text-green-600' />
                 </div>
                 <h2 className='text-2xl font-bold font-serif mb-2'>
@@ -266,6 +346,12 @@ export default function CafeSubmissionForm({
                     is now under review. We&apos;ll notify you once it&apos;s
                     approved and live on the platform.
                 </p>
+                <button
+                    onClick={resetForm}
+                    className='mt-8 px-6 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors cursor-pointer'
+                >
+                    Submit Another Cafe
+                </button>
             </motion.div>
         )
     }
@@ -297,7 +383,7 @@ export default function CafeSubmissionForm({
                                         "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
                                         isActive && "bg-primary text-white",
                                         isComplete &&
-                                            "bg-green-100 text-green-700",
+                                            "bg-green-200! text-green-600",
                                         !isActive && !isComplete && "bg-text/10"
                                     )}
                                 >
@@ -316,7 +402,7 @@ export default function CafeSubmissionForm({
                                     className={cn(
                                         "w-8 h-0.5 mx-1",
                                         currentStep > step.id
-                                            ? "bg-green-600"
+                                            ? "bg-green-500"
                                             : "bg-text/10"
                                     )}
                                 />
@@ -555,6 +641,29 @@ export default function CafeSubmissionForm({
                                                     </svg>
                                                     Remove
                                                 </button>
+
+                                                {/* Thumbnail Progress Overlay */}
+                                                {uploadProgress.thumbnail !==
+                                                    undefined &&
+                                                    uploadProgress.thumbnail <
+                                                        100 && (
+                                                        <div className='absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none'>
+                                                            <div className='w-32 h-1.5 bg-white/30 rounded-full overflow-hidden'>
+                                                                <div
+                                                                    className='h-full bg-white transition-all duration-300'
+                                                                    style={{
+                                                                        width: `${uploadProgress.thumbnail}%`,
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <span className='absolute mt-6 text-white text-xs font-medium'>
+                                                                {Math.round(
+                                                                    uploadProgress.thumbnail
+                                                                )}
+                                                                %
+                                                            </span>
+                                                        </div>
+                                                    )}
                                             </div>
                                         ) : (
                                             <label className='flex flex-col items-center justify-center w-full aspect-video rounded-xl border-2 border-dashed border-text/20 bg-text/5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer'>
@@ -633,6 +742,30 @@ export default function CafeSubmissionForm({
                                                 )
                                             }
                                             maxImages={0}
+                                            progress={
+                                                // Convert "gallery-i" keys to numeric index keys for ImageUpload
+                                                Object.entries(uploadProgress)
+                                                    .filter(([k]) =>
+                                                        k.startsWith("gallery-")
+                                                    )
+                                                    .reduce(
+                                                        (acc, [k, v]) => {
+                                                            const idx =
+                                                                parseInt(
+                                                                    k.split(
+                                                                        "-"
+                                                                    )[1]
+                                                                )
+                                                            if (!isNaN(idx))
+                                                                acc[idx] = v
+                                                            return acc
+                                                        },
+                                                        {} as Record<
+                                                            number,
+                                                            number
+                                                        >
+                                                    )
+                                            }
                                         />
                                     </div>
                                 </div>
@@ -1452,6 +1585,30 @@ export default function CafeSubmissionForm({
                                                 <MapPin className='w-16 h-16' />
                                             </div>
                                         )}
+
+                                        {/* Thumbnail Upload Progress */}
+                                        {isSubmitting &&
+                                            uploadProgress.thumbnail !==
+                                                undefined &&
+                                            uploadProgress.thumbnail < 100 && (
+                                                <div className='absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 transition-all'>
+                                                    <div className='w-48 h-2 bg-white/30 rounded-full overflow-hidden mb-2'>
+                                                        <div
+                                                            className='h-full bg-primary transition-all duration-300'
+                                                            style={{
+                                                                width: `${uploadProgress.thumbnail}%`,
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <span className='text-white text-sm font-medium'>
+                                                        Uploading cover...{" "}
+                                                        {Math.round(
+                                                            uploadProgress.thumbnail
+                                                        )}
+                                                        %
+                                                    </span>
+                                                </div>
+                                            )}
                                         <div className='absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent' />
                                         <div className='absolute bottom-0 left-0 right-0 p-6'>
                                             <div className='flex items-center gap-2 mb-2'>
@@ -1619,7 +1776,7 @@ export default function CafeSubmissionForm({
                                                         .map((file, idx) => (
                                                             <div
                                                                 key={idx}
-                                                                className='w-24 h-24 rounded-lg overflow-hidden shrink-0'
+                                                                className='relative w-24 h-24 rounded-lg overflow-hidden shrink-0'
                                                             >
                                                                 <img
                                                                     src={URL.createObjectURL(
@@ -1628,6 +1785,27 @@ export default function CafeSubmissionForm({
                                                                     alt={`Gallery ${idx + 1}`}
                                                                     className='w-full h-full object-cover'
                                                                 />
+
+                                                                {/* Gallery Image Progress */}
+                                                                {isSubmitting &&
+                                                                    uploadProgress[
+                                                                        `gallery-${idx}`
+                                                                    ] !==
+                                                                        undefined &&
+                                                                    uploadProgress[
+                                                                        `gallery-${idx}`
+                                                                    ] < 100 && (
+                                                                        <div className='absolute inset-0 bg-black/50 flex items-center justify-center'>
+                                                                            <div className='w-16 h-1 bg-white/30 rounded-full overflow-hidden'>
+                                                                                <div
+                                                                                    className='h-full bg-white transition-all duration-300'
+                                                                                    style={{
+                                                                                        width: `${uploadProgress[`gallery-${idx}`]}%`,
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                             </div>
                                                         ))}
                                                     {galleryFiles.length >
@@ -1728,24 +1906,29 @@ export default function CafeSubmissionForm({
                         <ChevronRight className='w-5 h-5' />
                     </button>
                 ) : (
-                    <button
-                        type='button'
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className='flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer'
+                        className='px-8 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
                     >
                         {isSubmitting ? (
                             <>
-                                <Loader2 className='w-5 h-5 animate-spin' />
-                                Submitting...
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                                <span>
+                                    {isProcessing
+                                        ? processingStatus || "Processing..."
+                                        : "Uploading..."}
+                                </span>
                             </>
                         ) : (
                             <>
-                                <Send className='w-5 h-5' />
-                                Submit Cafe
+                                <span>Submit Cafe</span>
+                                <Send className='w-4 h-4' />
                             </>
                         )}
-                    </button>
+                    </motion.button>
                 )}
             </div>
         </div>

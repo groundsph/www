@@ -69,7 +69,7 @@ export default function OperatingHoursEditor({
                 </p>
             </div>
 
-            <div className='space-y-2'>
+            <div className='space-y-2 w-full overflow-x-auto'>
                 {DAY_OPTIONS.map((day, idx) => {
                     const hours = getHoursForDay(day.key)
 
@@ -77,7 +77,7 @@ export default function OperatingHoursEditor({
                         <div
                             key={day.key}
                             className={cn(
-                                "flex items-center gap-3 p-3 rounded-xl border transition-colors",
+                                "flex items-center w-max gap-3 p-3 rounded-xl border transition-colors",
                                 hours.is_closed
                                     ? "border-text/10 bg-text/5"
                                     : "border-text/20 bg-background"

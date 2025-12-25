@@ -11,6 +11,7 @@ interface ImageUploadProps {
     onChange: (files: (string | File)[]) => void
     disabled?: boolean
     maxImages?: number // 0 or undefined = unlimited
+    progress?: Record<number, number> // Map of index -> progress (0-100)
 }
 
 export default function ImageUpload({
@@ -18,6 +19,7 @@ export default function ImageUpload({
     onChange,
     disabled,
     maxImages = 3, // Default to 3 for backwards compatibility, 0 = unlimited
+    progress = {},
 }: ImageUploadProps) {
     const [previewUrls, setPreviewUrls] = useState<Map<File, string>>(new Map())
 
@@ -106,11 +108,23 @@ export default function ImageUpload({
                         <button
                             type='button'
                             onClick={() => removeImage(item)}
-                            className='absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors cursor-pointer'
+                            className='absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors cursor-pointer z-10'
                             disabled={disabled}
                         >
                             <X className='w-3 h-3' />
                         </button>
+
+                        {/* Progress Overlay */}
+                        {progress[idx] !== undefined && progress[idx] < 100 && (
+                            <div className='absolute inset-0 bg-black/40 flex items-center justify-center'>
+                                <div className='w-16 h-1 bg-white/30 rounded-full overflow-hidden'>
+                                    <div
+                                        className='h-full bg-white transition-all duration-300'
+                                        style={{ width: `${progress[idx]}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

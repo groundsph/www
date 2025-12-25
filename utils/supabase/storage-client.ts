@@ -226,3 +226,97 @@ export async function uploadAvatarClient(file: File): Promise<UploadResult> {
         return { success: false, error: "Upload failed" }
     }
 }
+
+// ============================================
+// Progress Upload (Client-side)
+// ============================================
+
+/**
+ * Upload a cafe image with progress tracking
+ */
+export async function uploadCafeImageWithProgress(
+    file: File,
+    onProgress?: (progress: number) => void
+): Promise<UploadResult> {
+    const db = createLocalClient()
+
+    // Get current user and session for token
+    const {
+        data: { session },
+    } = await db.auth.getSession()
+    const {
+        data: { user },
+    } = await db.auth.getUser()
+
+    if (!user || !session) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Validate file type
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    // Allow webp as well since we might be converting to it
+    const EXTENSIONS_WITH_WEBP = [...ALLOWED_EXTENSIONS, "webp"]
+
+    // Check if extension is allowed
+    // Note: file.name might not have extension if blob created manually without name, 
+    // but usually File objects do. 
+    if (!EXTENSIONS_WITH_WEBP.includes(fileExt) && fileExt !== "") {
+        // Should we be strict? The original code was.
+        return {
+            success: false,
+            error: "Invalid file type (JPEG, PNG, WebP, GIF only)",
+        }
+    }
+
+    // Generate unique filename
+    const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(7)}.${fileExt}`
+    const filePath = `${user.id}/${fileName}`
+
+    // Construct the URL for the Supabase Storage API
+    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!projectUrl) {
+        console.error("Missing NEXT_PUBLIC_SUPABASE_URL")
+        return { success: false, error: "Configuration error" }
+    }
+
+    const uploadUrl = `${projectUrl}/storage/v1/object/${CAFE_BUCKET}/${filePath}`
+
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest()
+
+        xhr.open("POST", uploadUrl)
+        xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`)
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream")
+        // x-upsert is optional
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable && onProgress) {
+                const percentComplete = (event.loaded / event.total) * 100
+                onProgress(percentComplete)
+            }
+        }
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // Success
+                const { data: urlData } = db.storage
+                    .from(CAFE_BUCKET)
+                    .getPublicUrl(filePath)
+
+                resolve({ success: true, url: urlData.publicUrl })
+            } else {
+                console.error("Upload failed", xhr.status, xhr.responseText)
+                resolve({ success: false, error: `Upload failed: ${xhr.statusText}` })
+            }
+        }
+
+        xhr.onerror = () => {
+            console.error("XHR Error")
+            resolve({ success: false, error: "Network error during upload" })
+        }
+
+        xhr.send(file)
+    })
+}
