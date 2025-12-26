@@ -1,8 +1,6 @@
 import { Metadata } from "next"
 import { Heart, QrCode, Smartphone } from "lucide-react"
 import Image from "next/image"
-import { createClient } from "@/utils/supabase/server"
-import SupporterSection from "./SupporterSection"
 
 export const metadata: Metadata = {
     title: "Support Grounds",
@@ -12,25 +10,7 @@ export const metadata: Metadata = {
 import qrph from "@/assets/qrph-dono.jpg"
 import gcash from "@/assets/gcash-dono.png"
 
-export default async function DonatePage() {
-    const supabase = await createClient()
-
-    // Get current user and supporter status
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    let isSupporter = false
-    if (user) {
-        const { data: profile } = await supabase
-            .from("profiles")
-            .select("is_supporter")
-            .eq("id", user.id)
-            .single()
-
-        isSupporter = profile?.is_supporter ?? false
-    }
-
+export default function DonatePage() {
     return (
         <main className='min-h-screen bg-background py-12 px-6'>
             <div className='max-w-2xl mx-auto'>
@@ -51,24 +31,6 @@ export default async function DonatePage() {
 
                 {/* Donation Options */}
                 <div className='space-y-6'>
-                    {/* Polar.sh Supporter Section */}
-                    <SupporterSection
-                        isSupporter={isSupporter}
-                        isLoggedIn={!!user}
-                    />
-
-                    {/* Divider */}
-                    <div className='relative'>
-                        <div className='absolute inset-0 flex items-center'>
-                            <div className='w-full border-t border-text/10'></div>
-                        </div>
-                        <div className='relative flex justify-center text-sm'>
-                            <span className='px-4 bg-background text-text/50'>
-                                or make a one-time donation
-                            </span>
-                        </div>
-                    </div>
-
                     {/* QRPh */}
                     <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                         <div className='flex items-center gap-3 mb-4'>

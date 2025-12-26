@@ -14,6 +14,20 @@ export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials
     average_rating: number | null;
     total_reviews: number | null;
     story?: Tables<'cafe_stories'> | null;
+    // Contributor (who submitted the cafe)
+    contributor?: {
+        id: string;
+        username: string;
+        display_name: string;
+        avatar_url: string | null;
+    } | null;
+    // Owners/managers profile data (resolved from owner_ids)
+    owners?: {
+        id: string;
+        username: string;
+        display_name: string;
+        avatar_url: string | null;
+    }[];
 };
 
 // 3. Define the custom Filter interface for your UI

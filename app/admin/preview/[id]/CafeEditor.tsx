@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -22,6 +22,8 @@ import {
     ImagePlus,
     Upload,
     BadgeCheck,
+    Users,
+    Search,
 } from "lucide-react"
 import {
     approveCafe,
@@ -31,6 +33,8 @@ import {
     upsertCafeStory,
     deleteCafeStory,
     adminDeleteCafeImage,
+    searchUsersForOwner,
+    getOwnerProfiles,
 } from "@/app/api/actions/admin"
 import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -71,6 +75,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         | "hours"
         | "contact"
         | "story"
+        | "owners"
     >("basic")
 
     // Image management state
@@ -87,6 +92,39 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
     // Custom inputs for comma-separated values
     const [customSpecialties, setCustomSpecialties] = useState("")
     const [customTags, setCustomTags] = useState("")
+
+    // Owner management state
+    const [owners, setOwners] = useState<
+        {
+            id: string
+            username: string
+            display_name: string
+            avatar_url: string | null
+        }[]
+    >([])
+    const [ownerSearchQuery, setOwnerSearchQuery] = useState("")
+    const [ownerSearchResults, setOwnerSearchResults] = useState<
+        {
+            id: string
+            username: string
+            display_name: string
+            avatar_url: string | null
+        }[]
+    >([])
+    const [ownerSearchLoading, setOwnerSearchLoading] = useState(false)
+    const [ownersLoading, setOwnersLoading] = useState(true)
+
+    // Load owner profiles on mount
+    useEffect(() => {
+        async function loadOwners() {
+            if (initialCafe.owner_ids && initialCafe.owner_ids.length > 0) {
+                const profiles = await getOwnerProfiles(initialCafe.owner_ids)
+                setOwners(profiles)
+            }
+            setOwnersLoading(false)
+        }
+        loadOwners()
+    }, [initialCafe.owner_ids])
 
     const updateField = useCallback(
         <K extends keyof typeof cafe>(key: K, value: (typeof cafe)[K]) => {
@@ -128,6 +166,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             gallery: cafe.gallery,
             slug: cafe.slug,
             is_verified: cafe.is_verified || false,
+            owner_ids: cafe.owner_ids || null,
         })
         setSaving(false)
         if (result.success) {
@@ -202,6 +241,46 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         setCustomTags("")
     }
 
+    // Owner search handler with debounce
+    const handleOwnerSearch = async (query: string) => {
+        setOwnerSearchQuery(query)
+        if (query.length < 2) {
+            setOwnerSearchResults([])
+            return
+        }
+        setOwnerSearchLoading(true)
+        const results = await searchUsersForOwner(query)
+        // Filter out users who are already owners
+        const filtered = results.filter(
+            (user) => !owners.some((o) => o.id === user.id)
+        )
+        setOwnerSearchResults(filtered)
+        setOwnerSearchLoading(false)
+    }
+
+    // Add owner
+    const addOwner = (user: (typeof owners)[0]) => {
+        const newOwners = [...owners, user]
+        setOwners(newOwners)
+        setOwnerSearchResults((prev) => prev.filter((u) => u.id !== user.id))
+        setOwnerSearchQuery("")
+        // Update cafe owner_ids
+        setCafe((prev) => ({ ...prev, owner_ids: newOwners.map((o) => o.id) }))
+        setHasChanges(true)
+    }
+
+    // Remove owner
+    const removeOwner = (userId: string) => {
+        const newOwners = owners.filter((o) => o.id !== userId)
+        setOwners(newOwners)
+        // Update cafe owner_ids
+        setCafe((prev) => ({
+            ...prev,
+            owner_ids: newOwners.length > 0 ? newOwners.map((o) => o.id) : null,
+        }))
+        setHasChanges(true)
+    }
+
     const SECTIONS = [
         { id: "basic", title: "Basic Info", icon: Coffee },
         { id: "images", title: "Images", icon: ImagePlus },
@@ -210,6 +289,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         { id: "hours", title: "Hours", icon: Clock },
         { id: "contact", title: "Contact", icon: Phone },
         { id: "story", title: "Story", icon: FileText },
+        { id: "owners", title: "Owners", icon: Users },
     ] as const
 
     // Price level mapping for UI
@@ -237,6 +317,15 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                         <p className='text-text/60 text-sm'>
                             {cafe.is_published ? "Published " : "Submitted "}
                             {new Date(cafe.created_at!).toLocaleDateString()}
+                            {cafe.contributor && (
+                                <span className='ml-2'>
+                                    by{" "}
+                                    <span className='font-medium text-text/80'>
+                                        {cafe.contributor.display_name ||
+                                            cafe.contributor.username}
+                                    </span>
+                                </span>
+                            )}
                         </p>
                     </div>
                 </div>
@@ -1247,6 +1336,174 @@ Highlight unique features...'
                                 *italic*, [links](url), etc.
                             </p>
                         </div>
+                    </div>
+                )}
+
+                {/* Owners Section */}
+                {activeSection === "owners" && (
+                    <div className='space-y-6'>
+                        {/* Contributor Info */}
+                        {cafe.contributor && (
+                            <div className='bg-accent/10 border border-accent/20 rounded-xl p-4'>
+                                <div className='flex items-center gap-3'>
+                                    {cafe.contributor.avatar_url ? (
+                                        <Image
+                                            src={cafe.contributor.avatar_url}
+                                            alt={cafe.contributor.display_name}
+                                            width={40}
+                                            height={40}
+                                            className='rounded-full object-cover'
+                                        />
+                                    ) : (
+                                        <div className='w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center'>
+                                            <Users className='w-5 h-5 text-accent' />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className='text-sm text-text/60'>
+                                            Submitted by
+                                        </p>
+                                        <p className='font-medium'>
+                                            {cafe.contributor.display_name ||
+                                                cafe.contributor.username}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Owner Search */}
+                        <div>
+                            <label className='block text-sm font-medium text-text/60 mb-2'>
+                                Add Cafe Owner/Manager
+                            </label>
+                            <div className='relative'>
+                                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                <input
+                                    type='text'
+                                    value={ownerSearchQuery}
+                                    onChange={(e) =>
+                                        handleOwnerSearch(e.target.value)
+                                    }
+                                    placeholder='Search by username or display name...'
+                                    className='w-full pl-10 pr-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
+                                />
+                                {ownerSearchLoading && (
+                                    <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-text/40' />
+                                )}
+                            </div>
+
+                            {/* Search Results */}
+                            {ownerSearchResults.length > 0 && (
+                                <div className='mt-2 bg-background border border-text/10 rounded-lg divide-y divide-text/10 max-h-64 overflow-y-auto'>
+                                    {ownerSearchResults.map((user) => (
+                                        <div
+                                            key={user.id}
+                                            className='flex items-center justify-between p-3 hover:bg-text/5 transition'
+                                        >
+                                            <div className='flex items-center gap-3'>
+                                                {user.avatar_url ? (
+                                                    <Image
+                                                        src={user.avatar_url}
+                                                        alt={user.display_name}
+                                                        width={32}
+                                                        height={32}
+                                                        className='rounded-full object-cover'
+                                                    />
+                                                ) : (
+                                                    <div className='w-8 h-8 rounded-full bg-text/10 flex items-center justify-center'>
+                                                        <Users className='w-4 h-4 text-text/40' />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className='font-medium text-sm'>
+                                                        {user.display_name}
+                                                    </p>
+                                                    <p className='text-xs text-text/60'>
+                                                        @{user.username}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => addOwner(user)}
+                                                className='px-3 py-1 text-sm bg-accent/20 text-accent rounded hover:bg-accent/30 transition'
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Current Owners */}
+                        <div>
+                            <label className='block text-sm font-medium text-text/60 mb-2'>
+                                Current Owners/Managers ({owners.length})
+                            </label>
+                            {ownersLoading ? (
+                                <div className='flex items-center justify-center py-8'>
+                                    <Loader2 className='w-6 h-6 animate-spin text-text/40' />
+                                </div>
+                            ) : owners.length > 0 ? (
+                                <div className='bg-background border border-text/10 rounded-lg divide-y divide-text/10'>
+                                    {owners.map((owner) => (
+                                        <div
+                                            key={owner.id}
+                                            className='flex items-center justify-between p-3'
+                                        >
+                                            <div className='flex items-center gap-3'>
+                                                {owner.avatar_url ? (
+                                                    <Image
+                                                        src={owner.avatar_url}
+                                                        alt={owner.display_name}
+                                                        width={40}
+                                                        height={40}
+                                                        className='rounded-full object-cover'
+                                                    />
+                                                ) : (
+                                                    <div className='w-10 h-10 rounded-full bg-text/10 flex items-center justify-center'>
+                                                        <Users className='w-5 h-5 text-text/40' />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className='font-medium'>
+                                                        {owner.display_name}
+                                                    </p>
+                                                    <p className='text-sm text-text/60'>
+                                                        @{owner.username}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() =>
+                                                    removeOwner(owner.id)
+                                                }
+                                                className='p-2 text-red-500 hover:bg-red-500/10 rounded transition'
+                                                title='Remove owner'
+                                            >
+                                                <X className='w-4 h-4' />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className='bg-text/5 border border-text/10 border-dashed rounded-xl p-8 text-center text-text/40'>
+                                    <Users className='w-12 h-12 mx-auto mb-4 opacity-50' />
+                                    <p>No owners assigned yet</p>
+                                    <p className='text-sm mt-1'>
+                                        Search for users above to add them as
+                                        cafe owners
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <p className='text-xs text-text/40'>
+                            Owners can manage their cafe listing (features
+                            coming soon). Changes are saved when you click the
+                            Save button above.
+                        </p>
                     </div>
                 )}
             </div>

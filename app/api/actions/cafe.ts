@@ -13,7 +13,13 @@ export async function getCafeBySlug(slug: string) {
         .select(`
             *,
             cafe_rating_stats(average_rating, total_reviews),
-            cafe_stories(*)
+            cafe_stories(*),
+            contributor:profiles!cafes_contributor_id_fkey(
+                id,
+                username,
+                display_name,
+                avatar_url
+            )
         `)
         .eq("slug", slug)
         .single()
@@ -25,7 +31,8 @@ export async function getCafeBySlug(slug: string) {
         ...(cafe as any),
         average_rating: (cafe as any).cafe_rating_stats?.average_rating ?? null,
         total_reviews: (cafe as any).cafe_rating_stats?.total_reviews ?? null,
-        story: (cafe as any).cafe_stories?.[0] ?? null
+        story: (cafe as any).cafe_stories?.[0] ?? null,
+        contributor: (cafe as any).contributor ?? null
     }
     delete (flatCafe as any).cafe_rating_stats
     delete (flatCafe as any).cafe_stories

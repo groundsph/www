@@ -12,6 +12,7 @@ import {
     SunIcon,
     BriefcaseIcon,
     CoffeeIcon,
+    UserIcon,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -437,6 +438,21 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
             )}
 
             <div className='border-b border-text/10 my-3' />
+
+            {/* Contributed By */}
+            {cafe.contributor && (
+                <>
+                    <div className='flex items-center gap-2 text-sm text-text/60'>
+                        <UserIcon className='w-4 h-4' />
+                        <span>Contributed by</span>
+                        <span className='font-semibold text-text'>
+                            {cafe.contributor.display_name ||
+                                cafe.contributor.username}
+                        </span>
+                    </div>
+                    <div className='border-b border-text/10 my-3' />
+                </>
+            )}
 
             {/* Suggest Edit */}
             <div className='flex justify-center'>

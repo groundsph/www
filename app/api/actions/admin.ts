@@ -385,6 +385,7 @@ export async function updateCafe(
         gallery: string[] | null
         slug: string
         is_verified: boolean
+        owner_ids: string[] | null
     }>
 ): Promise<AdminActionResult> {
     const db = await createClient()
@@ -1364,6 +1365,91 @@ export async function searchUsersForBadge(query: string): Promise<{
     }
 
     return users || []
+}
+
+/**
+ * Search users for cafe owner assignment (admin only)
+ * Same as searchUsersForBadge but semantically separate for owner management
+ */
+export async function searchUsersForOwner(query: string): Promise<{
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+}[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    if (!query || query.length < 2) {
+        return []
+    }
+
+    const { data: users, error } = await db
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+        .limit(10)
+
+    if (error) {
+        console.error("Error searching users for owner:", error)
+        return []
+    }
+
+    return users || []
+}
+
+/**
+ * Get owner profiles by IDs (admin only)
+ * Used to resolve owner_ids array to full profile data
+ */
+export async function getOwnerProfiles(ownerIds: string[]): Promise<{
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+}[]> {
+    if (!ownerIds || ownerIds.length === 0) return []
+
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const { data: owners, error } = await db
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', ownerIds)
+
+    if (error) {
+        console.error("Error fetching owner profiles:", error)
+        return []
+    }
+
+    return owners || []
 }
 
 /**
