@@ -150,7 +150,8 @@ export async function submitCafe(
                 is_published: false, // Requires admin approval
                 is_active: true,
                 is_verified: false,
-                is_claimed: false,
+                is_claimed: formData.is_owner,
+                owner_ids: formData.is_owner ? [user.id] : null,
             })
             .select('id, slug')
             .single()

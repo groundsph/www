@@ -21,6 +21,7 @@ import {
     Sun,
     Utensils,
     ExternalLink,
+    BadgeCheck,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
@@ -1874,6 +1875,52 @@ export default function CafeSubmissionForm({
                                                 )}
                                             </div>
                                         )}
+                                    </div>
+                                </div>
+
+                                {/* Owner Verification */}
+                                <div className='bg-background border border-text/10 rounded-xl p-4 flex items-start gap-4'>
+                                    <div
+                                        className={cn(
+                                            "w-5 h-5 mt-0.5 rounded border flex items-center justify-center shrink-0 cursor-pointer transition-colors",
+                                            formData.is_owner
+                                                ? "bg-primary border-primary text-white"
+                                                : "border-text/30 hover:border-primary"
+                                        )}
+                                        onClick={() =>
+                                            updateFormData(
+                                                "is_owner",
+                                                !formData.is_owner
+                                            )
+                                        }
+                                    >
+                                        {formData.is_owner && (
+                                            <Check className='w-3.5 h-3.5' />
+                                        )}
+                                    </div>
+                                    <div
+                                        className='flex-1 cursor-pointer'
+                                        onClick={() =>
+                                            updateFormData(
+                                                "is_owner",
+                                                !formData.is_owner
+                                            )
+                                        }
+                                    >
+                                        <div className='flex items-center gap-2 mb-1'>
+                                            <BadgeCheck className='w-4 h-4 text-primary' />
+                                            <span className='font-medium text-sm'>
+                                                I am the owner or manager of
+                                                this cafe
+                                            </span>
+                                        </div>
+                                        <p className='text-xs text-text/60'>
+                                            By checking this, you request to
+                                            claim manage rights for this cafe
+                                            page. You will need to provide
+                                            verification documents upon admin
+                                            request.
+                                        </p>
                                     </div>
                                 </div>
 

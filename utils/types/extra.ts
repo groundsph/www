@@ -110,6 +110,7 @@ export interface CafeSubmission {
     phone: string;
     email: string;
     socials: CafeSocial[];
+    is_owner: boolean;
 }
 
 // Serializable version of CafeSubmission for server actions (excludes File objects)
@@ -147,4 +148,5 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     phone: '',
     email: '',
     socials: [],
+    is_owner: false,
 };
