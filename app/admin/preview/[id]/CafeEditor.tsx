@@ -46,6 +46,7 @@ import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
+import { cropAndResizeImage } from "@/utils/image-processing"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
@@ -520,9 +521,22 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                     if (!file) return
 
                                                     setUploadingCover(true)
+                                                    // Crop to 16:9 aspect ratio
+                                                    const processedFile =
+                                                        await cropAndResizeImage(
+                                                            file,
+                                                            {
+                                                                targetAspectRatio:
+                                                                    16 / 9,
+                                                                maxWidth: 2560,
+                                                                maxHeight: 1440,
+                                                                quality: 0.9,
+                                                                format: "image/webp",
+                                                            }
+                                                        )
                                                     const result =
                                                         await uploadCafeImageClient(
-                                                            file
+                                                            processedFile
                                                         )
 
                                                     if (
@@ -613,9 +627,22 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                             const newUrls: string[] = []
 
                                             for (const file of files) {
+                                                // Crop to 16:9 aspect ratio
+                                                const processedFile =
+                                                    await cropAndResizeImage(
+                                                        file,
+                                                        {
+                                                            targetAspectRatio:
+                                                                16 / 9,
+                                                            maxWidth: 1920,
+                                                            maxHeight: 1080,
+                                                            quality: 0.85,
+                                                            format: "image/webp",
+                                                        }
+                                                    )
                                                 const result =
                                                     await uploadCafeImageClient(
-                                                        file
+                                                        processedFile
                                                     )
                                                 if (
                                                     result.success &&

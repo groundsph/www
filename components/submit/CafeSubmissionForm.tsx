@@ -41,7 +41,7 @@ import AmenityToggles from "./AmenityToggles"
 import OperatingHoursEditor from "./OperatingHoursEditor"
 import SocialLinksEditor from "./SocialLinksEditor"
 import LocationPicker from "./LocationPicker"
-import { resizeImage } from "@/utils/image-processing"
+import { cropAndResizeImage } from "@/utils/image-processing"
 
 const STEPS = [
     { id: 1, title: "Basic Info", icon: Coffee },
@@ -212,10 +212,11 @@ export default function CafeSubmissionForm({
                 throw new Error("Thumbnail is required")
             }
 
-            setProcessingStatus("Compressing thumbnail...")
-            const processedThumbnail = await resizeImage(thumbnailFile, {
+            setProcessingStatus("Cropping and compressing thumbnail...")
+            const processedThumbnail = await cropAndResizeImage(thumbnailFile, {
+                targetAspectRatio: 16 / 9,
                 maxWidth: 2560,
-                maxHeight: 1600,
+                maxHeight: 1440,
                 quality: 0.9,
                 format: "image/webp",
             })
@@ -227,9 +228,10 @@ export default function CafeSubmissionForm({
             const processedGalleryFiles: File[] = []
             for (let i = 0; i < galleryFiles.length; i++) {
                 const file = galleryFiles[i]
-                const processed = await resizeImage(file, {
-                    maxWidth: 2048,
-                    maxHeight: 1536,
+                const processed = await cropAndResizeImage(file, {
+                    targetAspectRatio: 16 / 9,
+                    maxWidth: 1920,
+                    maxHeight: 1080,
                     quality: 0.85,
                     format: "image/webp",
                 })
