@@ -70,10 +70,6 @@ export default function CafeDetails({
     // Computed
     const story = cafe.story
     const gallery = cafe.gallery ?? []
-    const firstImage = gallery[0]
-    const secondImage = gallery[1]
-    const thirdImage = gallery[2]
-    const remainingImages = gallery.slice(3)
 
     // Find if user has reviewed
     const userReview = user
@@ -179,42 +175,38 @@ export default function CafeDetails({
 
                 {/* Main Content */}
                 <div className='flex-1 flex flex-col gap-6'>
-                    {/* Gallery */}
+                    {/* Gallery - Horizontal Scroll */}
                     {gallery.length > 0 && (
-                        <div className='w-full flex flex-col gap-2'>
-                            {firstImage && (
-                                <>
-                                    <div className='w-full h-auto aspect-video relative rounded-xl overflow-hidden'>
+                        <div className='w-full'>
+                            <div
+                                className='flex flex-row gap-3 overflow-x-auto pb-2 scrollbar-hide'
+                                style={{
+                                    scrollSnapType: "x mandatory",
+                                    scrollBehavior: "smooth",
+                                    msOverflowStyle: "none",
+                                    scrollbarWidth: "none",
+                                }}
+                            >
+                                {gallery.map((image, idx) => (
+                                    <div
+                                        key={`${cafe.id}-gallery-${idx}`}
+                                        className='shrink-0 h-48 sm:h-56 md:h-64 overflow-hidden rounded-sm shadow-md shadow-black/10'
+                                        style={{ scrollSnapAlign: "start" }}
+                                    >
                                         <Image
-                                            src={firstImage}
-                                            alt={`${cafe.name} photo`}
-                                            fill
-                                            className='object-cover object-center'
+                                            src={image}
+                                            alt={`${cafe.name} photo ${idx + 1}`}
+                                            width={400}
+                                            height={300}
+                                            className='h-full w-auto object-cover transition-transform duration-300'
                                         />
                                     </div>
-                                    {secondImage && (
-                                        <div className='w-full h-auto aspect-6/2 flex flex-row gap-2'>
-                                            <div className='h-full w-auto aspect-video relative rounded-xl overflow-hidden'>
-                                                <Image
-                                                    src={secondImage}
-                                                    alt={`${cafe.name} photo`}
-                                                    fill
-                                                    className='object-cover object-center'
-                                                />
-                                            </div>
-                                            {thirdImage && (
-                                                <div className='flex-1 relative rounded-xl overflow-hidden'>
-                                                    <Image
-                                                        src={thirdImage}
-                                                        alt={`${cafe.name} photo`}
-                                                        fill
-                                                        className='object-cover object-center'
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </>
+                                ))}
+                            </div>
+                            {gallery.length > 1 && (
+                                <p className='text-xs text-text/40 mt-2 text-center'>
+                                    ← Scroll to see {gallery.length} photos →
+                                </p>
                             )}
                         </div>
                     )}
@@ -241,33 +233,6 @@ export default function CafeDetails({
                     </section>
                 </div>
             </section>
-
-            {/* Additional Images Section */}
-            {remainingImages && remainingImages.length > 0 && (
-                <section
-                    id='images'
-                    className='px-4 py-10 w-full max-w-7xl mx-auto'
-                >
-                    <h2 className='text-xl font-semibold font-serif'>
-                        More Photos
-                    </h2>
-                    <div className='flex flex-row gap-4 flex-wrap py-6 w-full'>
-                        {remainingImages.map((image, idx) => (
-                            <div
-                                key={`${cafe.id}-image-${idx}`}
-                                className='relative w-full sm:w-auto sm:h-48 aspect-video rounded-xl overflow-hidden'
-                            >
-                                <Image
-                                    src={image}
-                                    alt={`${cafe.name} gallery image ${idx + 4}`}
-                                    fill
-                                    className='object-cover'
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
 
             {/* Review Modal */}
             <ReviewModal

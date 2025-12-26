@@ -2,6 +2,7 @@
 
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
+import Image from "next/image"
 import {
     StarIcon,
     WifiIcon,
@@ -65,9 +66,46 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
     const openStatus = isOpenNow(cafe.operating_hours)
     const socials = (cafe.socials as unknown as CafeSocial[]) ?? []
     const story = cafe.story
+    const gallery = cafe.gallery ?? []
 
     return (
         <div className='flex flex-col gap-4'>
+            {/* Gallery - Horizontal Scroll */}
+            {gallery.length > 0 && (
+                <div className='w-full -mx-4 px-4'>
+                    <div
+                        className='flex flex-row gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4'
+                        style={{
+                            scrollSnapType: "x mandatory",
+                            scrollBehavior: "smooth",
+                            msOverflowStyle: "none",
+                            scrollbarWidth: "none",
+                        }}
+                    >
+                        {gallery.map((image, idx) => (
+                            <div
+                                key={`${cafe.id}-gallery-mobile-${idx}`}
+                                className='shrink-0 h-40 overflow-hidden rounded-sm shadow-md shadow-black/10'
+                                style={{ scrollSnapAlign: "start" }}
+                            >
+                                <Image
+                                    src={image}
+                                    alt={`${cafe.name} photo ${idx + 1}`}
+                                    width={400}
+                                    height={300}
+                                    className='h-full w-auto object-cover'
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    {gallery.length > 1 && (
+                        <p className='text-xs text-text/40 mt-2 text-center'>
+                            ← Scroll to see {gallery.length} photos →
+                        </p>
+                    )}
+                </div>
+            )}
+
             {/* Story */}
             {story ? (
                 <div className='w-full'>
