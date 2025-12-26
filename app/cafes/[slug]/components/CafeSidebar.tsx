@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import RatingDistribution from "./RatingDistribution"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
 
@@ -445,10 +446,13 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                     <div className='flex items-center gap-2 text-sm text-text/60'>
                         <UserIcon className='w-4 h-4' />
                         <span>Contributed by</span>
-                        <span className='font-semibold text-text'>
+                        <Link
+                            href={`/profile/${cafe.contributor.username}`}
+                            className='font-semibold text-text hover:text-accent transition-colors hover:underline'
+                        >
                             {cafe.contributor.display_name ||
                                 cafe.contributor.username}
-                        </span>
+                        </Link>
                     </div>
                     <div className='border-b border-text/10 my-3' />
                 </>
