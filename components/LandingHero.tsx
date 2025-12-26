@@ -94,7 +94,7 @@ export default function LandingHero({
                                 <span className='text-text/60'>.</span>
                             </span>
                             <span className='font-medium text-text/60 text-4xl md:text-5xl lg:text-6xl'>
-                                COFFEE
+                                PH
                             </span>
                         </motion.h1>
                         <motion.span className='text-lg md:text-2xl lg:text-3xl font-semibold'>
