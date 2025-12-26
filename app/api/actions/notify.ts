@@ -218,3 +218,85 @@ export async function notifyDiscordEditSuggestion(
         }
     }
 }
+
+/**
+ * Notify Discord about a new cafe ownership claim
+ */
+export async function notifyDiscordCafeClaim(
+    cafeInfo: { name: string; slug: string },
+    claimantName: string,
+    proofSummary: string
+): Promise<NotifyResult> {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn('Discord webhook URL not configured')
+        return { success: false, message: 'Webhook not configured' }
+    }
+
+    try {
+        const cafeUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/cafes/${cafeInfo.slug}`
+        const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/admin`
+
+        // Truncate proof to reasonable length
+        const truncatedProof = proofSummary.length > 200
+            ? proofSummary.substring(0, 200) + '...'
+            : proofSummary
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: "🏪 New Cafe Claim Request",
+                    description: "A user is claiming ownership of a cafe.",
+                    color: 0x8b5cf6, // Purple color
+                    fields: [
+                        {
+                            name: "Cafe",
+                            value: `[${cafeInfo.name}](${cafeUrl})`,
+                            inline: true
+                        },
+                        {
+                            name: "Claimed By",
+                            value: claimantName,
+                            inline: true
+                        },
+                        {
+                            name: "Proof Summary",
+                            value: truncatedProof || "No proof provided",
+                            inline: false
+                        },
+                        {
+                            name: "Action Required",
+                            value: `[Review in Admin Dashboard](${adminUrl})`,
+                            inline: false
+                        },
+                    ],
+                    footer: {
+                        text: "Grounds • Cafe Claim"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            }),
+        })
+
+        if (!response.ok) {
+            console.error('Discord webhook failed:', response.status)
+            return {
+                success: false,
+                message: 'Failed to notify Discord',
+            }
+        }
+
+        return {
+            success: true,
+            message: 'Cafe Claim Notified',
+        }
+    } catch (error) {
+        console.error('Discord notification error:', error)
+        return {
+            success: false,
+            message: 'Error sending notification',
+        }
+    }
+}

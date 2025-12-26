@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from "motion/react"
 import {
     ArrowLeft,
+    BarChart3,
     Building2,
     Check,
     ChevronRight,
@@ -79,7 +80,7 @@ const tierColors: Record<
     },
 }
 
-type Tab = "overview" | "reviews" | "menu" | "settings"
+type Tab = "overview" | "reviews" | "menu" | "analytics" | "settings"
 
 export default function CafeManagementClient({
     cafe,
@@ -177,6 +178,12 @@ export default function CafeManagementClient({
             id: "menu" as Tab,
             label: "Menu",
             icon: UtensilsCrossed,
+            locked: tier === "free",
+        },
+        {
+            id: "analytics" as Tab,
+            label: "Analytics",
+            icon: BarChart3,
             locked: tier === "free",
         },
         { id: "settings" as Tab, label: "Settings", icon: Settings },
@@ -682,6 +689,179 @@ export default function CafeManagementClient({
                                 ))}
                             </div>
                         )}
+                    </motion.div>
+                )}
+
+                {/* Analytics Tab */}
+                {activeTab === "analytics" && (
+                    <motion.div
+                        key='analytics'
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className='space-y-6'
+                    >
+                        {/* Overview Stats */}
+                        <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                            <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                <p className='text-sm text-text/60'>
+                                    Total Reviews
+                                </p>
+                                <p className='text-3xl font-bold mt-1'>
+                                    {reviews.length}
+                                </p>
+                            </div>
+                            <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                <p className='text-sm text-text/60'>
+                                    Average Rating
+                                </p>
+                                <p className='text-3xl font-bold mt-1 flex items-center gap-1'>
+                                    {reviews.length > 0
+                                        ? (
+                                              reviews.reduce(
+                                                  (sum, r) => sum + r.rating,
+                                                  0
+                                              ) / reviews.length
+                                          ).toFixed(1)
+                                        : "—"}
+                                    <Star className='w-5 h-5 text-yellow-500 fill-yellow-500' />
+                                </p>
+                            </div>
+                            <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                <p className='text-sm text-text/60'>
+                                    Response Rate
+                                </p>
+                                <p className='text-3xl font-bold mt-1'>
+                                    {reviews.length > 0
+                                        ? Math.round(
+                                              (reviews.filter(
+                                                  (r) => r.owner_response
+                                              ).length /
+                                                  reviews.length) *
+                                                  100
+                                          )
+                                        : 0}
+                                    %
+                                </p>
+                            </div>
+                            <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                <p className='text-sm text-text/60'>
+                                    Pending Responses
+                                </p>
+                                <p className='text-3xl font-bold mt-1'>
+                                    {
+                                        reviews.filter((r) => !r.owner_response)
+                                            .length
+                                    }
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Rating Distribution */}
+                        <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                            <h3 className='font-semibold mb-4'>
+                                Rating Distribution
+                            </h3>
+                            <div className='space-y-3'>
+                                {[5, 4, 3, 2, 1].map((rating) => {
+                                    const count = reviews.filter(
+                                        (r) => r.rating === rating
+                                    ).length
+                                    const percentage =
+                                        reviews.length > 0
+                                            ? (count / reviews.length) * 100
+                                            : 0
+                                    return (
+                                        <div
+                                            key={rating}
+                                            className='flex items-center gap-3'
+                                        >
+                                            <div className='flex items-center gap-1 w-12'>
+                                                <span className='font-medium'>
+                                                    {rating}
+                                                </span>
+                                                <Star className='w-4 h-4 text-yellow-500 fill-yellow-500' />
+                                            </div>
+                                            <div className='flex-1 h-4 bg-text/10 rounded-full overflow-hidden'>
+                                                <div
+                                                    className='h-full bg-primary rounded-full transition-all duration-500'
+                                                    style={{
+                                                        width: `${percentage}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className='w-20 text-right'>
+                                                <span className='text-sm font-medium'>
+                                                    {count}
+                                                </span>
+                                                <span className='text-sm text-text/50 ml-1'>
+                                                    ({percentage.toFixed(0)}%)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Recent Activity */}
+                        <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                            <h3 className='font-semibold mb-4'>
+                                Recent Reviews
+                            </h3>
+                            {reviews.length === 0 ? (
+                                <p className='text-text/60 text-center py-8'>
+                                    No reviews yet
+                                </p>
+                            ) : (
+                                <div className='space-y-4'>
+                                    {reviews.slice(0, 5).map((review) => (
+                                        <div
+                                            key={review.id}
+                                            className='flex items-start gap-3 p-3 bg-background/50 rounded-lg'
+                                        >
+                                            <div className='flex-1 min-w-0'>
+                                                <div className='flex items-center gap-2'>
+                                                    <span className='font-medium text-sm'>
+                                                        {
+                                                            review.author
+                                                                .display_name
+                                                        }
+                                                    </span>
+                                                    <div className='flex items-center gap-0.5'>
+                                                        {[...Array(5)].map(
+                                                            (_, i) => (
+                                                                <Star
+                                                                    key={i}
+                                                                    className={`w-3 h-3 ${i < review.rating ? "text-yellow-500 fill-yellow-500" : "text-text/20"}`}
+                                                                />
+                                                            )
+                                                        )}
+                                                    </div>
+                                                    {review.owner_response && (
+                                                        <Check className='w-4 h-4 text-green-500' />
+                                                    )}
+                                                </div>
+                                                <p className='text-sm text-text/70 line-clamp-2 mt-1'>
+                                                    {review.comment}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Coming Soon */}
+                        <div className='p-6 bg-linear-to-br from-primary/5 to-secondary/5 rounded-xl border border-primary/20'>
+                            <h3 className='font-semibold mb-2'>
+                                📊 More Analytics Coming Soon
+                            </h3>
+                            <p className='text-sm text-text/60'>
+                                Page views, visitor trends, and conversion
+                                tracking will be available in a future update.
+                            </p>
+                        </div>
                     </motion.div>
                 )}
 

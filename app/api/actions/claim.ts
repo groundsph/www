@@ -2,6 +2,12 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
+import { notifyDiscordCafeClaim } from "@/app/api/actions/notify"
+import { Resend } from "resend"
+import ClaimApprovedEmail from "@/emails/ClaimApprovedEmail"
+import ClaimRejectedEmail from "@/emails/ClaimRejectedEmail"
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 export interface CafeClaim {
     id: string
@@ -60,6 +66,13 @@ export async function submitCafeClaim(
         return { success: false, error: "This cafe has already been claimed" }
     }
 
+    // Get user profile for notification
+    const { data: userProfile } = await db
+        .from("profiles")
+        .select("display_name, username")
+        .eq("id", user.id)
+        .single()
+
     // Check if user already has a pending claim for this cafe
     const { data: existingClaim } = await db
         .from("cafe_claims")
@@ -88,6 +101,22 @@ export async function submitCafeClaim(
     if (error) {
         console.error("[submitCafeClaim] Error:", error)
         return { success: false, error: "Failed to submit claim" }
+    }
+
+    // Get cafe details for notification
+    const { data: cafeDetails } = await db
+        .from("cafes")
+        .select("name, slug")
+        .eq("id", cafeId)
+        .single()
+
+    // Send Discord notification (don't await, fire and forget)
+    if (cafeDetails) {
+        notifyDiscordCafeClaim(
+            { name: cafeDetails.name, slug: cafeDetails.slug },
+            userProfile?.display_name || userProfile?.username || "Unknown User",
+            proofText
+        ).catch(err => console.error("Discord notification failed:", err))
     }
 
     return { success: true, claim: claim as CafeClaim }
@@ -254,6 +283,41 @@ export async function approveClaim(
         }
     }
 
+    // Send email notification to claimant
+    try {
+        // Get claimant display_name from profiles
+        const { data: claimantProfile } = await adminDb
+            .from("profiles")
+            .select("display_name")
+            .eq("id", claim.user_id)
+            .single()
+
+        // Get claimant email from auth
+        const { data: { user: claimantUser } } = await adminDb.auth.admin.getUserById(claim.user_id)
+
+        const { data: cafeData } = await adminDb
+            .from("cafes")
+            .select("name, slug")
+            .eq("id", claim.cafe_id)
+            .single()
+
+        if (claimantUser?.email && cafeData) {
+            await resend.emails.send({
+                from: "Grounds <noreply@grounds.ph>",
+                to: claimantUser.email,
+                subject: `Your claim for ${cafeData.name} has been approved! 🎉`,
+                react: ClaimApprovedEmail({
+                    cafeName: cafeData.name,
+                    cafeSlug: cafeData.slug,
+                    ownerName: claimantProfile?.display_name || undefined,
+                }),
+            })
+        }
+    } catch (emailErr) {
+        console.error("[approveClaim] Email error:", emailErr)
+        // Don't fail the approval if email fails
+    }
+
     return { success: true }
 }
 
@@ -295,6 +359,53 @@ export async function rejectClaim(
     if (error) {
         console.error("[rejectClaim] Error:", error)
         return { success: false, error: "Failed to reject claim" }
+    }
+
+    // Send email notification to claimant
+    try {
+        // Get claim, claimant, and cafe details
+        const { data: claimData } = await db
+            .from("cafe_claims")
+            .select("user_id, cafe_id")
+            .eq("id", claimId)
+            .single()
+
+        if (claimData) {
+            // Get admin client for email lookup
+            const adminDb = await createAdminClient()
+
+            // Get claimant display_name from profiles
+            const { data: claimantProfile } = await adminDb
+                .from("profiles")
+                .select("display_name")
+                .eq("id", claimData.user_id)
+                .single()
+
+            // Get claimant email from auth
+            const { data: { user: claimantUser } } = await adminDb.auth.admin.getUserById(claimData.user_id)
+
+            const { data: cafeData } = await db
+                .from("cafes")
+                .select("name")
+                .eq("id", claimData.cafe_id)
+                .single()
+
+            if (claimantUser?.email && cafeData) {
+                await resend.emails.send({
+                    from: "Grounds <noreply@grounds.ph>",
+                    to: claimantUser.email,
+                    subject: `Update on your claim for ${cafeData.name}`,
+                    react: ClaimRejectedEmail({
+                        cafeName: cafeData.name,
+                        ownerName: claimantProfile?.display_name || undefined,
+                        reason: notes || undefined,
+                    }),
+                })
+            }
+        }
+    } catch (emailErr) {
+        console.error("[rejectClaim] Email error:", emailErr)
+        // Don't fail the rejection if email fails
     }
 
     return { success: true }
