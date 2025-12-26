@@ -285,6 +285,51 @@ export default function ReviewItem({
                     </div>
                 )}
 
+            {/* Owner Response */}
+            {review.owner_response && (
+                <div className='mt-4 ml-4 p-4 bg-primary/5 border-l-2 border-primary rounded-r-lg'>
+                    <div className='flex items-center gap-2 mb-2'>
+                        <div className='relative w-6 h-6 rounded-full overflow-hidden bg-text/10 border border-primary/20'>
+                            {review.owner_response.owner?.avatar_url ? (
+                                <Image
+                                    src={review.owner_response.owner.avatar_url}
+                                    alt={
+                                        review.owner_response.owner
+                                            .display_name || "Owner"
+                                    }
+                                    fill
+                                    className='object-cover'
+                                />
+                            ) : (
+                                <div className='w-full h-full flex items-center justify-center'>
+                                    <User className='w-3 h-3 text-primary/60' />
+                                </div>
+                            )}
+                        </div>
+                        <span className='text-sm font-semibold text-primary'>
+                            {review.owner_response.owner?.display_name ||
+                                "Cafe Owner"}
+                        </span>
+                        <span className='text-xs px-1.5 py-0.5 bg-primary/20 text-primary rounded font-medium'>
+                            Owner
+                        </span>
+                        <span className='text-xs text-text/40'>
+                            {review.owner_response.created_at
+                                ? formatDistanceToNow(
+                                      new Date(
+                                          review.owner_response.created_at
+                                      ),
+                                      { addSuffix: true }
+                                  )
+                                : ""}
+                        </span>
+                    </div>
+                    <p className='text-sm text-text/70 leading-relaxed'>
+                        {review.owner_response.response_text}
+                    </p>
+                </div>
+            )}
+
             {/* Footer: Likes */}
             <div className='flex items-center gap-4 border-t border-text/5 pt-3 mt-1'>
                 <button

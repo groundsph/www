@@ -38,6 +38,16 @@ export interface Review {
         username: string
         avatar_url: string | null
     }
+    owner_response?: {
+        id: string
+        response_text: string
+        created_at: string | null
+        updated_at: string | null
+        owner: {
+            display_name: string
+            avatar_url: string | null
+        }
+    } | null
 }
 
 export default function CafeDetails({

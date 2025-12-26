@@ -1,15 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import {
-    Sparkles,
-    Check,
-    CreditCard,
-    Star,
-    Award,
-    Loader2,
-    ExternalLink,
-} from "lucide-react"
+import { Sparkles, Check, Star, Award, Clock } from "lucide-react"
 
 interface SupporterSectionProps {
     isSupporter: boolean
@@ -24,51 +15,7 @@ const PERKS = [
 
 export default function SupporterSection({
     isSupporter,
-    isLoggedIn,
 }: SupporterSectionProps) {
-    const [isLoading, setIsLoading] = useState(false)
-    const [isPortalLoading, setIsPortalLoading] = useState(false)
-
-    const handleBecomeSupporter = async () => {
-        setIsLoading(true)
-        try {
-            const response = await fetch("/api/polar/checkout", {
-                method: "POST",
-            })
-            const data = await response.json()
-
-            if (data.url) {
-                window.location.href = data.url
-            } else {
-                console.error("No checkout URL received")
-            }
-        } catch (error) {
-            console.error("Failed to start checkout:", error)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    const handleManageSubscription = async () => {
-        setIsPortalLoading(true)
-        try {
-            const response = await fetch("/api/polar/portal", {
-                method: "POST",
-            })
-            const data = await response.json()
-
-            if (data.url) {
-                window.open(data.url, "_blank")
-            } else {
-                console.error("No portal URL received")
-            }
-        } catch (error) {
-            console.error("Failed to open portal:", error)
-        } finally {
-            setIsPortalLoading(false)
-        }
-    }
-
     return (
         <div className='bg-linear-to-br from-purple-500/10 via-primary/5 to-purple-500/10 border border-purple-500/20 rounded-xl p-6'>
             <div className='flex items-center gap-3 mb-4'>
@@ -118,44 +65,18 @@ export default function SupporterSection({
                             You&apos;re helping keep Grounds running ☕
                         </p>
                     </div>
-                    <button
-                        onClick={handleManageSubscription}
-                        disabled={isPortalLoading}
-                        className='w-full flex items-center justify-center gap-2 bg-text/5 hover:bg-text/10 text-text/70 font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50'
-                    >
-                        {isPortalLoading ? (
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                            <>
-                                <ExternalLink className='w-4 h-4' />
-                                Manage Subscription
-                            </>
-                        )}
-                    </button>
                 </div>
             ) : (
-                <button
-                    onClick={handleBecomeSupporter}
-                    disabled={isLoading || !isLoggedIn}
-                    className='w-full flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-                >
-                    {isLoading ? (
-                        <Loader2 className='w-4 h-4 animate-spin' />
-                    ) : (
-                        <>
-                            <CreditCard className='w-4 h-4' />
-                            {isLoggedIn
-                                ? "Become a Supporter"
-                                : "Sign in to Subscribe"}
-                        </>
-                    )}
-                </button>
-            )}
-
-            {!isLoggedIn && !isSupporter && (
-                <p className='text-xs text-text/50 text-center mt-2'>
-                    You need to be signed in to subscribe
-                </p>
+                <div className='bg-text/5 border border-text/10 rounded-lg p-4 text-center'>
+                    <div className='flex items-center justify-center gap-2 text-text/50 mb-2'>
+                        <Clock className='w-5 h-5' />
+                        <span className='font-semibold'>Coming Soon</span>
+                    </div>
+                    <p className='text-sm text-text/50'>
+                        We&apos;re setting up our new payment system. Check back
+                        soon!
+                    </p>
+                </div>
             )}
         </div>
     )

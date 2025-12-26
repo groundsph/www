@@ -9,6 +9,7 @@ import {
     getUserReviews,
     updateProfile,
 } from "@/app/api/actions/profile"
+import { getOwnedCafes } from "@/app/api/actions/owner"
 import { uploadAvatarClient } from "@/utils/supabase/storage-client"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
@@ -25,6 +26,7 @@ import {
     Share2,
     Shield,
     Sparkles,
+    Store,
     User,
     X,
 } from "lucide-react"
@@ -95,6 +97,10 @@ export default function ProfileClient() {
     // Badge display
     const [showAllBadges, setShowAllBadges] = useState(false)
 
+    // Owned cafes (for cafe owners)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OwnedCafe type from owner actions
+    const [ownedCafes, setOwnedCafes] = useState<any[]>([])
+
     // Redirect if not authenticated
     useEffect(() => {
         if (!user && !loading) {
@@ -108,15 +114,18 @@ export default function ProfileClient() {
             if (!user) return
 
             try {
-                const [profile, badges, userReviews] = await Promise.all([
-                    getProfileWithBadges(user.id),
-                    getAllBadges(),
-                    getUserReviews(user.id, user.id),
-                ])
+                const [profile, badges, userReviews, cafesOwned] =
+                    await Promise.all([
+                        getProfileWithBadges(user.id),
+                        getAllBadges(),
+                        getUserReviews(user.id, user.id),
+                        getOwnedCafes(),
+                    ])
 
                 setProfileData(profile)
                 setAllBadges(badges)
                 setReviews(userReviews)
+                setOwnedCafes(cafesOwned)
 
                 if (profile) {
                     setEditDisplayName(profile.display_name)
@@ -620,6 +629,65 @@ export default function ProfileClient() {
                         </div>
                     </div>
                 </section>
+
+                {/* My Cafes Section - Only shown if user owns cafes */}
+                {ownedCafes.length > 0 && (
+                    <section className='mt-10'>
+                        <div className='flex items-center gap-2 mb-4'>
+                            <Store className='w-5 h-5' />
+                            <h2 className='text-xl font-semibold font-serif'>
+                                My Cafes
+                            </h2>
+                            <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                                {ownedCafes.length}
+                            </span>
+                        </div>
+
+                        <div className='bg-linear-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-6'>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                {ownedCafes.slice(0, 3).map((cafe) => (
+                                    <Link
+                                        key={cafe.id}
+                                        href={`/owner/cafes/${cafe.id}`}
+                                        className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group'
+                                    >
+                                        {cafe.thumbnail ? (
+                                            <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                <Image
+                                                    src={cafe.thumbnail}
+                                                    alt={cafe.name}
+                                                    fill
+                                                    className='object-cover'
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className='w-12 h-12 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
+                                                <Coffee className='w-5 h-5 text-text/40' />
+                                            </div>
+                                        )}
+                                        <div className='flex-1 min-w-0'>
+                                            <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                {cafe.name}
+                                            </p>
+                                            <p className='text-xs text-text/50 truncate'>
+                                                {cafe.address_display ||
+                                                    cafe.city_municipality}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+
+                            <Link
+                                href='/owner'
+                                className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                            >
+                                <Store className='w-4 h-4' />
+                                Go to Owner Dashboard
+                            </Link>
+                        </div>
+                    </section>
+                )}
 
                 {/* Badges Collection - Passport Style */}
                 <section className='mt-10'>

@@ -1949,3 +1949,326 @@ export async function searchCafesForFeatured(query: string): Promise<{
 
     return cafes || []
 }
+
+// ============================================
+// Owner Verification Management Functions
+// ============================================
+
+export interface OwnerVerificationForAdmin {
+    id: string
+    cafe_id: string
+    user_id: string
+    verification_type: 'document' | 'email' | 'social_proof'
+    proof_urls: string[]
+    notes: string | null
+    status: 'pending' | 'approved' | 'rejected'
+    admin_notes: string | null
+    created_at: string | null
+    cafe: {
+        id: string
+        name: string
+        slug: string
+        thumbnail: string
+        email: string | null
+    } | null
+    user: {
+        id: string
+        username: string
+        display_name: string
+        avatar_url: string | null
+    } | null
+}
+
+/**
+ * Get all pending owner verification requests
+ */
+export async function getPendingVerifications(): Promise<OwnerVerificationForAdmin[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const { data: requests, error } = await db
+        .from('owner_verification_requests')
+        .select(`
+            *,
+            cafe:cafes(id, name, slug, thumbnail, email),
+            user:profiles!owner_verification_requests_user_id_fkey(id, username, display_name, avatar_url)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        console.error("Error fetching pending verifications:", error)
+        return []
+    }
+
+    return requests as unknown as OwnerVerificationForAdmin[]
+}
+
+/**
+ * Get all verification requests (for history view)
+ */
+export async function getAllVerifications(status?: 'pending' | 'approved' | 'rejected'): Promise<OwnerVerificationForAdmin[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    let query = db
+        .from('owner_verification_requests')
+        .select(`
+            *,
+            cafe:cafes(id, name, slug, thumbnail, email),
+            user:profiles!owner_verification_requests_user_id_fkey(id, username, display_name, avatar_url)
+        `)
+        .order('created_at', { ascending: false })
+
+    if (status) {
+        query = query.eq('status', status)
+    }
+
+    const { data: requests, error } = await query.limit(100)
+
+    if (error) {
+        console.error("Error fetching verifications:", error)
+        return []
+    }
+
+    return requests as unknown as OwnerVerificationForAdmin[]
+}
+
+/**
+ * Approve an owner verification request
+ * This adds the user to the cafe's owner_ids and sets is_claimed = true
+ */
+export async function approveVerification(requestId: string): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Get the verification request
+    const { data: request, error: reqError } = await adminDb
+        .from('owner_verification_requests')
+        .select('cafe_id, user_id, status')
+        .eq('id', requestId)
+        .single()
+
+    if (reqError || !request) {
+        return { success: false, error: "Verification request not found" }
+    }
+
+    if (request.status !== 'pending') {
+        return { success: false, error: "Request has already been processed" }
+    }
+
+    // Get current cafe owner_ids
+    const { data: cafe } = await adminDb
+        .from('cafes')
+        .select('owner_ids')
+        .eq('id', request.cafe_id)
+        .single()
+
+    const currentOwners = cafe?.owner_ids || []
+    const newOwners = currentOwners.includes(request.user_id)
+        ? currentOwners
+        : [...currentOwners, request.user_id]
+
+    // Update cafe with new owner
+    const { error: cafeError } = await adminDb
+        .from('cafes')
+        .update({
+            owner_ids: newOwners,
+            is_claimed: true,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.cafe_id)
+
+    if (cafeError) {
+        console.error("Error updating cafe owners:", cafeError)
+        return { success: false, error: "Failed to update cafe ownership" }
+    }
+
+    // Update verification request status
+    const { error: updateError } = await adminDb
+        .from('owner_verification_requests')
+        .update({
+            status: 'approved',
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+
+    if (updateError) {
+        console.error("Error updating verification status:", updateError)
+        return { success: false, error: "Failed to update verification status" }
+    }
+
+    // Create a free subscription for the cafe if one doesn't exist
+    const { data: existingSub } = await adminDb
+        .from('cafe_subscriptions')
+        .select('id')
+        .eq('cafe_id', request.cafe_id)
+        .single()
+
+    if (!existingSub) {
+        await adminDb
+            .from('cafe_subscriptions')
+            .insert({
+                cafe_id: request.cafe_id,
+                tier: 'free',
+                status: 'active',
+            })
+    }
+
+    return { success: true }
+}
+
+/**
+ * Reject an owner verification request
+ */
+export async function rejectVerification(
+    requestId: string,
+    reason: string
+): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Verify request exists and is pending
+    const { data: request } = await adminDb
+        .from('owner_verification_requests')
+        .select('status')
+        .eq('id', requestId)
+        .single()
+
+    if (!request) {
+        return { success: false, error: "Verification request not found" }
+    }
+
+    if (request.status !== 'pending') {
+        return { success: false, error: "Request has already been processed" }
+    }
+
+    // Update verification request status
+    const { error } = await adminDb
+        .from('owner_verification_requests')
+        .update({
+            status: 'rejected',
+            admin_notes: reason,
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+
+    if (error) {
+        console.error("Error rejecting verification:", error)
+        return { success: false, error: "Failed to reject verification" }
+    }
+
+    // TODO: Send email notification to user about rejection
+
+    return { success: true }
+}
+
+/**
+ * Send verification email to cafe's listed email
+ * Used for semi-automated verification when cafe has an email
+ */
+export async function sendVerificationEmail(
+    requestId: string
+): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Get request with cafe email
+    const { data: request, error: reqError } = await db
+        .from('owner_verification_requests')
+        .select(`
+            id,
+            cafe:cafes(id, name, email),
+            user:profiles!owner_verification_requests_user_id_fkey(display_name)
+        `)
+        .eq('id', requestId)
+        .single()
+
+    if (reqError || !request) {
+        return { success: false, error: "Verification request not found" }
+    }
+
+    const cafeEmail = (request.cafe as any)?.email
+    if (!cafeEmail) {
+        return { success: false, error: "Cafe does not have an email address" }
+    }
+
+    // TODO: Implement email sending with verification link
+    // The email should contain a unique token that, when clicked,
+    // confirms the cafe owner has access to the cafe's email
+
+    console.log(`Would send verification email to ${cafeEmail} for request ${requestId}`)
+
+    return { success: true }
+}

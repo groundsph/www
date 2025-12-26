@@ -297,14 +297,26 @@ export async function getReviewsByCafeId(cafeId: string) {
             user_id,
             images,
             likes_count,
+            is_edited,
             review_interactions(user_id, interaction_type),
-            author:profiles(display_name, username, avatar_url)
+            author:profiles(display_name, username, avatar_url),
+            owner_response:owner_review_responses(
+                id,
+                response_text,
+                created_at,
+                updated_at,
+                owner:profiles(display_name, avatar_url)
+            )
         `)
         .eq("cafe_id", cafeId)
         .eq("status", "published")
         .order("created_at", { ascending: false })
 
-    return reviews || []
+    // Flatten owner_response array to single object (there should only be one response per review)
+    return (reviews || []).map((r: any) => ({
+        ...r,
+        owner_response: r.owner_response?.[0] || null
+    }))
 }
 
 /**

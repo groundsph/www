@@ -1,13 +1,11 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
     ArrowLeft,
-    Check,
-    X,
     Save,
     MapPin,
     DollarSign,
@@ -16,26 +14,16 @@ import {
     Clock,
     Phone,
     Settings,
-    EyeOff,
     FileText,
     Trash2,
     ImagePlus,
     Upload,
-    BadgeCheck,
-    Users,
-    Search,
+    X,
 } from "lucide-react"
 import {
-    approveCafe,
-    rejectCafe,
-    updateCafe,
-    unpublishCafe,
-    upsertCafeStory,
-    deleteCafeStory,
-    adminDeleteCafeImage,
-    searchUsersForOwner,
-    getOwnerProfiles,
-} from "@/app/api/actions/admin"
+    updateCafeAsOwner,
+    deleteCafeImageAsOwner,
+} from "@/app/api/actions/owner"
 import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
@@ -51,10 +39,11 @@ import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
 import { cropAndResizeImage } from "@/utils/image-processing"
+import { useNotification } from "@/components/NotificationProvider"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
-interface CafeEditorProps {
+interface CafeEditClientProps {
     cafe: CafeWithRatings
 }
 
@@ -62,8 +51,11 @@ interface CafeEditorProps {
 const formatLabel = (s: string) =>
     s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
-export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
+export default function CafeEditClient({
+    cafe: initialCafe,
+}: CafeEditClientProps) {
     const router = useRouter()
+    const { addNotification } = useNotification()
     const [cafe, setCafe] = useState(initialCafe)
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
@@ -75,56 +67,15 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         | "hours"
         | "contact"
         | "story"
-        | "owners"
     >("basic")
 
     // Image management state
     const [uploadingCover, setUploadingCover] = useState(false)
     const [uploadingGallery, setUploadingGallery] = useState(false)
 
-    // Story state
-    const [storyContent, setStoryContent] = useState(
-        initialCafe.story?.content || ""
-    )
-    const [storyHasChanges, setStoryHasChanges] = useState(false)
-    const [savingStory, setSavingStory] = useState(false)
-
     // Custom inputs for comma-separated values
     const [customSpecialties, setCustomSpecialties] = useState("")
     const [customTags, setCustomTags] = useState("")
-
-    // Owner management state
-    const [owners, setOwners] = useState<
-        {
-            id: string
-            username: string
-            display_name: string
-            avatar_url: string | null
-        }[]
-    >([])
-    const [ownerSearchQuery, setOwnerSearchQuery] = useState("")
-    const [ownerSearchResults, setOwnerSearchResults] = useState<
-        {
-            id: string
-            username: string
-            display_name: string
-            avatar_url: string | null
-        }[]
-    >([])
-    const [ownerSearchLoading, setOwnerSearchLoading] = useState(false)
-    const [ownersLoading, setOwnersLoading] = useState(true)
-
-    // Load owner profiles on mount
-    useEffect(() => {
-        async function loadOwners() {
-            if (initialCafe.owner_ids && initialCafe.owner_ids.length > 0) {
-                const profiles = await getOwnerProfiles(initialCafe.owner_ids)
-                setOwners(profiles)
-            }
-            setOwnersLoading(false)
-        }
-        loadOwners()
-    }, [initialCafe.owner_ids])
 
     const updateField = useCallback(
         <K extends keyof typeof cafe>(key: K, value: (typeof cafe)[K]) => {
@@ -136,7 +87,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
 
     const handleSave = async () => {
         setSaving(true)
-        const result = await updateCafe(cafe.id, {
+        const result = await updateCafeAsOwner(cafe.id, {
             name: cafe.name,
             description: cafe.description || undefined,
             address_display: cafe.address_display,
@@ -162,53 +113,13 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             phone: cafe.phone || undefined,
             email: cafe.email || undefined,
             socials: cafe.socials || [],
-            thumbnail: cafe.thumbnail,
-            gallery: cafe.gallery,
-            slug: cafe.slug,
-            is_verified: cafe.is_verified || false,
-            owner_ids: cafe.owner_ids || null,
         })
         setSaving(false)
         if (result.success) {
             setHasChanges(false)
+            addNotification("Changes saved successfully", "success")
         } else {
-            alert(result.error || "Failed to save changes")
-        }
-    }
-
-    const handleApprove = async () => {
-        if (hasChanges) {
-            await handleSave()
-        }
-        const result = await approveCafe(cafe.id)
-        if (result.success) {
-            router.push("/admin")
-        } else {
-            alert(result.error || "Failed to approve")
-        }
-    }
-
-    const handleReject = async () => {
-        if (!confirm("Are you sure you want to reject and delete this cafe?"))
-            return
-        const result = await rejectCafe(cafe.id)
-        if (result.success) {
-            router.push("/admin")
-        } else {
-            alert(result.error || "Failed to reject")
-        }
-    }
-
-    const handleUnpublish = async () => {
-        if (!confirm("Are you sure you want to unpublish this cafe?")) return
-        if (hasChanges) {
-            await handleSave()
-        }
-        const result = await unpublishCafe(cafe.id)
-        if (result.success) {
-            router.push("/admin")
-        } else {
-            alert(result.error || "Failed to unpublish")
+            addNotification(result.error || "Failed to save changes", "error")
         }
     }
 
@@ -241,46 +152,6 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         setCustomTags("")
     }
 
-    // Owner search handler with debounce
-    const handleOwnerSearch = async (query: string) => {
-        setOwnerSearchQuery(query)
-        if (query.length < 2) {
-            setOwnerSearchResults([])
-            return
-        }
-        setOwnerSearchLoading(true)
-        const results = await searchUsersForOwner(query)
-        // Filter out users who are already owners
-        const filtered = results.filter(
-            (user) => !owners.some((o) => o.id === user.id)
-        )
-        setOwnerSearchResults(filtered)
-        setOwnerSearchLoading(false)
-    }
-
-    // Add owner
-    const addOwner = (user: (typeof owners)[0]) => {
-        const newOwners = [...owners, user]
-        setOwners(newOwners)
-        setOwnerSearchResults((prev) => prev.filter((u) => u.id !== user.id))
-        setOwnerSearchQuery("")
-        // Update cafe owner_ids
-        setCafe((prev) => ({ ...prev, owner_ids: newOwners.map((o) => o.id) }))
-        setHasChanges(true)
-    }
-
-    // Remove owner
-    const removeOwner = (userId: string) => {
-        const newOwners = owners.filter((o) => o.id !== userId)
-        setOwners(newOwners)
-        // Update cafe owner_ids
-        setCafe((prev) => ({
-            ...prev,
-            owner_ids: newOwners.length > 0 ? newOwners.map((o) => o.id) : null,
-        }))
-        setHasChanges(true)
-    }
-
     const SECTIONS = [
         { id: "basic", title: "Basic Info", icon: Coffee },
         { id: "images", title: "Images", icon: ImagePlus },
@@ -289,7 +160,6 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         { id: "hours", title: "Hours", icon: Clock },
         { id: "contact", title: "Contact", icon: Phone },
         { id: "story", title: "Story", icon: FileText },
-        { id: "owners", title: "Owners", icon: Users },
     ] as const
 
     // Price level mapping for UI
@@ -305,27 +175,17 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-text/10'>
                 <div className='flex items-center gap-4'>
                     <Link
-                        href='/admin'
+                        href={`/owner/cafes/${cafe.id}`}
                         className='p-2 hover:bg-text/5 rounded-lg transition'
                     >
                         <ArrowLeft className='w-5 h-5' />
                     </Link>
                     <div>
                         <h1 className='text-2xl font-bold font-serif'>
-                            Review Submission
+                            Edit {cafe.name}
                         </h1>
                         <p className='text-text/60 text-sm'>
-                            {cafe.is_published ? "Published " : "Submitted "}
-                            {new Date(cafe.created_at!).toLocaleDateString()}
-                            {cafe.contributor && (
-                                <span className='ml-2'>
-                                    by{" "}
-                                    <span className='font-medium text-text/80'>
-                                        {cafe.contributor.display_name ||
-                                            cafe.contributor.username}
-                                    </span>
-                                </span>
-                            )}
+                            Update your cafe information
                         </p>
                     </div>
                 </div>
@@ -334,43 +194,15 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className='flex items-center gap-2 px-4 py-2 bg-text/10 rounded-lg hover:bg-text/20 transition disabled:opacity-50'
+                            className='flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition disabled:opacity-50'
                         >
                             {saving ? (
                                 <Loader2 className='w-4 h-4 animate-spin' />
                             ) : (
                                 <Save className='w-4 h-4' />
                             )}
-                            Save
+                            Save Changes
                         </button>
-                    )}
-                    {cafe.is_published ? (
-                        // Published cafe - show Unpublish button
-                        <button
-                            onClick={handleUnpublish}
-                            className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition'
-                        >
-                            <EyeOff className='w-4 h-4' />
-                            Unpublish
-                        </button>
-                    ) : (
-                        // Pending cafe - show Reject and Approve buttons
-                        <>
-                            <button
-                                onClick={handleReject}
-                                className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition'
-                            >
-                                <X className='w-4 h-4' />
-                                Reject
-                            </button>
-                            <button
-                                onClick={handleApprove}
-                                className='flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition'
-                            >
-                                <Check className='w-4 h-4' />
-                                Approve
-                            </button>
-                        </>
                     )}
                 </div>
             </div>
@@ -383,7 +215,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                         onClick={() => setActiveSection(id)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition border ${
                             activeSection === id
-                                ? "bg-accent/20 text-accent border-accent/30"
+                                ? "bg-primary/20 text-primary border-primary/30"
                                 : "bg-text/5 border-text/10 hover:bg-text/10"
                         }`}
                     >
@@ -414,42 +246,6 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                 {/* Basic Info */}
                 {activeSection === "basic" && (
                     <div className='space-y-6'>
-                        {/* Verified Status Toggle */}
-                        <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'>
-                            <div className='flex items-center gap-3'>
-                                <BadgeCheck
-                                    className={`w-5 h-5 ${cafe.is_verified ? "text-accent" : "text-text/40"}`}
-                                />
-                                <div>
-                                    <p className='font-medium'>Verified Cafe</p>
-                                    <p className='text-sm text-text/60'>
-                                        Verified cafes display a badge on their
-                                        listing
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() =>
-                                    updateField(
-                                        "is_verified",
-                                        !cafe.is_verified
-                                    )
-                                }
-                                className={`relative inline-flex h-6 min-w-11 items-center rounded-full transition-colors cursor-pointer ${
-                                    cafe.is_verified
-                                        ? "bg-text/40"
-                                        : "bg-text/20"
-                                }`}
-                            >
-                                <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                        cafe.is_verified
-                                            ? "translate-x-6"
-                                            : "translate-x-1"
-                                    }`}
-                                />
-                            </button>
-                        </div>
                         <div>
                             <label className='block text-sm font-medium text-text/60 mb-2'>
                                 Cafe Name *
@@ -460,26 +256,8 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                 onChange={(e) =>
                                     updateField("name", e.target.value)
                                 }
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
+                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
                             />
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Slug (URL Path) *
-                            </label>
-                            <input
-                                type='text'
-                                value={cafe.slug}
-                                onChange={(e) =>
-                                    updateField("slug", e.target.value)
-                                }
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 font-mono text-sm'
-                            />
-                            <p className='text-xs text-text/40 mt-1'>
-                                Warning: Changing this will break existing links
-                                to the cafe page.
-                            </p>
                         </div>
 
                         <div>
@@ -498,7 +276,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                 }}
                                 maxLength={300}
                                 rows={4}
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none'
+                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none'
                                 placeholder='Tell us about this cafe...'
                             />
                             <p
@@ -522,7 +300,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                         }
                                         className={`flex items-center gap-1 px-4 py-2 rounded-lg border transition ${
                                             cafe.price_level === value
-                                                ? "bg-accent/20 border-accent text-accent"
+                                                ? "bg-primary/20 border-primary text-primary"
                                                 : "bg-background border-text/10 hover:bg-text/5"
                                         }`}
                                     >
@@ -537,6 +315,21 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        <div>
+                            <label className='block text-sm font-medium text-text/60 mb-2'>
+                                Roaster
+                            </label>
+                            <input
+                                type='text'
+                                value={cafe.roaster || ""}
+                                onChange={(e) =>
+                                    updateField("roaster", e.target.value)
+                                }
+                                placeholder='Coffee roaster name'
+                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
+                            />
                         </div>
 
                         {/* Gallery Preview */}
@@ -590,7 +383,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
 
                                     {/* Overlay with actions */}
                                     <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-4'>
-                                        <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition'>
+                                        <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition'>
                                             {uploadingCover ? (
                                                 <Loader2 className='w-4 h-4 animate-spin' />
                                             ) : (
@@ -634,7 +427,8 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                     ) {
                                                         // Delete old image if exists
                                                         if (cafe.thumbnail) {
-                                                            await adminDeleteCafeImage(
+                                                            await deleteCafeImageAsOwner(
+                                                                cafe.id,
                                                                 cafe.thumbnail
                                                             )
                                                         }
@@ -643,9 +437,10 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                             result.url
                                                         )
                                                     } else {
-                                                        alert(
+                                                        addNotification(
                                                             result.error ||
-                                                                "Failed to upload image"
+                                                                "Failed to upload image",
+                                                            "error"
                                                         )
                                                     }
 
@@ -664,7 +459,8 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                         )
                                                     )
                                                         return
-                                                    await adminDeleteCafeImage(
+                                                    await deleteCafeImageAsOwner(
+                                                        cafe.id,
                                                         cafe.thumbnail!
                                                     )
                                                     setCafe(
@@ -693,7 +489,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                 <label className='text-sm font-medium text-text/60'>
                                     Gallery ({cafe.gallery?.length || 0} images)
                                 </label>
-                                <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition'>
+                                <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition'>
                                     {uploadingGallery ? (
                                         <Loader2 className='w-4 h-4 animate-spin' />
                                     ) : (
@@ -776,7 +572,8 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                         )
                                                     )
                                                         return
-                                                    await adminDeleteCafeImage(
+                                                    await deleteCafeImageAsOwner(
+                                                        cafe.id,
                                                         url
                                                     )
                                                     updateField(
@@ -858,7 +655,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                         e.target.value
                                     )
                                 }
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
+                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
                             />
                         </div>
 
@@ -935,7 +732,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                             }}
                                             className={`px-3 py-1.5 rounded-full text-sm transition ${
                                                 isSelected
-                                                    ? "bg-accent/20 text-accent border border-accent/30"
+                                                    ? "bg-primary/20 text-primary border border-primary/30"
                                                     : "bg-text/5 border border-text/10 hover:bg-text/10"
                                             }`}
                                         >
@@ -973,7 +770,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                             }}
                                             className={`px-3 py-1.5 rounded-full text-sm transition ${
                                                 isSelected
-                                                    ? "bg-accent/20 text-accent border border-accent/30"
+                                                    ? "bg-primary/20 text-primary border border-primary/30"
                                                     : "bg-text/5 border border-text/10 hover:bg-text/10"
                                             }`}
                                         >
@@ -1009,7 +806,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                     {cafe.specialty.map((s) => (
                                         <span
                                             key={s}
-                                            className='px-2 py-1 bg-accent/20 text-accent rounded-full text-xs flex items-center gap-1'
+                                            className='px-2 py-1 bg-primary/20 text-primary rounded-full text-xs flex items-center gap-1'
                                         >
                                             {formatLabel(s)}
                                             <button
@@ -1056,7 +853,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                             }}
                                             className={`px-3 py-1.5 rounded-full text-sm transition ${
                                                 isSelected
-                                                    ? "bg-accent/20 text-accent border border-accent/30"
+                                                    ? "bg-primary/20 text-primary border border-primary/30"
                                                     : "bg-text/5 border border-text/10 hover:bg-text/10"
                                             }`}
                                         >
@@ -1140,7 +937,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                             }}
                                             className={`px-3 py-1.5 rounded-full text-sm transition ${
                                                 isSelected
-                                                    ? "bg-accent/20 text-accent border border-accent/30"
+                                                    ? "bg-primary/20 text-primary border border-primary/30"
                                                     : "bg-text/5 border border-text/10 hover:bg-text/10"
                                             }`}
                                         >
@@ -1188,7 +985,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                         )
                                     }
                                     placeholder='https://...'
-                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
+                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
                                 />
                             </div>
                             <div>
@@ -1201,30 +998,29 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                     onChange={(e) =>
                                         updateField("phone", e.target.value)
                                     }
-                                    placeholder='+63...'
-                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
+                                    placeholder='+63 XXX XXX XXXX'
+                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
+                                />
+                            </div>
+                            <div className='md:col-span-2'>
+                                <label className='block text-sm font-medium text-text/60 mb-2'>
+                                    Email
+                                </label>
+                                <input
+                                    type='email'
+                                    value={cafe.email || ""}
+                                    onChange={(e) =>
+                                        updateField("email", e.target.value)
+                                    }
+                                    placeholder='cafe@example.com'
+                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Email
-                            </label>
-                            <input
-                                type='email'
-                                value={cafe.email || ""}
-                                onChange={(e) =>
-                                    updateField("email", e.target.value)
-                                }
-                                placeholder='cafe@example.com'
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
-                            />
-                        </div>
-
-                        <div>
                             <label className='block text-sm font-medium text-text/60 mb-4'>
-                                Social Media Links
+                                Social Links
                             </label>
                             <SocialLinksEditor
                                 value={(cafe.socials as CafeSocial[]) || []}
@@ -1236,277 +1032,36 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                     </div>
                 )}
 
-                {/* Story */}
+                {/* Story - placeholder for future */}
                 {activeSection === "story" && (
-                    <div className='space-y-6'>
-                        <div>
-                            <div className='flex items-center justify-between mb-2'>
-                                <label className='block text-sm font-medium text-text/60'>
-                                    Cafe Story (Markdown)
-                                </label>
-                                <div className='flex items-center gap-2'>
-                                    {storyContent && (
-                                        <button
-                                            onClick={async () => {
-                                                if (
-                                                    !confirm(
-                                                        "Are you sure you want to delete this story?"
-                                                    )
-                                                )
-                                                    return
-                                                setSavingStory(true)
-                                                const result =
-                                                    await deleteCafeStory(
-                                                        cafe.id
-                                                    )
-                                                setSavingStory(false)
-                                                if (result.success) {
-                                                    setStoryContent("")
-                                                    setStoryHasChanges(false)
-                                                } else {
-                                                    alert(
-                                                        result.error ||
-                                                            "Failed to delete story"
-                                                    )
-                                                }
-                                            }}
-                                            disabled={savingStory}
-                                            className='flex items-center gap-1 px-3 py-1.5 bg-red-500/20 text-red-500 rounded-lg text-sm hover:bg-red-500/30 transition disabled:opacity-50'
-                                        >
-                                            <Trash2 className='w-4 h-4' />
-                                            Delete
-                                        </button>
-                                    )}
-                                    {storyHasChanges && (
-                                        <button
-                                            onClick={async () => {
-                                                setSavingStory(true)
-                                                const result =
-                                                    await upsertCafeStory(
-                                                        cafe.id,
-                                                        storyContent
-                                                    )
-                                                setSavingStory(false)
-                                                if (result.success) {
-                                                    setStoryHasChanges(false)
-                                                } else {
-                                                    alert(
-                                                        result.error ||
-                                                            "Failed to save story"
-                                                    )
-                                                }
-                                            }}
-                                            disabled={savingStory}
-                                            className='flex items-center gap-1 px-3 py-1.5 bg-accent/20 text-accent rounded-lg text-sm hover:bg-accent/30 transition disabled:opacity-50'
-                                        >
-                                            {savingStory ? (
-                                                <Loader2 className='w-4 h-4 animate-spin' />
-                                            ) : (
-                                                <Save className='w-4 h-4' />
-                                            )}
-                                            Save Story
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <textarea
-                                value={storyContent}
-                                onChange={(e) => {
-                                    setStoryContent(e.target.value)
-                                    setStoryHasChanges(true)
-                                }}
-                                rows={20}
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 font-mono text-sm resize-y'
-                                placeholder='Write the cafe story in markdown format...
-
-# About the Cafe
-
-Start with a compelling introduction...
-
-## The Story
-
-Share the history and journey...
-
-## What Makes It Special
-
-Highlight unique features...'
-                            />
-                            <p className='text-xs text-text/40 mt-2'>
-                                Supports markdown syntax: # headings, **bold**,
-                                *italic*, [links](url), etc.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Owners Section */}
-                {activeSection === "owners" && (
-                    <div className='space-y-6'>
-                        {/* Contributor Info */}
-                        {cafe.contributor && (
-                            <div className='bg-accent/10 border border-accent/20 rounded-xl p-4'>
-                                <div className='flex items-center gap-3'>
-                                    {cafe.contributor.avatar_url ? (
-                                        <Image
-                                            src={cafe.contributor.avatar_url}
-                                            alt={cafe.contributor.display_name}
-                                            width={40}
-                                            height={40}
-                                            className='rounded-full object-cover'
-                                        />
-                                    ) : (
-                                        <div className='w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center'>
-                                            <Users className='w-5 h-5 text-accent' />
-                                        </div>
-                                    )}
-                                    <div>
-                                        <p className='text-sm text-text/60'>
-                                            Submitted by
-                                        </p>
-                                        <p className='font-medium'>
-                                            {cafe.contributor.display_name ||
-                                                cafe.contributor.username}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Owner Search */}
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Add Cafe Owner/Manager
-                            </label>
-                            <div className='relative'>
-                                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
-                                <input
-                                    type='text'
-                                    value={ownerSearchQuery}
-                                    onChange={(e) =>
-                                        handleOwnerSearch(e.target.value)
-                                    }
-                                    placeholder='Search by username or display name...'
-                                    className='w-full pl-10 pr-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
-                                />
-                                {ownerSearchLoading && (
-                                    <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-text/40' />
-                                )}
-                            </div>
-
-                            {/* Search Results */}
-                            {ownerSearchResults.length > 0 && (
-                                <div className='mt-2 bg-background border border-text/10 rounded-lg divide-y divide-text/10 max-h-64 overflow-y-auto'>
-                                    {ownerSearchResults.map((user) => (
-                                        <div
-                                            key={user.id}
-                                            className='flex items-center justify-between p-3 hover:bg-text/5 transition'
-                                        >
-                                            <div className='flex items-center gap-3'>
-                                                {user.avatar_url ? (
-                                                    <Image
-                                                        src={user.avatar_url}
-                                                        alt={user.display_name}
-                                                        width={32}
-                                                        height={32}
-                                                        className='rounded-full object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-8 h-8 rounded-full bg-text/10 flex items-center justify-center'>
-                                                        <Users className='w-4 h-4 text-text/40' />
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <p className='font-medium text-sm'>
-                                                        {user.display_name}
-                                                    </p>
-                                                    <p className='text-xs text-text/60'>
-                                                        @{user.username}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => addOwner(user)}
-                                                className='px-3 py-1 text-sm bg-accent/20 text-accent rounded hover:bg-accent/30 transition'
-                                            >
-                                                Add
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Current Owners */}
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Current Owners/Managers ({owners.length})
-                            </label>
-                            {ownersLoading ? (
-                                <div className='flex items-center justify-center py-8'>
-                                    <Loader2 className='w-6 h-6 animate-spin text-text/40' />
-                                </div>
-                            ) : owners.length > 0 ? (
-                                <div className='bg-background border border-text/10 rounded-lg divide-y divide-text/10'>
-                                    {owners.map((owner) => (
-                                        <div
-                                            key={owner.id}
-                                            className='flex items-center justify-between p-3'
-                                        >
-                                            <div className='flex items-center gap-3'>
-                                                {owner.avatar_url ? (
-                                                    <Image
-                                                        src={owner.avatar_url}
-                                                        alt={owner.display_name}
-                                                        width={40}
-                                                        height={40}
-                                                        className='rounded-full object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-10 h-10 rounded-full bg-text/10 flex items-center justify-center'>
-                                                        <Users className='w-5 h-5 text-text/40' />
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <p className='font-medium'>
-                                                        {owner.display_name}
-                                                    </p>
-                                                    <p className='text-sm text-text/60'>
-                                                        @{owner.username}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() =>
-                                                    removeOwner(owner.id)
-                                                }
-                                                className='p-2 text-red-500 hover:bg-red-500/10 rounded transition'
-                                                title='Remove owner'
-                                            >
-                                                <X className='w-4 h-4' />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className='bg-text/5 border border-text/10 border-dashed rounded-xl p-8 text-center text-text/40'>
-                                    <Users className='w-12 h-12 mx-auto mb-4 opacity-50' />
-                                    <p>No owners assigned yet</p>
-                                    <p className='text-sm mt-1'>
-                                        Search for users above to add them as
-                                        cafe owners
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        <p className='text-xs text-text/40'>
-                            Owners can manage their cafe listing (features
-                            coming soon). Changes are saved when you click the
-                            Save button above.
+                    <div className='text-center py-12 text-text/60'>
+                        <FileText className='w-12 h-12 mx-auto mb-4 opacity-30' />
+                        <p className='font-medium'>Cafe Story</p>
+                        <p className='text-sm mt-1'>
+                            This feature is coming soon for Pro and Premium
+                            subscribers.
                         </p>
                     </div>
                 )}
             </div>
+
+            {/* Sticky Save Button (Mobile) */}
+            {hasChanges && (
+                <div className='fixed bottom-6 left-4 right-4 md:hidden z-50'>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className='w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-medium shadow-lg hover:bg-primary/90 disabled:opacity-50'
+                    >
+                        {saving ? (
+                            <Loader2 className='w-4 h-4 animate-spin' />
+                        ) : (
+                            <Save className='w-4 h-4' />
+                        )}
+                        Save Changes
+                    </button>
+                </div>
+            )}
         </div>
     )
 }

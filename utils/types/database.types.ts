@@ -139,6 +139,66 @@ export type Database = {
           },
         ]
       }
+      cafe_menu_items: {
+        Row: {
+          cafe_id: string
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          is_signature: boolean | null
+          name: string
+          price: number
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          cafe_id: string
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_signature?: boolean | null
+          name: string
+          price: number
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          cafe_id?: string
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_signature?: boolean | null
+          name?: string
+          price?: number
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_menu_items_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafe_menu_items_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cafe_menus: {
         Row: {
           cafe_id: string
@@ -266,6 +326,57 @@ export type Database = {
             foreignKeyName: "cafe_stories_cafe_id_fkey"
             columns: ["cafe_id"]
             isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafe_subscriptions: {
+        Row: {
+          cafe_id: string
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          helix_subscription_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          tier: Database["public"]["Enums"]["membership_tier"]
+          updated_at: string | null
+        }
+        Insert: {
+          cafe_id: string
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          helix_subscription_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["membership_tier"]
+          updated_at?: string | null
+        }
+        Update: {
+          cafe_id?: string
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          helix_subscription_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["membership_tier"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_subscriptions_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: true
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafe_subscriptions_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: true
             referencedRelation: "cafes"
             referencedColumns: ["id"]
           },
@@ -477,6 +588,122 @@ export type Database = {
             columns: ["cafe_id"]
             isOneToOne: false
             referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_review_responses: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_edited: boolean | null
+          owner_id: string
+          response: string
+          review_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          owner_id: string
+          response: string
+          review_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          owner_id?: string
+          response?: string
+          review_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_review_responses_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_review_responses_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_verification_requests: {
+        Row: {
+          admin_notes: string | null
+          cafe_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          proof_urls: string[] | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["verification_status"]
+          user_id: string
+          verification_type: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          cafe_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          proof_urls?: string[] | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          user_id: string
+          verification_type: string
+        }
+        Update: {
+          admin_notes?: string | null
+          cafe_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          proof_urls?: string[] | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          user_id?: string
+          verification_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_verification_requests_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_verification_requests_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_verification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_verification_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -730,6 +957,12 @@ export type Database = {
       }
     }
     Functions: {
+      can_add_menu_item: { Args: { p_cafe_id: string }; Returns: boolean }
+      count_cafe_menu_items: { Args: { p_cafe_id: string }; Returns: number }
+      get_cafe_tier: {
+        Args: { p_cafe_id: string }
+        Returns: Database["public"]["Enums"]["membership_tier"]
+      }
       get_cafes_in_bounds: {
         Args: { ne_lat: number; ne_lng: number; sw_lat: number; sw_lng: number }
         Returns: {
@@ -783,6 +1016,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      is_cafe_owner: {
+        Args: { p_cafe_id: string; p_user_id: string }
+        Returns: boolean
       }
       search_cafes: {
         Args: { query_text: string }
@@ -848,7 +1085,9 @@ export type Database = {
       review_status: "published" | "hidden" | "flagged"
       scout_rank: "novice" | "expert" | "vanguard"
       slot_type: "hero" | "sidebar" | "collection" | "regional_spotlight"
+      subscription_status: "active" | "cancelled" | "past_due" | "trialing"
       user_role: "user" | "moderator" | "admin"
+      verification_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -984,7 +1223,9 @@ export const Constants = {
       review_status: ["published", "hidden", "flagged"],
       scout_rank: ["novice", "expert", "vanguard"],
       slot_type: ["hero", "sidebar", "collection", "regional_spotlight"],
+      subscription_status: ["active", "cancelled", "past_due", "trialing"],
       user_role: ["user", "moderator", "admin"],
+      verification_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
