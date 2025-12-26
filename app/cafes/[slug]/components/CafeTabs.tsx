@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { Info, List, MessageSquare } from "lucide-react"
+import { Info, List, MessageSquare, UtensilsCrossed } from "lucide-react"
 
-type TabId = "about" | "details" | "reviews"
+type TabId = "about" | "details" | "menu" | "reviews"
 
 interface Tab {
     id: TabId
@@ -15,6 +15,7 @@ interface Tab {
 const TABS: Tab[] = [
     { id: "about", label: "About", icon: Info },
     { id: "details", label: "Details", icon: List },
+    { id: "menu", label: "Menu", icon: UtensilsCrossed },
     { id: "reviews", label: "Reviews", icon: MessageSquare },
 ]
 
@@ -22,9 +23,11 @@ interface CafeTabsProps {
     tabContent: {
         about: React.ReactNode
         details: React.ReactNode
+        menu: React.ReactNode
         reviews: React.ReactNode
     }
     reviewCount?: number
+    menuCount?: number
 }
 
 export default function CafeTabs({ tabContent, reviewCount }: CafeTabsProps) {
