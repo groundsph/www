@@ -102,7 +102,12 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                         {socials.map((social) => (
                             <li key={social.title}>
                                 <a
-                                    href={social.url}
+                                    href={
+                                        social.url.startsWith("http://") ||
+                                        social.url.startsWith("https://")
+                                            ? social.url
+                                            : `https://${social.url}`
+                                    }
                                     target='_blank'
                                     rel='noopener noreferrer'
                                     className='text-text hover:text-text/60 transition-colors hover:underline'

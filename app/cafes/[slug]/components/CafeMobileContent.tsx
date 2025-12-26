@@ -72,9 +72,9 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
         <div className='flex flex-col gap-4'>
             {/* Gallery - Horizontal Scroll */}
             {gallery.length > 0 && (
-                <div className='w-full -mx-4 px-4'>
+                <div className='w-screen -mx-4'>
                     <div
-                        className='flex flex-row gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4'
+                        className='flex flex-row gap-3 overflow-x-auto pb-2 scrollbar-hide px-4 scroll-px-4'
                         style={{
                             scrollSnapType: "x mandatory",
                             scrollBehavior: "smooth",
@@ -253,7 +253,12 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
                                 {socials.map((social) => (
                                     <a
                                         key={social.title}
-                                        href={social.url}
+                                        href={
+                                            social.url.startsWith("http://") ||
+                                            social.url.startsWith("https://")
+                                                ? social.url
+                                                : `https://${social.url}`
+                                        }
                                         target='_blank'
                                         rel='noopener noreferrer'
                                         className='text-xs bg-secondary/40 px-2 py-1 rounded-full hover:bg-secondary/60 transition-colors'
