@@ -24,7 +24,6 @@ import {
     searchCafesForFeatured,
     checkFeaturedConflict,
 } from "@/app/api/actions/admin"
-import { PHILIPPINES_LOCATIONS } from "@/utils/data/philippines"
 
 interface FeaturedScheduleManagerProps {
     initialSchedules: FeaturedSchedule[]
@@ -175,11 +174,11 @@ export default function FeaturedScheduleManager({
 
     const handleCafeSelect = (cafe: CafeSearchResult) => {
         setSelectedCafe(cafe)
-        // Auto-populate region from cafe, user can still change it after
+        // Auto-populate city from cafe (most specific targeting), user can change it
         setFormData((prev) => ({
             ...prev,
             cafe_id: cafe.id,
-            region_context: cafe.region || null,
+            region_context: cafe.city_municipality || null,
         }))
         setCafeSearchQuery("")
         setCafeSearchResults([])
@@ -680,39 +679,94 @@ export default function FeaturedScheduleManager({
                                 )}
                             </div>
 
-                            {/* Region Context */}
+                            {/* Targeting Type Selector */}
                             <div>
                                 <label className='block text-sm font-medium mb-2'>
-                                    Region (leave empty for global)
+                                    Target Audience
                                 </label>
-                                <select
-                                    value={formData.region_context ?? ""}
-                                    onChange={(e) =>
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            region_context:
-                                                e.target.value || null,
-                                        }))
-                                    }
-                                    className='w-full px-4 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:border-accent'
-                                >
-                                    <option value=''>
-                                        Global (all regions)
-                                    </option>
-                                    {PHILIPPINES_LOCATIONS.regions.map(
-                                        (region) => (
-                                            <option
-                                                key={region.name}
-                                                value={region.name}
-                                            >
-                                                {region.name}
-                                            </option>
-                                        )
-                                    )}
-                                </select>
-                                <p className='text-xs text-text/50 mt-1'>
-                                    Global featured shows when no
-                                    region-specific match exists
+                                <div className='flex gap-2 mb-3'>
+                                    <button
+                                        type='button'
+                                        onClick={() => {
+                                            if (selectedCafe) {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    region_context:
+                                                        selectedCafe.city_municipality ||
+                                                        null,
+                                                }))
+                                            }
+                                        }}
+                                        className={`flex-1 px-3 py-2 text-sm rounded-lg border transition ${
+                                            selectedCafe &&
+                                            formData.region_context ===
+                                                selectedCafe.city_municipality
+                                                ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                                                : "bg-text/5 border-text/10 hover:bg-text/10"
+                                        }`}
+                                        disabled={!selectedCafe}
+                                    >
+                                        City
+                                        {selectedCafe && (
+                                            <span className='block text-xs opacity-70 mt-0.5'>
+                                                {selectedCafe.city_municipality}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        type='button'
+                                        onClick={() => {
+                                            if (selectedCafe) {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    region_context:
+                                                        selectedCafe.region ||
+                                                        null,
+                                                }))
+                                            }
+                                        }}
+                                        className={`flex-1 px-3 py-2 text-sm rounded-lg border transition ${
+                                            selectedCafe &&
+                                            formData.region_context ===
+                                                selectedCafe.region
+                                                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                                : "bg-text/5 border-text/10 hover:bg-text/10"
+                                        }`}
+                                        disabled={!selectedCafe}
+                                    >
+                                        Region
+                                        {selectedCafe && (
+                                            <span className='block text-xs opacity-70 mt-0.5 truncate'>
+                                                {selectedCafe.region?.split(
+                                                    " - "
+                                                )[0] || selectedCafe.region}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        type='button'
+                                        onClick={() =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                region_context: null,
+                                            }))
+                                        }
+                                        className={`flex-1 px-3 py-2 text-sm rounded-lg border transition ${
+                                            formData.region_context === null
+                                                ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                                                : "bg-text/5 border-text/10 hover:bg-text/10"
+                                        }`}
+                                    >
+                                        Global
+                                        <span className='block text-xs opacity-70 mt-0.5'>
+                                            All locations
+                                        </span>
+                                    </button>
+                                </div>
+                                <p className='text-xs text-text/50'>
+                                    {formData.region_context === null
+                                        ? "Shows when no city or region schedule matches"
+                                        : `Featured in: ${formData.region_context}`}
                                 </p>
                             </div>
 

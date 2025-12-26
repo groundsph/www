@@ -92,7 +92,7 @@ export async function getDailyFeatured() {
 
 /**
  * Get featured cafe based on user's location (city/region)
- * Priority: 1) Manual schedule for user's region, 2) City match, 3) Region match
+ * Priority: 1) City schedule, 2) Region schedule, 3) Global schedule, 4) City algorithmic, 5) Region algorithmic
  */
 export async function getLocationFeatured(city?: string, region?: string): Promise<CafeWithRatings | null> {
     if (!city && !region) return null
@@ -101,9 +101,42 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
     const now = new Date().toISOString()
     const dayOfYear = getDayOfYear(new Date())
 
-    // 1. Check for manual schedule matching user's location (region_context)
+    // Helper to flatten cafe data
+    const flattenCafe = (c: any): CafeWithRatings => {
+        const flat = {
+            ...c,
+            average_rating: c.cafe_rating_stats?.average_rating ?? null,
+            total_reviews: c.cafe_rating_stats?.total_reviews ?? null
+        }
+        delete flat.cafe_rating_stats
+        return flat as CafeWithRatings
+    }
+
+    // 1. Check for city-level manual schedule (exact city match in region_context)
+    if (city) {
+        const { data: cityScheduled } = await db
+            .from("featured_schedules")
+            .select(`
+                *,
+                cafe:cafes(*, cafe_rating_stats(average_rating, total_reviews))
+            `)
+            .eq("slot_type", "hero")
+            .eq("is_active", true)
+            .ilike("region_context", city)  // Exact city match
+            .lte("start_date", now)
+            .gte("end_date", now)
+            .order("priority", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if ((cityScheduled as any)?.cafe) {
+            return flattenCafe((cityScheduled as any).cafe)
+        }
+    }
+
+    // 2. Check for region-level manual schedule
     if (region) {
-        const { data: scheduled } = await db
+        const { data: regionScheduled } = await db
             .from("featured_schedules")
             .select(`
                 *,
@@ -118,19 +151,32 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             .limit(1)
             .maybeSingle()
 
-        if ((scheduled as any)?.cafe) {
-            const c = (scheduled as any).cafe
-            const flat = {
-                ...c,
-                average_rating: c.cafe_rating_stats?.average_rating ?? null,
-                total_reviews: c.cafe_rating_stats?.total_reviews ?? null
-            }
-            delete flat.cafe_rating_stats
-            return flat as CafeWithRatings
+        if ((regionScheduled as any)?.cafe) {
+            return flattenCafe((regionScheduled as any).cafe)
         }
     }
 
-    // 2. Try city_municipality algorithmic match
+    // 3. Check for global manual schedule (region_context is null)
+    const { data: globalScheduled } = await db
+        .from("featured_schedules")
+        .select(`
+            *,
+            cafe:cafes(*, cafe_rating_stats(average_rating, total_reviews))
+        `)
+        .eq("slot_type", "hero")
+        .eq("is_active", true)
+        .is("region_context", null)
+        .lte("start_date", now)
+        .gte("end_date", now)
+        .order("priority", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    if ((globalScheduled as any)?.cafe) {
+        return flattenCafe((globalScheduled as any).cafe)
+    }
+
+    // 4. Algorithmic fallback: city_municipality match
     if (city) {
         const { data: cityCafes } = await db
             .from("cafes")
@@ -142,17 +188,11 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
 
         if (cityCafes?.length) {
             const selected = cityCafes[dayOfYear % cityCafes.length] as any
-            const flat = {
-                ...selected,
-                average_rating: selected.cafe_rating_stats?.average_rating ?? null,
-                total_reviews: selected.cafe_rating_stats?.total_reviews ?? null
-            }
-            delete flat.cafe_rating_stats
-            return flat as CafeWithRatings
+            return flattenCafe(selected)
         }
     }
 
-    // 3. Fallback to region algorithmic match
+    // 5. Algorithmic fallback: region match
     if (region) {
         const { data: regionCafes } = await db
             .from("cafes")
@@ -164,13 +204,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
 
         if (regionCafes?.length) {
             const selected = regionCafes[dayOfYear % regionCafes.length] as any
-            const flat = {
-                ...selected,
-                average_rating: selected.cafe_rating_stats?.average_rating ?? null,
-                total_reviews: selected.cafe_rating_stats?.total_reviews ?? null
-            }
-            delete flat.cafe_rating_stats
-            return flat as CafeWithRatings
+            return flattenCafe(selected)
         }
     }
 
