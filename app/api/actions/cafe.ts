@@ -287,7 +287,7 @@ export async function getAllCafes(
  */
 export async function getReviewsByCafeId(cafeId: string) {
     const db = await createClient()
-    const { data: reviews } = await db
+    const { data: reviews, error } = await db
         .from("reviews")
         .select(`
             id,
@@ -302,7 +302,7 @@ export async function getReviewsByCafeId(cafeId: string) {
             author:profiles(display_name, username, avatar_url),
             owner_response:owner_review_responses(
                 id,
-                response_text,
+                response_text:response,
                 created_at,
                 updated_at,
                 owner:profiles(display_name, avatar_url)
@@ -311,6 +311,11 @@ export async function getReviewsByCafeId(cafeId: string) {
         .eq("cafe_id", cafeId)
         .eq("status", "published")
         .order("created_at", { ascending: false })
+
+    if (error) {
+        console.error("Error fetching reviews:", error)
+        return []
+    }
 
     // Flatten owner_response array to single object (there should only be one response per review)
     return (reviews || []).map((r: any) => ({

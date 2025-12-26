@@ -1,5 +1,7 @@
 "use client"
 
+import { Reorder } from "motion/react"
+
 import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -24,6 +26,8 @@ import {
     BadgeCheck,
     Users,
     Search,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react"
 import {
     approveCafe,
@@ -50,7 +54,7 @@ import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
-import { cropAndResizeImage } from "@/utils/image-processing"
+import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
@@ -279,6 +283,22 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
             owner_ids: newOwners.length > 0 ? newOwners.map((o) => o.id) : null,
         }))
         setHasChanges(true)
+    }
+
+    const moveGalleryImage = (index: number, direction: "left" | "right") => {
+        const currentGallery = cafe.gallery || []
+        if (
+            (direction === "left" && index === 0) ||
+            (direction === "right" && index === currentGallery.length - 1)
+        ) {
+            return
+        }
+
+        const newIndex = direction === "left" ? index - 1 : index + 1
+        const newGallery = [...currentGallery]
+        const [movedItem] = newGallery.splice(index, 1)
+        newGallery.splice(newIndex, 0, movedItem)
+        updateField("gallery", newGallery)
     }
 
     const SECTIONS = [
@@ -718,17 +738,12 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                             for (const file of files) {
                                                 // Crop to 16:9 aspect ratio
                                                 const processedFile =
-                                                    await cropAndResizeImage(
-                                                        file,
-                                                        {
-                                                            targetAspectRatio:
-                                                                16 / 9,
-                                                            maxWidth: 1920,
-                                                            maxHeight: 1080,
-                                                            quality: 0.85,
-                                                            format: "image/webp",
-                                                        }
-                                                    )
+                                                    await resizeImage(file, {
+                                                        maxWidth: 1920,
+                                                        maxHeight: 1920,
+                                                        quality: 0.85,
+                                                        format: "image/webp",
+                                                    })
                                                 const result =
                                                     await uploadCafeImageClient(
                                                         processedFile
@@ -756,19 +771,65 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                             </div>
 
                             {cafe.gallery && cafe.gallery.length > 0 ? (
-                                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'>
+                                <Reorder.Group
+                                    axis='y'
+                                    values={cafe.gallery}
+                                    onReorder={(newOrder) =>
+                                        updateField("gallery", newOrder)
+                                    }
+                                    className='flex flex-wrap gap-4'
+                                >
                                     {cafe.gallery.map((url, idx) => (
-                                        <div
-                                            key={idx}
-                                            className='relative aspect-square rounded-lg overflow-hidden group'
+                                        <Reorder.Item
+                                            key={url}
+                                            value={url}
+                                            className='relative h-48 w-auto shrink-0 rounded-lg overflow-hidden group cursor-move active:cursor-grabbing bg-gray-50 flex items-center justify-center border border-text/10'
                                         >
-                                            <Image
+                                            <img
                                                 src={url}
                                                 alt={`Gallery ${idx + 1}`}
-                                                fill
-                                                className='object-cover'
+                                                className='h-full w-auto object-contain pointer-events-none max-w-none'
                                             />
+
+                                            {/* Move Controls */}
+                                            <div className='absolute bottom-2 left-2 right-2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-2 py-1 backdrop-blur-sm z-10'>
+                                                <button
+                                                    type='button'
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        moveGalleryImage(
+                                                            idx,
+                                                            "left"
+                                                        )
+                                                    }}
+                                                    className={`p-1 text-white hover:text-white/80 transition ${idx === 0 ? "opacity-20 cursor-not-allowed" : ""}`}
+                                                    disabled={idx === 0}
+                                                    title='Move left'
+                                                >
+                                                    <ChevronLeft className='w-4 h-4' />
+                                                </button>
+                                                <button
+                                                    type='button'
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        moveGalleryImage(
+                                                            idx,
+                                                            "right"
+                                                        )
+                                                    }}
+                                                    className={`p-1 text-white hover:text-white/80 transition ${idx === cafe.gallery!.length - 1 ? "opacity-20 cursor-not-allowed" : ""}`}
+                                                    disabled={
+                                                        idx ===
+                                                        cafe.gallery!.length - 1
+                                                    }
+                                                    title='Move right'
+                                                >
+                                                    <ChevronRight className='w-4 h-4' />
+                                                </button>
+                                            </div>
+
                                             <button
+                                                type='button'
                                                 onClick={async () => {
                                                     if (
                                                         !confirm(
@@ -786,13 +847,14 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                         ) || []
                                                     )
                                                 }}
-                                                className='absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-red-600'
+                                                className='absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-red-600 z-10'
+                                                title='Remove image'
                                             >
                                                 <X className='w-4 h-4' />
                                             </button>
-                                        </div>
+                                        </Reorder.Item>
                                     ))}
-                                </div>
+                                </Reorder.Group>
                             ) : (
                                 <div className='bg-text/5 border border-text/10 border-dashed rounded-xl p-12 text-center text-text/40'>
                                     <ImagePlus className='w-12 h-12 mx-auto mb-4 opacity-50' />

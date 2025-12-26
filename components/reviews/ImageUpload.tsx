@@ -1,10 +1,11 @@
 "use client"
 
-import { UploadCloud, X } from "lucide-react"
+import { UploadCloud, X, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import { useCallback, useState, useEffect } from "react"
 import { useDropzone } from "react-dropzone"
 import { cn } from "@/utils/cn"
+import { Reorder } from "motion/react"
 
 interface ImageUploadProps {
     value: (string | File)[]
@@ -78,6 +79,21 @@ export default function ImageUpload({
         }
     }
 
+    const moveImage = (index: number, direction: "left" | "right") => {
+        if (
+            (direction === "left" && index === 0) ||
+            (direction === "right" && index === value.length - 1)
+        ) {
+            return
+        }
+
+        const newIndex = direction === "left" ? index - 1 : index + 1
+        const newValue = [...value]
+        const [movedItem] = newValue.splice(index, 1)
+        newValue.splice(newIndex, 0, movedItem)
+        onChange(newValue)
+    }
+
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
         accept: {
@@ -93,41 +109,93 @@ export default function ImageUpload({
 
     return (
         <div className='w-full'>
-            <div className='flex flex-row gap-3 mb-4 overflow-x-auto pb-2 min-h-[100px]'>
-                {value.map((item, idx) => (
-                    <div
-                        key={typeof item === "string" ? item : `file-${idx}`}
-                        className='relative w-24 h-24 shrink-0 rounded-lg overflow-hidden border border-text/10'
-                    >
-                        <Image
-                            fill
-                            src={getPreviewUrl(item)}
-                            alt='Review image'
-                            className='object-cover'
-                        />
-                        <button
-                            type='button'
-                            onClick={() => removeImage(item)}
-                            className='absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors cursor-pointer z-10'
-                            disabled={disabled}
-                        >
-                            <X className='w-3 h-3' />
-                        </button>
+            <Reorder.Group
+                axis='x'
+                values={value}
+                onReorder={onChange}
+                className='flex flex-row gap-3 mb-4 overflow-x-auto pb-4 min-h-[100px] scrollbar-thin scrollbar-thumb-text/10 scrollbar-track-transparent'
+            >
+                {value.map((item, idx) => {
+                    const previewUrl = getPreviewUrl(item)
+                    // Use previewUrl as key for Files (stable per session), item string for URLs
+                    const key = typeof item === "string" ? item : previewUrl
 
-                        {/* Progress Overlay */}
-                        {progress[idx] !== undefined && progress[idx] < 100 && (
-                            <div className='absolute inset-0 bg-black/40 flex items-center justify-center'>
-                                <div className='w-16 h-1 bg-white/30 rounded-full overflow-hidden'>
-                                    <div
-                                        className='h-full bg-white transition-all duration-300'
-                                        style={{ width: `${progress[idx]}%` }}
-                                    />
+                    return (
+                        <Reorder.Item
+                            key={key}
+                            value={item}
+                            className='relative h-32 w-auto shrink-0 rounded-lg overflow-hidden border border-text/10 group cursor-grab active:cursor-grabbing bg-gray-50 flex items-center justify-center'
+                        >
+                            <img
+                                src={previewUrl}
+                                alt='Review image'
+                                className='h-full w-auto object-contain pointer-events-none max-w-none' // Prevent image drag interfering with item drag
+                            />
+                            <button
+                                type='button'
+                                onClick={() => removeImage(item)}
+                                className='absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors cursor-pointer z-10'
+                                disabled={disabled}
+                                title='Remove image'
+                            >
+                                <X className='w-3 h-3' />
+                            </button>
+
+                            {!disabled && (
+                                <div className='absolute bottom-1 left-1 right-1 flex justify-between z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-1 py-0.5 backdrop-blur-sm'>
+                                    <button
+                                        type='button'
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            moveImage(idx, "left")
+                                        }}
+                                        className={cn(
+                                            "p-1 text-white hover:text-white/80 transition-colors",
+                                            idx === 0 &&
+                                                "opacity-20 cursor-not-allowed"
+                                        )}
+                                        disabled={idx === 0}
+                                        title='Move left'
+                                    >
+                                        <ChevronLeft className='w-3 h-3' />
+                                    </button>
+                                    <button
+                                        type='button'
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            moveImage(idx, "right")
+                                        }}
+                                        className={cn(
+                                            "p-1 text-white hover:text-white/80 transition-colors",
+                                            idx === value.length - 1 &&
+                                                "opacity-20 cursor-not-allowed"
+                                        )}
+                                        disabled={idx === value.length - 1}
+                                        title='Move right'
+                                    >
+                                        <ChevronRight className='w-3 h-3' />
+                                    </button>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
+                            )}
+
+                            {/* Progress Overlay */}
+                            {progress[idx] !== undefined &&
+                                progress[idx] < 100 && (
+                                    <div className='absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none'>
+                                        <div className='w-16 h-1 bg-white/30 rounded-full overflow-hidden'>
+                                            <div
+                                                className='h-full bg-white transition-all duration-300'
+                                                style={{
+                                                    width: `${progress[idx]}%`,
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                        </Reorder.Item>
+                    )
+                })}
+            </Reorder.Group>
 
             {(maxImages === 0 || value.length < maxImages) && (
                 <div

@@ -14,12 +14,13 @@ export default function RecentCard({
     idx: number
 }) {
     return (
-        <motion.div
+        <motion.a
             initial={{ opacity: 0, y: 20 }}
             transition={{ delay: idx * 0.4 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className='min-w-full md:min-w-80 md:w-80 snap-center md:snap-start flex flex-col gap-2 bg-background border-text/10 border shadow-sm  rounded-4xl p-4'
+            href={`/cafes/${cafe.slug}`}
+            className='min-w-full md:min-w-80 md:w-80 snap-center md:snap-start flex flex-col gap-2 bg-background border-text/10 border shadow-sm  rounded-4xl p-4 group'
         >
             <div className='relative rounded-3xl overflow-clip w-full h-auto aspect-square select-none bg-secondary/10'>
                 {cafe.thumbnail && (
@@ -36,13 +37,10 @@ export default function RecentCard({
             <span className='text-text/60 text-sm'>{cafe.address_display}</span>
             <div className='flex-1' />
             {cafe.slug && (
-                <Link
-                    href={`/cafes/${cafe.slug}`}
-                    className='flex flex-row justify-end items-center gap-2 hover:opacity-60 transition-opacity'
-                >
+                <div className='flex flex-row justify-end items-center gap-2 hover:opacity-60 transition-opacity group-hover:opacity-60'>
                     Learn More <ArrowRightIcon className='w-4 h-4' />
-                </Link>
+                </div>
             )}
-        </motion.div>
+        </motion.a>
     )
 }

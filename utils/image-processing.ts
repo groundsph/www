@@ -94,7 +94,7 @@ export async function resizeImage(
 }
 
 interface CropResizeOptions {
-    targetAspectRatio: number // e.g., 16/9 for 16:9 aspect ratio
+    targetAspectRatio?: number // Optional: if undefined, preserves original aspect ratio
     maxWidth: number
     maxHeight: number
     quality?: number // 0 to 1, default 0.8
@@ -111,7 +111,6 @@ export async function cropAndResizeImage(
 ): Promise<File> {
     return new Promise((resolve, reject) => {
         const {
-            targetAspectRatio,
             maxWidth,
             maxHeight,
             quality = 0.8,
@@ -127,6 +126,9 @@ export async function cropAndResizeImage(
                 const srcWidth = img.width
                 const srcHeight = img.height
                 const srcAspectRatio = srcWidth / srcHeight
+
+                // Use provided targetAspectRatio or default to source aspect ratio (no cropping)
+                const targetAspectRatio = options.targetAspectRatio || srcAspectRatio
 
                 // Calculate crop dimensions to achieve target aspect ratio
                 let cropWidth: number

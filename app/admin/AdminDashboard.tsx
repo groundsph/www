@@ -66,6 +66,41 @@ import IconPicker from "@/components/badges/IconPicker"
 import { Pencil } from "lucide-react"
 import FeaturedScheduleManager from "./FeaturedScheduleManager"
 
+const resizeBadgeImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+        const img = document.createElement("img")
+        img.src = URL.createObjectURL(file)
+        img.onload = () => {
+            // If already 512x512, return original
+            if (img.width === 512 && img.height === 512) {
+                resolve(file)
+                return
+            }
+
+            const canvas = document.createElement("canvas")
+            canvas.width = 512
+            canvas.height = 512
+            const ctx = canvas.getContext("2d")
+            if (!ctx) {
+                reject(new Error("Canvas context not available"))
+                return
+            }
+
+            // Draw stretched to 512x512
+            ctx.drawImage(img, 0, 0, 512, 512)
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(new File([blob], file.name, { type: "image/png" }))
+                } else {
+                    reject(new Error("Failed to create blob"))
+                }
+            }, "image/png")
+        }
+        img.onerror = () => reject(new Error("Failed to load image"))
+    })
+}
+
 interface AdminDashboardProps {
     pendingCafes: CafeWithRatings[]
     publishedCafes: CafeWithRatings[]
@@ -375,7 +410,9 @@ export default function AdminDashboard({
         setSelectedIconColor("#8B4513")
     }
 
-    const handleBadgeImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBadgeImageChange = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
         const file = e.target.files?.[0]
         if (!file) return
 
@@ -385,21 +422,32 @@ export default function AdminDashboard({
             return
         }
 
-        // Validate size (500KB)
-        if (file.size > 500 * 1024) {
-            setBadgeError("File too large (max 500KB)")
-            return
-        }
+        try {
+            setBadgeLoading(true)
+            const processedFile = await resizeBadgeImage(file)
 
-        setBadgeImageFile(file)
-        setBadgeError(null)
+            // Validate size (500KB)
+            if (processedFile.size > 500 * 1024) {
+                setBadgeError("File too large after processing (max 500KB)")
+                setBadgeLoading(false)
+                return
+            }
 
-        // Create preview
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            setBadgeImagePreview(e.target?.result as string)
+            setBadgeImageFile(processedFile)
+            setBadgeError(null)
+
+            // Create preview
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                setBadgeImagePreview(e.target?.result as string)
+            }
+            reader.readAsDataURL(processedFile)
+        } catch (error) {
+            console.error("Image processing error:", error)
+            setBadgeError("Failed to process image")
+        } finally {
+            setBadgeLoading(false)
         }
-        reader.readAsDataURL(file)
     }
 
     const handleSaveBadge = async () => {
@@ -1848,7 +1896,8 @@ export default function AdminDashboard({
                                                 />
                                             </label>
                                             <p className='text-xs text-text/40 mt-1'>
-                                                PNG only, 512×512px, max 500KB
+                                                PNG only, auto-resized to
+                                                512×512px, max 500KB
                                             </p>
                                         </div>
                                     </div>

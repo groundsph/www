@@ -42,7 +42,7 @@ import AmenityToggles from "./AmenityToggles"
 import OperatingHoursEditor from "./OperatingHoursEditor"
 import SocialLinksEditor from "./SocialLinksEditor"
 import LocationPicker from "./LocationPicker"
-import { cropAndResizeImage } from "@/utils/image-processing"
+import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
 
 const STEPS = [
     { id: 1, title: "Basic Info", icon: Coffee },
@@ -229,10 +229,9 @@ export default function CafeSubmissionForm({
             const processedGalleryFiles: File[] = []
             for (let i = 0; i < galleryFiles.length; i++) {
                 const file = galleryFiles[i]
-                const processed = await cropAndResizeImage(file, {
-                    targetAspectRatio: 16 / 9,
+                const processed = await resizeImage(file, {
                     maxWidth: 1920,
-                    maxHeight: 1080,
+                    maxHeight: 1920,
                     quality: 0.85,
                     format: "image/webp",
                 })
