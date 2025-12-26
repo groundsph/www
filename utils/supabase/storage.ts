@@ -10,7 +10,7 @@ const BADGE_BUCKET = "badges"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CAFE_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_BADGE_FILE_SIZE = 500 * 1024 // 500KB
-const BADGE_IMAGE_DIMENSION = 128 // Badge images must be 128x128px
+const BADGE_IMAGE_DIMENSION = 512 // Badge images must be 512x512px
 
 /**
  * Extract storage path from a Supabase storage public URL (internal helper)
@@ -519,7 +519,7 @@ export async function removeAvatar(): Promise<{
 
 /**
  * Upload a badge image to Supabase Storage (Admin only)
- * Requirements: PNG with transparency, 128x128px, max 500KB
+ * Requirements: PNG with transparency, 512x512px, max 500KB
  * File is stored at: badges/{timestamp}-{random}.png
  */
 export async function uploadBadgeImage(formData: FormData): Promise<{

@@ -1810,7 +1810,7 @@ export default function AdminDashboard({
                             ) : (
                                 <div>
                                     <label className='block text-sm font-medium mb-2'>
-                                        Badge Image (128×128 PNG)
+                                        Badge Image (512×512 PNG)
                                     </label>
                                     <div className='flex items-center gap-4'>
                                         {/* Preview */}
@@ -1848,7 +1848,7 @@ export default function AdminDashboard({
                                                 />
                                             </label>
                                             <p className='text-xs text-text/40 mt-1'>
-                                                PNG only, 128×128px, max 500KB
+                                                PNG only, 512×512px, max 500KB
                                             </p>
                                         </div>
                                     </div>
