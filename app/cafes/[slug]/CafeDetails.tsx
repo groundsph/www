@@ -5,8 +5,9 @@ import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
 import Image from "next/image"
-import { useState, useContext } from "react"
+import { useState, useContext, useRef, useEffect } from "react"
 import { AuthContext } from "@/components/AuthProvider"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 // Components
 import CafeHero from "./components/CafeHero"
@@ -97,6 +98,41 @@ export default function CafeDetails({
     const userReview = user
         ? reviews.find((r) => r.user_id === user.id)
         : undefined
+
+    // Gallery Scroll Logic
+    const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const [canScrollLeft, setCanScrollLeft] = useState(false)
+    const [canScrollRight, setCanScrollRight] = useState(true)
+
+    const checkScroll = () => {
+        if (scrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } =
+                scrollContainerRef.current
+            setCanScrollLeft(scrollLeft > 0)
+            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth)
+        }
+    }
+
+    useEffect(() => {
+        checkScroll()
+        window.addEventListener("resize", checkScroll)
+        return () => window.removeEventListener("resize", checkScroll)
+    }, [gallery])
+
+    const scroll = (direction: "left" | "right") => {
+        if (scrollContainerRef.current) {
+            const scrollAmount = 300
+            const newScrollLeft =
+                direction === "left"
+                    ? scrollContainerRef.current.scrollLeft - scrollAmount
+                    : scrollContainerRef.current.scrollLeft + scrollAmount
+
+            scrollContainerRef.current.scrollTo({
+                left: newScrollLeft,
+                behavior: "smooth",
+            })
+        }
+    }
 
     // Reviews Section Component (shared between mobile tabs and desktop)
     const ReviewsSection = () => (
@@ -269,8 +305,41 @@ export default function CafeDetails({
                 <div className='flex-1 flex flex-col gap-6'>
                     {/* Gallery - Horizontal Scroll */}
                     {gallery.length > 0 && (
-                        <div className='w-full'>
+                        <div className='w-full relative group'>
+                            {/* Left Scroll Button */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    scroll("left")
+                                }}
+                                className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-primary hover:bg-primary/60 text-background rounded-full transition-all duration-200 cursor-pointer ${
+                                    canScrollLeft
+                                        ? "opacity-0 group-hover:opacity-100"
+                                        : "opacity-0 pointer-events-none"
+                                }`}
+                                aria-label='Scroll left'
+                            >
+                                <ChevronLeft className='w-5 h-5' />
+                            </button>
+
+                            {/* Right Scroll Button */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    scroll("right")
+                                }}
+                                className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-primary hover:bg-primary/60 text-background rounded-full transition-all duration-200 cursor-pointer ${
+                                    canScrollRight
+                                        ? "opacity-0 group-hover:opacity-100"
+                                        : "opacity-0 pointer-events-none"
+                                }`}
+                                aria-label='Scroll right'
+                            >
+                                <ChevronRight className='w-5 h-5' />
+                            </button>
                             <div
+                                ref={scrollContainerRef}
+                                onScroll={checkScroll}
                                 className='flex flex-row gap-3 overflow-x-auto pb-2 scrollbar-hide'
                                 style={{
                                     scrollSnapType: "x mandatory",
@@ -300,9 +369,15 @@ export default function CafeDetails({
                                 ))}
                             </div>
                             {gallery.length > 1 && (
-                                <p className='text-xs text-text/40 mt-2 text-center'>
-                                    ← Scroll to see {gallery.length} photos →
-                                </p>
+                                <>
+                                    <p className='text-xs text-text/40 mt-2 text-center'>
+                                        ← Scroll to see {gallery.length} photos
+                                        →
+                                    </p>
+                                    <p className='text-xs text-text/40 text-center'>
+                                        or navigate using the buttons above
+                                    </p>
+                                </>
                             )}
                         </div>
                     )}
