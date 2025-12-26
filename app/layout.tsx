@@ -89,7 +89,7 @@ export const metadata: Metadata = {
     icons: {
         icon: "/icon.png",
         shortcut: "/icon.png",
-        apple: "/icon.png",
+        apple: "/mobile-icon.png",
     },
     manifest: "/manifest.webmanifest",
     category: "food and drink",
