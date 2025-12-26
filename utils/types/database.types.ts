@@ -490,6 +490,7 @@ export type Database = {
           id: string
           is_supporter: boolean | null
           passport: Json | null
+          profile_completed: boolean | null
           role: Database["public"]["Enums"]["user_role"] | null
           stats: Json | null
           support_since: string | null
@@ -505,6 +506,7 @@ export type Database = {
           id: string
           is_supporter?: boolean | null
           passport?: Json | null
+          profile_completed?: boolean | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stats?: Json | null
           support_since?: string | null
@@ -520,6 +522,7 @@ export type Database = {
           id?: string
           is_supporter?: boolean | null
           passport?: Json | null
+          profile_completed?: boolean | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stats?: Json | null
           support_since?: string | null

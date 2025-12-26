@@ -5,7 +5,7 @@ import { checkUsernameAvailability } from "@/app/api/actions/profile"
 import { createLocalClient } from "@/utils/supabase/client"
 import { motion } from "motion/react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect, useContext } from "react"
 
 type AuthMode = "signin" | "signup" | "username" | "reset"
@@ -21,6 +21,7 @@ export default function AuthPageClient() {
     // Constants
     const supabase = createLocalClient()
     const searchParams = useSearchParams()
+    const router = useRouter()
 
     // States
     const [mode, setMode] = useState<AuthMode>("signin")
@@ -33,8 +34,13 @@ export default function AuthPageClient() {
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
     const [usernameStatus, setUsernameStatus] = useState<
-        "idle" | "checking" | "available" | "taken"
+        "idle" | "checking" | "available" | "taken" | "current"
     >("idle")
+    const [currentProfile, setCurrentProfile] = useState<{
+        id: string
+        username: string
+        display_name: string
+    } | null>(null)
 
     // Effects
     useEffect(() => {
@@ -43,11 +49,31 @@ export default function AuthPageClient() {
 
         if (setup === "username") {
             setMode("username")
+            // Fetch current profile to pre-fill and show current username
+            const fetchCurrentProfile = async () => {
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser()
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from("profiles")
+                        .select("id, username, display_name")
+                        .eq("id", user.id)
+                        .single()
+                    if (profile) {
+                        setCurrentProfile(profile)
+                        // Pre-fill with current values
+                        setUsername(profile.username || "")
+                        setDisplayName(profile.display_name || "")
+                    }
+                }
+            }
+            fetchCurrentProfile()
         }
         if (authError === "auth_failed") {
             setError("Authentication failed. Please try again.")
         }
-    }, [searchParams])
+    }, [searchParams, supabase])
 
     // Debounced username availability check
     useEffect(() => {
@@ -61,11 +87,25 @@ export default function AuthPageClient() {
             return
         }
 
+        // If username matches current username, it's their own - mark as current
+        if (
+            currentProfile &&
+            username.trim().toLowerCase() ===
+                currentProfile.username.toLowerCase()
+        ) {
+            setUsernameStatus("current")
+            return
+        }
+
         setUsernameStatus("checking")
 
         const timeoutId = setTimeout(async () => {
             try {
-                const result = await checkUsernameAvailability(username.trim())
+                // Pass current user ID to exclude from availability check
+                const result = await checkUsernameAvailability(
+                    username.trim(),
+                    currentProfile?.id
+                )
                 setUsernameStatus(result.available ? "available" : "taken")
             } catch {
                 setUsernameStatus("idle")
@@ -73,7 +113,7 @@ export default function AuthPageClient() {
         }, 500)
 
         return () => clearTimeout(timeoutId)
-    }, [username, mode])
+    }, [username, mode, currentProfile])
 
     // Functions
     const checkPasswordRequirements = (password: string) => {
@@ -100,7 +140,8 @@ export default function AuthPageClient() {
             })
             if (error) throw error
             // Redirect on success
-            window.location.href = "/"
+            const redirect = searchParams.get("redirect") || "/"
+            window.location.href = redirect
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to sign in")
         } finally {
@@ -134,7 +175,12 @@ export default function AuthPageClient() {
                 },
             })
             if (error) throw error
-            // Move to username step
+            // Move to username step and update URL to stay in sync
+            const redirectParam = searchParams.get("redirect")
+            const newUrl = redirectParam
+                ? `/auth?setup=username&redirect=${encodeURIComponent(redirectParam)}`
+                : "/auth?setup=username"
+            router.replace(newUrl)
             setMode("username")
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to sign up")
@@ -173,6 +219,7 @@ export default function AuthPageClient() {
                 .update({
                     username: username.trim(),
                     display_name: displayName.trim(),
+                    profile_completed: true,
                 })
                 .eq("id", user.id)
 
@@ -180,7 +227,8 @@ export default function AuthPageClient() {
 
             refreshProfile()
             // Redirect on success
-            window.location.href = "/"
+            const redirect = searchParams.get("redirect") || "/"
+            window.location.href = redirect
         } catch (err: unknown) {
             setError(
                 err instanceof Error ? err.message : "Failed to set profile"
@@ -275,6 +323,14 @@ export default function AuthPageClient() {
                             <p className='text-text/70 text-sm mb-4'>
                                 Almost there! Set up your profile to get
                                 started.
+                                {currentProfile && (
+                                    <span className='block mt-2 text-text/50'>
+                                        Your current username is{" "}
+                                        <span className='font-mono text-primary'>
+                                            @{currentProfile.username}
+                                        </span>
+                                    </span>
+                                )}
                             </p>
                             <div>
                                 <div className='relative'>
@@ -294,7 +350,9 @@ export default function AuthPageClient() {
                                                 ? "border-red-400 focus:border-red-400"
                                                 : usernameStatus === "available"
                                                   ? "border-green-400 focus:border-green-400"
-                                                  : "border-secondary/30 focus:border-primary"
+                                                  : usernameStatus === "current"
+                                                    ? "border-blue-400 focus:border-blue-400"
+                                                    : "border-secondary/30 focus:border-primary"
                                         }`}
                                         disabled={isLoading}
                                         required
@@ -336,6 +394,21 @@ export default function AuthPageClient() {
                                                     />
                                                 </svg>
                                             )}
+                                            {usernameStatus === "current" && (
+                                                <svg
+                                                    className='w-5 h-5 text-blue-500'
+                                                    fill='none'
+                                                    viewBox='0 0 24 24'
+                                                    stroke='currentColor'
+                                                >
+                                                    <path
+                                                        strokeLinecap='round'
+                                                        strokeLinejoin='round'
+                                                        strokeWidth={2}
+                                                        d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
+                                                    />
+                                                </svg>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -348,6 +421,11 @@ export default function AuthPageClient() {
                                 {usernameStatus === "available" && (
                                     <p className='text-green-500 text-xs mt-1'>
                                         Username is available!
+                                    </p>
+                                )}
+                                {usernameStatus === "current" && (
+                                    <p className='text-blue-500 text-xs mt-1'>
+                                        This is your current username
                                     </p>
                                 )}
                                 {username.trim().length > 0 &&

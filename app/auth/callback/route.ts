@@ -34,8 +34,9 @@ export async function GET(request: Request) {
             const { data: { user } } = await supabase.auth.getUser()
 
             if (user && !user.user_metadata?.username) {
-                // Redirect to auth page with username mode
-                return NextResponse.redirect(`${origin}/auth?setup=username`)
+                // Redirect to auth page with username mode, preserving the original redirect
+                const redirectParam = next !== "/" ? `&redirect=${encodeURIComponent(next)}` : ""
+                return NextResponse.redirect(`${origin}/auth?setup=username${redirectParam}`)
             }
 
             return NextResponse.redirect(`${origin}${next}`)

@@ -7,19 +7,26 @@ import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tabl
 /**
  * Check if a username is already taken
  * Returns { available: true } if username is free, { available: false } if taken
+ * @param excludeUserId - Optional user ID to exclude from the check (for checking own username)
  */
-export async function checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
+export async function checkUsernameAvailability(username: string, excludeUserId?: string): Promise<{ available: boolean }> {
     if (!username || username.trim().length < 3) {
         return { available: false }
     }
 
     const db = await createClient()
 
-    const { data, error } = await db
+    let query = db
         .from("profiles")
         .select("id")
         .eq("username", username.trim().toLowerCase())
-        .maybeSingle()
+
+    // If excludeUserId is provided, exclude that user from the check
+    if (excludeUserId) {
+        query = query.neq("id", excludeUserId)
+    }
+
+    const { data, error } = await query.maybeSingle()
 
     // If no data and no error, username is available
     if (!data && !error) {

@@ -36,11 +36,22 @@ export async function proxy(request: NextRequest) {
 
     // Refresh session if exists - with error handling
     let user = null
+    let profileCompleted = false
     try {
         const {
             data: { user: authUser },
         } = await supabase.auth.getUser()
         user = authUser
+
+        // Check if user has completed their profile setup
+        if (user) {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("profile_completed")
+                .eq("id", user.id)
+                .single()
+            profileCompleted = !!profile?.profile_completed
+        }
     } catch {
         // Error fetching user - treat as not logged in
         user = null
@@ -61,12 +72,30 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
-    // Redirect away from auth if already logged in
+    // If user is logged in but hasn't completed profile setup, redirect to profile setup
+    // (except if already on auth page or callback)
+    if (isProtectedRoute && user && !profileCompleted && !pathname.startsWith("/auth")) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/auth"
+        url.searchParams.set("setup", "username")
+        url.searchParams.set("redirect", pathname)
+        return NextResponse.redirect(url)
+    }
+
+    // Redirect away from auth if already logged in AND has completed profile setup
+    const isSettingUpUsername = request.nextUrl.searchParams.get("setup") === "username"
     if (pathname.startsWith("/auth") && user && !pathname.includes("/callback")) {
+        // Don't redirect if user still needs to complete profile setup
+        if (!profileCompleted || isSettingUpUsername) {
+            // Stay on auth page for profile setup
+            return supabaseResponse
+        }
+        // User is fully set up, redirect them away from auth
         const redirect = request.nextUrl.searchParams.get("redirect") || "/"
         const url = request.nextUrl.clone()
         url.pathname = redirect
         url.searchParams.delete("redirect")
+        url.searchParams.delete("setup")
         return NextResponse.redirect(url)
     }
 
