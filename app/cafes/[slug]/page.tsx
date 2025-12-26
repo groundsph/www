@@ -2,6 +2,7 @@ import CafeDetails from "@/app/cafes/[slug]/CafeDetails"
 import Link from "next/link"
 import type { Metadata } from "next"
 import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"
+import { getCafeMenuItems } from "@/app/api/actions/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 export async function generateMetadata({
@@ -152,7 +153,10 @@ export default async function CafePage({
     // Constants
     const { slug } = await params
     const cafe = await getCafeBySlug(slug)
-    const reviews = cafe ? await getReviewsByCafeId(cafe.id) : []
+    const [reviews, menuItems] = await Promise.all([
+        cafe ? getReviewsByCafeId(cafe.id) : [],
+        cafe ? getCafeMenuItems(cafe.id) : [],
+    ])
 
     if (!cafe)
         return (
@@ -187,6 +191,7 @@ export default async function CafePage({
             <CafeDetails
                 cafe={cafe}
                 reviews={reviews}
+                menuItems={menuItems}
             />
         </>
     )

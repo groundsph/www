@@ -3,6 +3,7 @@
 
 import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { CafeMenuItem } from "@/utils/types/owner"
 import Image from "next/image"
 import { useState, useContext } from "react"
 import { AuthContext } from "@/components/AuthProvider"
@@ -54,9 +55,11 @@ export interface Review {
 export default function CafeDetails({
     cafe,
     reviews = [],
+    menuItems = [],
 }: {
     cafe: CafeWithRatings
     reviews?: Review[]
+    menuItems?: CafeMenuItem[]
 }) {
     // Auth
     const authContext = useContext(AuthContext)
@@ -249,6 +252,71 @@ export default function CafeDetails({
                                 Check back later for more about {cafe.name}
                             </p>
                         </div>
+                    )}
+
+                    {/* Menu Section */}
+                    {menuItems.length > 0 && (
+                        <section className='w-full mt-6'>
+                            <h2 className='text-xl font-semibold mb-4'>Menu</h2>
+                            <div className='grid gap-4'>
+                                {/* Group by category */}
+                                {Array.from(
+                                    new Set(
+                                        menuItems.map((item) => item.category)
+                                    )
+                                ).map((category) => (
+                                    <div
+                                        key={category}
+                                        className='space-y-2'
+                                    >
+                                        <h3 className='text-sm font-medium text-text/60 uppercase tracking-wide'>
+                                            {category}
+                                        </h3>
+                                        <div className='grid gap-2'>
+                                            {menuItems
+                                                .filter(
+                                                    (item) =>
+                                                        item.category ===
+                                                            category &&
+                                                        item.is_available
+                                                )
+                                                .map((item) => (
+                                                    <div
+                                                        key={item.id}
+                                                        className='flex justify-between items-start p-3 bg-tertiary/50 rounded-lg'
+                                                    >
+                                                        <div className='flex-1 min-w-0'>
+                                                            <div className='flex items-center gap-2'>
+                                                                <span className='font-medium'>
+                                                                    {item.name}
+                                                                </span>
+                                                                {item.is_signature && (
+                                                                    <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
+                                                                        ★
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {item.description && (
+                                                                <p className='text-sm text-text/60 mt-0.5'>
+                                                                    {
+                                                                        item.description
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <span className='font-semibold text-primary ml-4'>
+                                                            ₱
+                                                            {item.price.toFixed(
+                                                                0
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
                     )}
 
                     {/* Reviews Section */}

@@ -5,6 +5,12 @@ import { Bookmark, Coffee, Heart, MapPin, Stamp, Star } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
+// Stamp Images
+import stamp1 from "@/assets/stamps/1.svg"
+import stamp2 from "@/assets/stamps/2.svg"
+import stamp3 from "@/assets/stamps/3.svg"
+import Image from "next/image"
+
 interface PassportCafe {
     name: string
     slug: string
@@ -27,6 +33,13 @@ export default function Passport({
     className = "",
 }: PassportProps) {
     const [activeTab, setActiveTab] = useState<TabType>("visited")
+
+    // Get Randomized Stamp from Cafe Title (ensure same stamp is used for same cafe)
+    const getStamp = (title: string) => {
+        const hash = title.split(" ").join("").toLowerCase()
+        const index = hash.charCodeAt(0) % 3
+        return [stamp1, stamp2, stamp3][index]
+    }
 
     return (
         <div className={`w-full ${className}`}>
@@ -107,7 +120,7 @@ export default function Passport({
                             </div>
 
                             {visited.length > 0 ? (
-                                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6'>
+                                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8'>
                                     {visited.map((cafe) => (
                                         <Link
                                             key={cafe.slug}
@@ -115,7 +128,7 @@ export default function Passport({
                                             className='group relative aspect-square'
                                         >
                                             {/* Stamp Visual */}
-                                            <div className='absolute inset-0 border-4 border-dashed border-primary/30 rounded-full flex flex-col items-center justify-center p-4 text-center transform -rotate-12 group-hover:rotate-0 group-hover:scale-105 group-hover:border-primary/60 transition-all duration-300 bg-background/50 backdrop-blur-xs'>
+                                            <div className='absolute inset-0 flex flex-col items-center justify-center p-4 text-center transform -rotate-12 group-hover:rotate-0 group-hover:scale-105 transition-all duration-300'>
                                                 <Coffee className='w-6 h-6 text-primary/50 mb-1' />
                                                 <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight'>
                                                     {cafe.name}
@@ -123,6 +136,11 @@ export default function Passport({
                                                 <span className='text-[10px] text-primary/40 mt-1 font-mono'>
                                                     VISITED
                                                 </span>
+                                                <Image
+                                                    src={getStamp(cafe.name)}
+                                                    alt=''
+                                                    className='w-full h-full absolute inset-0 object-contain'
+                                                />
                                             </div>
                                         </Link>
                                     ))}

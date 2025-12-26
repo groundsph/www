@@ -44,6 +44,38 @@ export async function isOwnerOfCafe(cafeId: string): Promise<boolean> {
 }
 
 /**
+ * Check if user is owner of cafe OR an admin/moderator
+ */
+async function isOwnerOrAdmin(cafeId: string): Promise<boolean> {
+    const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    if (!user) return false
+
+    // Check if admin/moderator
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role && ['admin', 'moderator'].includes(profile.role)) {
+        return true
+    }
+
+    // Check if owner
+    const { data: cafe } = await db
+        .from('cafes')
+        .select('owner_ids')
+        .eq('id', cafeId)
+        .single()
+
+    if (!cafe || !cafe.owner_ids) return false
+
+    return cafe.owner_ids.includes(user.id)
+}
+
+/**
  * Get the current user ID if authenticated
  */
 async function getCurrentUserId(): Promise<string | null> {
@@ -603,8 +635,8 @@ export async function addMenuItem(
     cafeId: string,
     item: MenuItemForm
 ): Promise<MenuItemResult> {
-    const isOwner = await isOwnerOfCafe(cafeId)
-    if (!isOwner) {
+    const canManage = await isOwnerOrAdmin(cafeId)
+    if (!canManage) {
         return { success: false, error: 'Not authorized to manage this cafe\'s menu' }
     }
 
@@ -690,8 +722,8 @@ export async function updateMenuItem(
         return { success: false, error: 'Menu item not found' }
     }
 
-    const isOwner = await isOwnerOfCafe(item.cafe_id)
-    if (!isOwner) {
+    const canManage = await isOwnerOrAdmin(item.cafe_id)
+    if (!canManage) {
         return { success: false, error: 'Not authorized to edit this menu item' }
     }
 
@@ -725,8 +757,8 @@ export async function deleteMenuItem(itemId: string): Promise<OwnerActionResult>
         return { success: false, error: 'Menu item not found' }
     }
 
-    const isOwner = await isOwnerOfCafe(item.cafe_id)
-    if (!isOwner) {
+    const canManage = await isOwnerOrAdmin(item.cafe_id)
+    if (!canManage) {
         return { success: false, error: 'Not authorized to delete this menu item' }
     }
 
