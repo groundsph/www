@@ -23,6 +23,7 @@ import {
 import { useRouter } from "next/navigation"
 import { cn } from "@/utils/cn"
 import MarkdownRender from "@/components/MarkdownRender"
+import ImageLightbox from "@/components/ImageLightbox"
 
 interface ReviewItemProps {
     review: Review
@@ -55,6 +56,10 @@ export default function ReviewItem({
     const avatarUrl = review.author?.avatar_url
     const displayName = review.author?.display_name || "Unknown User"
     const username = review.author?.username || "user"
+
+    // Lightbox state
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+    const [lightboxIndex, setLightboxIndex] = useState(0)
 
     const handleLike = async () => {
         if (!currentUser || isLiking) return
@@ -264,6 +269,10 @@ export default function ReviewItem({
                             <div
                                 key={idx}
                                 className='relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border border-text/10 cursor-pointer hover:opacity-90 transition-opacity'
+                                onClick={() => {
+                                    setLightboxIndex(idx)
+                                    setIsLightboxOpen(true)
+                                }}
                             >
                                 <Image
                                     src={img}
@@ -304,6 +313,19 @@ export default function ReviewItem({
                     )}
                 </button>
             </div>
+
+            {/* Review Images Lightbox */}
+            {review.images &&
+                Array.isArray(review.images) &&
+                review.images.length > 0 && (
+                    <ImageLightbox
+                        images={review.images}
+                        initialIndex={lightboxIndex}
+                        isOpen={isLightboxOpen}
+                        onClose={() => setIsLightboxOpen(false)}
+                        altPrefix='Review image'
+                    />
+                )}
         </div>
     )
 }

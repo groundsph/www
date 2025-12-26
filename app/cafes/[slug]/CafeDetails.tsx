@@ -18,6 +18,7 @@ import {
 import ReviewModal from "@/components/reviews/ReviewModal"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import MarkdownRender from "@/components/MarkdownRender"
+import ImageLightbox from "@/components/ImageLightbox"
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
@@ -66,6 +67,10 @@ export default function CafeDetails({
     const [editingReview, setEditingReview] = useState<Review | undefined>(
         undefined
     )
+
+    // Lightbox State
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+    const [lightboxIndex, setLightboxIndex] = useState(0)
 
     // Computed
     const story = cafe.story
@@ -190,8 +195,12 @@ export default function CafeDetails({
                                 {gallery.map((image, idx) => (
                                     <div
                                         key={`${cafe.id}-gallery-${idx}`}
-                                        className='shrink-0 h-48 sm:h-56 md:h-64 overflow-hidden rounded-sm shadow-md shadow-black/10'
+                                        className='shrink-0 h-48 sm:h-56 md:h-64 overflow-hidden rounded-sm shadow-md shadow-black/10 cursor-pointer hover:opacity-90 transition-opacity'
                                         style={{ scrollSnapAlign: "start" }}
+                                        onClick={() => {
+                                            setLightboxIndex(idx)
+                                            setIsLightboxOpen(true)
+                                        }}
                                     >
                                         <Image
                                             src={image}
@@ -244,6 +253,15 @@ export default function CafeDetails({
                 cafeId={cafe.id}
                 cafeName={cafe.name}
                 existingReview={editingReview || userReview}
+            />
+
+            {/* Gallery Lightbox */}
+            <ImageLightbox
+                images={gallery}
+                initialIndex={lightboxIndex}
+                isOpen={isLightboxOpen}
+                onClose={() => setIsLightboxOpen(false)}
+                altPrefix={`${cafe.name} photo`}
             />
         </>
     )
