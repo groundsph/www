@@ -8,6 +8,7 @@ import {
     getFeaturedSchedules,
 } from "@/app/api/actions/admin"
 import { getPendingSuggestions } from "@/app/api/actions/suggestions"
+import { getPendingClaims } from "@/app/api/actions/claim"
 import AdminDashboard from "./AdminDashboard"
 
 export const metadata = {
@@ -22,7 +23,7 @@ export default async function AdminPage() {
         redirect("/")
     }
 
-    // Fetch pending cafes, published cafes, reported reviews, badges, suggestions, and featured schedules
+    // Fetch all admin data
     const [
         pendingCafes,
         publishedCafes,
@@ -30,6 +31,7 @@ export default async function AdminPage() {
         badges,
         suggestions,
         featuredSchedules,
+        pendingClaims,
     ] = await Promise.all([
         getPendingCafes(),
         getPublishedCafes(),
@@ -37,6 +39,7 @@ export default async function AdminPage() {
         getAllBadgeDefinitions(),
         getPendingSuggestions(),
         getFeaturedSchedules(),
+        getPendingClaims(),
     ])
 
     return (
@@ -49,6 +52,7 @@ export default async function AdminPage() {
                     badges={badges}
                     suggestions={suggestions}
                     featuredSchedules={featuredSchedules}
+                    pendingClaims={pendingClaims}
                 />
             </div>
         </main>

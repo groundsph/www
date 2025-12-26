@@ -58,12 +58,18 @@ import {
     approveSuggestion,
     rejectSuggestion,
 } from "@/app/api/actions/suggestions"
+import {
+    getPendingClaims,
+    approveClaim,
+    rejectClaim,
+    CafeClaim,
+} from "@/app/api/actions/claim"
 import { EditSuggestion } from "@/utils/types/suggestions"
 import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
-import { Pencil } from "lucide-react"
+import { Pencil, Store } from "lucide-react"
 import FeaturedScheduleManager from "./FeaturedScheduleManager"
 
 const resizeBadgeImage = (file: File): Promise<File> => {
@@ -108,6 +114,7 @@ interface AdminDashboardProps {
     badges: BadgeDefinition[]
     suggestions: EditSuggestion[]
     featuredSchedules: FeaturedSchedule[]
+    pendingClaims?: CafeClaim[]
 }
 
 type TabType =
@@ -117,6 +124,7 @@ type TabType =
     | "badges"
     | "suggestions"
     | "featured"
+    | "claims"
 
 export default function AdminDashboard({
     pendingCafes: initialPending,
@@ -125,6 +133,7 @@ export default function AdminDashboard({
     badges: initialBadges,
     suggestions: initialSuggestions,
     featuredSchedules: initialFeaturedSchedules,
+    pendingClaims: initialClaims = [],
 }: AdminDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
     const [pendingCafes, setPendingCafes] = useState(initialPending)
@@ -132,11 +141,13 @@ export default function AdminDashboard({
     const [reportedReviews, setReportedReviews] = useState(initialReported)
     const [badges, setBadges] = useState(initialBadges)
     const [suggestions, setSuggestions] = useState(initialSuggestions)
+    const [claims, setClaims] = useState<CafeClaim[]>(initialClaims)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedReview, setExpandedReview] = useState<string | null>(null)
     const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
         null
     )
+    const [expandedClaim, setExpandedClaim] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [cleanupLoading, setCleanupLoading] = useState(false)
@@ -900,6 +911,19 @@ export default function AdminDashboard({
                 >
                     <Star className='w-4 h-4' />
                     Featured
+                </button>
+                <button
+                    onClick={() => setActiveTab("claims")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                        activeTab === "claims"
+                            ? "bg-purple-500/20 text-purple-500 border-purple-500/30"
+                            : claims.length > 0
+                              ? "bg-purple-500/10 border-purple-500/20 text-purple-500/80 hover:bg-purple-500/20"
+                              : "bg-text/5 border-text/10 hover:bg-text/10"
+                    }`}
+                >
+                    <Store className='w-4 h-4' />
+                    Claims ({claims.length})
                 </button>
             </div>
 
@@ -2250,6 +2274,276 @@ export default function AdminDashboard({
                 <FeaturedScheduleManager
                     initialSchedules={initialFeaturedSchedules}
                 />
+            )}
+
+            {/* Claims Management */}
+            {activeTab === "claims" && (
+                <div className='space-y-4'>
+                    <div className='flex items-center justify-between'>
+                        <h2 className='text-xl font-semibold'>
+                            Cafe Claim Requests
+                        </h2>
+                        <p className='text-sm text-text/60'>
+                            {claims.length} pending{" "}
+                            {claims.length === 1 ? "claim" : "claims"}
+                        </p>
+                    </div>
+
+                    {claims.length === 0 ? (
+                        <div className='text-center py-12 bg-text/5 border border-text/10 rounded-xl'>
+                            <Store className='w-12 h-12 mx-auto mb-4 text-text/30' />
+                            <p className='text-text/60 font-medium'>
+                                No pending claims
+                            </p>
+                            <p className='text-text/40 text-sm mt-1'>
+                                Cafe ownership claims will appear here
+                            </p>
+                        </div>
+                    ) : (
+                        <div className='space-y-3'>
+                            {claims.map((claim) => (
+                                <div
+                                    key={claim.id}
+                                    className='bg-text/5 border border-text/10 rounded-xl overflow-hidden'
+                                >
+                                    <div
+                                        className='p-4 cursor-pointer hover:bg-text/10 transition-colors'
+                                        onClick={() =>
+                                            setExpandedClaim(
+                                                expandedClaim === claim.id
+                                                    ? null
+                                                    : claim.id
+                                            )
+                                        }
+                                    >
+                                        <div className='flex items-start justify-between'>
+                                            <div className='flex items-center gap-3'>
+                                                {claim.cafe?.thumbnail ? (
+                                                    <Image
+                                                        src={
+                                                            claim.cafe.thumbnail
+                                                        }
+                                                        alt={
+                                                            claim.cafe.name ||
+                                                            "Cafe"
+                                                        }
+                                                        width={48}
+                                                        height={48}
+                                                        className='rounded-lg object-cover'
+                                                    />
+                                                ) : (
+                                                    <div className='w-12 h-12 bg-text/10 rounded-lg flex items-center justify-center'>
+                                                        <Store className='w-6 h-6 text-text/40' />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <Link
+                                                        href={`/cafes/${claim.cafe?.slug || claim.cafe_id}`}
+                                                        className='font-semibold hover:text-primary transition-colors'
+                                                        onClick={(e) =>
+                                                            e.stopPropagation()
+                                                        }
+                                                    >
+                                                        {claim.cafe?.name ||
+                                                            "Unknown Cafe"}
+                                                    </Link>
+                                                    <div className='text-sm text-text/60 flex items-center gap-2'>
+                                                        <span>
+                                                            Claimed by @
+                                                            {claim.user
+                                                                ?.username ||
+                                                                "unknown"}
+                                                        </span>
+                                                        <span className='text-text/30'>
+                                                            •
+                                                        </span>
+                                                        <span>
+                                                            {claim.created_at
+                                                                ? new Date(
+                                                                      claim.created_at
+                                                                  ).toLocaleDateString()
+                                                                : "Unknown date"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className='flex items-center gap-2'>
+                                                {processing === claim.id ? (
+                                                    <Loader2 className='w-5 h-5 animate-spin' />
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={async (
+                                                                e
+                                                            ) => {
+                                                                e.stopPropagation()
+                                                                setProcessing(
+                                                                    claim.id
+                                                                )
+                                                                const result =
+                                                                    await approveClaim(
+                                                                        claim.id
+                                                                    )
+                                                                if (
+                                                                    result.success
+                                                                ) {
+                                                                    setClaims(
+                                                                        (
+                                                                            prev
+                                                                        ) =>
+                                                                            prev.filter(
+                                                                                (
+                                                                                    c
+                                                                                ) =>
+                                                                                    c.id !==
+                                                                                    claim.id
+                                                                            )
+                                                                    )
+                                                                } else {
+                                                                    alert(
+                                                                        result.error ||
+                                                                            "Failed to approve"
+                                                                    )
+                                                                }
+                                                                setProcessing(
+                                                                    null
+                                                                )
+                                                            }}
+                                                            className='p-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition-colors'
+                                                            title='Approve claim'
+                                                        >
+                                                            <Check className='w-4 h-4' />
+                                                        </button>
+                                                        <button
+                                                            onClick={async (
+                                                                e
+                                                            ) => {
+                                                                e.stopPropagation()
+                                                                if (
+                                                                    !confirm(
+                                                                        "Reject this claim?"
+                                                                    )
+                                                                )
+                                                                    return
+                                                                setProcessing(
+                                                                    claim.id
+                                                                )
+                                                                const result =
+                                                                    await rejectClaim(
+                                                                        claim.id
+                                                                    )
+                                                                if (
+                                                                    result.success
+                                                                ) {
+                                                                    setClaims(
+                                                                        (
+                                                                            prev
+                                                                        ) =>
+                                                                            prev.filter(
+                                                                                (
+                                                                                    c
+                                                                                ) =>
+                                                                                    c.id !==
+                                                                                    claim.id
+                                                                            )
+                                                                    )
+                                                                } else {
+                                                                    alert(
+                                                                        result.error ||
+                                                                            "Failed to reject"
+                                                                    )
+                                                                }
+                                                                setProcessing(
+                                                                    null
+                                                                )
+                                                            }}
+                                                            className='p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors'
+                                                            title='Reject claim'
+                                                        >
+                                                            <X className='w-4 h-4' />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {expandedClaim === claim.id ? (
+                                                    <ChevronUp className='w-5 h-5 text-text/40' />
+                                                ) : (
+                                                    <ChevronDown className='w-5 h-5 text-text/40' />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Expanded proof section */}
+                                    {expandedClaim === claim.id && (
+                                        <div className='border-t border-text/10 p-4 bg-text/5'>
+                                            <div className='mb-3'>
+                                                <h4 className='text-sm font-medium mb-1'>
+                                                    Claimant Details
+                                                </h4>
+                                                <div className='flex items-center gap-2'>
+                                                    {claim.user?.avatar_url ? (
+                                                        <Image
+                                                            src={
+                                                                claim.user
+                                                                    .avatar_url
+                                                            }
+                                                            alt={
+                                                                claim.user
+                                                                    .display_name ||
+                                                                "User"
+                                                            }
+                                                            width={32}
+                                                            height={32}
+                                                            className='rounded-full'
+                                                        />
+                                                    ) : (
+                                                        <div className='w-8 h-8 bg-text/20 rounded-full' />
+                                                    )}
+                                                    <div>
+                                                        <p className='font-medium text-sm'>
+                                                            {claim.user
+                                                                ?.display_name ||
+                                                                "Unknown"}
+                                                        </p>
+                                                        <p className='text-xs text-text/50'>
+                                                            @
+                                                            {claim.user
+                                                                ?.username ||
+                                                                "unknown"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className='text-sm font-medium mb-1'>
+                                                    Proof of Ownership
+                                                </h4>
+                                                <p className='text-sm text-text/70 whitespace-pre-wrap bg-background/50 p-3 rounded-lg border border-text/10'>
+                                                    {claim.proof_text}
+                                                </p>
+                                            </div>
+                                            {claim.proof_document_url && (
+                                                <div className='mt-3'>
+                                                    <a
+                                                        href={
+                                                            claim.proof_document_url
+                                                        }
+                                                        target='_blank'
+                                                        rel='noopener noreferrer'
+                                                        className='text-sm text-primary hover:underline flex items-center gap-1'
+                                                    >
+                                                        <FileText className='w-4 h-4' />
+                                                        View attached document
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     )
