@@ -54,7 +54,8 @@ import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
-import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
+import { resizeImage } from "@/utils/image-processing"
+import ImageCropper from "@/components/ui/ImageCropper"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
@@ -71,6 +72,81 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
     const [cafe, setCafe] = useState(initialCafe)
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
+
+    // Cropper State
+    const [croppingImage, setCroppingImage] = useState<File | null>(null)
+    const [cropperOpen, setCropperOpen] = useState(false)
+
+    const checkAspectRatio = (file: File): Promise<boolean> => {
+        return new Promise((resolve) => {
+            const img = new window.Image()
+            img.onload = () => {
+                const aspect = img.width / img.height
+                // Allow some tolerance for 16:9
+                const is16by9 = Math.abs(aspect - 16 / 9) < 0.05
+                resolve(is16by9)
+            }
+            img.src = URL.createObjectURL(file)
+        })
+    }
+
+    const handleThumbnailChange = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        const is16by9 = await checkAspectRatio(file)
+
+        if (is16by9) {
+            setUploadingCover(true)
+            const result = await uploadCafeImageClient(file)
+            setUploadingCover(false)
+
+            if (result.success && result.url) {
+                if (cafe.thumbnail) {
+                    await adminDeleteCafeImage(cafe.thumbnail)
+                }
+                updateField("thumbnail", result.url)
+            }
+        } else {
+            setCroppingImage(file)
+            setCropperOpen(true)
+        }
+    }
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        const file = new File(
+            [croppedBlob],
+            croppingImage?.name || "cover.webp",
+            {
+                type: "image/webp",
+                lastModified: Date.now(),
+            }
+        )
+
+        // Resize if needed
+        const finalFile = await resizeImage(file, {
+            maxWidth: 2560,
+            maxHeight: 1440,
+            quality: 0.9,
+            format: "image/webp",
+        })
+
+        setUploadingCover(true)
+        const result = await uploadCafeImageClient(finalFile)
+        setUploadingCover(false)
+
+        if (result.success && result.url) {
+            if (cafe.thumbnail) {
+                await adminDeleteCafeImage(cafe.thumbnail)
+            }
+            updateField("thumbnail", result.url)
+        }
+
+        setCropperOpen(false)
+        setCroppingImage(null)
+    }
     const [activeSection, setActiveSection] = useState<
         | "basic"
         | "images"
@@ -609,6 +685,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                     )}
 
                                     {/* Overlay with actions */}
+                                    {/* Overlay with actions */}
                                     <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-4'>
                                         <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition'>
                                             {uploadingCover ? (
@@ -624,59 +701,13 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                 accept='image/jpeg,image/png,image/webp,image/gif'
                                                 className='hidden'
                                                 disabled={uploadingCover}
-                                                onChange={async (e) => {
-                                                    const file =
-                                                        e.target.files?.[0]
-                                                    if (!file) return
-
-                                                    setUploadingCover(true)
-                                                    // Crop to 16:9 aspect ratio
-                                                    const processedFile =
-                                                        await cropAndResizeImage(
-                                                            file,
-                                                            {
-                                                                targetAspectRatio:
-                                                                    16 / 9,
-                                                                maxWidth: 2560,
-                                                                maxHeight: 1440,
-                                                                quality: 0.9,
-                                                                format: "image/webp",
-                                                            }
-                                                        )
-                                                    const result =
-                                                        await uploadCafeImageClient(
-                                                            processedFile
-                                                        )
-
-                                                    if (
-                                                        result.success &&
-                                                        result.url
-                                                    ) {
-                                                        // Delete old image if exists
-                                                        if (cafe.thumbnail) {
-                                                            await adminDeleteCafeImage(
-                                                                cafe.thumbnail
-                                                            )
-                                                        }
-                                                        updateField(
-                                                            "thumbnail",
-                                                            result.url
-                                                        )
-                                                    } else {
-                                                        alert(
-                                                            result.error ||
-                                                                "Failed to upload image"
-                                                        )
-                                                    }
-
-                                                    setUploadingCover(false)
-                                                    e.target.value = ""
-                                                }}
+                                                onChange={handleThumbnailChange}
                                             />
                                         </label>
 
                                         {cafe.thumbnail && (
                                             <button
+                                                type='button'
                                                 onClick={async () => {
                                                     if (
                                                         !confirm(
@@ -684,22 +715,18 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                                                         )
                                                     )
                                                         return
+
                                                     await adminDeleteCafeImage(
                                                         cafe.thumbnail!
                                                     )
-                                                    setCafe(
-                                                        (prev) =>
-                                                            ({
-                                                                ...prev,
-                                                                thumbnail: null,
-                                                            }) as unknown as typeof prev
+                                                    updateField(
+                                                        "thumbnail",
+                                                        null as any
                                                     )
-                                                    setHasChanges(true)
                                                 }}
-                                                className='flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition'
+                                                className='p-2 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition'
                                             >
                                                 <Trash2 className='w-4 h-4' />
-                                                Remove
                                             </button>
                                         )}
                                     </div>
@@ -711,6 +738,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
                         <div>
                             <div className='flex items-center justify-between mb-4'>
                                 <label className='text-sm font-medium text-text/60'>
+                                    {/* Rest of gallery header if needed, but I'll stop here to match context */}
                                     Gallery ({cafe.gallery?.length || 0} images)
                                 </label>
                                 <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition'>
@@ -772,12 +800,12 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
 
                             {cafe.gallery && cafe.gallery.length > 0 ? (
                                 <Reorder.Group
-                                    axis='y'
+                                    axis='x'
                                     values={cafe.gallery}
                                     onReorder={(newOrder) =>
                                         updateField("gallery", newOrder)
                                     }
-                                    className='flex flex-wrap gap-4'
+                                    className='flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-text/10 scrollbar-track-transparent'
                                 >
                                     {cafe.gallery.map((url, idx) => (
                                         <Reorder.Item
@@ -1569,6 +1597,28 @@ Highlight unique features...'
                     </div>
                 )}
             </div>
+            {/* Image Cropper */}
+            <ImageCropper
+                open={cropperOpen}
+                image={croppingImage}
+                aspect={16 / 9}
+                onComplete={handleCropComplete}
+                onCancel={() => {
+                    setCropperOpen(false)
+                    setCroppingImage(null)
+                }}
+            />
+            {/* Image Cropper */}
+            <ImageCropper
+                open={cropperOpen}
+                image={croppingImage}
+                aspect={16 / 9}
+                onComplete={handleCropComplete}
+                onCancel={() => {
+                    setCropperOpen(false)
+                    setCroppingImage(null)
+                }}
+            />
         </div>
     )
 }

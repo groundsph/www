@@ -43,6 +43,7 @@ import OperatingHoursEditor from "./OperatingHoursEditor"
 import SocialLinksEditor from "./SocialLinksEditor"
 import LocationPicker from "./LocationPicker"
 import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
+import ImageCropper from "@/components/ui/ImageCropper"
 
 const STEPS = [
     { id: 1, title: "Basic Info", icon: Coffee },
@@ -67,6 +68,9 @@ export default function CafeSubmissionForm({
         DEFAULT_CAFE_SUBMISSION
     )
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(
+        null
+    )
     const [galleryFiles, setGalleryFiles] = useState<File[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false) // For resizing/compression
@@ -196,6 +200,68 @@ export default function CafeSubmissionForm({
         setError(null)
         setCurrentStep((prev) => Math.max(prev - 1, 1))
         window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+
+    // State for image cropping
+    const [croppingImage, setCroppingImage] = useState<File | null>(null)
+    const [cropperOpen, setCropperOpen] = useState(false)
+
+    const checkAspectRatio = (file: File): Promise<boolean> => {
+        return new Promise((resolve) => {
+            const img = new Image()
+            img.onload = () => {
+                const aspect = img.width / img.height
+                // Allow some tolerance for 16:9 (1.77)
+                const is16by9 = Math.abs(aspect - 16 / 9) < 0.05
+                resolve(is16by9)
+            }
+            img.src = URL.createObjectURL(file)
+        })
+    }
+
+    const handleThumbnailChange = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        const is16by9 = await checkAspectRatio(file)
+
+        // If strict 16:9 check fails, open cropper
+        // Or if you want to force cropper for all uploads to ensure perfect framing, just open it.
+        // User requested: "allow the user to select where it gets cropped... when ... non-16:9"
+        if (is16by9) {
+            // Process normally
+            setThumbnailFile(file)
+            setThumbnailPreview(URL.createObjectURL(file))
+        } else {
+            setCroppingImage(file)
+            setCropperOpen(true)
+        }
+    }
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        const file = new File(
+            [croppedBlob],
+            croppingImage?.name || "cover.webp",
+            {
+                type: "image/webp",
+                lastModified: Date.now(),
+            }
+        )
+
+        // Resize final cropped image to max dimensions if needed
+        const finalFile = await resizeImage(file, {
+            maxWidth: 2560,
+            maxHeight: 1440,
+            quality: 0.9,
+            format: "image/webp",
+        })
+
+        setThumbnailFile(finalFile)
+        setThumbnailPreview(URL.createObjectURL(finalFile))
+        setCropperOpen(false)
+        setCroppingImage(null)
     }
 
     const handleSubmit = async () => {
@@ -711,15 +777,9 @@ export default function CafeSubmissionForm({
                                                     type='file'
                                                     accept='image/jpeg,image/png,image/webp,image/gif'
                                                     className='hidden'
-                                                    onChange={(e) => {
-                                                        const file =
-                                                            e.target.files?.[0]
-                                                        if (file)
-                                                            setThumbnailFile(
-                                                                file
-                                                            )
-                                                        e.target.value = "" // Reset for re-selection
-                                                    }}
+                                                    onChange={
+                                                        handleThumbnailChange
+                                                    }
                                                 />
                                             </label>
                                         )}
@@ -1984,6 +2044,17 @@ export default function CafeSubmissionForm({
                     </motion.button>
                 )}
             </div>
+            {/* Image Cropper */}
+            <ImageCropper
+                open={cropperOpen}
+                image={croppingImage}
+                aspect={16 / 9}
+                onComplete={handleCropComplete}
+                onCancel={() => {
+                    setCropperOpen(false)
+                    setCroppingImage(null)
+                }}
+            />
         </div>
     )
 }
