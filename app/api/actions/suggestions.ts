@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/utils/email"
+import { notifyDiscordEditSuggestion } from "./notify"
 import {
     EditSuggestion,
     SuggestableFields,
@@ -55,10 +56,10 @@ export async function submitEditSuggestion(
         return { success: false, error: "No changes provided" }
     }
 
-    // Verify the cafe exists
+    // Verify the cafe exists and get info for notification
     const { data: cafe, error: cafeError } = await db
         .from('cafes')
-        .select('id')
+        .select('id, name, slug')
         .eq('id', cafeId)
         .single()
 
@@ -84,6 +85,22 @@ export async function submitEditSuggestion(
         console.error("Error inserting suggestion:", insertError)
         return { success: false, error: "Failed to submit suggestion" }
     }
+
+    // Notify Discord about the new suggestion
+    const { data: submitterProfile } = await db
+        .from("profiles")
+        .select("display_name, username")
+        .eq("id", user.id)
+        .single()
+
+    const submitterName = submitterProfile?.display_name || submitterProfile?.username
+    const suggestedFields = Object.keys(changes)
+
+    await notifyDiscordEditSuggestion(
+        { name: cafe.name, slug: cafe.slug },
+        suggestedFields,
+        submitterName
+    )
 
     return { success: true, suggestionId: suggestion.id }
 }

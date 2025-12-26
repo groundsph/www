@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { deleteReviewImages } from "@/utils/supabase/storage"
+import { notifyDiscordReviewReport } from "./notify"
 import { revalidatePath } from "next/cache"
 
 export async function createReview(
@@ -262,7 +263,10 @@ export async function reportReview(reviewId: string) {
     // Check if review exists and user isn't reporting their own review
     const { data: review } = await db
         .from("reviews")
-        .select("id, user_id, status")
+        .select(`
+            id, user_id, status,
+            cafe:cafes(name, slug)
+        `)
         .eq("id", reviewId)
         .single()
 
@@ -317,6 +321,26 @@ export async function reportReview(reviewId: string) {
                 updated_at: new Date().toISOString()
             })
             .eq("id", reviewId)
+    }
+
+    // Notify Discord about the report
+    const cafeInfo = review.cafe as { name: string; slug: string } | null
+    if (cafeInfo) {
+        // Get reporter's profile
+        const { data: reporterProfile } = await db
+            .from("profiles")
+            .select("display_name, username")
+            .eq("id", user.id)
+            .single()
+
+        const reporterName = reporterProfile?.display_name || reporterProfile?.username
+
+        await notifyDiscordReviewReport(
+            reviewId,
+            cafeInfo,
+            count || 1,
+            reporterName
+        )
     }
 
     return { reported: true }
