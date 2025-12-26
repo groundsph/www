@@ -278,6 +278,59 @@ export async function deleteCafeImageAsOwner(
     return deleteSingleCafeImage(imageUrl)
 }
 
+/**
+ * Update or create cafe story as owner
+ */
+export async function updateCafeStory(
+    cafeId: string,
+    content: string
+): Promise<OwnerActionResult> {
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized to manage this cafe' }
+    }
+
+    const db = await createClient()
+
+    // Check if story exists
+    const { data: existingStory } = await db
+        .from('cafe_stories')
+        .select('id')
+        .eq('cafe_id', cafeId)
+        .single()
+
+    if (existingStory) {
+        // Update existing story
+        const { error } = await db
+            .from('cafe_stories')
+            .update({
+                content,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('cafe_id', cafeId)
+
+        if (error) {
+            console.error('[updateCafeStory] Update error:', error)
+            return { success: false, error: 'Failed to update story' }
+        }
+    } else {
+        // Create new story
+        const { error } = await db
+            .from('cafe_stories')
+            .insert({
+                cafe_id: cafeId,
+                content,
+            })
+
+        if (error) {
+            console.error('[updateCafeStory] Insert error:', error)
+            return { success: false, error: 'Failed to create story' }
+        }
+    }
+
+    return { success: true }
+}
+
 // ============================================
 // Owner Verification
 // ============================================

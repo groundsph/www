@@ -74,8 +74,8 @@ export type Database = {
           cafe_id: string
           created_at: string | null
           id: string
-          proof_documents: string[] | null
-          proof_text: string | null
+          proof_document_url: string | null
+          proof_text: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string | null
@@ -86,8 +86,8 @@ export type Database = {
           cafe_id: string
           created_at?: string | null
           id?: string
-          proof_documents?: string[] | null
-          proof_text?: string | null
+          proof_document_url?: string | null
+          proof_text: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string | null
@@ -98,8 +98,8 @@ export type Database = {
           cafe_id?: string
           created_at?: string | null
           id?: string
-          proof_documents?: string[] | null
-          proof_text?: string | null
+          proof_document_url?: string | null
+          proof_text?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string | null
@@ -1025,6 +1025,10 @@ export type Database = {
       }
     }
     Functions: {
+      approve_cafe_claim: {
+        Args: { admin_id: string; claim_id: string; notes?: string }
+        Returns: boolean
+      }
       can_add_menu_item: { Args: { p_cafe_id: string }; Returns: boolean }
       count_cafe_menu_items: { Args: { p_cafe_id: string }; Returns: number }
       get_cafe_tier: {

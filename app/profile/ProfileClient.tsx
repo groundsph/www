@@ -37,6 +37,7 @@ import { useContext, useEffect, useRef, useState } from "react"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import { getLucideIcon } from "@/components/badges/iconUtils"
+import ImageCropper from "@/components/ui/ImageCropper"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -76,6 +77,10 @@ export default function ProfileClient() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
     const [avatarError, setAvatarError] = useState<string | null>(null)
+
+    // Cropper state for avatar
+    const [croppingAvatar, setCroppingAvatar] = useState<File | null>(null)
+    const [avatarCropperOpen, setAvatarCropperOpen] = useState(false)
     const [uploadStatus, setUploadStatus] = useState<string | null>(null)
 
     // Constants for avatar processing
@@ -213,6 +218,73 @@ export default function ProfileClient() {
         setIsEditing(false)
     }
 
+    // Handle avatar crop complete
+    const handleAvatarCropComplete = async (croppedBlob: Blob) => {
+        setAvatarCropperOpen(false)
+        setCroppingAvatar(null)
+        setIsUploadingAvatar(true)
+        setUploadStatus("Processing...")
+
+        try {
+            // Resize to final avatar size
+            const img = document.createElement("img")
+            const objectUrl = URL.createObjectURL(croppedBlob)
+
+            await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve()
+                img.onerror = () => reject(new Error("Failed to load image"))
+                img.src = objectUrl
+            })
+
+            const canvas = document.createElement("canvas")
+            canvas.width = AVATAR_SIZE
+            canvas.height = AVATAR_SIZE
+            const ctx = canvas.getContext("2d")!
+
+            ctx.drawImage(img, 0, 0, AVATAR_SIZE, AVATAR_SIZE)
+            URL.revokeObjectURL(objectUrl)
+
+            const blob = await new Promise<Blob>((resolve, reject) => {
+                canvas.toBlob(
+                    (b) =>
+                        b
+                            ? resolve(b)
+                            : reject(new Error("Failed to create blob")),
+                    "image/jpeg",
+                    0.9
+                )
+            })
+
+            setUploadStatus("Uploading...")
+
+            const processedFile = new File([blob], "avatar.jpg", {
+                type: "image/jpeg",
+            })
+            const result = await uploadAvatarClient(processedFile)
+
+            if (result.success && result.url) {
+                setUploadStatus("Done!")
+                setProfileData((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              avatar_url: result.url!,
+                          }
+                        : null
+                )
+                refreshProfile()
+            } else {
+                setAvatarError(result.error || "Upload failed")
+            }
+        } catch (err) {
+            console.error("Upload error:", err)
+            setAvatarError("Failed to process image")
+        } finally {
+            setIsUploadingAvatar(false)
+            setUploadStatus(null)
+        }
+    }
+
     if (loading || !user) {
         return (
             <main className='w-full min-h-screen px-4 py-8'>
@@ -293,13 +365,13 @@ export default function ProfileClient() {
                             type='file'
                             accept='image/jpeg,image/png,image/webp,image/gif'
                             className='hidden'
-                            onChange={async (e) => {
+                            onChange={(e) => {
                                 const file = e.target.files?.[0]
                                 if (!file) return
 
                                 setAvatarError(null)
 
-                                // Validate file type (handle cases where file.type might be empty)
+                                // Validate file type
                                 const fileExt =
                                     file.name.split(".").pop()?.toLowerCase() ||
                                     ""
@@ -321,7 +393,7 @@ export default function ProfileClient() {
                                     return
                                 }
 
-                                // Validate file size (generous limit since we'll resize)
+                                // Validate file size
                                 if (file.size > MAX_FILE_SIZE) {
                                     setAvatarError(
                                         "Image too large. Please use an image under 5MB"
@@ -330,108 +402,10 @@ export default function ProfileClient() {
                                     return
                                 }
 
-                                setIsUploadingAvatar(true)
-                                setUploadStatus("Loading image...")
-                                try {
-                                    // Load image and resize/crop to square
-                                    const img = document.createElement("img")
-                                    const objectUrl = URL.createObjectURL(file)
-
-                                    await new Promise<void>(
-                                        (resolve, reject) => {
-                                            img.onload = () => resolve()
-                                            img.onerror = () =>
-                                                reject(
-                                                    new Error(
-                                                        "Failed to load image"
-                                                    )
-                                                )
-                                            img.src = objectUrl
-                                        }
-                                    )
-
-                                    setUploadStatus("Cropping & resizing...")
-
-                                    // Create canvas and crop to center square
-                                    const canvas =
-                                        document.createElement("canvas")
-                                    canvas.width = AVATAR_SIZE
-                                    canvas.height = AVATAR_SIZE
-                                    const ctx = canvas.getContext("2d")!
-
-                                    // Calculate crop dimensions (center crop to square)
-                                    const size = Math.min(img.width, img.height)
-                                    const x = (img.width - size) / 2
-                                    const y = (img.height - size) / 2
-
-                                    // Draw cropped and resized image
-                                    ctx.drawImage(
-                                        img,
-                                        x,
-                                        y,
-                                        size,
-                                        size,
-                                        0,
-                                        0,
-                                        AVATAR_SIZE,
-                                        AVATAR_SIZE
-                                    )
-                                    URL.revokeObjectURL(objectUrl)
-
-                                    // Convert to blob
-                                    const blob = await new Promise<Blob>(
-                                        (resolve, reject) => {
-                                            canvas.toBlob(
-                                                (b) =>
-                                                    b
-                                                        ? resolve(b)
-                                                        : reject(
-                                                              new Error(
-                                                                  "Failed to create blob"
-                                                              )
-                                                          ),
-                                                "image/jpeg",
-                                                0.9
-                                            )
-                                        }
-                                    )
-
-                                    setUploadStatus("Uploading...")
-
-                                    // Upload processed image - direct to Supabase
-                                    const processedFile = new File(
-                                        [blob],
-                                        "avatar.jpg",
-                                        { type: "image/jpeg" }
-                                    )
-                                    const result =
-                                        await uploadAvatarClient(processedFile)
-
-                                    if (result.success && result.url) {
-                                        setUploadStatus("Done!")
-                                        setProfileData((prev) =>
-                                            prev
-                                                ? {
-                                                      ...prev,
-                                                      avatar_url: result.url!,
-                                                  }
-                                                : null
-                                        )
-                                        // Refresh in background, don't block UI
-                                        refreshProfile()
-                                    } else {
-                                        setAvatarError(
-                                            result.error || "Upload failed"
-                                        )
-                                    }
-                                } catch (err) {
-                                    console.error("Upload error:", err)
-                                    setAvatarError("Failed to process image")
-                                } finally {
-                                    setIsUploadingAvatar(false)
-                                    setUploadStatus(null)
-                                    e.target.value = ""
-                                }
+                                // Open cropper
+                                setCroppingAvatar(file)
+                                setAvatarCropperOpen(true)
+                                e.target.value = ""
                             }}
                         />
                         <div
@@ -1150,6 +1124,18 @@ export default function ProfileClient() {
                     )}
                 </section>
             </motion.div>
+
+            {/* Avatar Image Cropper */}
+            <ImageCropper
+                open={avatarCropperOpen}
+                image={croppingAvatar}
+                aspect={1}
+                onComplete={handleAvatarCropComplete}
+                onCancel={() => {
+                    setAvatarCropperOpen(false)
+                    setCroppingAvatar(null)
+                }}
+            />
         </main>
     )
 }

@@ -19,10 +19,13 @@ import {
     ImagePlus,
     Upload,
     X,
+    Eye,
+    Edit3,
 } from "lucide-react"
 import {
     updateCafeAsOwner,
     deleteCafeImageAsOwner,
+    updateCafeStory,
 } from "@/app/api/actions/owner"
 import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -76,6 +79,14 @@ export default function CafeEditClient({
     // Custom inputs for comma-separated values
     const [customSpecialties, setCustomSpecialties] = useState("")
     const [customTags, setCustomTags] = useState("")
+
+    // Story state
+    const [storyContent, setStoryContent] = useState(
+        initialCafe.story?.content || ""
+    )
+    const [storyPreview, setStoryPreview] = useState(false)
+    const [savingStory, setSavingStory] = useState(false)
+    const [storyHasChanges, setStoryHasChanges] = useState(false)
 
     const updateField = useCallback(
         <K extends keyof typeof cafe>(key: K, value: (typeof cafe)[K]) => {
@@ -1032,15 +1043,110 @@ export default function CafeEditClient({
                     </div>
                 )}
 
-                {/* Story - placeholder for future */}
+                {/* Story Editor */}
                 {activeSection === "story" && (
-                    <div className='text-center py-12 text-text/60'>
-                        <FileText className='w-12 h-12 mx-auto mb-4 opacity-30' />
-                        <p className='font-medium'>Cafe Story</p>
-                        <p className='text-sm mt-1'>
-                            This feature is coming soon for Pro and Premium
-                            subscribers.
-                        </p>
+                    <div className='space-y-4'>
+                        <div className='flex items-center justify-between'>
+                            <div>
+                                <h3 className='font-medium'>Cafe Story</h3>
+                                <p className='text-sm text-text/60'>
+                                    Tell visitors about your cafe&apos;s
+                                    history, values, and what makes it special.
+                                    Markdown is supported.
+                                </p>
+                            </div>
+                            <div className='flex items-center gap-2'>
+                                <button
+                                    onClick={() =>
+                                        setStoryPreview(!storyPreview)
+                                    }
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                        storyPreview
+                                            ? "bg-primary/20 text-primary"
+                                            : "bg-text/10 text-text/60 hover:bg-text/20"
+                                    }`}
+                                >
+                                    {storyPreview ? (
+                                        <>
+                                            <Edit3 className='w-4 h-4' />
+                                            Edit
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Eye className='w-4 h-4' />
+                                            Preview
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        {storyPreview ? (
+                            <div className='bg-text/5 border border-text/10 rounded-lg p-6 min-h-[300px] prose prose-sm max-w-none'>
+                                {storyContent ? (
+                                    <div className='whitespace-pre-wrap'>
+                                        {storyContent}
+                                    </div>
+                                ) : (
+                                    <p className='text-text/40 italic'>
+                                        No story written yet...
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className='space-y-2'>
+                                <textarea
+                                    value={storyContent}
+                                    onChange={(e) => {
+                                        setStoryContent(e.target.value)
+                                        setStoryHasChanges(true)
+                                    }}
+                                    placeholder='Tell your story...&#10;&#10;You can share:&#10;• How your cafe started&#10;• What makes your coffee special&#10;• Your philosophy and values&#10;• The people behind your cafe'
+                                    className='w-full h-72 p-4 bg-text/5 border border-text/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none text-sm leading-relaxed'
+                                />
+                                <div className='flex items-center justify-between text-xs text-text/50'>
+                                    <span>
+                                        {storyContent.length} characters
+                                    </span>
+                                    <span>Markdown supported</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {storyHasChanges && (
+                            <button
+                                onClick={async () => {
+                                    setSavingStory(true)
+                                    const result = await updateCafeStory(
+                                        cafe.id,
+                                        storyContent
+                                    )
+                                    setSavingStory(false)
+                                    if (result.success) {
+                                        setStoryHasChanges(false)
+                                        addNotification(
+                                            "Story saved successfully!",
+                                            "success"
+                                        )
+                                    } else {
+                                        addNotification(
+                                            result.error ||
+                                                "Failed to save story",
+                                            "error"
+                                        )
+                                    }
+                                }}
+                                disabled={savingStory}
+                                className='flex items-center justify-center gap-2 w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50'
+                            >
+                                {savingStory ? (
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                ) : (
+                                    <Save className='w-4 h-4' />
+                                )}
+                                Save Story
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

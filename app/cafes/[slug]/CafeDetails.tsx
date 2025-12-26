@@ -19,6 +19,7 @@ import ReviewModal from "@/components/reviews/ReviewModal"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import MarkdownRender from "@/components/MarkdownRender"
 import ImageLightbox from "@/components/ImageLightbox"
+import ClaimCafeModal from "@/components/ClaimCafeModal"
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
@@ -77,6 +78,9 @@ export default function CafeDetails({
     const [editingReview, setEditingReview] = useState<Review | undefined>(
         undefined
     )
+
+    // Claim Modal State
+    const [isClaimOpen, setIsClaimOpen] = useState(false)
 
     // Lightbox State
     const [isLightboxOpen, setIsLightboxOpen] = useState(false)
@@ -158,6 +162,7 @@ export default function CafeDetails({
                 onToggleVisited={toggleVisited}
                 onToggleFavorite={toggleFavorite}
                 onToggleWishlist={toggleWishlist}
+                onOpenClaim={() => setIsClaimOpen(true)}
             />
 
             {/* Mobile Layout (< md) */}
@@ -263,6 +268,14 @@ export default function CafeDetails({
                 cafeId={cafe.id}
                 cafeName={cafe.name}
                 existingReview={editingReview || userReview}
+            />
+
+            {/* Claim Cafe Modal */}
+            <ClaimCafeModal
+                isOpen={isClaimOpen}
+                onClose={() => setIsClaimOpen(false)}
+                cafeId={cafe.id}
+                cafeName={cafe.name}
             />
 
             {/* Gallery Lightbox */}
