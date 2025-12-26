@@ -399,7 +399,7 @@ export default function AuthPageClient() {
                                 <div>
                                     <input
                                         type='email'
-                                        placeholder='juan@ground.com'
+                                        placeholder='juan@grounds.ph'
                                         value={email}
                                         onChange={(e) =>
                                             setEmail(e.target.value)
