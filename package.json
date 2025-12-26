@@ -8,7 +8,7 @@
         "start": "next start",
         "lint": "eslint",
         "merge": "git checkout prod && git merge dev && git push origin prod && git checkout dev",
-        "supabase-types": "supabase gen types typescript --project-id uriwhfpoprbrcehboadj --schema public > utils/types/database.types.ts"
+        "sync-types": "supabase gen types typescript --project-id uriwhfpoprbrcehboadj --schema public > utils/types/database.types.ts"
     },
     "dependencies": {
         "@react-email/components": "^1.0.2",
