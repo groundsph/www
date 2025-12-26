@@ -52,6 +52,7 @@ import {
     searchUsersForBadge,
     getUsersWithBadge,
     awardBadgeToAllUsers,
+    type FeaturedSchedule,
 } from "@/app/api/actions/admin"
 import {
     approveSuggestion,
@@ -63,6 +64,7 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
 import { Pencil } from "lucide-react"
+import FeaturedScheduleManager from "./FeaturedScheduleManager"
 
 interface AdminDashboardProps {
     pendingCafes: CafeWithRatings[]
@@ -70,9 +72,16 @@ interface AdminDashboardProps {
     reportedReviews: ReviewForModeration[]
     badges: BadgeDefinition[]
     suggestions: EditSuggestion[]
+    featuredSchedules: FeaturedSchedule[]
 }
 
-type TabType = "pending" | "published" | "reviews" | "badges" | "suggestions"
+type TabType =
+    | "pending"
+    | "published"
+    | "reviews"
+    | "badges"
+    | "suggestions"
+    | "featured"
 
 export default function AdminDashboard({
     pendingCafes: initialPending,
@@ -80,6 +89,7 @@ export default function AdminDashboard({
     reportedReviews: initialReported,
     badges: initialBadges,
     suggestions: initialSuggestions,
+    featuredSchedules: initialFeaturedSchedules,
 }: AdminDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
     const [pendingCafes, setPendingCafes] = useState(initialPending)
@@ -832,6 +842,17 @@ export default function AdminDashboard({
                     <Pencil className='w-4 h-4' />
                     Suggestions ({suggestions.length})
                 </button>
+                <button
+                    onClick={() => setActiveTab("featured")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                        activeTab === "featured"
+                            ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                            : "bg-text/5 border-text/10 hover:bg-text/10"
+                    }`}
+                >
+                    <Star className='w-4 h-4' />
+                    Featured
+                </button>
             </div>
 
             {/* Search - only for cafe tabs */}
@@ -1101,379 +1122,355 @@ export default function AdminDashboard({
             )}
 
             {/* Cafe List - only for cafe tabs */}
-            {activeTab !== "reviews" &&
-                activeTab !== "badges" &&
-                activeTab !== "suggestions" && (
-                    <>
-                        {currentCafes.length === 0 ? (
-                            <div className='text-center py-16 bg-text/5 rounded-xl border border-text/10'>
-                                <AlertCircle className='w-12 h-12 mx-auto text-text/30 mb-4' />
-                                <p className='text-text/60 text-lg'>
-                                    {searchQuery
-                                        ? `No cafes found for "${searchQuery}"`
-                                        : activeTab === "pending"
-                                          ? "No pending submissions"
-                                          : "No published cafes"}
-                                </p>
-                                <p className='text-text/40 text-sm mt-1'>
-                                    {searchQuery
-                                        ? "Try a different search term"
-                                        : activeTab === "pending"
-                                          ? "All caught up!"
-                                          : "Approve some cafes to see them here"}
-                                </p>
-                            </div>
-                        ) : (
-                            <div className='space-y-4'>
-                                {currentCafes.map((cafe) => {
-                                    const isExpanded = expandedCafe === cafe.id
-                                    const isProcessingThis =
-                                        processing === cafe.id
+            {(activeTab === "pending" || activeTab === "published") && (
+                <>
+                    {currentCafes.length === 0 ? (
+                        <div className='text-center py-16 bg-text/5 rounded-xl border border-text/10'>
+                            <AlertCircle className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <p className='text-text/60 text-lg'>
+                                {searchQuery
+                                    ? `No cafes found for "${searchQuery}"`
+                                    : activeTab === "pending"
+                                      ? "No pending submissions"
+                                      : "No published cafes"}
+                            </p>
+                            <p className='text-text/40 text-sm mt-1'>
+                                {searchQuery
+                                    ? "Try a different search term"
+                                    : activeTab === "pending"
+                                      ? "All caught up!"
+                                      : "Approve some cafes to see them here"}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className='space-y-4'>
+                            {currentCafes.map((cafe) => {
+                                const isExpanded = expandedCafe === cafe.id
+                                const isProcessingThis = processing === cafe.id
 
-                                    return (
-                                        <div
-                                            key={cafe.id}
-                                            className='bg-text/5 border border-text/10 rounded-xl overflow-hidden'
-                                        >
-                                            {/* Main Row */}
-                                            <div className='p-4 flex items-center gap-4'>
-                                                {/* Thumbnail */}
-                                                <div className='relative w-20 h-20 shrink-0 rounded-lg overflow-hidden'>
-                                                    {cafe.thumbnail ? (
-                                                        <Image
-                                                            src={cafe.thumbnail}
-                                                            alt={cafe.name}
-                                                            fill
-                                                            className='object-cover'
-                                                        />
-                                                    ) : (
-                                                        <div className='w-full h-full bg-text/10 flex items-center justify-center'>
-                                                            <MapPin className='w-6 h-6 text-text/30' />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                return (
+                                    <div
+                                        key={cafe.id}
+                                        className='bg-text/5 border border-text/10 rounded-xl overflow-hidden'
+                                    >
+                                        {/* Main Row */}
+                                        <div className='p-4 flex items-center gap-4'>
+                                            {/* Thumbnail */}
+                                            <div className='relative w-20 h-20 shrink-0 rounded-lg overflow-hidden'>
+                                                {cafe.thumbnail ? (
+                                                    <Image
+                                                        src={cafe.thumbnail}
+                                                        alt={cafe.name}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                ) : (
+                                                    <div className='w-full h-full bg-text/10 flex items-center justify-center'>
+                                                        <MapPin className='w-6 h-6 text-text/30' />
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                                {/* Info */}
-                                                <div className='flex-1 min-w-0'>
-                                                    <h3 className='font-semibold text-lg truncate'>
-                                                        {cafe.name}
-                                                    </h3>
-                                                    <p className='text-text/60 text-sm truncate'>
-                                                        <MapPin className='inline w-3 h-3 mr-1' />
-                                                        {cafe.city_municipality}
-                                                        , {cafe.province}
-                                                    </p>
-                                                    <p className='text-text/40 text-xs mt-1'>
-                                                        {activeTab === "pending"
-                                                            ? "Submitted "
-                                                            : "Published "}
-                                                        {new Date(
-                                                            cafe.created_at!
-                                                        ).toLocaleDateString()}
-                                                    </p>
-                                                </div>
+                                            {/* Info */}
+                                            <div className='flex-1 min-w-0'>
+                                                <h3 className='font-semibold text-lg truncate'>
+                                                    {cafe.name}
+                                                </h3>
+                                                <p className='text-text/60 text-sm truncate'>
+                                                    <MapPin className='inline w-3 h-3 mr-1' />
+                                                    {cafe.city_municipality},{" "}
+                                                    {cafe.province}
+                                                </p>
+                                                <p className='text-text/40 text-xs mt-1'>
+                                                    {activeTab === "pending"
+                                                        ? "Submitted "
+                                                        : "Published "}
+                                                    {new Date(
+                                                        cafe.created_at!
+                                                    ).toLocaleDateString()}
+                                                </p>
+                                            </div>
 
-                                                {/* Actions */}
-                                                <div className='flex items-center gap-2'>
-                                                    <Link
-                                                        href={`/admin/preview/${cafe.id}`}
-                                                        className='p-2 bg-text/5 text-text rounded-lg hover:bg-text/20 transition'
-                                                        title='View & Edit'
-                                                    >
-                                                        <Eye className='w-5 h-5' />
-                                                    </Link>
-                                                    {activeTab === "pending" ? (
-                                                        <>
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleApprove(
-                                                                        cafe.id
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    isProcessingThis
-                                                                }
-                                                                className='p-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
-                                                                title='Approve'
-                                                            >
-                                                                <Check className='w-5 h-5' />
-                                                            </button>
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleReject(
-                                                                        cafe.id
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    isProcessingThis
-                                                                }
-                                                                className='p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
-                                                                title='Reject'
-                                                            >
-                                                                <X className='w-5 h-5' />
-                                                            </button>
-                                                        </>
-                                                    ) : (
+                                            {/* Actions */}
+                                            <div className='flex items-center gap-2'>
+                                                <Link
+                                                    href={`/admin/preview/${cafe.id}`}
+                                                    className='p-2 bg-text/5 text-text rounded-lg hover:bg-text/20 transition'
+                                                    title='View & Edit'
+                                                >
+                                                    <Eye className='w-5 h-5' />
+                                                </Link>
+                                                {activeTab === "pending" ? (
+                                                    <>
                                                         <button
                                                             onClick={() =>
-                                                                handleUnpublish(
+                                                                handleApprove(
                                                                     cafe.id
                                                                 )
                                                             }
                                                             disabled={
                                                                 isProcessingThis
                                                             }
-                                                            className='p-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition disabled:opacity-50'
-                                                            title='Unpublish'
+                                                            className='p-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
+                                                            title='Approve'
                                                         >
-                                                            <EyeOff className='w-5 h-5' />
+                                                            <Check className='w-5 h-5' />
                                                         </button>
-                                                    )}
+                                                        <button
+                                                            onClick={() =>
+                                                                handleReject(
+                                                                    cafe.id
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                isProcessingThis
+                                                            }
+                                                            className='p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                                                            title='Reject'
+                                                        >
+                                                            <X className='w-5 h-5' />
+                                                        </button>
+                                                    </>
+                                                ) : (
                                                     <button
                                                         onClick={() =>
-                                                            toggleExpand(
+                                                            handleUnpublish(
                                                                 cafe.id
                                                             )
                                                         }
-                                                        className='p-2 bg-text/5 rounded-lg hover:bg-text/10 transition'
-                                                        title='View Details'
+                                                        disabled={
+                                                            isProcessingThis
+                                                        }
+                                                        className='p-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition disabled:opacity-50'
+                                                        title='Unpublish'
                                                     >
-                                                        {isExpanded ? (
-                                                            <ChevronUp className='w-5 h-5' />
-                                                        ) : (
-                                                            <ChevronDown className='w-5 h-5' />
-                                                        )}
+                                                        <EyeOff className='w-5 h-5' />
                                                     </button>
-                                                </div>
+                                                )}
+                                                <button
+                                                    onClick={() =>
+                                                        toggleExpand(cafe.id)
+                                                    }
+                                                    className='p-2 bg-text/5 rounded-lg hover:bg-text/10 transition'
+                                                    title='View Details'
+                                                >
+                                                    {isExpanded ? (
+                                                        <ChevronUp className='w-5 h-5' />
+                                                    ) : (
+                                                        <ChevronDown className='w-5 h-5' />
+                                                    )}
+                                                </button>
                                             </div>
+                                        </div>
 
-                                            {/* Expanded Details */}
-                                            {isExpanded && (
-                                                <div className='border-t border-text/10 p-4 space-y-4 bg-background/50'>
-                                                    {/* Description */}
-                                                    {cafe.description && (
-                                                        <div>
-                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                                Description
-                                                            </h4>
-                                                            <p className='text-sm text-text/80'>
+                                        {/* Expanded Details */}
+                                        {isExpanded && (
+                                            <div className='border-t border-text/10 p-4 space-y-4 bg-background/50'>
+                                                {/* Description */}
+                                                {cafe.description && (
+                                                    <div>
+                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
+                                                            Description
+                                                        </h4>
+                                                        <p className='text-sm text-text/80'>
+                                                            {cafe.description}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {/* Address */}
+                                                <div>
+                                                    <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
+                                                        Address
+                                                    </h4>
+                                                    <p className='text-sm text-text/80'>
+                                                        {cafe.address_display}
+                                                    </p>
+                                                    {cafe.lat && cafe.lng && (
+                                                        <a
+                                                            href={`https://www.google.com/maps?q=${cafe.lat},${cafe.lng}`}
+                                                            target='_blank'
+                                                            rel='noopener noreferrer'
+                                                            className='text-xs text-accent hover:underline inline-flex items-center gap-1 mt-1'
+                                                        >
+                                                            View on Google Maps{" "}
+                                                            <ExternalLink className='w-3 h-3' />
+                                                        </a>
+                                                    )}
+                                                </div>
+
+                                                {/* Amenities */}
+                                                <div>
+                                                    <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
+                                                        Amenities
+                                                    </h4>
+                                                    <div className='flex flex-wrap gap-2'>
+                                                        {Object.entries(
+                                                            AMENITY_ICONS
+                                                        ).map(
+                                                            ([
+                                                                key,
                                                                 {
-                                                                    cafe.description
-                                                                }
-                                                            </p>
+                                                                    icon: Icon,
+                                                                    label,
+                                                                },
+                                                            ]) => {
+                                                                const hasAmenity =
+                                                                    cafe[
+                                                                        key as keyof typeof cafe
+                                                                    ]
+                                                                return (
+                                                                    <div
+                                                                        key={
+                                                                            key
+                                                                        }
+                                                                        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
+                                                                            hasAmenity
+                                                                                ? "bg-green-500/20 text-green-500"
+                                                                                : "bg-text/5 text-text/30"
+                                                                        }`}
+                                                                    >
+                                                                        <Icon className='w-3 h-3' />
+                                                                        {label}
+                                                                    </div>
+                                                                )
+                                                            }
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Gallery */}
+                                                {cafe.gallery &&
+                                                    cafe.gallery.length > 0 && (
+                                                        <div>
+                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
+                                                                Gallery (
+                                                                {
+                                                                    cafe.gallery
+                                                                        .length
+                                                                }{" "}
+                                                                images)
+                                                            </h4>
+                                                            <div className='flex gap-2 overflow-x-auto pb-2'>
+                                                                {cafe.gallery
+                                                                    .slice(0, 6)
+                                                                    .map(
+                                                                        (
+                                                                            url,
+                                                                            idx
+                                                                        ) => (
+                                                                            <div
+                                                                                key={
+                                                                                    idx
+                                                                                }
+                                                                                className='relative w-24 h-24 shrink-0 rounded-lg overflow-hidden'
+                                                                            >
+                                                                                <Image
+                                                                                    src={
+                                                                                        url
+                                                                                    }
+                                                                                    alt={`Gallery ${idx + 1}`}
+                                                                                    fill
+                                                                                    className='object-cover'
+                                                                                />
+                                                                            </div>
+                                                                        )
+                                                                    )}
+                                                                {cafe.gallery
+                                                                    .length >
+                                                                    6 && (
+                                                                    <div className='w-24 h-24 shrink-0 rounded-lg bg-text/10 flex items-center justify-center text-text/40 text-sm'>
+                                                                        +
+                                                                        {cafe
+                                                                            .gallery
+                                                                            .length -
+                                                                            6}{" "}
+                                                                        more
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     )}
 
-                                                    {/* Address */}
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                            Address
-                                                        </h4>
-                                                        <p className='text-sm text-text/80'>
-                                                            {
-                                                                cafe.address_display
-                                                            }
-                                                        </p>
-                                                        {cafe.lat &&
-                                                            cafe.lng && (
-                                                                <a
-                                                                    href={`https://www.google.com/maps?q=${cafe.lat},${cafe.lng}`}
-                                                                    target='_blank'
-                                                                    rel='noopener noreferrer'
-                                                                    className='text-xs text-accent hover:underline inline-flex items-center gap-1 mt-1'
-                                                                >
-                                                                    View on
-                                                                    Google Maps{" "}
-                                                                    <ExternalLink className='w-3 h-3' />
-                                                                </a>
-                                                            )}
-                                                    </div>
-
-                                                    {/* Amenities */}
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
-                                                            Amenities
-                                                        </h4>
-                                                        <div className='flex flex-wrap gap-2'>
-                                                            {Object.entries(
-                                                                AMENITY_ICONS
-                                                            ).map(
-                                                                ([
-                                                                    key,
-                                                                    {
-                                                                        icon: Icon,
-                                                                        label,
-                                                                    },
-                                                                ]) => {
-                                                                    const hasAmenity =
-                                                                        cafe[
-                                                                            key as keyof typeof cafe
-                                                                        ]
-                                                                    return (
-                                                                        <div
+                                                {/* Tags */}
+                                                {cafe.tags &&
+                                                    cafe.tags.length > 0 && (
+                                                        <div>
+                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
+                                                                Vibe Tags
+                                                            </h4>
+                                                            <div className='flex flex-wrap gap-1'>
+                                                                {cafe.tags.map(
+                                                                    (tag) => (
+                                                                        <span
                                                                             key={
-                                                                                key
+                                                                                tag
                                                                             }
-                                                                            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
-                                                                                hasAmenity
-                                                                                    ? "bg-green-500/20 text-green-500"
-                                                                                    : "bg-text/5 text-text/30"
-                                                                            }`}
+                                                                            className='px-2 py-0.5 bg-text/10 rounded-full text-xs'
                                                                         >
-                                                                            <Icon className='w-3 h-3' />
-                                                                            {
-                                                                                label
-                                                                            }
-                                                                        </div>
+                                                                            {tag.replace(
+                                                                                /_/g,
+                                                                                " "
+                                                                            )}
+                                                                        </span>
                                                                     )
-                                                                }
-                                                            )}
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
 
-                                                    {/* Gallery */}
-                                                    {cafe.gallery &&
-                                                        cafe.gallery.length >
-                                                            0 && (
-                                                            <div>
-                                                                <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
-                                                                    Gallery (
-                                                                    {
-                                                                        cafe
-                                                                            .gallery
-                                                                            .length
-                                                                    }{" "}
-                                                                    images)
-                                                                </h4>
-                                                                <div className='flex gap-2 overflow-x-auto pb-2'>
-                                                                    {cafe.gallery
-                                                                        .slice(
-                                                                            0,
-                                                                            6
-                                                                        )
-                                                                        .map(
-                                                                            (
-                                                                                url,
-                                                                                idx
-                                                                            ) => (
-                                                                                <div
-                                                                                    key={
-                                                                                        idx
-                                                                                    }
-                                                                                    className='relative w-24 h-24 shrink-0 rounded-lg overflow-hidden'
-                                                                                >
-                                                                                    <Image
-                                                                                        src={
-                                                                                            url
-                                                                                        }
-                                                                                        alt={`Gallery ${idx + 1}`}
-                                                                                        fill
-                                                                                        className='object-cover'
-                                                                                    />
-                                                                                </div>
-                                                                            )
-                                                                        )}
-                                                                    {cafe
-                                                                        .gallery
-                                                                        .length >
-                                                                        6 && (
-                                                                        <div className='w-24 h-24 shrink-0 rounded-lg bg-text/10 flex items-center justify-center text-text/40 text-sm'>
-                                                                            +
-                                                                            {cafe
-                                                                                .gallery
-                                                                                .length -
-                                                                                6}{" "}
-                                                                            more
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                {/* Specialty */}
+                                                {cafe.specialty &&
+                                                    cafe.specialty.length >
+                                                        0 && (
+                                                        <div>
+                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
+                                                                Specialties
+                                                            </h4>
+                                                            <div className='flex flex-wrap gap-1'>
+                                                                {cafe.specialty.map(
+                                                                    (s) => (
+                                                                        <span
+                                                                            key={
+                                                                                s
+                                                                            }
+                                                                            className='px-2 py-0.5 bg-accent/20 text-accent rounded-full text-xs'
+                                                                        >
+                                                                            {s.replace(
+                                                                                /_/g,
+                                                                                " "
+                                                                            )}
+                                                                        </span>
+                                                                    )
+                                                                )}
                                                             </div>
-                                                        )}
+                                                        </div>
+                                                    )}
 
-                                                    {/* Tags */}
-                                                    {cafe.tags &&
-                                                        cafe.tags.length >
-                                                            0 && (
-                                                            <div>
-                                                                <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
-                                                                    Vibe Tags
-                                                                </h4>
-                                                                <div className='flex flex-wrap gap-1'>
-                                                                    {cafe.tags.map(
-                                                                        (
-                                                                            tag
-                                                                        ) => (
-                                                                            <span
-                                                                                key={
-                                                                                    tag
-                                                                                }
-                                                                                className='px-2 py-0.5 bg-text/10 rounded-full text-xs'
-                                                                            >
-                                                                                {tag.replace(
-                                                                                    /_/g,
-                                                                                    " "
-                                                                                )}
-                                                                            </span>
-                                                                        )
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                    {/* Specialty */}
-                                                    {cafe.specialty &&
-                                                        cafe.specialty.length >
-                                                            0 && (
-                                                            <div>
-                                                                <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
-                                                                    Specialties
-                                                                </h4>
-                                                                <div className='flex flex-wrap gap-1'>
-                                                                    {cafe.specialty.map(
-                                                                        (s) => (
-                                                                            <span
-                                                                                key={
-                                                                                    s
-                                                                                }
-                                                                                className='px-2 py-0.5 bg-accent/20 text-accent rounded-full text-xs'
-                                                                            >
-                                                                                {s.replace(
-                                                                                    /_/g,
-                                                                                    " "
-                                                                                )}
-                                                                            </span>
-                                                                        )
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                    {/* View on site link for published cafes */}
-                                                    {activeTab ===
-                                                        "published" &&
-                                                        cafe.slug && (
-                                                            <div className='pt-2'>
-                                                                <a
-                                                                    href={`/cafes/${cafe.slug}`}
-                                                                    target='_blank'
-                                                                    rel='noopener noreferrer'
-                                                                    className='text-sm text-accent hover:underline inline-flex items-center gap-1'
-                                                                >
-                                                                    View public
-                                                                    page{" "}
-                                                                    <ExternalLink className='w-3 h-3' />
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </>
-                )}
+                                                {/* View on site link for published cafes */}
+                                                {activeTab === "published" &&
+                                                    cafe.slug && (
+                                                        <div className='pt-2'>
+                                                            <a
+                                                                href={`/cafes/${cafe.slug}`}
+                                                                target='_blank'
+                                                                rel='noopener noreferrer'
+                                                                className='text-sm text-accent hover:underline inline-flex items-center gap-1'
+                                                            >
+                                                                View public page{" "}
+                                                                <ExternalLink className='w-3 h-3' />
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </>
+            )}
 
             {/* Badges Management */}
             {activeTab === "badges" && (
@@ -2198,6 +2195,13 @@ export default function AdminDashboard({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Featured Schedule Management */}
+            {activeTab === "featured" && (
+                <FeaturedScheduleManager
+                    initialSchedules={initialFeaturedSchedules}
+                />
             )}
         </div>
     )

@@ -1503,3 +1503,363 @@ export async function awardBadgeToAllUsers(badgeId: string): Promise<{ success: 
     return { success: true }
 }
 
+// ============================================
+// Featured Schedule Management Functions
+// ============================================
+
+export interface FeaturedSchedule {
+    id: string
+    cafe_id: string
+    start_date: string
+    end_date: string
+    slot_type: 'hero' | 'sidebar' | 'collection' | 'regional_spotlight'
+    region_context: string | null
+    is_active: boolean | null
+    priority: number | null
+    custom_title: string | null
+    custom_description: string | null
+    custom_image: string | null
+    created_at: string | null
+    cafe: {
+        id: string
+        name: string
+        slug: string
+        thumbnail: string
+        city_municipality: string
+        region: string
+    } | null
+}
+
+/**
+ * Get all featured schedules with cafe info
+ */
+export async function getFeaturedSchedules(): Promise<FeaturedSchedule[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const { data: schedules, error } = await db
+        .from('featured_schedules')
+        .select(`
+            *,
+            cafe:cafes(
+                id,
+                name,
+                slug,
+                thumbnail,
+                city_municipality,
+                region
+            )
+        `)
+        .order('start_date', { ascending: true })
+
+    if (error) {
+        console.error("Error fetching featured schedules:", error)
+        return []
+    }
+
+    return schedules as unknown as FeaturedSchedule[]
+}
+
+/**
+ * Check for conflicting featured schedules
+ * Returns true if a conflict exists (same region_context and overlapping dates)
+ */
+export async function checkFeaturedConflict(
+    startDate: string,
+    endDate: string,
+    regionContext: string | null,
+    excludeId?: string
+): Promise<{ hasConflict: boolean; conflictingCafe?: string }> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { hasConflict: false }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { hasConflict: false }
+    }
+
+    // Check for overlapping schedules with same region_context
+    // Date overlap: (start1 <= end2) AND (end1 >= start2)
+    let query = db
+        .from('featured_schedules')
+        .select(`
+            id,
+            cafe:cafes(name)
+        `)
+        .eq('slot_type', 'hero')
+        .eq('is_active', true)
+        .lte('start_date', endDate)
+        .gte('end_date', startDate)
+
+    // Match region context (null matches null for global)
+    if (regionContext) {
+        query = query.eq('region_context', regionContext)
+    } else {
+        query = query.is('region_context', null)
+    }
+
+    // Exclude current schedule if editing
+    if (excludeId) {
+        query = query.neq('id', excludeId)
+    }
+
+    const { data: conflicts, error } = await query.limit(1)
+
+    if (error) {
+        console.error("Error checking featured conflict:", error)
+        return { hasConflict: false }
+    }
+
+    if (conflicts && conflicts.length > 0) {
+        const cafeName = (conflicts[0] as any).cafe?.name || 'Another cafe'
+        return { hasConflict: true, conflictingCafe: cafeName }
+    }
+
+    return { hasConflict: false }
+}
+
+/**
+ * Create a new featured schedule
+ */
+export async function createFeaturedSchedule(schedule: {
+    cafe_id: string
+    start_date: string
+    end_date: string
+    region_context: string | null
+    priority?: number
+    custom_title?: string
+    custom_description?: string
+}): Promise<AdminActionResult & { schedule?: FeaturedSchedule }> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Check for conflicts
+    const conflict = await checkFeaturedConflict(
+        schedule.start_date,
+        schedule.end_date,
+        schedule.region_context
+    )
+
+    if (conflict.hasConflict) {
+        return {
+            success: false,
+            error: `Conflict: ${conflict.conflictingCafe} is already featured for this region during the selected dates`
+        }
+    }
+
+    const { data: newSchedule, error } = await db
+        .from('featured_schedules')
+        .insert({
+            cafe_id: schedule.cafe_id,
+            start_date: schedule.start_date,
+            end_date: schedule.end_date,
+            region_context: schedule.region_context,
+            slot_type: 'hero',
+            is_active: true,
+            priority: schedule.priority ?? 1,
+            custom_title: schedule.custom_title ?? null,
+            custom_description: schedule.custom_description ?? null
+        })
+        .select(`
+            *,
+            cafe:cafes(
+                id,
+                name,
+                slug,
+                thumbnail,
+                city_municipality,
+                region
+            )
+        `)
+        .single()
+
+    if (error) {
+        console.error("Error creating featured schedule:", error)
+        return { success: false, error: "Failed to create featured schedule" }
+    }
+
+    return { success: true, schedule: newSchedule as unknown as FeaturedSchedule }
+}
+
+/**
+ * Update an existing featured schedule
+ */
+export async function updateFeaturedSchedule(
+    scheduleId: string,
+    updates: Partial<{
+        cafe_id: string
+        start_date: string
+        end_date: string
+        region_context: string | null
+        is_active: boolean
+        priority: number
+        custom_title: string | null
+        custom_description: string | null
+    }>
+): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // If dates or region are being updated, check for conflicts
+    if (updates.start_date || updates.end_date || updates.region_context !== undefined) {
+        // Get current schedule for fallback values
+        const { data: current } = await db
+            .from('featured_schedules')
+            .select('start_date, end_date, region_context')
+            .eq('id', scheduleId)
+            .single()
+
+        if (current) {
+            const conflict = await checkFeaturedConflict(
+                updates.start_date ?? current.start_date,
+                updates.end_date ?? current.end_date,
+                updates.region_context !== undefined ? updates.region_context : current.region_context,
+                scheduleId
+            )
+
+            if (conflict.hasConflict) {
+                return {
+                    success: false,
+                    error: `Conflict: ${conflict.conflictingCafe} is already featured for this region during the selected dates`
+                }
+            }
+        }
+    }
+
+    const { error } = await db
+        .from('featured_schedules')
+        .update(updates as Record<string, unknown>)
+        .eq('id', scheduleId)
+
+    if (error) {
+        console.error("Error updating featured schedule:", error)
+        return { success: false, error: "Failed to update featured schedule" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Delete a featured schedule
+ */
+export async function deleteFeaturedSchedule(scheduleId: string): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const { error } = await db
+        .from('featured_schedules')
+        .delete()
+        .eq('id', scheduleId)
+
+    if (error) {
+        console.error("Error deleting featured schedule:", error)
+        return { success: false, error: "Failed to delete featured schedule" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Search published cafes for featured selection
+ */
+export async function searchCafesForFeatured(query: string): Promise<{
+    id: string
+    name: string
+    slug: string
+    thumbnail: string
+    city_municipality: string
+    region: string
+}[]> {
+    if (!query || query.length < 2) return []
+
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const { data: cafes, error } = await db
+        .from('cafes')
+        .select('id, name, slug, thumbnail, city_municipality, region')
+        .eq('is_published', true)
+        .ilike('name', `%${query}%`)
+        .order('name')
+        .limit(10)
+
+    if (error) {
+        console.error("Error searching cafes for featured:", error)
+        return []
+    }
+
+    return cafes || []
+}
