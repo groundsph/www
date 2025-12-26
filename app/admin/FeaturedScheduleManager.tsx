@@ -175,7 +175,12 @@ export default function FeaturedScheduleManager({
 
     const handleCafeSelect = (cafe: CafeSearchResult) => {
         setSelectedCafe(cafe)
-        setFormData((prev) => ({ ...prev, cafe_id: cafe.id }))
+        // Auto-populate region from cafe, user can still change it after
+        setFormData((prev) => ({
+            ...prev,
+            cafe_id: cafe.id,
+            region_context: cafe.region || null,
+        }))
         setCafeSearchQuery("")
         setCafeSearchResults([])
     }
@@ -326,7 +331,7 @@ export default function FeaturedScheduleManager({
     return (
         <div className='space-y-6'>
             {/* Header */}
-            <div className='flex items-center justify-between'>
+            <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
                 <div>
                     <h2 className='text-xl font-semibold flex items-center gap-2'>
                         <Star className='w-5 h-5 text-accent' />
@@ -339,7 +344,7 @@ export default function FeaturedScheduleManager({
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className='flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition shadow-sm'
+                    className='flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition shadow-sm w-full sm:w-auto'
                 >
                     <Plus className='w-4 h-4' />
                     Add Featured
@@ -347,7 +352,7 @@ export default function FeaturedScheduleManager({
             </div>
 
             {/* Calendar View */}
-            <div className='bg-text/5 border border-text/10 rounded-xl p-4'>
+            <div className='bg-text/5 border border-text/10 rounded-xl p-2 sm:p-4 overflow-x-auto'>
                 <div className='flex items-center justify-between mb-4'>
                     <button
                         onClick={prevMonth}
@@ -369,7 +374,7 @@ export default function FeaturedScheduleManager({
                     </button>
                 </div>
 
-                <div className='grid grid-cols-7 gap-1'>
+                <div className='grid grid-cols-7 gap-0.5 sm:gap-1 min-w-[280px]'>
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
                         (day) => (
                             <div
@@ -460,7 +465,7 @@ export default function FeaturedScheduleManager({
                             return (
                                 <div
                                     key={schedule.id}
-                                    className={`flex items-center gap-4 p-4 rounded-xl border transition ${
+                                    className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition ${
                                         status === "active"
                                             ? "bg-accent/5 border-accent/20"
                                             : status === "expired"
@@ -503,40 +508,42 @@ export default function FeaturedScheduleManager({
                                             ).toLocaleDateString()}
                                         </div>
                                     </div>
-
-                                    {/* Status badge */}
-                                    <div
-                                        className={`px-2 py-1 text-xs rounded-full ${
-                                            status === "active"
-                                                ? "bg-green-500/20 text-green-400"
-                                                : status === "upcoming"
-                                                  ? "bg-blue-500/20 text-blue-400"
-                                                  : "bg-text/10 text-text/40"
-                                        }`}
-                                    >
-                                        {status}
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className='flex items-center gap-2'>
-                                        <button
-                                            onClick={() =>
-                                                openEditModal(schedule)
-                                            }
-                                            className='p-2 hover:bg-text/10 rounded-lg transition'
-                                            title='Edit'
+                                    {/* Status badge and Actions - row on mobile */}
+                                    <div className='flex items-center justify-between sm:justify-end gap-2 sm:gap-4'>
+                                        {/* Status badge */}
+                                        <div
+                                            className={`px-2 py-1 text-xs rounded-full ${
+                                                status === "active"
+                                                    ? "bg-green-500/20 text-green-400"
+                                                    : status === "upcoming"
+                                                      ? "bg-blue-500/20 text-blue-400"
+                                                      : "bg-text/10 text-text/40"
+                                            }`}
                                         >
-                                            <Edit2 className='w-4 h-4' />
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                handleDelete(schedule.id)
-                                            }
-                                            className='p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition'
-                                            title='Delete'
-                                        >
-                                            <Trash2 className='w-4 h-4' />
-                                        </button>
+                                            {status}
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className='flex items-center gap-1 sm:gap-2'>
+                                            <button
+                                                onClick={() =>
+                                                    openEditModal(schedule)
+                                                }
+                                                className='p-2 hover:bg-text/10 rounded-lg transition'
+                                                title='Edit'
+                                            >
+                                                <Edit2 className='w-4 h-4' />
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    handleDelete(schedule.id)
+                                                }
+                                                className='p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition'
+                                                title='Delete'
+                                            >
+                                                <Trash2 className='w-4 h-4' />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )

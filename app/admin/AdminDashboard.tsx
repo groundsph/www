@@ -903,7 +903,7 @@ export default function AdminDashboard({
                                         className='bg-text/5 border border-red-500/20 rounded-xl overflow-hidden'
                                     >
                                         {/* Main Row */}
-                                        <div className='p-4 flex items-start gap-4'>
+                                        <div className='p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4'>
                                             {/* Author Avatar */}
                                             <div className='relative w-12 h-12 shrink-0 rounded-full overflow-hidden bg-text/10'>
                                                 {review.author?.avatar_url ? (
@@ -978,9 +978,8 @@ export default function AdminDashboard({
                                                         ).toLocaleDateString()}
                                                 </p>
                                             </div>
-
                                             {/* Actions */}
-                                            <div className='flex items-center gap-2 shrink-0'>
+                                            <div className='flex items-center gap-2 shrink-0 self-end sm:self-center'>
                                                 <button
                                                     onClick={() =>
                                                         handleApproveReview(
@@ -1154,9 +1153,9 @@ export default function AdminDashboard({
                                         className='bg-text/5 border border-text/10 rounded-xl overflow-hidden'
                                     >
                                         {/* Main Row */}
-                                        <div className='p-4 flex items-center gap-4'>
+                                        <div className='p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4'>
                                             {/* Thumbnail */}
-                                            <div className='relative w-20 h-20 shrink-0 rounded-lg overflow-hidden'>
+                                            <div className='relative w-full sm:w-20 h-32 sm:h-20 shrink-0 rounded-lg overflow-hidden'>
                                                 {cafe.thumbnail ? (
                                                     <Image
                                                         src={cafe.thumbnail}
@@ -1192,7 +1191,7 @@ export default function AdminDashboard({
                                             </div>
 
                                             {/* Actions */}
-                                            <div className='flex items-center gap-2'>
+                                            <div className='flex items-center gap-2 self-end sm:self-center'>
                                                 <Link
                                                     href={`/admin/preview/${cafe.id}`}
                                                     className='p-2 bg-text/5 text-text rounded-lg hover:bg-text/20 transition'
@@ -1543,7 +1542,7 @@ export default function AdminDashboard({
                                     >
                                         {/* Header */}
                                         <div
-                                            className='p-4 cursor-pointer hover:bg-text/5 transition flex items-center gap-4'
+                                            className='p-3 sm:p-4 cursor-pointer hover:bg-text/5 transition flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4'
                                             onClick={() =>
                                                 setExpandedSuggestion(
                                                     isExpanded

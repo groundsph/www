@@ -199,8 +199,8 @@ export function BadgeCardFull({
     )
 
     return (
-        <div className='group relative bg-text/5 border border-text/10 rounded-xl p-4 hover:border-text/20 transition-colors'>
-            <div className='flex items-start gap-4'>
+        <div className='group relative bg-text/5 border border-text/10 rounded-xl p-3 sm:p-4 hover:border-text/20 transition-colors'>
+            <div className='flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4'>
                 {/* Badge Image/Icon */}
                 <div
                     className={`
@@ -230,8 +230,8 @@ export function BadgeCardFull({
 
                 {/* Badge Info */}
                 <div className='flex-1 min-w-0'>
-                    <div className='flex items-center gap-2 mb-1'>
-                        <h3 className='text-lg font-semibold text-text truncate'>
+                    <div className='flex items-center gap-2 mb-1 flex-wrap'>
+                        <h3 className='text-lg font-semibold text-text'>
                             {badge.name}
                         </h3>
                         <span
@@ -254,8 +254,8 @@ export function BadgeCardFull({
                     </span>
                 </div>
 
-                {/* Actions */}
-                <div className='flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+                {/* Actions - always visible on mobile, hover on desktop */}
+                <div className='flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity self-end sm:self-start'>
                     {onAward && (
                         <button
                             onClick={onAward}

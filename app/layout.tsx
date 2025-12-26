@@ -60,7 +60,7 @@ export const metadata: Metadata = {
             "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
         images: [
             {
-                url: "/og-image.png",
+                url: "/og-image.jpg",
                 width: 1200,
                 height: 630,
                 alt: "Grounds - Discover the Philippines' Best Cafes",
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
         title: "Grounds",
         description:
             "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
-        images: ["/og-image.png"],
+        images: ["/og-image.jpg"],
         creator: "@adrianbonpin",
     },
     robots: {
