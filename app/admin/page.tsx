@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation"
 import {
     isAdmin,
-    getPendingCafes,
-    getPublishedCafes,
+    getPaginatedCafes,
+    getCafeFilterOptions,
     getReportedReviews,
     getAllBadgeDefinitions,
     getFeaturedSchedules,
@@ -23,18 +23,30 @@ export default async function AdminPage() {
         redirect("/")
     }
 
-    // Fetch all admin data
+    // Fetch initial admin data with pagination
     const [
-        pendingCafes,
-        publishedCafes,
+        pendingResult,
+        publishedResult,
+        filterOptions,
         reportedReviews,
         badges,
         suggestions,
         featuredSchedules,
         pendingClaims,
     ] = await Promise.all([
-        getPendingCafes(),
-        getPublishedCafes(),
+        getPaginatedCafes({
+            isPublished: false,
+            page: 1,
+            pageSize: 25,
+            sortBy: "date",
+        }),
+        getPaginatedCafes({
+            isPublished: true,
+            page: 1,
+            pageSize: 25,
+            sortBy: "name",
+        }),
+        getCafeFilterOptions(),
         getReportedReviews(),
         getAllBadgeDefinitions(),
         getPendingSuggestions(),
@@ -46,8 +58,13 @@ export default async function AdminPage() {
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
                 <AdminDashboard
-                    pendingCafes={pendingCafes}
-                    publishedCafes={publishedCafes}
+                    initialPendingCafes={pendingResult.cafes}
+                    initialPublishedCafes={publishedResult.cafes}
+                    pendingTotal={pendingResult.total}
+                    publishedTotal={publishedResult.total}
+                    pendingHasMore={pendingResult.hasMore}
+                    publishedHasMore={publishedResult.hasMore}
+                    filterOptions={filterOptions}
                     reportedReviews={reportedReviews}
                     badges={badges}
                     suggestions={suggestions}

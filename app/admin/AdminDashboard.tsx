@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -25,6 +25,8 @@ import {
     EyeOff,
     Search,
     Trash2,
+    Filter,
+    ArrowUpDown,
     Loader2,
     MessageSquare,
     Flag,
@@ -42,8 +44,10 @@ import {
     adminProcessAvatarQueue,
     moderateReview,
     deleteReviewAsAdmin,
+    getPaginatedCafes,
     type ReviewForModeration,
     type BadgeDefinition,
+    type CafeFilterOptions,
     createBadgeDefinition,
     updateBadgeDefinition,
     deleteBadgeDefinition,
@@ -108,8 +112,13 @@ const resizeBadgeImage = (file: File): Promise<File> => {
 }
 
 interface AdminDashboardProps {
-    pendingCafes: CafeWithRatings[]
-    publishedCafes: CafeWithRatings[]
+    initialPendingCafes: CafeWithRatings[]
+    initialPublishedCafes: CafeWithRatings[]
+    pendingTotal: number
+    publishedTotal: number
+    pendingHasMore: boolean
+    publishedHasMore: boolean
+    filterOptions: CafeFilterOptions
     reportedReviews: ReviewForModeration[]
     badges: BadgeDefinition[]
     suggestions: EditSuggestion[]
@@ -127,8 +136,13 @@ type TabType =
     | "claims"
 
 export default function AdminDashboard({
-    pendingCafes: initialPending,
-    publishedCafes: initialPublished,
+    initialPendingCafes,
+    initialPublishedCafes,
+    pendingTotal: initialPendingTotal,
+    publishedTotal: initialPublishedTotal,
+    pendingHasMore: initialPendingHasMore,
+    publishedHasMore: initialPublishedHasMore,
+    filterOptions,
     reportedReviews: initialReported,
     badges: initialBadges,
     suggestions: initialSuggestions,
@@ -136,8 +150,21 @@ export default function AdminDashboard({
     pendingClaims: initialClaims = [],
 }: AdminDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
-    const [pendingCafes, setPendingCafes] = useState(initialPending)
-    const [publishedCafes, setPublishedCafes] = useState(initialPublished)
+
+    // Cafe pagination state
+    const [pendingCafes, setPendingCafes] = useState(initialPendingCafes)
+    const [publishedCafes, setPublishedCafes] = useState(initialPublishedCafes)
+    const [pendingTotal, setPendingTotal] = useState(initialPendingTotal)
+    const [publishedTotal, setPublishedTotal] = useState(initialPublishedTotal)
+    const [pendingHasMore, setPendingHasMore] = useState(initialPendingHasMore)
+    const [publishedHasMore, setPublishedHasMore] = useState(
+        initialPublishedHasMore
+    )
+    const [pendingPage, setPendingPage] = useState(1)
+    const [publishedPage, setPublishedPage] = useState(1)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [isFiltering, setIsFiltering] = useState(false)
+
     const [reportedReviews, setReportedReviews] = useState(initialReported)
     const [badges, setBadges] = useState(initialBadges)
     const [suggestions, setSuggestions] = useState(initialSuggestions)
@@ -150,6 +177,11 @@ export default function AdminDashboard({
     const [expandedClaim, setExpandedClaim] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
+    const [provinceFilter, setProvinceFilter] = useState<string>("")
+    const [cityFilter, setCityFilter] = useState<string>("")
+    const [sortBy, setSortBy] = useState<"name" | "date" | "city" | "province">(
+        "name"
+    )
     const [cleanupLoading, setCleanupLoading] = useState(false)
     const [cleanupMessage, setCleanupMessage] = useState<string | null>(null)
 
@@ -743,21 +775,114 @@ export default function AdminDashboard({
         is_work_friendly: { icon: Briefcase, label: "Work Friendly" },
     }
 
-    const baseCafes = activeTab === "pending" ? pendingCafes : publishedCafes
+    // Get provinces from filter options
+    const provinces = filterOptions.provinces
 
-    // Filter cafes by search query
-    const currentCafes = searchQuery.trim()
-        ? baseCafes.filter((cafe) => {
-              const query = searchQuery.toLowerCase()
-              return (
-                  cafe.name.toLowerCase().includes(query) ||
-                  cafe.address_display?.toLowerCase().includes(query) ||
-                  cafe.city_municipality?.toLowerCase().includes(query) ||
-                  cafe.province?.toLowerCase().includes(query) ||
-                  cafe.area?.toLowerCase().includes(query)
-              )
-          })
-        : baseCafes
+    // Get cities for the selected province from filter options
+    const cities = useMemo(() => {
+        if (!provinceFilter) return []
+        const provinceData = filterOptions.cities.find(
+            (c) => c.province === provinceFilter
+        )
+        return provinceData?.cities || []
+    }, [filterOptions.cities, provinceFilter])
+
+    // Fetch cafes with current filters (server-side)
+    const fetchCafes = async (
+        isPublished: boolean,
+        page: number,
+        append: boolean = false
+    ) => {
+        const result = await getPaginatedCafes({
+            isPublished,
+            page,
+            pageSize: 25,
+            province: provinceFilter || undefined,
+            city: cityFilter || undefined,
+            search: searchQuery || undefined,
+            sortBy,
+        })
+
+        if (isPublished) {
+            setPublishedCafes(
+                append ? [...publishedCafes, ...result.cafes] : result.cafes
+            )
+            setPublishedTotal(result.total)
+            setPublishedHasMore(result.hasMore)
+            setPublishedPage(page)
+        } else {
+            setPendingCafes(
+                append ? [...pendingCafes, ...result.cafes] : result.cafes
+            )
+            setPendingTotal(result.total)
+            setPendingHasMore(result.hasMore)
+            setPendingPage(page)
+        }
+    }
+
+    // Handle filter/sort changes - refetch from server
+    const applyFilters = async () => {
+        setIsFiltering(true)
+        const isPublished = activeTab === "published"
+        await fetchCafes(isPublished, 1, false)
+        setIsFiltering(false)
+    }
+
+    // Reset city filter when province changes
+    const handleProvinceChange = async (province: string) => {
+        setProvinceFilter(province)
+        setCityFilter("") // Reset city when province changes
+    }
+
+    // Load more cafes
+    const loadMore = async () => {
+        if (loadingMore) return
+        setLoadingMore(true)
+
+        const isPublished = activeTab === "published"
+        const currentPage = isPublished ? publishedPage : pendingPage
+        await fetchCafes(isPublished, currentPage + 1, true)
+
+        setLoadingMore(false)
+    }
+
+    // Debounced search effect
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    useEffect(() => {
+        // Clear previous timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current)
+        }
+
+        // Debounce search by 500ms
+        searchTimeoutRef.current = setTimeout(() => {
+            if (activeTab === "pending" || activeTab === "published") {
+                applyFilters()
+            }
+        }, 500)
+
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current)
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery])
+
+    // Apply filters when province, city, or sortBy changes
+    useEffect(() => {
+        if (activeTab === "pending" || activeTab === "published") {
+            applyFilters()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [provinceFilter, cityFilter, sortBy, activeTab])
+
+    // Current cafes for display (already filtered/sorted from server)
+    const currentCafes = activeTab === "pending" ? pendingCafes : publishedCafes
+    const currentTotal = activeTab === "pending" ? pendingTotal : publishedTotal
+    const currentHasMore =
+        activeTab === "pending" ? pendingHasMore : publishedHasMore
 
     return (
         <div className='w-full overflow-hidden space-y-8 [&_button]:cursor-pointer'>
@@ -775,13 +900,13 @@ export default function AdminDashboard({
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                 <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                     <div className='text-4xl font-bold'>
-                        {pendingCafes.length}
+                        {filterOptions.totalPending}
                     </div>
                     <div className='text-text/60 text-sm'>Pending Cafes</div>
                 </div>
                 <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                     <div className='text-4xl font-bold'>
-                        {publishedCafes.length}
+                        {filterOptions.totalPublished}
                     </div>
                     <div className='text-text/60 text-sm'>Published Cafes</div>
                 </div>
@@ -927,25 +1052,133 @@ export default function AdminDashboard({
                 </button>
             </div>
 
-            {/* Search - only for cafe tabs */}
+            {/* Search and Filter - only for cafe tabs */}
             {(activeTab === "pending" || activeTab === "published") && (
-                <div className='relative'>
-                    <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
-                    <input
-                        type='text'
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder='Search cafes by name, city, or address...'
-                        className='w-full pl-12 pr-4 py-3 bg-text/5 border border-text/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/50'
-                    />
-                    {searchQuery && (
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className='absolute right-4 top-1/2 -translate-y-1/2 text-text/40 hover:text-text/60'
-                        >
-                            <X className='w-4 h-4' />
-                        </button>
-                    )}
+                <div className='space-y-3'>
+                    {/* Search bar */}
+                    <div className='relative'>
+                        <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
+                        <input
+                            type='text'
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder='Search cafes by name, city, or address...'
+                            className='w-full pl-12 pr-4 py-3 bg-text/5 border border-text/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/50'
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className='absolute right-4 top-1/2 -translate-y-1/2 text-text/40 hover:text-text/60'
+                            >
+                                <X className='w-4 h-4' />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Filters row */}
+                    <div className='flex gap-3 flex-wrap'>
+                        {/* Province filter */}
+                        <div className='relative'>
+                            <Filter className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <select
+                                value={provinceFilter}
+                                onChange={(e) =>
+                                    handleProvinceChange(e.target.value)
+                                }
+                                className='appearance-none pl-9 pr-8 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 cursor-pointer text-sm'
+                            >
+                                <option value=''>All Provinces</option>
+                                {provinces.map((province) => (
+                                    <option
+                                        key={province}
+                                        value={province}
+                                    >
+                                        {province}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                        </div>
+
+                        {/* City filter - only shows when province is selected */}
+                        {provinceFilter && cities.length > 0 && (
+                            <div className='relative'>
+                                <MapPin className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                <select
+                                    value={cityFilter}
+                                    onChange={(e) =>
+                                        setCityFilter(e.target.value)
+                                    }
+                                    className='appearance-none pl-9 pr-8 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 cursor-pointer text-sm'
+                                >
+                                    <option value=''>All Cities</option>
+                                    {cities.map((city) => (
+                                        <option
+                                            key={city}
+                                            value={city}
+                                        >
+                                            {city}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                            </div>
+                        )}
+
+                        {/* Spacer to push sort to the right */}
+                        <div className='flex-1' />
+
+                        {/* Sort dropdown */}
+                        <div className='relative'>
+                            <ArrowUpDown className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <select
+                                value={sortBy}
+                                onChange={(e) =>
+                                    setSortBy(e.target.value as typeof sortBy)
+                                }
+                                className='appearance-none pl-9 pr-8 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 cursor-pointer text-sm'
+                            >
+                                <option value='name'>Sort by Name</option>
+                                <option value='date'>Sort by Date</option>
+                                <option value='city'>Sort by City</option>
+                                <option value='province'>
+                                    Sort by Province
+                                </option>
+                            </select>
+                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                        </div>
+
+                        {/* Clear filters button */}
+                        {(provinceFilter || cityFilter) && (
+                            <button
+                                onClick={() => {
+                                    setProvinceFilter("")
+                                    setCityFilter("")
+                                }}
+                                className='px-3 py-2 text-sm text-accent hover:bg-accent/10 rounded-lg transition flex items-center gap-1'
+                            >
+                                <X className='w-4 h-4' />
+                                Clear filters
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Results count */}
+                    <div className='text-sm text-text/50'>
+                        {isFiltering ? (
+                            <span className='flex items-center gap-2'>
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                                Loading...
+                            </span>
+                        ) : (
+                            <>
+                                Showing {currentCafes.length} of {currentTotal}{" "}
+                                cafes
+                                {provinceFilter && ` in ${provinceFilter}`}
+                                {cityFilter && `, ${cityFilter}`}
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -1538,6 +1771,26 @@ export default function AdminDashboard({
                                     </div>
                                 )
                             })}
+                        </div>
+                    )}
+
+                    {/* Load More Button */}
+                    {currentHasMore && (
+                        <div className='flex justify-center pt-4'>
+                            <button
+                                onClick={loadMore}
+                                disabled={loadingMore}
+                                className='flex items-center gap-2 px-6 py-3 bg-accent/20 text-accent rounded-xl hover:bg-accent/30 transition disabled:opacity-50 border border-accent/30'
+                            >
+                                {loadingMore ? (
+                                    <>
+                                        <Loader2 className='w-4 h-4 animate-spin' />
+                                        Loading...
+                                    </>
+                                ) : (
+                                    <>Load More Cafes</>
+                                )}
+                            </button>
                         </div>
                     )}
                 </>

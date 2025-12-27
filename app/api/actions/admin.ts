@@ -487,6 +487,207 @@ export async function getPublishedCafes(): Promise<CafeWithRatings[]> {
     return cafes as unknown as CafeWithRatings[]
 }
 
+// ============================================
+// Paginated Cafe Functions
+// ============================================
+
+export interface CafePaginationParams {
+    page?: number
+    pageSize?: number
+    province?: string
+    city?: string
+    search?: string
+    sortBy?: 'name' | 'date' | 'city' | 'province'
+    sortOrder?: 'asc' | 'desc'
+    isPublished: boolean
+}
+
+export interface PaginatedCafesResult {
+    cafes: CafeWithRatings[]
+    total: number
+    page: number
+    pageSize: number
+    hasMore: boolean
+}
+
+/**
+ * Get paginated cafes with server-side filtering and sorting
+ * Supports filtering by province, city, search query
+ * Supports sorting by name, date, city, province
+ */
+export async function getPaginatedCafes(params: CafePaginationParams): Promise<PaginatedCafesResult> {
+    const {
+        page = 1,
+        pageSize = 25,
+        province,
+        city,
+        search,
+        sortBy = 'name',
+        sortOrder = 'asc',
+        isPublished
+    } = params
+
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { cafes: [], total: 0, page, pageSize, hasMore: false }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { cafes: [], total: 0, page, pageSize, hasMore: false }
+    }
+
+    // Use admin client to bypass RLS for unpublished cafes
+    const adminDb = isPublished ? db : await createAdminClient()
+
+    // Build the query
+    let query = adminDb
+        .from('cafes')
+        .select(`
+            *,
+            contributor:profiles!cafes_contributor_id_fkey(
+                id,
+                username,
+                display_name,
+                avatar_url
+            )
+        `, { count: 'exact' })
+        .eq('is_published', isPublished)
+
+    // Apply province filter
+    if (province) {
+        query = query.eq('province', province)
+    }
+
+    // Apply city filter
+    if (city) {
+        query = query.eq('city_municipality', city)
+    }
+
+    // Apply search filter (using ilike for case-insensitive partial match)
+    if (search && search.trim()) {
+        const searchTerm = `%${search.trim()}%`
+        query = query.or(`name.ilike.${searchTerm},address_display.ilike.${searchTerm},city_municipality.ilike.${searchTerm},province.ilike.${searchTerm}`)
+    }
+
+    // Apply sorting
+    const ascending = sortOrder === 'asc'
+    switch (sortBy) {
+        case 'name':
+            query = query.order('name', { ascending })
+            break
+        case 'date':
+            query = query.order('created_at', { ascending: !ascending }) // Reverse for date (newest first by default)
+            break
+        case 'city':
+            query = query.order('city_municipality', { ascending, nullsFirst: false })
+            break
+        case 'province':
+            query = query.order('province', { ascending, nullsFirst: false })
+            break
+    }
+
+    // Apply pagination
+    const offset = (page - 1) * pageSize
+    query = query.range(offset, offset + pageSize - 1)
+
+    const { data: cafes, error, count } = await query
+
+    if (error) {
+        console.error("Error fetching paginated cafes:", error)
+        return { cafes: [], total: 0, page, pageSize, hasMore: false }
+    }
+
+    const total = count ?? 0
+    const hasMore = offset + pageSize < total
+
+    return {
+        cafes: cafes as unknown as CafeWithRatings[],
+        total,
+        page,
+        pageSize,
+        hasMore
+    }
+}
+
+export interface CafeFilterOptions {
+    provinces: string[]
+    cities: { province: string; cities: string[] }[]
+    totalPublished: number
+    totalPending: number
+}
+
+/**
+ * Get filter options for cafe admin (provinces, cities, counts)
+ * Used to populate filter dropdowns without loading all cafes
+ */
+export async function getCafeFilterOptions(): Promise<CafeFilterOptions> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { provinces: [], cities: [], totalPublished: 0, totalPending: 0 }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { provinces: [], cities: [], totalPublished: 0, totalPending: 0 }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Get all cafes (just province and city fields for efficiency)
+    const { data: cafes } = await adminDb
+        .from('cafes')
+        .select('province, city_municipality, is_published')
+
+    if (!cafes) {
+        return { provinces: [], cities: [], totalPublished: 0, totalPending: 0 }
+    }
+
+    // Build province and city lists
+    const provinceSet = new Set<string>()
+    const cityMap = new Map<string, Set<string>>()
+    let totalPublished = 0
+    let totalPending = 0
+
+    cafes.forEach(cafe => {
+        if (cafe.is_published) {
+            totalPublished++
+        } else {
+            totalPending++
+        }
+
+        if (cafe.province) {
+            provinceSet.add(cafe.province)
+            if (!cityMap.has(cafe.province)) {
+                cityMap.set(cafe.province, new Set())
+            }
+            if (cafe.city_municipality) {
+                cityMap.get(cafe.province)!.add(cafe.city_municipality)
+            }
+        }
+    })
+
+    const provinces = Array.from(provinceSet).sort()
+    const cities = provinces.map(province => ({
+        province,
+        cities: Array.from(cityMap.get(province) || []).sort()
+    }))
+
+    return { provinces, cities, totalPublished, totalPending }
+}
+
 /**
  * Unpublish a cafe (set is_published = false)
  */
