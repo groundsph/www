@@ -22,6 +22,9 @@ import {
     Utensils,
     ExternalLink,
     BadgeCheck,
+    Upload,
+    FileText,
+    Trash2,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
@@ -34,8 +37,12 @@ import {
     BREW_METHODS,
     PAYMENT_METHODS,
 } from "@/utils/data/philippines"
-import { uploadCafeImageWithProgress } from "@/utils/supabase/storage-client"
+import {
+    uploadCafeImageWithProgress,
+    uploadOwnershipProofWithProgress,
+} from "@/utils/supabase/storage-client"
 import { submitCafe } from "@/app/api/actions/submit"
+import { submitCafeClaim } from "@/app/api/actions/claim"
 import { searchCafesSimple } from "@/app/api/actions/cafe"
 import ImageUpload from "@/components/reviews/ImageUpload"
 import AmenityToggles from "./AmenityToggles"
@@ -89,6 +96,9 @@ export default function CafeSubmissionForm({
     // Duplicate checking
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Cafe search results have dynamic shape
     const [possibleDuplicates, setPossibleDuplicates] = useState<any[]>([])
+
+    // Ownership proof files for owner verification
+    const [ownershipProofFiles, setOwnershipProofFiles] = useState<File[]>([])
 
     useEffect(() => {
         const checkDuplicates = async () => {
@@ -153,6 +163,7 @@ export default function CafeSubmissionForm({
         setFormData(DEFAULT_CAFE_SUBMISSION)
         setThumbnailFile(null)
         setGalleryFiles([])
+        setOwnershipProofFiles([])
         setUploadProgress({})
         setProcessingStatus("")
         setIsProcessing(false)
@@ -274,6 +285,13 @@ export default function CafeSubmissionForm({
         try {
             console.log("[Cafe Submit] Starting submission...")
 
+            // Validate ownership proof if claiming ownership
+            if (formData.is_owner && ownershipProofFiles.length === 0) {
+                throw new Error(
+                    "At least one proof document is required when claiming ownership"
+                )
+            }
+
             // 1. Process Thumbnail
             if (!thumbnailFile) {
                 throw new Error("Thumbnail is required")
@@ -351,12 +369,58 @@ export default function CafeSubmissionForm({
                 }
             }
 
+            // 5. Upload Ownership Proof Files (if owner)
+            let proofUrls: string[] = []
+            if (formData.is_owner && ownershipProofFiles.length > 0) {
+                setProcessingStatus("Uploading ownership proof documents...")
+                console.log(
+                    "[Cafe Submit] Uploading ownership proofs...",
+                    ownershipProofFiles.length
+                )
+
+                for (let i = 0; i < ownershipProofFiles.length; i++) {
+                    const file = ownershipProofFiles[i]
+                    const key = `proof-${i}`
+                    setUploadProgress((prev) => ({ ...prev, [key]: 0 }))
+
+                    const result = await uploadOwnershipProofWithProgress(
+                        file,
+                        (progress: number) => {
+                            setUploadProgress((prev) => ({
+                                ...prev,
+                                [key]: progress,
+                            }))
+                        }
+                    )
+
+                    if (result.success && result.url) {
+                        proofUrls.push(result.url)
+                    } else {
+                        console.error(
+                            "[Cafe Submit] Failed to upload proof:",
+                            result.error
+                        )
+                    }
+                }
+
+                if (proofUrls.length === 0) {
+                    throw new Error(
+                        "Failed to upload ownership proof documents"
+                    )
+                }
+            }
+
             setProcessingStatus("Finalizing submission...")
 
-            // 5. Submit cafe data
+            // 6. Submit cafe data
             console.log("[Cafe Submit] Submitting to server...")
             // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Destructuring to exclude file fields
-            const { thumbnail, gallery, ...serializableFormData } = formData
+            const {
+                thumbnail,
+                gallery,
+                ownership_proof_files,
+                ...serializableFormData
+            } = formData
             const result = await submitCafe(
                 serializableFormData,
                 thumbnailResult.url,
@@ -365,6 +429,27 @@ export default function CafeSubmissionForm({
 
             if (!result.success) {
                 throw new Error(result.error || "Failed to submit cafe")
+            }
+
+            // 7. Create ownership claim if owner
+            if (formData.is_owner && result.cafeId && proofUrls.length > 0) {
+                console.log("[Cafe Submit] Creating ownership claim...")
+                const proofText =
+                    "Submitted during cafe registration with proof documents."
+                // Use the first proof URL as the document URL
+                const claimResult = await submitCafeClaim(
+                    result.cafeId,
+                    proofText,
+                    proofUrls[0] // Primary proof document
+                )
+
+                if (!claimResult.success) {
+                    console.error(
+                        "[Cafe Submit] Failed to create claim:",
+                        claimResult.error
+                    )
+                    // Don't throw - cafe was already created, just log the warning
+                }
             }
 
             // Success!
@@ -1938,49 +2023,187 @@ export default function CafeSubmissionForm({
                                 </div>
 
                                 {/* Owner Verification */}
-                                <div className='bg-background border border-text/10 rounded-xl p-4 flex items-start gap-4'>
-                                    <div
-                                        className={cn(
-                                            "w-5 h-5 mt-0.5 rounded border flex items-center justify-center shrink-0 cursor-pointer transition-colors",
-                                            formData.is_owner
-                                                ? "bg-primary border-primary text-white"
-                                                : "border-text/30 hover:border-primary"
-                                        )}
-                                        onClick={() =>
-                                            updateFormData(
-                                                "is_owner",
-                                                !formData.is_owner
-                                            )
-                                        }
-                                    >
-                                        {formData.is_owner && (
-                                            <Check className='w-3.5 h-3.5' />
-                                        )}
-                                    </div>
-                                    <div
-                                        className='flex-1 cursor-pointer'
-                                        onClick={() =>
-                                            updateFormData(
-                                                "is_owner",
-                                                !formData.is_owner
-                                            )
-                                        }
-                                    >
-                                        <div className='flex items-center gap-2 mb-1'>
-                                            <BadgeCheck className='w-4 h-4 text-primary' />
-                                            <span className='font-medium text-sm'>
-                                                I am the owner or manager of
-                                                this cafe
-                                            </span>
+                                <div className='bg-background border border-text/10 rounded-xl p-4 space-y-4'>
+                                    <div className='flex items-start gap-4'>
+                                        <div
+                                            className={cn(
+                                                "w-5 h-5 mt-0.5 rounded border flex items-center justify-center shrink-0 cursor-pointer transition-colors",
+                                                formData.is_owner
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "border-text/30 hover:border-primary"
+                                            )}
+                                            onClick={() => {
+                                                updateFormData(
+                                                    "is_owner",
+                                                    !formData.is_owner
+                                                )
+                                                // Clear proof files when unchecking
+                                                if (formData.is_owner) {
+                                                    setOwnershipProofFiles([])
+                                                }
+                                            }}
+                                        >
+                                            {formData.is_owner && (
+                                                <Check className='w-3.5 h-3.5' />
+                                            )}
                                         </div>
-                                        <p className='text-xs text-text/60'>
-                                            By checking this, you request to
-                                            claim manage rights for this cafe
-                                            page. You will need to provide
-                                            verification documents upon admin
-                                            request.
-                                        </p>
+                                        <div
+                                            className='flex-1 cursor-pointer'
+                                            onClick={() => {
+                                                updateFormData(
+                                                    "is_owner",
+                                                    !formData.is_owner
+                                                )
+                                                if (formData.is_owner) {
+                                                    setOwnershipProofFiles([])
+                                                }
+                                            }}
+                                        >
+                                            <div className='flex items-center gap-2 mb-1'>
+                                                <BadgeCheck className='w-4 h-4 text-primary' />
+                                                <span className='font-medium text-sm'>
+                                                    I am the owner or manager of
+                                                    this cafe
+                                                </span>
+                                            </div>
+                                            <p className='text-xs text-text/60'>
+                                                By checking this, you request to
+                                                claim management rights for this
+                                                cafe page.
+                                            </p>
+                                        </div>
                                     </div>
+
+                                    {/* Proof Upload Section - Only shown when is_owner is checked */}
+                                    {formData.is_owner && (
+                                        <div className='pl-9 space-y-3'>
+                                            <div className='bg-amber-50 border border-amber-200 rounded-lg p-3'>
+                                                <p className='text-sm text-amber-800 font-medium mb-1'>
+                                                    Proof of Ownership Required
+                                                </p>
+                                                <p className='text-xs text-amber-700'>
+                                                    Please upload at least one
+                                                    document to verify your
+                                                    ownership. Accepted:
+                                                    Business permits, DTI/SEC
+                                                    registration, lease
+                                                    agreements, official
+                                                    letterhead, or photo with
+                                                    cafe signage.
+                                                </p>
+                                            </div>
+
+                                            {/* File Upload Area */}
+                                            <div className='border-2 border-dashed border-text/20 rounded-xl p-4 text-center hover:border-primary/50 transition-colors'>
+                                                <input
+                                                    type='file'
+                                                    id='ownership-proof-upload'
+                                                    accept='image/jpeg,image/png,image/webp,application/pdf'
+                                                    multiple
+                                                    className='hidden'
+                                                    onChange={(e) => {
+                                                        const files =
+                                                            Array.from(
+                                                                e.target
+                                                                    .files || []
+                                                            )
+                                                        if (files.length > 0) {
+                                                            setOwnershipProofFiles(
+                                                                (prev) => [
+                                                                    ...prev,
+                                                                    ...files,
+                                                                ]
+                                                            )
+                                                        }
+                                                        // Reset input
+                                                        e.target.value = ""
+                                                    }}
+                                                />
+                                                <label
+                                                    htmlFor='ownership-proof-upload'
+                                                    className='cursor-pointer'
+                                                >
+                                                    <Upload className='w-8 h-8 mx-auto text-text/40 mb-2' />
+                                                    <p className='text-sm font-medium text-text/70'>
+                                                        Click to upload proof
+                                                        documents
+                                                    </p>
+                                                    <p className='text-xs text-text/50 mt-1'>
+                                                        JPEG, PNG, WebP, or PDF
+                                                        (max 10MB each)
+                                                    </p>
+                                                </label>
+                                            </div>
+
+                                            {/* Uploaded Files List */}
+                                            {ownershipProofFiles.length > 0 && (
+                                                <div className='space-y-2'>
+                                                    <p className='text-xs font-medium text-text/60'>
+                                                        Uploaded Documents (
+                                                        {
+                                                            ownershipProofFiles.length
+                                                        }
+                                                        )
+                                                    </p>
+                                                    {ownershipProofFiles.map(
+                                                        (file, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                className='flex items-center gap-3 bg-text/5 rounded-lg p-2'
+                                                            >
+                                                                <FileText className='w-4 h-4 text-primary shrink-0' />
+                                                                <span className='text-sm text-text/80 flex-1 truncate'>
+                                                                    {file.name}
+                                                                </span>
+                                                                <span className='text-xs text-text/50'>
+                                                                    {(
+                                                                        file.size /
+                                                                        1024
+                                                                    ).toFixed(
+                                                                        0
+                                                                    )}
+                                                                    KB
+                                                                </span>
+                                                                <button
+                                                                    type='button'
+                                                                    onClick={() => {
+                                                                        setOwnershipProofFiles(
+                                                                            (
+                                                                                prev
+                                                                            ) =>
+                                                                                prev.filter(
+                                                                                    (
+                                                                                        _,
+                                                                                        i
+                                                                                    ) =>
+                                                                                        i !==
+                                                                                        idx
+                                                                                )
+                                                                        )
+                                                                    }}
+                                                                    className='p-1 hover:bg-red-100 rounded transition-colors cursor-pointer'
+                                                                >
+                                                                    <Trash2 className='w-4 h-4 text-red-500' />
+                                                                </button>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Validation Warning */}
+                                            {formData.is_owner &&
+                                                ownershipProofFiles.length ===
+                                                    0 && (
+                                                    <p className='text-xs text-red-500 flex items-center gap-1'>
+                                                        <span>⚠</span>
+                                                        At least one proof
+                                                        document is required to
+                                                        claim ownership
+                                                    </p>
+                                                )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Submission Note */}

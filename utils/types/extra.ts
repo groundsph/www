@@ -111,10 +111,11 @@ export interface CafeSubmission {
     email: string;
     socials: CafeSocial[];
     is_owner: boolean;
+    ownership_proof_files: File[];
 }
 
 // Serializable version of CafeSubmission for server actions (excludes File objects)
-export type SerializableCafeSubmission = Omit<CafeSubmission, 'thumbnail' | 'gallery'>;
+export type SerializableCafeSubmission = Omit<CafeSubmission, 'thumbnail' | 'gallery' | 'ownership_proof_files'>;
 
 // Default empty submission for form initialization
 export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
@@ -149,4 +150,5 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     email: '',
     socials: [],
     is_owner: false,
+    ownership_proof_files: [],
 };

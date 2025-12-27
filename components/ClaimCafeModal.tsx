@@ -2,8 +2,18 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { X, Store, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import {
+    X,
+    Store,
+    Loader2,
+    CheckCircle,
+    AlertCircle,
+    Upload,
+    FileText,
+    Trash2,
+} from "lucide-react"
 import { submitCafeClaim } from "@/app/api/actions/claim"
+import { uploadOwnershipProofWithProgress } from "@/utils/supabase/storage-client"
 
 interface ClaimCafeModalProps {
     isOpen: boolean
@@ -24,17 +34,49 @@ export default function ClaimCafeModal({
         success: boolean
         message: string
     } | null>(null)
+    const [proofFile, setProofFile] = useState<File | null>(null)
+    const [uploadProgress, setUploadProgress] = useState(0)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!proofText.trim()) return
+        if (!proofText.trim() && !proofFile) {
+            setResult({
+                success: false,
+                message:
+                    "Please provide either a description or a proof document",
+            })
+            return
+        }
 
         setIsSubmitting(true)
         setResult(null)
+        setUploadProgress(0)
 
         try {
-            const response = await submitCafeClaim(cafeId, proofText.trim())
+            let proofUrl: string | undefined
+
+            // Upload proof file if present
+            if (proofFile) {
+                const uploadResult = await uploadOwnershipProofWithProgress(
+                    proofFile,
+                    (progress) => setUploadProgress(progress)
+                )
+
+                if (!uploadResult.success || !uploadResult.url) {
+                    throw new Error(
+                        uploadResult.error || "Failed to upload proof document"
+                    )
+                }
+
+                proofUrl = uploadResult.url
+            }
+
+            const response = await submitCafeClaim(
+                cafeId,
+                proofText.trim() || "Document attached",
+                proofUrl
+            )
 
             if (response.success) {
                 setResult({
@@ -43,6 +85,8 @@ export default function ClaimCafeModal({
                         "Your claim has been submitted! We'll review it and get back to you soon.",
                 })
                 setProofText("")
+                setProofFile(null)
+                setUploadProgress(0)
             } else {
                 setResult({
                     success: false,
@@ -53,7 +97,10 @@ export default function ClaimCafeModal({
             console.error("Error submitting claim:", error)
             setResult({
                 success: false,
-                message: "An unexpected error occurred",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "An unexpected error occurred",
             })
         } finally {
             setIsSubmitting(false)
@@ -63,6 +110,8 @@ export default function ClaimCafeModal({
     const handleClose = () => {
         if (!isSubmitting) {
             setProofText("")
+            setProofFile(null)
+            setUploadProgress(0)
             setResult(null)
             onClose()
         }
@@ -158,6 +207,85 @@ export default function ClaimCafeModal({
                                             required
                                             disabled={isSubmitting}
                                         />
+                                        <div className='mb-4'>
+                                            <label className='block text-sm font-medium mb-2'>
+                                                Proof Document (Optional but
+                                                Recommended)
+                                            </label>
+
+                                            {!proofFile ? (
+                                                <div className='border-2 border-dashed border-text/20 rounded-xl p-4 text-center hover:border-primary/50 transition-colors bg-text/5'>
+                                                    <input
+                                                        type='file'
+                                                        id='modal-proof-upload'
+                                                        accept='image/jpeg,image/png,image/webp,application/pdf'
+                                                        className='hidden'
+                                                        onChange={(e) => {
+                                                            const file =
+                                                                e.target
+                                                                    .files?.[0]
+                                                            if (file)
+                                                                setProofFile(
+                                                                    file
+                                                                )
+                                                            e.target.value = ""
+                                                        }}
+                                                    />
+                                                    <label
+                                                        htmlFor='modal-proof-upload'
+                                                        className='cursor-pointer flex flex-col items-center justify-center'
+                                                    >
+                                                        <Upload className='w-6 h-6 text-text/40 mb-2' />
+                                                        <span className='text-sm font-medium text-text/70'>
+                                                            Upload Business
+                                                            Permit / ID
+                                                        </span>
+                                                        <span className='text-xs text-text/50 mt-1'>
+                                                            Max 10MB (PDF, JPG,
+                                                            PNG)
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            ) : (
+                                                <div className='bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-center gap-3'>
+                                                    <FileText className='w-4 h-4 text-primary shrink-0' />
+                                                    <div className='flex-1 overflow-hidden'>
+                                                        <p className='text-sm font-medium text-text/80 truncate'>
+                                                            {proofFile.name}
+                                                        </p>
+                                                        <p className='text-xs text-text/50'>
+                                                            {(
+                                                                proofFile.size /
+                                                                1024
+                                                            ).toFixed(0)}{" "}
+                                                            KB
+                                                        </p>
+                                                        {uploadProgress > 0 &&
+                                                            uploadProgress <
+                                                                100 && (
+                                                                <div className='w-full h-1 bg-text/10 rounded-full mt-1.5 overflow-hidden'>
+                                                                    <div
+                                                                        className='h-full bg-primary transition-all duration-300'
+                                                                        style={{
+                                                                            width: `${uploadProgress}%`,
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                    </div>
+                                                    <button
+                                                        type='button'
+                                                        onClick={() =>
+                                                            setProofFile(null)
+                                                        }
+                                                        className='p-1.5 hover:bg-red-100 rounded-lg text-text/40 hover:text-red-500 transition-colors'
+                                                    >
+                                                        <Trash2 className='w-4 h-4' />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <p className='text-xs text-text/50 mt-1'>
                                             We may contact you for verification
                                             before approving your claim.

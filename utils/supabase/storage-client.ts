@@ -320,3 +320,98 @@ export async function uploadCafeImageWithProgress(
         xhr.send(file)
     })
 }
+
+// ============================================
+// Ownership Proof Upload (Client-side)
+// ============================================
+
+const OWNERSHIP_PROOF_BUCKET = "ownership-proofs"
+const MAX_PROOF_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_PROOF_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "pdf"]
+
+/**
+ * Upload ownership proof document with progress tracking
+ * Files are stored at: ownership-proofs/{userId}/{timestamp}-{random}.{ext}
+ * Bucket should be private (admin-only access for verification)
+ */
+export async function uploadOwnershipProofWithProgress(
+    file: File,
+    onProgress?: (progress: number) => void
+): Promise<UploadResult> {
+    const db = createLocalClient()
+
+    // Get current user and session for token
+    const {
+        data: { session },
+    } = await db.auth.getSession()
+    const {
+        data: { user },
+    } = await db.auth.getUser()
+
+    if (!user || !session) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Validate file type
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    if (!ALLOWED_PROOF_EXTENSIONS.includes(fileExt)) {
+        return {
+            success: false,
+            error: "Invalid file type (JPEG, PNG, WebP, or PDF only)",
+        }
+    }
+
+    // Validate size
+    if (file.size > MAX_PROOF_FILE_SIZE) {
+        return { success: false, error: "File too large (max 10MB)" }
+    }
+
+    // Generate unique filename
+    const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(7)}.${fileExt}`
+    const filePath = `${user.id}/${fileName}`
+
+    // Construct the URL for the Supabase Storage API
+    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!projectUrl) {
+        console.error("Missing NEXT_PUBLIC_SUPABASE_URL")
+        return { success: false, error: "Configuration error" }
+    }
+
+    const uploadUrl = `${projectUrl}/storage/v1/object/${OWNERSHIP_PROOF_BUCKET}/${filePath}`
+
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest()
+
+        xhr.open("POST", uploadUrl)
+        xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`)
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream")
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable && onProgress) {
+                const percentComplete = (event.loaded / event.total) * 100
+                onProgress(percentComplete)
+            }
+        }
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // For private buckets, we store the path rather than public URL
+                // Admins will use signed URLs to access
+                const fullPath = `${user.id}/${fileName}`
+                resolve({ success: true, url: fullPath })
+            } else {
+                console.error("Upload failed", xhr.status, xhr.responseText)
+                resolve({ success: false, error: `Upload failed: ${xhr.statusText}` })
+            }
+        }
+
+        xhr.onerror = () => {
+            console.error("XHR Error")
+            resolve({ success: false, error: "Network error during upload" })
+        }
+
+        xhr.send(file)
+    })
+}
