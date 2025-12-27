@@ -403,6 +403,12 @@ export function DetailsTabContent({
                         <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
                             <MilkOff className='w-4 h-4' />
                             Non-Dairy Milk
+                            {cafe.milk_options &&
+                                cafe.milk_options.length > 0 && (
+                                    <span className='text-xs text-text/60'>
+                                        ({cafe.milk_options.join(", ")})
+                                    </span>
+                                )}
                         </span>
                     )}
                     {cafe.is_work_friendly && (

@@ -1409,6 +1409,37 @@ export default function CafeSubmissionForm({
                                     />
                                 </div>
 
+                                {/* Milk Options (conditional on has_non_dairy) */}
+                                {formData.has_non_dairy && (
+                                    <div className='p-4 bg-primary/5 border border-primary/20 rounded-xl'>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Non-Dairy Milk Options
+                                        </label>
+                                        <input
+                                            type='text'
+                                            value={formData.milk_options.join(
+                                                ", "
+                                            )}
+                                            onChange={(e) => {
+                                                const options = e.target.value
+                                                    .split(",")
+                                                    .map((s) => s.trim())
+                                                    .filter(Boolean)
+                                                updateFormData(
+                                                    "milk_options",
+                                                    options
+                                                )
+                                            }}
+                                            placeholder='Oat, Almond, Soy, Coconut...'
+                                            className='w-full px-4 py-3 bg-background border border-text/20 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                        />
+                                        <p className='text-xs text-text/50 mt-2'>
+                                            Comma-separated list of available
+                                            non-dairy milk options
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div>
                                     <label className='block text-sm font-medium mb-2'>
                                         Price Level
@@ -2140,6 +2171,17 @@ export default function CafeSubmissionForm({
                                                     {formData.has_non_dairy && (
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
                                                             Non-Dairy Milk
+                                                            {formData
+                                                                .milk_options
+                                                                .length > 0 && (
+                                                                <span className='text-xs text-text/60'>
+                                                                    (
+                                                                    {formData.milk_options.join(
+                                                                        ", "
+                                                                    )}
+                                                                    )
+                                                                </span>
+                                                            )}
                                                         </span>
                                                     )}
                                                     {formData.serves_food && (
