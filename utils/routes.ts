@@ -12,13 +12,13 @@ export const routes: Route[] = [
         title: 'cafes',
         href: '/cafes',
     },
+    {
+        title: 'blog',
+        href: '/blog',
+    },
     // {
     //     title: 'events',
     //     href: '/events',
-    // },
-    // {
-    //     title: 'blog',
-    //     href: '/blog',
     // },
     // // {
     //     title: 'community',
