@@ -75,11 +75,16 @@ export default function ContributionHistoryModal({
 
     useEffect(() => {
         if (isOpen) {
-            setLoading(true)
-            getCafeContributions(cafeId).then((data) => {
-                setContributions(data)
-                setLoading(false)
-            })
+            const loadData = async () => {
+                setLoading(true)
+                try {
+                    const data = await getCafeContributions(cafeId)
+                    setContributions(data)
+                } finally {
+                    setLoading(false)
+                }
+            }
+            loadData()
         }
     }, [isOpen, cafeId])
 
