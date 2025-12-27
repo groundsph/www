@@ -13,9 +13,10 @@ import { DivIcon, point } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
 import Link from "next/link"
-import { useMemo, useState, useEffect, useCallback } from "react"
+import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { StarIcon } from "lucide-react"
 import MarkerClusterGroup from "react-leaflet-cluster"
+import { trackMapUsage } from "@/utils/badges/badge-logic"
 
 interface CafeMapProps {
     cafes: CafeWithRatings[]
@@ -77,8 +78,10 @@ function LocationMarker() {
 // Component to handle map bounds changes for lazy loading
 function BoundsHandler({
     onBoundsChange,
+    onMapUsed,
 }: {
     onBoundsChange?: CafeMapProps["onBoundsChange"]
+    onMapUsed?: () => void
 }) {
     const map = useMapEvents({
         moveend: () => {
@@ -91,6 +94,8 @@ function BoundsHandler({
                     neLng: bounds.getNorthEast().lng,
                 })
             }
+            // Track map usage for Eye Spy badge
+            onMapUsed?.()
         },
     })
     return null
@@ -164,6 +169,15 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
     // Force re-render on mount to avoid map initialization issues
     const [mapKey, setMapKey] = useState("map-init")
 
+    // Track map usage for Eye Spy badge (only once per session)
+    const hasTrackedMapUsage = useRef(false)
+    const handleMapUsed = useCallback(() => {
+        if (!hasTrackedMapUsage.current) {
+            hasTrackedMapUsage.current = true
+            trackMapUsage().catch(console.error)
+        }
+    }, [])
+
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: Force re-render on mount to avoid map initialization issues
         setMapKey(`map-${Date.now()}`)
@@ -185,7 +199,10 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                 url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
             />
             <LocationMarker />
-            <BoundsHandler onBoundsChange={onBoundsChange} />
+            <BoundsHandler
+                onBoundsChange={onBoundsChange}
+                onMapUsed={handleMapUsed}
+            />
             <MarkerClusterGroup
                 chunkedLoading
                 maxClusterRadius={60}

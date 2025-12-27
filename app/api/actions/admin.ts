@@ -7,6 +7,7 @@ import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue } f
 import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { Database } from "@/utils/types/database.types"
+import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 
 type ScoutRank = Database['public']['Enums']['scout_rank']
 
@@ -195,6 +196,12 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
     // Update contributor's scout stats and send notification email
     if (cafe?.contributor_id) {
         await updateContributorScoutStats(cafe.contributor_id)
+
+        // Check and award any earned scout badges
+        await checkAndAwardBadges(cafe.contributor_id, {
+            scout: true,
+            geographic: false
+        })
 
         // Get contributor's email and profile info for notification
         try {

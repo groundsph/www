@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { deleteReviewImages } from "@/utils/supabase/storage"
 import { notifyDiscordReviewReport } from "./notify"
 import { revalidatePath } from "next/cache"
+import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 
 export async function createReview(
     cafeId: string,
@@ -79,6 +80,9 @@ export async function createReview(
         console.error("Error updating passport:", err)
         // Don't fail the review creation if passport update fails
     }
+
+    // Check and award any review-related badges (including geographic)
+    await checkAndAwardBadges(user.id, { reviews: true, geographic: true })
 
     revalidatePath(`/cafes/[slug]`)
     return { success: true, data }
