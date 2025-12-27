@@ -505,7 +505,9 @@ export default function CafeEditor({
                     </Link>
                     <div>
                         <h1 className='text-2xl font-bold font-serif'>
-                            Review Submission
+                            {cafe.is_published
+                                ? "Edit Cafe Listing"
+                                : "Review Cafe Submission"}
                         </h1>
                         <p className='text-text/60 text-sm'>
                             {cafe.is_published ? "Published " : "Submitted "}

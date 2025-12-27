@@ -76,6 +76,8 @@ import IconPicker from "@/components/badges/IconPicker"
 import { Pencil, Store, RefreshCw } from "lucide-react"
 import FeaturedScheduleManager from "./FeaturedScheduleManager"
 import { backfillBadgesForAllUsers } from "@/utils/badges/badge-logic"
+import { BlogPost } from "@/utils/types/blog"
+import BlogEditor from "@/components/blog/BlogEditor"
 
 const resizeBadgeImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -126,6 +128,7 @@ interface ManageDashboardProps {
     suggestions: EditSuggestion[]
     featuredSchedules: FeaturedSchedule[]
     pendingClaims?: CafeClaim[]
+    blogPosts?: BlogPost[]
 }
 
 type TabType =
@@ -137,6 +140,7 @@ type TabType =
     | "featured"
     | "claims"
     | "team"
+    | "blog"
 
 export default function ManageDashboard({
     userRole,
@@ -152,6 +156,7 @@ export default function ManageDashboard({
     suggestions: initialSuggestions,
     featuredSchedules: initialFeaturedSchedules,
     pendingClaims: initialClaims = [],
+    blogPosts: initialBlogPosts = [],
 }: ManageDashboardProps) {
     const isFullAdmin = userRole === "admin"
     const [activeTab, setActiveTab] = useState<TabType>("pending")
@@ -256,6 +261,13 @@ export default function ManageDashboard({
     const [teamSearchResults, setTeamSearchResults] = useState<TeamMember[]>([])
     const [teamLoading, setTeamLoading] = useState(false)
     const [teamSearchLoading, setTeamSearchLoading] = useState(false)
+
+    // Blog management state
+    const [blogPosts, setBlogPosts] = useState<BlogPost[]>(initialBlogPosts)
+    const [showBlogEditor, setShowBlogEditor] = useState(false)
+    const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(
+        null
+    )
 
     const handleApprove = async (cafeId: string) => {
         setProcessing(cafeId)
@@ -840,6 +852,41 @@ export default function ManageDashboard({
         }
     }, [activeTab, teamMembers.length])
 
+    // Blog handlers
+    const refreshBlogPosts = async () => {
+        const { getAdminBlogPosts } = await import("@/app/api/actions/blog")
+        const result = await getAdminBlogPosts({ pageSize: 50 })
+        setBlogPosts(result.posts)
+    }
+
+    const openBlogEditor = (post?: BlogPost) => {
+        setEditingBlogPost(post || null)
+        setShowBlogEditor(true)
+    }
+
+    const closeBlogEditor = () => {
+        setEditingBlogPost(null)
+        setShowBlogEditor(false)
+    }
+
+    const handleBlogSuccess = async () => {
+        await refreshBlogPosts()
+        closeBlogEditor()
+    }
+
+    const handleDeleteBlogPost = async (postId: string) => {
+        if (!confirm("Are you sure you want to delete this blog post?")) return
+        setProcessing(postId)
+        const { deleteBlogPost } = await import("@/app/api/actions/blog")
+        const result = await deleteBlogPost(postId)
+        if (result.success) {
+            setBlogPosts((prev) => prev.filter((p) => p.id !== postId))
+        } else {
+            alert(result.error || "Failed to delete post")
+        }
+        setProcessing(null)
+    }
+
     const AMENITY_ICONS = {
         has_wifi: { icon: Wifi, label: "WiFi" },
         has_sockets: { icon: Plug, label: "Power Outlets" },
@@ -1163,6 +1210,17 @@ export default function ManageDashboard({
                             >
                                 <Users className='w-4 h-4' />
                                 Team
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("blog")}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                                    activeTab === "blog"
+                                        ? "bg-green-500/20 text-green-500 border-green-500/30"
+                                        : "bg-text/5 border-text/10 hover:bg-text/10"
+                                }`}
+                            >
+                                <FileText className='w-4 h-4' />
+                                Blog ({blogPosts.length})
                             </button>
                         </>
                     )}
@@ -3115,6 +3173,162 @@ export default function ManageDashboard({
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Blog Tab */}
+            {activeTab === "blog" && (
+                <div className='space-y-6'>
+                    <div className='flex items-center justify-between'>
+                        <h2 className='text-xl font-semibold flex items-center gap-2'>
+                            <FileText className='w-5 h-5' />
+                            Blog Management
+                        </h2>
+                        <div className='flex gap-2'>
+                            <button
+                                onClick={refreshBlogPosts}
+                                className='flex items-center gap-2 px-3 py-2 bg-text/5 border border-text/10 rounded-lg hover:bg-text/10 transition'
+                            >
+                                <RefreshCw className='w-4 h-4' />
+                                Refresh
+                            </button>
+                            <button
+                                onClick={() => openBlogEditor()}
+                                className='flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition'
+                            >
+                                <Plus className='w-4 h-4' />
+                                Create Post
+                            </button>
+                        </div>
+                    </div>
+
+                    {blogPosts.length === 0 ? (
+                        <div className='text-center py-12 text-text/60'>
+                            <FileText className='w-12 h-12 mx-auto mb-3 opacity-30' />
+                            <p>No blog posts yet</p>
+                            <p className='text-sm'>
+                                Create your first post to get started
+                            </p>
+                        </div>
+                    ) : (
+                        <div className='space-y-3'>
+                            {blogPosts.map((post: BlogPost) => (
+                                <div
+                                    key={post.id}
+                                    className='flex items-center justify-between p-4 bg-text/5 border border-text/10 rounded-xl hover:border-text/20 transition'
+                                >
+                                    <div className='flex items-center gap-4 min-w-0'>
+                                        {post.cover_image && (
+                                            <div className='relative w-16 h-12 rounded-lg overflow-hidden bg-text/10 shrink-0'>
+                                                <Image
+                                                    src={post.cover_image}
+                                                    alt={post.title}
+                                                    fill
+                                                    className='object-cover'
+                                                />
+                                            </div>
+                                        )}
+                                        <div className='min-w-0'>
+                                            <div className='flex items-center gap-2 flex-wrap'>
+                                                <h3 className='font-medium truncate'>
+                                                    {post.title}
+                                                </h3>
+                                                <span
+                                                    className={`px-2 py-0.5 text-xs rounded-full ${
+                                                        post.status ===
+                                                        "published"
+                                                            ? "bg-green-500/20 text-green-600"
+                                                            : post.status ===
+                                                                "draft"
+                                                              ? "bg-yellow-500/20 text-yellow-600"
+                                                              : "bg-text/10 text-text/60"
+                                                    }`}
+                                                >
+                                                    {post.status}
+                                                </span>
+                                                {post.featured && (
+                                                    <span className='px-2 py-0.5 text-xs bg-amber-500/20 text-amber-600 rounded-full'>
+                                                        Featured
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className='flex items-center gap-3 text-sm text-text/60 mt-1'>
+                                                <span className='capitalize'>
+                                                    {post.category.replace(
+                                                        "_",
+                                                        " "
+                                                    )}
+                                                </span>
+                                                <span>•</span>
+                                                <span>
+                                                    {post.created_at &&
+                                                        new Date(
+                                                            post.created_at
+                                                        ).toLocaleDateString()}
+                                                </span>
+                                                {post.views_count != null &&
+                                                    post.views_count > 0 && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>
+                                                                {
+                                                                    post.views_count
+                                                                }{" "}
+                                                                views
+                                                            </span>
+                                                        </>
+                                                    )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className='flex items-center gap-2 shrink-0'>
+                                        <Link
+                                            href={`/blog/${post.slug}`}
+                                            target='_blank'
+                                            className='p-2 bg-text/5 rounded-lg hover:bg-text/10 transition'
+                                            title='View'
+                                        >
+                                            <ExternalLink className='w-4 h-4' />
+                                        </Link>
+                                        <button
+                                            onClick={() => openBlogEditor(post)}
+                                            className='p-2 bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/30 transition'
+                                            title='Edit'
+                                        >
+                                            <Pencil className='w-4 h-4' />
+                                        </button>
+                                        <button
+                                            onClick={() =>
+                                                handleDeleteBlogPost(post.id)
+                                            }
+                                            disabled={processing === post.id}
+                                            className='p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                                            title='Delete'
+                                        >
+                                            {processing === post.id ? (
+                                                <Loader2 className='w-4 h-4 animate-spin' />
+                                            ) : (
+                                                <Trash2 className='w-4 h-4' />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Blog Editor Modal */}
+            {showBlogEditor && (
+                <div className='fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto'>
+                    <div className='w-full max-w-6xl pb-8'>
+                        <BlogEditor
+                            post={editingBlogPost || undefined}
+                            onSuccess={handleBlogSuccess}
+                            onCancel={closeBlogEditor}
+                        />
                     </div>
                 </div>
             )}

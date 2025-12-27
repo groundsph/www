@@ -163,7 +163,7 @@ export default function BlogEditor({
     const readingTime = estimateReadingTime(content)
 
     return (
-        <div className='bg-white rounded-2xl shadow-lg overflow-hidden'>
+        <div className='bg-background rounded-2xl shadow-lg overflow-hidden [&_button]:cursor-pointer'>
             {/* Header */}
             <div className='flex items-center justify-between px-6 py-4 border-b border-text/10'>
                 <div>
@@ -213,7 +213,7 @@ export default function BlogEditor({
                 )}
             </AnimatePresence>
 
-            <div className='grid lg:grid-cols-3 min-h-[600px]'>
+            <div className='grid lg:grid-cols-3'>
                 {/* Main Editor */}
                 <div className='lg:col-span-2 p-6 space-y-6 border-r border-text/10'>
                     {/* Cover Image */}
@@ -367,7 +367,7 @@ Use Markdown for formatting:
                 </div>
 
                 {/* Sidebar */}
-                <div className='p-6 space-y-6 bg-background/50'>
+                <div className='p-6 space-y-6 bg-primary/5'>
                     {/* Category */}
                     <div>
                         <label className='block text-sm font-medium text-text mb-2'>
@@ -419,7 +419,7 @@ Use Markdown for formatting:
                             <button
                                 onClick={handleAddTag}
                                 disabled={!tagInput.trim() || tags.length >= 10}
-                                className='px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors disabled:opacity-50'
+                                className='px-3 py-2 bg-primary text-background rounded-lg hover:bg-primary/60 transition-colors disabled:opacity-50 font-semibold'
                             >
                                 Add
                             </button>
@@ -468,7 +468,7 @@ Use Markdown for formatting:
                         <button
                             onClick={() => handleSubmit("draft")}
                             disabled={isSubmitting}
-                            className='w-full px-4 py-3 rounded-xl border-2 border-text/20 text-text font-medium hover:bg-text/5 transition-colors disabled:opacity-50 flex items-center justify-center gap-2'
+                            className='w-full px-4 py-3 rounded-xl border-2 border-text/20 text-text font-medium hover:bg-text/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2'
                         >
                             {isSubmitting ? (
                                 <Loader2 className='w-5 h-5 animate-spin' />

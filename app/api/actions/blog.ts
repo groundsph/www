@@ -385,6 +385,24 @@ export async function createBlogPost(
         return { success: false, error: "Cafe owners must link posts to a cafe" }
     }
 
+    // Tier check for cafe owners - only Pro+ can create blog posts
+    if (!isAdmin && input.cafe_id) {
+        const adminClient = await createAdminClient()
+        const { data: subscription } = await adminClient
+            .from("cafe_subscriptions")
+            .select("tier")
+            .eq("cafe_id", input.cafe_id)
+            .single()
+
+        const tier = subscription?.tier || "free"
+        if (tier === "free") {
+            return {
+                success: false,
+                error: "Blog posting requires a Pro subscription or higher. Upgrade to start sharing your cafe's story.",
+            }
+        }
+    }
+
     // Generate slug if not provided
     const baseSlug = input.slug || generateSlug(input.title)
     let slug = baseSlug

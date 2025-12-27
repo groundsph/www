@@ -8,15 +8,8 @@ import MarkdownRender from "@/components/MarkdownRender"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import {
-    Calendar,
-    Clock,
-    ArrowLeft,
-    Eye,
-    Coffee,
-    Share2,
-    User,
-} from "lucide-react"
+import { Calendar, Clock, ArrowLeft, Eye, Coffee, User } from "lucide-react"
+import ShareButton from "@/components/blog/ShareButton"
 
 export const revalidate = 60 // Revalidate every minute
 
@@ -73,7 +66,7 @@ export default async function BlogPostPage({
     const categoryInfo = BLOG_CATEGORIES.find((c) => c.value === post.category)
 
     return (
-        <main className='w-full min-h-screen bg-background'>
+        <main className='w-full min-h-screen bg-background [&_button]:cursor-pointer'>
             {/* Cover Image Section */}
             {post.cover_image && (
                 <div className='relative w-full aspect-21/9 md:aspect-3/1 bg-text/5'>
@@ -84,11 +77,9 @@ export default async function BlogPostPage({
                         priority
                         className='object-cover'
                     />
-                    <div className='absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent' />
                 </div>
             )}
-
-            <article className='max-w-4xl mx-auto px-4 py-8 md:py-12'>
+            <article className='max-w-6xl mx-auto px-4 py-8 md:py-12'>
                 {/* Back Link */}
                 <Link
                     href='/blog'
@@ -215,19 +206,7 @@ export default async function BlogPostPage({
                     <span className='text-text/60 text-sm'>
                         Share this article
                     </span>
-                    <button
-                        onClick={() => {
-                            if (typeof navigator !== "undefined") {
-                                navigator.share?.({
-                                    title: post.title,
-                                    url: window.location.href,
-                                })
-                            }
-                        }}
-                        className='p-2 rounded-full bg-text/5 hover:bg-text/10 transition-colors'
-                    >
-                        <Share2 className='w-5 h-5 text-text/70' />
-                    </button>
+                    <ShareButton title={post.title} />
                 </div>
 
                 {/* Related Posts */}

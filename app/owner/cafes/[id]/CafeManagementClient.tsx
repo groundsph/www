@@ -29,6 +29,7 @@ import {
     UtensilsCrossed,
     Verified,
     X,
+    FileText,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -42,6 +43,7 @@ import {
 } from "@/app/api/actions/owner"
 import { useNotification } from "@/components/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import BlogEditor from "@/components/blog/BlogEditor"
 
 interface CafeManagementClientProps {
     cafe: CafeWithRatings
@@ -84,7 +86,7 @@ const tierColors: Record<
     },
 }
 
-type Tab = "overview" | "reviews" | "menu" | "analytics" | "settings"
+type Tab = "overview" | "reviews" | "menu" | "analytics" | "blog" | "settings"
 
 export default function CafeManagementClient({
     cafe,
@@ -115,6 +117,20 @@ export default function CafeManagementClient({
         is_signature: false,
         is_available: true,
     })
+
+    // Blog management state
+    const [showBlogEditor, setShowBlogEditor] = useState(false)
+    const [blogPosts, setBlogPosts] = useState<
+        {
+            id: string
+            title: string
+            slug: string
+            status: string
+            category: string
+            created_at: string | null
+        }[]
+    >([])
+    const [blogLoading, setBlogLoading] = useState(false)
 
     const tier = subscription?.tier || "free"
     const tierConfig = SUBSCRIPTION_TIERS[tier]
@@ -266,6 +282,50 @@ export default function CafeManagementClient({
         }
     }
 
+    // Blog handlers
+    const loadBlogPosts = async () => {
+        setBlogLoading(true)
+        const { getOwnerBlogPosts } = await import("@/app/api/actions/blog")
+        const posts = await getOwnerBlogPosts(cafe.id)
+        setBlogPosts(
+            posts.map((p) => ({
+                id: p.id,
+                title: p.title,
+                slug: p.slug,
+                status: p.status,
+                category: p.category,
+                created_at: p.created_at,
+            }))
+        )
+        setBlogLoading(false)
+    }
+
+    const handleBlogSuccess = async () => {
+        await loadBlogPosts()
+        setShowBlogEditor(false)
+        addNotification("Blog post saved", "success")
+    }
+
+    const handleDeleteBlogPost = async (postId: string) => {
+        if (!confirm("Delete this blog post?")) return
+        const { deleteBlogPost } = await import("@/app/api/actions/blog")
+        const result = await deleteBlogPost(postId)
+        if (result.success) {
+            setBlogPosts((prev) => prev.filter((p) => p.id !== postId))
+            addNotification("Blog post deleted", "success")
+        } else {
+            addNotification(result.error || "Failed to delete", "error")
+        }
+    }
+
+    // Load blog posts when blog tab is selected
+    const handleTabChange = (tab: Tab) => {
+        setActiveTab(tab)
+        if (tab === "blog" && blogPosts.length === 0) {
+            loadBlogPosts()
+        }
+    }
+
     const tabs = [
         { id: "overview" as Tab, label: "Overview", icon: Building2 },
         {
@@ -284,6 +344,12 @@ export default function CafeManagementClient({
             id: "analytics" as Tab,
             label: "Analytics",
             icon: BarChart3,
+            locked: tier === "free",
+        },
+        {
+            id: "blog" as Tab,
+            label: "Blog",
+            icon: FileText,
             locked: tier === "free",
         },
         { id: "settings" as Tab, label: "Settings", icon: Settings },
@@ -383,7 +449,7 @@ export default function CafeManagementClient({
                                 <button
                                     key={tab.id}
                                     onClick={() =>
-                                        !isLocked && setActiveTab(tab.id)
+                                        !isLocked && handleTabChange(tab.id)
                                     }
                                     disabled={isLocked}
                                     className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
@@ -994,6 +1060,104 @@ export default function CafeManagementClient({
                         </motion.div>
                     )}
 
+                    {activeTab === "blog" && (
+                        <motion.div
+                            key='blog'
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className='space-y-6'
+                        >
+                            <div className='flex items-center justify-between'>
+                                <h3 className='font-semibold flex items-center gap-2'>
+                                    <FileText className='w-5 h-5' />
+                                    Your Blog Posts
+                                </h3>
+                                <button
+                                    onClick={() => setShowBlogEditor(true)}
+                                    className='flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors'
+                                >
+                                    <Plus className='w-4 h-4' />
+                                    New Post
+                                </button>
+                            </div>
+
+                            {blogLoading ? (
+                                <div className='flex items-center justify-center py-12'>
+                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
+                                </div>
+                            ) : blogPosts.length === 0 ? (
+                                <div className='text-center py-12 text-text/60'>
+                                    <FileText className='w-12 h-12 mx-auto mb-3 opacity-30' />
+                                    <p className='font-medium'>
+                                        No blog posts yet
+                                    </p>
+                                    <p className='text-sm'>
+                                        Share your cafe&apos;s story with the
+                                        community
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className='space-y-3'>
+                                    {blogPosts.map((post) => (
+                                        <div
+                                            key={post.id}
+                                            className='flex items-center justify-between p-4 bg-text/5 border border-text/10 rounded-xl'
+                                        >
+                                            <div>
+                                                <div className='flex items-center gap-2'>
+                                                    <h4 className='font-medium'>
+                                                        {post.title}
+                                                    </h4>
+                                                    <span
+                                                        className={`px-2 py-0.5 text-xs rounded-full ${
+                                                            post.status ===
+                                                            "published"
+                                                                ? "bg-green-500/20 text-green-600"
+                                                                : "bg-yellow-500/20 text-yellow-600"
+                                                        }`}
+                                                    >
+                                                        {post.status}
+                                                    </span>
+                                                </div>
+                                                <p className='text-sm text-text/60 mt-1'>
+                                                    {post.category.replace(
+                                                        "_",
+                                                        " "
+                                                    )}{" "}
+                                                    •{" "}
+                                                    {post.created_at &&
+                                                        new Date(
+                                                            post.created_at
+                                                        ).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <div className='flex items-center gap-2'>
+                                                <Link
+                                                    href={`/blog/${post.slug}`}
+                                                    target='_blank'
+                                                    className='p-2 bg-text/5 rounded-lg hover:bg-text/10 transition'
+                                                >
+                                                    <ExternalLink className='w-4 h-4' />
+                                                </Link>
+                                                <button
+                                                    onClick={() =>
+                                                        handleDeleteBlogPost(
+                                                            post.id
+                                                        )
+                                                    }
+                                                    className='p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition'
+                                                >
+                                                    <Trash2 className='w-4 h-4' />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+
                     {activeTab === "settings" && (
                         <motion.div
                             key='settings'
@@ -1229,6 +1393,25 @@ export default function CafeManagementClient({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Blog Editor Modal */}
+            {showBlogEditor && (
+                <div className='fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto'>
+                    <div className='w-full max-w-5xl pb-8'>
+                        <BlogEditor
+                            cafeId={cafe.id}
+                            cafeName={cafe.name}
+                            onSuccess={handleBlogSuccess}
+                            onCancel={() => setShowBlogEditor(false)}
+                            allowedCategories={[
+                                "cafe_update",
+                                "promotions",
+                                "events",
+                            ]}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     )
 }

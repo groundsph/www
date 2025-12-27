@@ -179,7 +179,7 @@ export default async function BlogPage({
                             {posts.map((post) => (
                                 <article
                                     key={post.id}
-                                    className='group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-text/5'
+                                    className='group bg-background rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-text/5'
                                 >
                                     <Link href={`/blog/${post.slug}`}>
                                         <div className='relative aspect-video overflow-hidden'>
@@ -188,7 +188,7 @@ export default async function BlogPage({
                                                     src={post.cover_image}
                                                     alt={post.title}
                                                     fill
-                                                    className='object-cover transition-transform duration-500 group-hover:scale-105'
+                                                    className='object-cover'
                                                 />
                                             ) : (
                                                 <div className='w-full h-full bg-linear-to-br from-secondary/20 to-tertiary/20 flex items-center justify-center'>
