@@ -68,6 +68,88 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          author_id: string
+          cafe_id: string | null
+          category: Database["public"]["Enums"]["blog_category"]
+          content: string
+          cover_image: string | null
+          created_at: string | null
+          excerpt: string | null
+          featured: boolean | null
+          id: string
+          published_at: string | null
+          search_vector: unknown
+          slug: string
+          status: Database["public"]["Enums"]["blog_status"]
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          views_count: number | null
+        }
+        Insert: {
+          author_id: string
+          cafe_id?: string | null
+          category?: Database["public"]["Enums"]["blog_category"]
+          content: string
+          cover_image?: string | null
+          created_at?: string | null
+          excerpt?: string | null
+          featured?: boolean | null
+          id?: string
+          published_at?: string | null
+          search_vector?: unknown
+          slug: string
+          status?: Database["public"]["Enums"]["blog_status"]
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          views_count?: number | null
+        }
+        Update: {
+          author_id?: string
+          cafe_id?: string | null
+          category?: Database["public"]["Enums"]["blog_category"]
+          content?: string
+          cover_image?: string | null
+          created_at?: string | null
+          excerpt?: string | null
+          featured?: boolean | null
+          id?: string
+          published_at?: string | null
+          search_vector?: unknown
+          slug?: string
+          status?: Database["public"]["Enums"]["blog_status"]
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cafe_claims: {
         Row: {
           admin_notes: string | null
@@ -260,60 +342,6 @@ export type Database = {
           },
           {
             foreignKeyName: "cafe_menu_items_cafe_id_fkey"
-            columns: ["cafe_id"]
-            isOneToOne: false
-            referencedRelation: "cafes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      cafe_menus: {
-        Row: {
-          cafe_id: string
-          category: string
-          created_at: string | null
-          description: string | null
-          id: string
-          image_url: string | null
-          is_signature: boolean | null
-          name: string
-          price: number
-          updated_at: string | null
-        }
-        Insert: {
-          cafe_id: string
-          category: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          is_signature?: boolean | null
-          name: string
-          price: number
-          updated_at?: string | null
-        }
-        Update: {
-          cafe_id?: string
-          category?: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          is_signature?: boolean | null
-          name?: string
-          price?: number
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cafe_menus_cafe_id_fkey"
-            columns: ["cafe_id"]
-            isOneToOne: false
-            referencedRelation: "cafe_with_ratings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cafe_menus_cafe_id_fkey"
             columns: ["cafe_id"]
             isOneToOne: false
             referencedRelation: "cafes"
@@ -1151,6 +1179,14 @@ export type Database = {
     Enums: {
       badge_category: "achievement" | "monetary" | "social"
       badge_rarity: "common" | "rare" | "legendary"
+      blog_category:
+        | "news"
+        | "guides"
+        | "events"
+        | "promotions"
+        | "community"
+        | "cafe_update"
+      blog_status: "draft" | "published" | "archived"
       interaction_type: "like" | "report"
       membership_tier: "free" | "basic" | "premium"
       price_level: "low" | "medium" | "high"
@@ -1289,6 +1325,15 @@ export const Constants = {
     Enums: {
       badge_category: ["achievement", "monetary", "social"],
       badge_rarity: ["common", "rare", "legendary"],
+      blog_category: [
+        "news",
+        "guides",
+        "events",
+        "promotions",
+        "community",
+        "cafe_update",
+      ],
+      blog_status: ["draft", "published", "archived"],
       interaction_type: ["like", "report"],
       membership_tier: ["free", "basic", "premium"],
       price_level: ["low", "medium", "high"],

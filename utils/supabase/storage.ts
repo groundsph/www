@@ -7,8 +7,10 @@ const AVATAR_BUCKET = "avatars"
 const REVIEW_BUCKET = "reviews"
 const CAFE_BUCKET = "cafes"
 const BADGE_BUCKET = "badges"
+const BLOG_BUCKET = "blogs"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CAFE_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_BLOG_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_BADGE_FILE_SIZE = 500 * 1024 // 500KB
 const BADGE_IMAGE_DIMENSION = 512 // Badge images must be 512x512px
 
@@ -626,4 +628,112 @@ export async function deleteBadgeImage(imageUrl: string): Promise<void> {
     if (path) {
         await deleteStorageFiles(BADGE_BUCKET, [path])
     }
+}
+
+// ============================================
+// Blog Image Storage Functions
+// ============================================
+
+/**
+ * Upload a blog cover image to Supabase Storage
+ * File is stored at: blogs/{userId}/{timestamp}-{random}.{ext}
+ * Used for blog post cover images (recommended 16:9 aspect ratio)
+ */
+export async function uploadBlogImage(formData: FormData): Promise<{
+    success: boolean
+    url?: string
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Get current user
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Check if user is admin/mod or cafe owner
+    const { data: profile } = await db
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    const isAdminOrMod = profile?.role === "admin" || profile?.role === "moderator"
+
+    // Check if cafe owner
+    const { data: ownedCafes } = await db
+        .from("cafes")
+        .select("id")
+        .contains("owner_ids", [user.id])
+        .limit(1)
+
+    const isCafeOwner = ownedCafes && ownedCafes.length > 0
+
+    if (!isAdminOrMod && !isCafeOwner) {
+        return { success: false, error: "Not authorized to upload blog images" }
+    }
+
+    const file = formData.get("image") as File | null
+    if (!file) {
+        return { success: false, error: "No file provided" }
+    }
+
+    // Validate file type
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    const isValidType = ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExt)
+
+    if (!isValidType) {
+        return { success: false, error: "Invalid file type (JPEG, PNG, WebP, GIF only)" }
+    }
+
+    // Validate size
+    if (file.size > MAX_BLOG_IMAGE_SIZE) {
+        return { success: false, error: "File too large (max 5MB)" }
+    }
+
+    // Generate unique filename
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${user.id}/${fileName}`
+
+    // Use admin client to upload (bypass potential RLS issues)
+    const adminDb = await createAdminClient()
+
+    const { error: uploadError } = await adminDb.storage
+        .from(BLOG_BUCKET)
+        .upload(filePath, file)
+
+    if (uploadError) {
+        console.error("Blog image upload error:", uploadError)
+        return { success: false, error: "Upload failed" }
+    }
+
+    const { data: urlData } = adminDb.storage
+        .from(BLOG_BUCKET)
+        .getPublicUrl(filePath)
+
+    return { success: true, url: urlData.publicUrl }
+}
+
+/**
+ * Delete a blog image from storage
+ */
+export async function deleteBlogImage(imageUrl: string): Promise<void> {
+    if (!imageUrl) return
+
+    const path = extractStoragePath(imageUrl, BLOG_BUCKET)
+    if (path) {
+        await deleteStorageFiles(BLOG_BUCKET, [path])
+    }
+}
+
+/**
+ * Delete all blog images for a post (cover + content images)
+ */
+export async function deleteBlogPostImages(coverImage: string | null): Promise<void> {
+    if (coverImage) {
+        await deleteBlogImage(coverImage)
+    }
+    // Note: Content images would need to be parsed from markdown and deleted
+    // This is a simplified version that only handles cover images
 }
