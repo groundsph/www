@@ -168,9 +168,11 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                     </div>
                     <span className='text-xs font-semibold text-text/60'>
                         {openStatus.isOpen
-                            ? `Closes at ${formatTimeTo12Hour(
-                                  openStatus.closesAt
-                              )}`
+                            ? openStatus.closesAt
+                                ? `Closes at ${formatTimeTo12Hour(
+                                      openStatus.closesAt
+                                  )}`
+                                : "Open 24/7"
                             : openStatus.opensAt
                               ? `Opens at ${
                                     openStatus.opensAt.split(" ")[0]
@@ -420,6 +422,10 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                                             hours.is_closed ? (
                                                 <span className='text-text/50'>
                                                     Closed
+                                                </span>
+                                            ) : hours.is_24_hours ? (
+                                                <span className='text-primary font-medium'>
+                                                    24 Hours
                                                 </span>
                                             ) : (
                                                 `${formatTimeTo12Hour(

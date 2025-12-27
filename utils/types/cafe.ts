@@ -3,6 +3,7 @@ export type OperatingHour = {
     open: string;
     close: string;
     is_closed?: boolean;
+    is_24_hours?: boolean;
 }
 
 export type OperatingHours = OperatingHour[];

@@ -56,10 +56,18 @@ export function isOpenNow(operatingHours?: OperatingHours | null): { isOpen: boo
             const nextDay = days[nextDayIndex];
             const nextHours = operatingHours.find(h => h.day === nextDay && !h.is_closed);
             if (nextHours) {
+                if (nextHours.is_24_hours) {
+                    return { isOpen: false, opensAt: `${nextDay.charAt(0).toUpperCase() + nextDay.slice(1)} 12:00 AM` };
+                }
                 return { isOpen: false, opensAt: `${nextDay.charAt(0).toUpperCase() + nextDay.slice(1)} ${nextHours.open}` };
             }
         }
         return { isOpen: false };
+    }
+
+    // If it's a 24-hour day, always open
+    if (todayHours.is_24_hours) {
+        return { isOpen: true, closesAt: undefined };
     }
 
     const isOpen = currentTime >= todayHours.open && currentTime < todayHours.close;

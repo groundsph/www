@@ -211,6 +211,10 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
                                                 <span className='text-text/50'>
                                                     Closed
                                                 </span>
+                                            ) : hours.is_24_hours ? (
+                                                <span className='text-primary font-medium'>
+                                                    24 Hours
+                                                </span>
                                             ) : (
                                                 `${formatTimeTo12Hour(
                                                     hours.open
