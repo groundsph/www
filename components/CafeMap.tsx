@@ -14,7 +14,17 @@ import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
 import Link from "next/link"
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
-import { StarIcon } from "lucide-react"
+import {
+    StarIcon,
+    Wifi,
+    Plug,
+    Car,
+    Snowflake,
+    PawPrint,
+    Sun,
+    Armchair,
+    Laptop,
+} from "lucide-react"
 import MarkerClusterGroup from "react-leaflet-cluster"
 import { trackMapUsage } from "@/utils/badges/badge-logic"
 import { getCafeThumbnailUrl } from "@/utils/extras"
@@ -292,6 +302,83 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                                 {cafe.address_display}
                                             </p>
                                         </div>
+
+                                        {/* Amenities icons */}
+                                        {(cafe.has_wifi ||
+                                            cafe.has_sockets ||
+                                            cafe.has_parking ||
+                                            cafe.has_aircon ||
+                                            cafe.is_pet_friendly ||
+                                            cafe.has_outdoor_seating ||
+                                            cafe.has_indoor_seating ||
+                                            cafe.is_work_friendly) && (
+                                            <div className='flex flex-wrap gap-2'>
+                                                {cafe.has_wifi && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='WiFi'
+                                                    >
+                                                        <Wifi className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_sockets && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Power Outlets'
+                                                    >
+                                                        <Plug className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_parking && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Parking'
+                                                    >
+                                                        <Car className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_aircon && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Air Conditioning'
+                                                    >
+                                                        <Snowflake className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.is_pet_friendly && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Pet Friendly'
+                                                    >
+                                                        <PawPrint className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_outdoor_seating && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Outdoor Seating'
+                                                    >
+                                                        <Sun className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_indoor_seating && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Indoor Seating'
+                                                    >
+                                                        <Armchair className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.is_work_friendly && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Work Friendly'
+                                                    >
+                                                        <Laptop className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Divider */}
                                         <div className='w-full h-px bg-linear-to-r from-transparent via-secondary/30 to-transparent' />
