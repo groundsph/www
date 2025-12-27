@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import {
     OwnedCafe,
     OwnerVerificationRequest,
@@ -629,48 +630,79 @@ export async function getCafeMenuItems(cafeId: string): Promise<CafeMenuItem[]> 
 }
 
 /**
- * Add a menu item (respects tier limits)
+ * Add a menu item (respects tier limits for owners, bypasses for admins)
  */
 export async function addMenuItem(
     cafeId: string,
     item: MenuItemForm
 ): Promise<MenuItemResult> {
-    const canManage = await isOwnerOrAdmin(cafeId)
-    if (!canManage) {
-        return { success: false, error: 'Not authorized to manage this cafe\'s menu' }
+    const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    if (!user) {
+        return { success: false, error: 'Not authenticated' }
     }
 
-    // Check subscription tier limits
-    const subscription = await getCafeSubscription(cafeId)
-    const tier = subscription?.tier || 'free'
-    const tierConfig = SUBSCRIPTION_TIERS[tier]
+    // Check if admin
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
-    if (tierConfig.menuLimit === 0) {
-        return {
-            success: false,
-            error: 'Upgrade to Pro to add menu items',
-            remaining_slots: 0,
+    const isAdmin = profile?.role && ['admin', 'moderator'].includes(profile.role)
+
+    // If not admin, check if owner
+    if (!isAdmin) {
+        const isOwner = await isOwnerOfCafe(cafeId)
+        if (!isOwner) {
+            return { success: false, error: 'Not authorized to manage this cafe\'s menu' }
         }
     }
 
-    // Count current items
-    const db = await createClient()
-    const { count } = await db
+    // Only check tier limits for non-admins
+    if (!isAdmin) {
+        const subscription = await getCafeSubscription(cafeId)
+        const tier = subscription?.tier || 'free'
+        const tierConfig = SUBSCRIPTION_TIERS[tier]
+
+        if (tierConfig.menuLimit === 0) {
+            return {
+                success: false,
+                error: 'Upgrade to Pro to add menu items',
+                remaining_slots: 0,
+            }
+        }
+
+        // Count current items
+        const { count } = await db
+            .from('cafe_menu_items')
+            .select('*', { count: 'exact', head: true })
+            .eq('cafe_id', cafeId)
+
+        const currentCount = count || 0
+
+        if (tierConfig.menuLimit !== Infinity && currentCount >= tierConfig.menuLimit) {
+            return {
+                success: false,
+                error: `You've reached the ${tierConfig.menuLimit} item limit. Upgrade to Premium for unlimited items.`,
+                remaining_slots: 0,
+            }
+        }
+    }
+
+    // Get current count for sort_order (needed for all cases)
+    const { count: currentItemCount } = await db
         .from('cafe_menu_items')
         .select('*', { count: 'exact', head: true })
         .eq('cafe_id', cafeId)
 
-    const currentCount = count || 0
+    const sortOrder = currentItemCount || 0
 
-    if (tierConfig.menuLimit !== Infinity && currentCount >= tierConfig.menuLimit) {
-        return {
-            success: false,
-            error: `You've reached the ${tierConfig.menuLimit} item limit. Upgrade to Premium for unlimited items.`,
-            remaining_slots: 0,
-        }
-    }
+    // Use admin client if admin, otherwise regular client (for RLS bypass)
+    const insertDb = isAdmin ? await createAdminClient() : db
 
-    const { data, error } = await db
+    const { data, error } = await insertDb
         .from('cafe_menu_items')
         .insert({
             cafe_id: cafeId,
@@ -681,7 +713,7 @@ export async function addMenuItem(
             image_url: item.image_url || null,
             is_signature: item.is_signature || false,
             is_available: item.is_available ?? true,
-            sort_order: currentCount,
+            sort_order: sortOrder,
         })
         .select()
         .single()
@@ -691,14 +723,10 @@ export async function addMenuItem(
         return { success: false, error: 'Failed to add menu item' }
     }
 
-    const remainingSlots = tierConfig.menuLimit === Infinity
-        ? Infinity
-        : tierConfig.menuLimit - (currentCount + 1)
-
     return {
         success: true,
         item: data as CafeMenuItem,
-        remaining_slots: remainingSlots,
+        remaining_slots: Infinity,
     }
 }
 
@@ -710,6 +738,20 @@ export async function updateMenuItem(
     updates: Partial<MenuItemForm>
 ): Promise<OwnerActionResult> {
     const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    if (!user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    // Check if admin
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    const isAdmin = profile?.role && ['admin', 'moderator'].includes(profile.role)
 
     // Get the item to verify ownership
     const { data: item } = await db
@@ -722,12 +764,18 @@ export async function updateMenuItem(
         return { success: false, error: 'Menu item not found' }
     }
 
-    const canManage = await isOwnerOrAdmin(item.cafe_id)
-    if (!canManage) {
-        return { success: false, error: 'Not authorized to edit this menu item' }
+    // If not admin, check if owner
+    if (!isAdmin) {
+        const isOwner = await isOwnerOfCafe(item.cafe_id)
+        if (!isOwner) {
+            return { success: false, error: 'Not authorized to edit this menu item' }
+        }
     }
 
-    const { error } = await db
+    // Use admin client for admin, regular for owners
+    const updateDb = isAdmin ? await createAdminClient() : db
+
+    const { error } = await updateDb
         .from('cafe_menu_items')
         .update(updates)
         .eq('id', itemId)
@@ -745,6 +793,20 @@ export async function updateMenuItem(
  */
 export async function deleteMenuItem(itemId: string): Promise<OwnerActionResult> {
     const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    if (!user) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    // Check if admin
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    const isAdmin = profile?.role && ['admin', 'moderator'].includes(profile.role)
 
     // Get the item to verify ownership
     const { data: item } = await db
@@ -757,12 +819,18 @@ export async function deleteMenuItem(itemId: string): Promise<OwnerActionResult>
         return { success: false, error: 'Menu item not found' }
     }
 
-    const canManage = await isOwnerOrAdmin(item.cafe_id)
-    if (!canManage) {
-        return { success: false, error: 'Not authorized to delete this menu item' }
+    // If not admin, check if owner
+    if (!isAdmin) {
+        const isOwner = await isOwnerOfCafe(item.cafe_id)
+        if (!isOwner) {
+            return { success: false, error: 'Not authorized to delete this menu item' }
+        }
     }
 
-    const { error } = await db
+    // Use admin client for admin, regular for owners
+    const deleteDb = isAdmin ? await createAdminClient() : db
+
+    const { error } = await deleteDb
         .from('cafe_menu_items')
         .delete()
         .eq('id', itemId)

@@ -40,6 +40,12 @@ import {
     searchUsersForOwner,
     getOwnerProfiles,
 } from "@/app/api/actions/admin"
+import {
+    addMenuItem,
+    updateMenuItem,
+    deleteMenuItem,
+} from "@/app/api/actions/owner"
+import { CafeMenuItem, MenuItemForm } from "@/utils/types/owner"
 import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
@@ -61,17 +67,37 @@ type PriceLevel = Database["public"]["Enums"]["price_level"]
 
 interface CafeEditorProps {
     cafe: CafeWithRatings
+    menuItems?: CafeMenuItem[]
 }
 
 // Helper to convert snake_case to Title Case
 const formatLabel = (s: string) =>
     s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
-export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
+export default function CafeEditor({
+    cafe: initialCafe,
+    menuItems: initialMenuItems = [],
+}: CafeEditorProps) {
     const router = useRouter()
     const [cafe, setCafe] = useState(initialCafe)
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
+
+    // Menu State
+    const [menuItems, setMenuItems] = useState<CafeMenuItem[]>(initialMenuItems)
+    const [showMenuModal, setShowMenuModal] = useState(false)
+    const [editingMenuItem, setEditingMenuItem] = useState<CafeMenuItem | null>(
+        null
+    )
+    const [menuForm, setMenuForm] = useState<MenuItemForm>({
+        name: "",
+        category: "Coffee",
+        price: 0,
+        description: "",
+        is_signature: false,
+        is_available: true,
+    })
+    const [menuSaving, setMenuSaving] = useState(false)
 
     // Cropper State
     const [croppingImage, setCroppingImage] = useState<File | null>(null)
@@ -155,6 +181,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         | "hours"
         | "contact"
         | "story"
+        | "menu"
         | "owners"
     >("basic")
 
@@ -377,6 +404,70 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         updateField("gallery", newGallery)
     }
 
+    // Menu handlers
+    const openAddMenu = () => {
+        setEditingMenuItem(null)
+        setMenuForm({
+            name: "",
+            category: "Coffee",
+            price: 0,
+            description: "",
+            is_signature: false,
+            is_available: true,
+        })
+        setShowMenuModal(true)
+    }
+
+    const openEditMenu = (item: CafeMenuItem) => {
+        setEditingMenuItem(item)
+        setMenuForm({
+            name: item.name,
+            category: item.category,
+            price: item.price,
+            description: item.description || "",
+            is_signature: item.is_signature,
+            is_available: item.is_available,
+        })
+        setShowMenuModal(true)
+    }
+
+    const handleSaveMenuItem = async () => {
+        if (!menuForm.name.trim() || menuForm.price <= 0) return
+
+        setMenuSaving(true)
+
+        if (editingMenuItem) {
+            const result = await updateMenuItem(editingMenuItem.id, menuForm)
+            if (result.success) {
+                setMenuItems((prev) =>
+                    prev.map((item) =>
+                        item.id === editingMenuItem.id
+                            ? { ...item, ...menuForm }
+                            : item
+                    )
+                )
+                setShowMenuModal(false)
+            }
+        } else {
+            const result = await addMenuItem(cafe.id, menuForm)
+            if (result.success && result.item) {
+                setMenuItems((prev) => [...prev, result.item!])
+                setShowMenuModal(false)
+            }
+        }
+
+        setMenuSaving(false)
+    }
+
+    const handleDeleteMenuItem = async (itemId: string) => {
+        if (!confirm("Delete this menu item?")) return
+
+        const result = await deleteMenuItem(itemId)
+        if (result.success) {
+            setMenuItems((prev) => prev.filter((item) => item.id !== itemId))
+        }
+    }
+
     const SECTIONS = [
         { id: "basic", title: "Basic Info", icon: Coffee },
         { id: "images", title: "Images", icon: ImagePlus },
@@ -385,6 +476,7 @@ export default function CafeEditor({ cafe: initialCafe }: CafeEditorProps) {
         { id: "hours", title: "Hours", icon: Clock },
         { id: "contact", title: "Contact", icon: Phone },
         { id: "story", title: "Story", icon: FileText },
+        { id: "menu", title: "Menu", icon: Coffee },
         { id: "owners", title: "Owners", icon: Users },
     ] as const
 
@@ -1429,6 +1521,81 @@ Highlight unique features...'
                     </div>
                 )}
 
+                {/* Menu Section */}
+                {activeSection === "menu" && (
+                    <div className='space-y-4'>
+                        <div className='flex items-center justify-between'>
+                            <p className='text-text/60'>
+                                {menuItems.length} menu items
+                            </p>
+                            <button
+                                onClick={openAddMenu}
+                                className='inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors'
+                            >
+                                + Add Item
+                            </button>
+                        </div>
+
+                        {menuItems.length === 0 ? (
+                            <div className='text-center py-8 text-text/50'>
+                                <Coffee className='w-12 h-12 mx-auto mb-3 opacity-30' />
+                                <p>No menu items yet</p>
+                            </div>
+                        ) : (
+                            <div className='grid gap-2'>
+                                {menuItems.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className='flex items-center gap-4 p-3 bg-text/5 rounded-lg border border-text/10'
+                                    >
+                                        <div className='flex-1 min-w-0'>
+                                            <div className='flex items-center gap-2'>
+                                                <span className='font-medium'>
+                                                    {item.name}
+                                                </span>
+                                                {item.is_signature && (
+                                                    <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
+                                                        ★
+                                                    </span>
+                                                )}
+                                                {!item.is_available && (
+                                                    <span className='px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded'>
+                                                        Off
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className='text-sm text-text/60'>
+                                                {item.category} · ₱
+                                                {item.price.toFixed(0)}
+                                            </p>
+                                        </div>
+                                        <div className='flex items-center gap-1'>
+                                            <button
+                                                onClick={() =>
+                                                    openEditMenu(item)
+                                                }
+                                                className='p-2 text-text/40 hover:text-text transition-colors'
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    handleDeleteMenuItem(
+                                                        item.id
+                                                    )
+                                                }
+                                                className='p-2 text-text/40 hover:text-red-500 transition-colors'
+                                            >
+                                                <Trash2 className='w-4 h-4' />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Owners Section */}
                 {activeSection === "owners" && (
                     <div className='space-y-6'>
@@ -1619,6 +1786,156 @@ Highlight unique features...'
                     setCroppingImage(null)
                 }}
             />
+
+            {/* Menu Item Modal */}
+            {showMenuModal && (
+                <div
+                    className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
+                    onClick={() => setShowMenuModal(false)}
+                >
+                    <div
+                        className='bg-background rounded-2xl p-6 w-full max-w-md'
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className='text-xl font-semibold mb-4'>
+                            {editingMenuItem
+                                ? "Edit Menu Item"
+                                : "Add Menu Item"}
+                        </h2>
+
+                        <div className='space-y-4'>
+                            <div>
+                                <label className='block text-sm font-medium mb-1'>
+                                    Name
+                                </label>
+                                <input
+                                    type='text'
+                                    value={menuForm.name}
+                                    onChange={(e) =>
+                                        setMenuForm({
+                                            ...menuForm,
+                                            name: e.target.value,
+                                        })
+                                    }
+                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg'
+                                />
+                            </div>
+
+                            <div>
+                                <label className='block text-sm font-medium mb-1'>
+                                    Category
+                                </label>
+                                <select
+                                    value={menuForm.category}
+                                    onChange={(e) =>
+                                        setMenuForm({
+                                            ...menuForm,
+                                            category: e.target.value,
+                                        })
+                                    }
+                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg'
+                                >
+                                    <option value='Coffee'>Coffee</option>
+                                    <option value='Non-Coffee'>
+                                        Non-Coffee
+                                    </option>
+                                    <option value='Espresso'>Espresso</option>
+                                    <option value='Tea'>Tea</option>
+                                    <option value='Pastry'>Pastry</option>
+                                    <option value='Food'>Food</option>
+                                    <option value='Dessert'>Dessert</option>
+                                    <option value='Other'>Other</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className='block text-sm font-medium mb-1'>
+                                    Price (₱)
+                                </label>
+                                <input
+                                    type='number'
+                                    min='0'
+                                    value={menuForm.price || ""}
+                                    onChange={(e) =>
+                                        setMenuForm({
+                                            ...menuForm,
+                                            price:
+                                                parseFloat(e.target.value) || 0,
+                                        })
+                                    }
+                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg'
+                                />
+                            </div>
+
+                            <div>
+                                <label className='block text-sm font-medium mb-1'>
+                                    Description
+                                </label>
+                                <textarea
+                                    value={menuForm.description || ""}
+                                    onChange={(e) =>
+                                        setMenuForm({
+                                            ...menuForm,
+                                            description: e.target.value,
+                                        })
+                                    }
+                                    rows={2}
+                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg resize-none'
+                                />
+                            </div>
+
+                            <div className='flex gap-4'>
+                                <label className='flex items-center gap-2'>
+                                    <input
+                                        type='checkbox'
+                                        checked={menuForm.is_signature || false}
+                                        onChange={(e) =>
+                                            setMenuForm({
+                                                ...menuForm,
+                                                is_signature: e.target.checked,
+                                            })
+                                        }
+                                    />
+                                    <span className='text-sm'>Signature</span>
+                                </label>
+                                <label className='flex items-center gap-2'>
+                                    <input
+                                        type='checkbox'
+                                        checked={menuForm.is_available ?? true}
+                                        onChange={(e) =>
+                                            setMenuForm({
+                                                ...menuForm,
+                                                is_available: e.target.checked,
+                                            })
+                                        }
+                                    />
+                                    <span className='text-sm'>Available</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className='flex gap-3 mt-6'>
+                            <button
+                                onClick={() => setShowMenuModal(false)}
+                                className='flex-1 px-4 py-2 bg-text/10 rounded-lg font-medium'
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveMenuItem}
+                                disabled={menuSaving}
+                                className='flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium disabled:opacity-50'
+                            >
+                                {menuSaving
+                                    ? "Saving..."
+                                    : editingMenuItem
+                                      ? "Save"
+                                      : "Add"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

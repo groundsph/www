@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { isAdmin, getCafeById } from "@/app/api/actions/admin"
+import { getCafeMenuItems } from "@/app/api/actions/owner"
 import CafeEditor from "./CafeEditor"
 
 interface Props {
@@ -28,10 +29,16 @@ export default async function AdminPreviewPage({ params }: Props) {
         redirect("/admin")
     }
 
+    // Fetch menu items
+    const menuItems = await getCafeMenuItems(id)
+
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <CafeEditor cafe={cafe} />
+                <CafeEditor
+                    cafe={cafe}
+                    menuItems={menuItems}
+                />
             </div>
         </main>
     )
