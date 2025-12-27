@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
+import Image from "next/image"
 import {
     XIcon,
     Loader2,
@@ -21,14 +22,22 @@ import {
     Clock,
     Link as LinkIcon,
     Check,
+    Trash2,
+    Upload,
 } from "lucide-react"
 import { submitEditSuggestion } from "@/app/api/actions/suggestions"
-import { SuggestableFields } from "@/utils/types/suggestions"
+import {
+    SuggestableFields,
+    SuggestedImageChanges,
+} from "@/utils/types/suggestions"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { useRouter } from "next/navigation"
 import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
+import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
+import { resizeImage } from "@/utils/image-processing"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface SuggestEditModalProps {
     isOpen: boolean
@@ -113,12 +122,27 @@ export default function SuggestEditModal({
     // Form state - only store values that differ from current
     const [changes, setChanges] = useState<SuggestableFields>({})
 
+    // Image state
+    const [newThumbnail, setNewThumbnail] = useState<File | null>(null)
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(
+        null
+    )
+    const [newGalleryFiles, setNewGalleryFiles] = useState<File[]>([])
+    const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
+    const [removeFromGallery, setRemoveFromGallery] = useState<string[]>([])
+    const [uploadingImages, setUploadingImages] = useState(false)
+
     // Reset form when modal opens/closes
     useEffect(() => {
         if (isOpen) {
             setChanges({})
             setError(null)
             setSuccess(false)
+            setNewThumbnail(null)
+            setThumbnailPreview(null)
+            setNewGalleryFiles([])
+            setGalleryPreviews([])
+            setRemoveFromGallery([])
         }
     }, [isOpen])
 
@@ -241,8 +265,14 @@ export default function SuggestEditModal({
     }
 
     const handleSubmit = async () => {
-        // Validate there are changes
-        if (Object.keys(changes).length === 0) {
+        // Check for any changes (text or images)
+        const hasTextChanges = Object.keys(changes).length > 0
+        const hasImageChanges =
+            newThumbnail ||
+            newGalleryFiles.length > 0 ||
+            removeFromGallery.length > 0
+
+        if (!hasTextChanges && !hasImageChanges) {
             setError("Please make at least one change before submitting")
             return
         }
@@ -251,7 +281,62 @@ export default function SuggestEditModal({
         setError(null)
 
         try {
-            const result = await submitEditSuggestion(cafe.id, changes)
+            // Upload images first if there are any
+            let imageChanges: SuggestedImageChanges | undefined
+
+            if (hasImageChanges) {
+                setUploadingImages(true)
+                imageChanges = {}
+
+                // Upload new thumbnail
+                if (newThumbnail) {
+                    const resized = await resizeImage(newThumbnail, {
+                        maxWidth: 2560,
+                        maxHeight: 1440,
+                        quality: 0.9,
+                        format: "image/webp",
+                    })
+                    const result = await uploadCafeImageClient(resized)
+                    if (result.success && result.url) {
+                        imageChanges.new_thumbnail = result.url
+                    } else {
+                        throw new Error("Failed to upload cover photo")
+                    }
+                }
+
+                // Upload new gallery images
+                if (newGalleryFiles.length > 0) {
+                    const uploadedUrls: string[] = []
+                    for (const file of newGalleryFiles) {
+                        const resized = await resizeImage(file, {
+                            maxWidth: 1920,
+                            maxHeight: 1920,
+                            quality: 0.85,
+                            format: "image/webp",
+                        })
+                        const result = await uploadCafeImageClient(resized)
+                        if (result.success && result.url) {
+                            uploadedUrls.push(result.url)
+                        }
+                    }
+                    if (uploadedUrls.length > 0) {
+                        imageChanges.add_to_gallery = uploadedUrls
+                    }
+                }
+
+                // Mark images for removal
+                if (removeFromGallery.length > 0) {
+                    imageChanges.remove_from_gallery = removeFromGallery
+                }
+
+                setUploadingImages(false)
+            }
+
+            const result = await submitEditSuggestion(
+                cafe.id,
+                changes,
+                imageChanges
+            )
 
             if (result.success) {
                 setSuccess(true)
@@ -268,10 +353,16 @@ export default function SuggestEditModal({
             )
         } finally {
             setIsSubmitting(false)
+            setUploadingImages(false)
         }
     }
 
-    const changesCount = Object.keys(changes).length
+    // Count includes text changes + image changes
+    const imageChangeCount =
+        (newThumbnail ? 1 : 0) +
+        newGalleryFiles.length +
+        removeFromGallery.length
+    const changesCount = Object.keys(changes).length + imageChangeCount
 
     // Helper to check if a field has changes
     const hasChange = (key: keyof SuggestableFields): boolean => {
@@ -1152,19 +1243,351 @@ export default function SuggestEditModal({
                                         )}
                                     </div>
 
-                                    {/* Images Info */}
-                                    <div className='bg-text/5 border border-text/10 rounded-lg p-3 flex items-start gap-3'>
-                                        <ImagePlus className='w-5 h-5 text-text/40 mt-0.5' />
-                                        <div className='text-sm text-text/60'>
-                                            <p>
-                                                <strong>
-                                                    Want to add photos?
-                                                </strong>{" "}
-                                                Image suggestions are coming
-                                                soon! For now, you can suggest
-                                                text updates.
-                                            </p>
-                                        </div>
+                                    {/* Images Section */}
+                                    <div className='border border-text/10 rounded-lg overflow-hidden'>
+                                        <button
+                                            onClick={() =>
+                                                toggleSection("images")
+                                            }
+                                            className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                                        >
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <ImagePlus className='w-4 h-4' />
+                                                Images
+                                                {imageChangeCount > 0 && (
+                                                    <span className='text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full'>
+                                                        {imageChangeCount}{" "}
+                                                        change
+                                                        {imageChangeCount !== 1
+                                                            ? "s"
+                                                            : ""}
+                                                    </span>
+                                                )}
+                                            </span>
+                                            {expandedSections.has("images") ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                            ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                            )}
+                                        </button>
+
+                                        {expandedSections.has("images") && (
+                                            <div className='p-4 space-y-6'>
+                                                {/* Cover Photo */}
+                                                <div className='space-y-3'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Cover Photo
+                                                    </label>
+                                                    <div className='flex items-start gap-4'>
+                                                        {/* Current or Preview */}
+                                                        <div className='relative w-32 h-20 rounded-lg overflow-hidden bg-text/5 border border-text/10 shrink-0'>
+                                                            {thumbnailPreview ? (
+                                                                <Image
+                                                                    src={
+                                                                        thumbnailPreview
+                                                                    }
+                                                                    alt='New cover preview'
+                                                                    fill
+                                                                    className='object-cover'
+                                                                />
+                                                            ) : cafe.thumbnail ? (
+                                                                <Image
+                                                                    src={getCafeThumbnailUrl(
+                                                                        cafe.thumbnail
+                                                                    )}
+                                                                    alt={
+                                                                        cafe.name
+                                                                    }
+                                                                    fill
+                                                                    className='object-cover'
+                                                                />
+                                                            ) : (
+                                                                <div className='w-full h-full flex items-center justify-center text-text/30'>
+                                                                    <ImagePlus className='w-6 h-6' />
+                                                                </div>
+                                                            )}
+                                                            {thumbnailPreview && (
+                                                                <div className='absolute top-1 right-1 px-1.5 py-0.5 bg-primary text-white text-[10px] font-medium rounded'>
+                                                                    NEW
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className='flex-1 space-y-2'>
+                                                            <label className='flex items-center gap-2 px-3 py-2 bg-text/5 hover:bg-text/10 rounded-lg border border-text/10 cursor-pointer transition-colors text-sm'>
+                                                                <Upload className='w-4 h-4' />
+                                                                <span>
+                                                                    {newThumbnail
+                                                                        ? "Change photo"
+                                                                        : "Upload new cover"}
+                                                                </span>
+                                                                <input
+                                                                    type='file'
+                                                                    accept='image/*'
+                                                                    className='hidden'
+                                                                    onChange={(
+                                                                        e
+                                                                    ) => {
+                                                                        const file =
+                                                                            e
+                                                                                .target
+                                                                                .files?.[0]
+                                                                        if (
+                                                                            file
+                                                                        ) {
+                                                                            setNewThumbnail(
+                                                                                file
+                                                                            )
+                                                                            setThumbnailPreview(
+                                                                                URL.createObjectURL(
+                                                                                    file
+                                                                                )
+                                                                            )
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                            {newThumbnail && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setNewThumbnail(
+                                                                            null
+                                                                        )
+                                                                        if (
+                                                                            thumbnailPreview
+                                                                        ) {
+                                                                            URL.revokeObjectURL(
+                                                                                thumbnailPreview
+                                                                            )
+                                                                        }
+                                                                        setThumbnailPreview(
+                                                                            null
+                                                                        )
+                                                                    }}
+                                                                    className='text-xs text-red-500 hover:underline cursor-pointer'
+                                                                >
+                                                                    Remove new
+                                                                    photo
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Gallery */}
+                                                <div className='space-y-3'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Gallery Photos
+                                                    </label>
+
+                                                    {/* Existing Gallery */}
+                                                    {cafe.gallery &&
+                                                        cafe.gallery.length >
+                                                            0 && (
+                                                            <div className='space-y-2'>
+                                                                <p className='text-xs text-text/40'>
+                                                                    Click to
+                                                                    mark for
+                                                                    removal
+                                                                </p>
+                                                                <div className='flex flex-wrap gap-2'>
+                                                                    {cafe.gallery.map(
+                                                                        (
+                                                                            url,
+                                                                            idx
+                                                                        ) => {
+                                                                            const isMarkedForRemoval =
+                                                                                removeFromGallery.includes(
+                                                                                    url
+                                                                                )
+                                                                            return (
+                                                                                <button
+                                                                                    key={
+                                                                                        idx
+                                                                                    }
+                                                                                    onClick={() => {
+                                                                                        if (
+                                                                                            isMarkedForRemoval
+                                                                                        ) {
+                                                                                            setRemoveFromGallery(
+                                                                                                (
+                                                                                                    prev
+                                                                                                ) =>
+                                                                                                    prev.filter(
+                                                                                                        (
+                                                                                                            u
+                                                                                                        ) =>
+                                                                                                            u !==
+                                                                                                            url
+                                                                                                    )
+                                                                                            )
+                                                                                        } else {
+                                                                                            setRemoveFromGallery(
+                                                                                                (
+                                                                                                    prev
+                                                                                                ) => [
+                                                                                                    ...prev,
+                                                                                                    url,
+                                                                                                ]
+                                                                                            )
+                                                                                        }
+                                                                                    }}
+                                                                                    className={`relative w-16 h-16 rounded overflow-hidden border-2 transition-all cursor-pointer ${
+                                                                                        isMarkedForRemoval
+                                                                                            ? "border-red-500 opacity-50"
+                                                                                            : "border-transparent hover:border-text/30"
+                                                                                    }`}
+                                                                                >
+                                                                                    <Image
+                                                                                        src={
+                                                                                            url
+                                                                                        }
+                                                                                        alt={`Gallery ${idx + 1}`}
+                                                                                        fill
+                                                                                        className='object-cover'
+                                                                                    />
+                                                                                    {isMarkedForRemoval && (
+                                                                                        <div className='absolute inset-0 flex items-center justify-center bg-red-500/50'>
+                                                                                            <Trash2 className='w-4 h-4 text-white' />
+                                                                                        </div>
+                                                                                    )}
+                                                                                </button>
+                                                                            )
+                                                                        }
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                    {/* New Gallery Images */}
+                                                    {galleryPreviews.length >
+                                                        0 && (
+                                                        <div className='space-y-2'>
+                                                            <p className='text-xs text-text/40'>
+                                                                New photos to
+                                                                add
+                                                            </p>
+                                                            <div className='flex flex-wrap gap-2'>
+                                                                {galleryPreviews.map(
+                                                                    (
+                                                                        preview,
+                                                                        idx
+                                                                    ) => (
+                                                                        <div
+                                                                            key={
+                                                                                idx
+                                                                            }
+                                                                            className='relative w-16 h-16 rounded overflow-hidden border-2 border-primary'
+                                                                        >
+                                                                            <Image
+                                                                                src={
+                                                                                    preview
+                                                                                }
+                                                                                alt={`New ${idx + 1}`}
+                                                                                fill
+                                                                                className='object-cover'
+                                                                            />
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    URL.revokeObjectURL(
+                                                                                        preview
+                                                                                    )
+                                                                                    setGalleryPreviews(
+                                                                                        (
+                                                                                            prev
+                                                                                        ) =>
+                                                                                            prev.filter(
+                                                                                                (
+                                                                                                    _,
+                                                                                                    i
+                                                                                                ) =>
+                                                                                                    i !==
+                                                                                                    idx
+                                                                                            )
+                                                                                    )
+                                                                                    setNewGalleryFiles(
+                                                                                        (
+                                                                                            prev
+                                                                                        ) =>
+                                                                                            prev.filter(
+                                                                                                (
+                                                                                                    _,
+                                                                                                    i
+                                                                                                ) =>
+                                                                                                    i !==
+                                                                                                    idx
+                                                                                            )
+                                                                                    )
+                                                                                }}
+                                                                                className='absolute top-0.5 right-0.5 p-0.5 bg-red-500 rounded-full text-white hover:bg-red-600 cursor-pointer'
+                                                                            >
+                                                                                <XIcon className='w-3 h-3' />
+                                                                            </button>
+                                                                            <div className='absolute bottom-0.5 left-0.5 px-1 py-0.5 bg-primary text-white text-[8px] font-medium rounded'>
+                                                                                NEW
+                                                                            </div>
+                                                                        </div>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Add Gallery Photos */}
+                                                    <label className='flex items-center gap-2 px-3 py-2 bg-text/5 hover:bg-text/10 rounded-lg border border-text/10 cursor-pointer transition-colors text-sm w-fit'>
+                                                        <ImagePlus className='w-4 h-4' />
+                                                        <span>
+                                                            Add gallery photos
+                                                        </span>
+                                                        <input
+                                                            type='file'
+                                                            accept='image/*'
+                                                            multiple
+                                                            className='hidden'
+                                                            onChange={(e) => {
+                                                                const files =
+                                                                    Array.from(
+                                                                        e.target
+                                                                            .files ||
+                                                                            []
+                                                                    )
+                                                                if (
+                                                                    files.length >
+                                                                    0
+                                                                ) {
+                                                                    setNewGalleryFiles(
+                                                                        (
+                                                                            prev
+                                                                        ) => [
+                                                                            ...prev,
+                                                                            ...files,
+                                                                        ]
+                                                                    )
+                                                                    setGalleryPreviews(
+                                                                        (
+                                                                            prev
+                                                                        ) => [
+                                                                            ...prev,
+                                                                            ...files.map(
+                                                                                (
+                                                                                    f
+                                                                                ) =>
+                                                                                    URL.createObjectURL(
+                                                                                        f
+                                                                                    )
+                                                                            ),
+                                                                        ]
+                                                                    )
+                                                                }
+                                                                // Reset input
+                                                                e.target.value =
+                                                                    ""
+                                                            }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Error Display */}
@@ -1205,7 +1628,11 @@ export default function SuggestEditModal({
                                     {isSubmitting && (
                                         <Loader2 className='w-4 h-4 animate-spin' />
                                     )}
-                                    Submit Suggestion
+                                    {uploadingImages
+                                        ? "Uploading images..."
+                                        : isSubmitting
+                                          ? "Submitting..."
+                                          : "Submit Suggestion"}
                                 </button>
                             </div>
                         )}

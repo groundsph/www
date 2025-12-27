@@ -17,6 +17,8 @@ import {
     ExternalLink,
     BriefcaseIcon,
     CoffeeIcon,
+    CalendarIcon,
+    UserIcon,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -24,6 +26,7 @@ import RatingDistribution from "./RatingDistribution"
 import MarkdownRender from "@/components/MarkdownRender"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
 import ImageLightbox from "@/components/ImageLightbox"
+import Link from "next/link"
 
 // Day mapping
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -492,6 +495,39 @@ export function DetailsTabContent({
                     </div>
                 </div>
             )}
+
+            {/* Last Updated & Scouted By */}
+            <div className='bg-text/5 rounded-xl p-4 space-y-2'>
+                {cafe.updated_at && (
+                    <div className='flex items-center gap-2 text-sm text-text/60'>
+                        <CalendarIcon className='w-4 h-4' />
+                        <span>
+                            Last updated{" "}
+                            {new Date(cafe.updated_at).toLocaleDateString(
+                                "en-US",
+                                {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                }
+                            )}
+                        </span>
+                    </div>
+                )}
+                {cafe.contributor && (
+                    <div className='flex items-center gap-2 text-sm text-text/60'>
+                        <UserIcon className='w-4 h-4' />
+                        <span>Scouted by</span>
+                        <Link
+                            href={`/profile/${cafe.contributor.username}`}
+                            className='font-semibold text-text hover:text-accent transition-colors hover:underline'
+                        >
+                            {cafe.contributor.display_name ||
+                                cafe.contributor.username}
+                        </Link>
+                    </div>
+                )}
+            </div>
 
             {/* Suggest Edit */}
             <div className='flex justify-center pt-2'>

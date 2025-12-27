@@ -13,6 +13,7 @@ import {
     BriefcaseIcon,
     CoffeeIcon,
     UserIcon,
+    CalendarIcon,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -451,12 +452,28 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
 
             <div className='border-b border-text/10 my-3' />
 
-            {/* Contributed By */}
-            {cafe.contributor && (
-                <>
+            {/* Last Updated & Scouted By */}
+            <div className='space-y-2'>
+                {cafe.updated_at && (
+                    <div className='flex items-center gap-2 text-sm text-text/60'>
+                        <CalendarIcon className='w-4 h-4' />
+                        <span>
+                            Last updated{" "}
+                            {new Date(cafe.updated_at).toLocaleDateString(
+                                "en-US",
+                                {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                }
+                            )}
+                        </span>
+                    </div>
+                )}
+                {cafe.contributor && (
                     <div className='flex items-center gap-2 text-sm text-text/60'>
                         <UserIcon className='w-4 h-4' />
-                        <span>Contributed by</span>
+                        <span>Scouted by</span>
                         <Link
                             href={`/profile/${cafe.contributor.username}`}
                             className='font-semibold text-text hover:text-accent transition-colors hover:underline'
@@ -465,9 +482,10 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                                 cafe.contributor.username}
                         </Link>
                     </div>
-                    <div className='border-b border-text/10 my-3' />
-                </>
-            )}
+                )}
+            </div>
+
+            <div className='border-b border-text/10 my-3' />
 
             {/* Suggest Edit */}
             <div className='flex justify-center'>
