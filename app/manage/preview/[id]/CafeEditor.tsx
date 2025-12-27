@@ -1780,9 +1780,8 @@ Highlight unique features...'
                         </div>
 
                         <p className='text-xs text-text/40'>
-                            Owners can manage their cafe listing (features
-                            coming soon). Changes are saved when you click the
-                            Save button above.
+                            Owners can manage their cafe listing. Changes are
+                            saved when you click the Save button above.
                         </p>
                     </div>
                 )}
