@@ -22,6 +22,7 @@ import ReviewItem from "@/components/reviews/ReviewItem"
 import MarkdownRender from "@/components/MarkdownRender"
 import ImageLightbox from "@/components/ImageLightbox"
 import ClaimCafeModal from "@/components/ClaimCafeModal"
+import ContributionHistoryModal from "@/components/history/ContributionHistoryModal"
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
@@ -89,6 +90,9 @@ export default function CafeDetails({
     // Lightbox State
     const [isLightboxOpen, setIsLightboxOpen] = useState(false)
     const [lightboxIndex, setLightboxIndex] = useState(0)
+
+    // History Modal State
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
     // Computed
     const story = cafe.story
@@ -215,6 +219,7 @@ export default function CafeDetails({
                             <DetailsTabContent
                                 cafe={cafe}
                                 reviews={reviews}
+                                onOpenHistory={() => setIsHistoryOpen(true)}
                             />
                         ),
                         menu:
@@ -299,6 +304,7 @@ export default function CafeDetails({
                 <CafeSidebar
                     cafe={cafe}
                     reviews={reviews}
+                    onOpenHistory={() => setIsHistoryOpen(true)}
                 />
 
                 {/* Main Content */}
@@ -502,6 +508,14 @@ export default function CafeDetails({
                 isOpen={isLightboxOpen}
                 onClose={() => setIsLightboxOpen(false)}
                 altPrefix={`${cafe.name} photo`}
+            />
+
+            {/* Contribution History Modal */}
+            <ContributionHistoryModal
+                isOpen={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
+                cafeId={cafe.id}
+                cafeName={cafe.name}
             />
         </>
     )

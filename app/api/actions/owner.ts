@@ -17,6 +17,7 @@ import {
     SUBSCRIPTION_TIERS,
 } from "@/utils/types/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
 
 // ============================================
 // Permission Checks
@@ -247,6 +248,14 @@ export async function updateCafeAsOwner(
     }
 
     const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    // Fetch current cafe data for change detection
+    const { data: currentCafe } = await db
+        .from('cafes')
+        .select('name, description, address_display, area, lat, lng, has_wifi, has_sockets, has_parking, has_aircon, is_pet_friendly, has_outdoor_seating, serves_food, is_work_friendly, price_level, payment_methods, specialty, tags, brew_methods, roaster, operating_hours, website_url, phone, email, socials')
+        .eq('id', cafeId)
+        .single()
 
     const { error } = await db
         .from('cafes')
@@ -259,6 +268,20 @@ export async function updateCafeAsOwner(
     if (error) {
         console.error('Error updating cafe:', error)
         return { success: false, error: 'Failed to update cafe' }
+    }
+
+    // Log contribution
+    if (user) {
+        const adminDb = await createAdminClient()
+        const changedFields = currentCafe ? getChangedFields(currentCafe as Record<string, unknown>, updates as Record<string, unknown>) : Object.keys(updates)
+        const summary = generateChangeSummary(changedFields)
+
+        await logContribution(adminDb, user.id, cafeId, 'UPDATE', {
+            summary,
+            source: 'owner_edit',
+            cafe_name: (updates.name as string | undefined) || currentCafe?.name,
+            changed_fields: changedFields
+        })
     }
 
     return { success: true }

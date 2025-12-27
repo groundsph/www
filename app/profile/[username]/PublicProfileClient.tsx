@@ -27,6 +27,7 @@ import { AuthContext } from "@/components/AuthProvider"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import { getLucideIcon } from "@/components/badges/iconUtils"
+import ContributionTimeline from "@/components/profile/ContributionTimeline"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -602,6 +603,11 @@ export default function PublicProfileClient({
                         favorites={favoriteCafes}
                         wishlist={wishlistCafes}
                     />
+                </section>
+
+                {/* Contribution History */}
+                <section className='mt-10 bg-text/5 border border-text/10 rounded-xl'>
+                    <ContributionTimeline userId={profile.id} />
                 </section>
 
                 {/* Reviews Section */}

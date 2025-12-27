@@ -628,6 +628,55 @@ export type Database = {
           },
         ]
       }
+      contribution_logs: {
+        Row: {
+          action_type: Database["public"]["Enums"]["contribution_action_type"]
+          cafe_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action_type: Database["public"]["Enums"]["contribution_action_type"]
+          cafe_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: Database["public"]["Enums"]["contribution_action_type"]
+          cafe_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contribution_logs_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contribution_logs_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contribution_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       featured_schedules: {
         Row: {
           cafe_id: string
@@ -1187,6 +1236,12 @@ export type Database = {
         | "community"
         | "cafe_update"
       blog_status: "draft" | "published" | "archived"
+      contribution_action_type:
+        | "CREATE"
+        | "UPDATE"
+        | "VERIFY"
+        | "MEDIA"
+        | "SUGGEST"
       interaction_type: "like" | "report"
       membership_tier: "free" | "basic" | "premium"
       price_level: "low" | "medium" | "high"
@@ -1334,6 +1389,13 @@ export const Constants = {
         "cafe_update",
       ],
       blog_status: ["draft", "published", "archived"],
+      contribution_action_type: [
+        "CREATE",
+        "UPDATE",
+        "VERIFY",
+        "MEDIA",
+        "SUGGEST",
+      ],
       interaction_type: ["like", "report"],
       membership_tier: ["free", "basic", "premium"],
       price_level: ["low", "medium", "high"],

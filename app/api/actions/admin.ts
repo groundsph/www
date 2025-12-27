@@ -8,6 +8,7 @@ import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { Database } from "@/utils/types/database.types"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
+import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
 
 type ScoutRank = Database['public']['Enums']['scout_rank']
 
@@ -432,6 +433,14 @@ export async function updateCafe(
 
     // Use admin client to bypass RLS for the update
     const adminDb = await createAdminClient()
+
+    // Fetch current cafe data for change detection
+    const { data: currentCafe } = await adminDb
+        .from('cafes')
+        .select('name, description, address_display, area, lat, lng, has_wifi, has_sockets, has_parking, has_aircon, is_pet_friendly, has_outdoor_seating, serves_food, is_work_friendly, price_level, specialty, tags, brew_methods, payment_methods, roaster, operating_hours, website_url, phone, email, socials, thumbnail, gallery, slug, is_verified, owner_ids')
+        .eq('id', cafeId)
+        .single()
+
     const { error } = await adminDb
         .from('cafes')
         .update(updates as Record<string, unknown>)
@@ -441,6 +450,17 @@ export async function updateCafe(
         console.error("Error updating cafe:", error)
         return { success: false, error: "Failed to update cafe" }
     }
+
+    // Log contribution
+    const changedFields = currentCafe ? getChangedFields(currentCafe as Record<string, unknown>, updates as Record<string, unknown>) : Object.keys(updates)
+    const summary = generateChangeSummary(changedFields)
+
+    await logContribution(adminDb, user.id, cafeId, 'UPDATE', {
+        summary,
+        source: 'admin_edit',
+        cafe_name: updates.name || currentCafe?.name,
+        changed_fields: changedFields
+    })
 
     return { success: true }
 }

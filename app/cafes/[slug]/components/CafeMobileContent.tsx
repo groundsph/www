@@ -19,6 +19,7 @@ import {
     CoffeeIcon,
     CalendarIcon,
     UserIcon,
+    History,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -62,6 +63,7 @@ const DynamicCafeMiniMap = dynamic(() => import("@/components/CafeMiniMap"), {
 interface CafeMobileContentProps {
     cafe: CafeWithRatings
     reviews?: { rating: number }[]
+    onOpenHistory?: () => void
 }
 
 /**
@@ -307,6 +309,7 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
 export function DetailsTabContent({
     cafe,
     reviews = [],
+    onOpenHistory,
 }: CafeMobileContentProps) {
     return (
         <div className='flex flex-col gap-4'>
@@ -512,6 +515,15 @@ export function DetailsTabContent({
                                 }
                             )}
                         </span>
+                        {onOpenHistory && (
+                            <button
+                                onClick={onOpenHistory}
+                                className='ml-auto flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer'
+                            >
+                                <History className='w-3.5 h-3.5' />
+                                View history
+                            </button>
+                        )}
                     </div>
                 )}
                 {cafe.contributor && (

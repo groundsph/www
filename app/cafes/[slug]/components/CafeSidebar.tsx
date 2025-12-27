@@ -14,6 +14,7 @@ import {
     CoffeeIcon,
     UserIcon,
     CalendarIcon,
+    History,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -55,9 +56,14 @@ const DynamicCafeMiniMap = dynamic(() => import("@/components/CafeMiniMap"), {
 interface CafeSidebarProps {
     cafe: CafeWithRatings
     reviews?: { rating: number }[]
+    onOpenHistory?: () => void
 }
 
-export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
+export default function CafeSidebar({
+    cafe,
+    reviews = [],
+    onOpenHistory,
+}: CafeSidebarProps) {
     const openStatus = isOpenNow(cafe.operating_hours)
     const socials = (cafe.socials as unknown as CafeSocial[]) ?? []
 
@@ -468,6 +474,15 @@ export default function CafeSidebar({ cafe, reviews = [] }: CafeSidebarProps) {
                                 }
                             )}
                         </span>
+                        {onOpenHistory && (
+                            <button
+                                onClick={onOpenHistory}
+                                className='ml-auto flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer'
+                            >
+                                <History className='w-3.5 h-3.5' />
+                                View history
+                            </button>
+                        )}
                     </div>
                 )}
                 {cafe.contributor && (

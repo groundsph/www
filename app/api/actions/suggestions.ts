@@ -9,6 +9,7 @@ import {
     SuggestableFields,
     SuggestedImageChanges
 } from "@/utils/types/suggestions"
+import { logContribution } from "@/utils/contribution-logging"
 
 // ============================================
 // Result Types
@@ -101,6 +102,15 @@ export async function submitEditSuggestion(
         suggestedFields,
         submitterName
     )
+
+    // Log contribution as SUGGEST
+    const adminDb = await createAdminClient()
+    await logContribution(adminDb, user.id, cafeId, 'SUGGEST', {
+        summary: `Suggested edits: ${suggestedFields.join(', ')}`,
+        source: 'edit_suggestion',
+        cafe_name: cafe.name,
+        changed_fields: suggestedFields
+    })
 
     return { success: true, suggestionId: suggestion.id }
 }
@@ -373,6 +383,14 @@ export async function approveSuggestion(
                 authorData.display_name || authorData.username
             )
         }
+
+        // Log UPDATE contribution for the suggester (their suggestion was accepted)
+        await logContribution(adminDb, authorData.id, suggestion.cafe_id, 'UPDATE', {
+            summary: `Suggestion approved: ${Object.keys(changesToApply).join(', ')}`,
+            source: 'approved_suggestion',
+            cafe_name: cafeData.name,
+            changed_fields: Object.keys(changesToApply)
+        })
     }
 
     return { success: true }

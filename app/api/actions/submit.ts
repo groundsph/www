@@ -1,11 +1,13 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { notifyDiscord } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
 import { OperatingHour } from "@/utils/types/cafe"
 import { SupabaseClient } from "@supabase/supabase-js"
 import { Database } from "@/utils/types/database.types"
+import { logContribution } from "@/utils/contribution-logging"
 
 // Generate a URL-friendly slug from cafe name
 function generateSlug(name: string): string {
@@ -175,6 +177,14 @@ export async function submitCafe(
             `${formData.city_municipality}, ${formData.province}`,
             submitterName
         )
+
+        // Log contribution
+        const adminDb = await createAdminClient()
+        await logContribution(adminDb, user.id, cafe.id, 'CREATE', {
+            summary: `Scouted ${formData.name}`,
+            source: 'cafe_submission',
+            cafe_name: formData.name
+        })
 
         return {
             success: true,
