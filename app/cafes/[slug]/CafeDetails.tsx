@@ -5,7 +5,7 @@ import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
 import Image from "next/image"
-import { useState, useContext, useRef, useEffect } from "react"
+import { useState, useContext, useRef, useEffect, useMemo } from "react"
 import { AuthContext } from "@/components/AuthProvider"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -92,7 +92,7 @@ export default function CafeDetails({
 
     // Computed
     const story = cafe.story
-    const gallery = cafe.gallery ?? []
+    const gallery = useMemo(() => cafe.gallery ?? [], [cafe.gallery])
 
     // Find if user has reviewed
     const userReview = user
@@ -492,6 +492,11 @@ export default function CafeDetails({
 
             {/* Gallery Lightbox */}
             <ImageLightbox
+                key={
+                    isLightboxOpen
+                        ? `lightbox-${lightboxIndex}`
+                        : "lightbox-closed"
+                }
                 images={gallery}
                 initialIndex={lightboxIndex}
                 isOpen={isLightboxOpen}

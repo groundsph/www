@@ -36,7 +36,6 @@ import { useState } from "react"
 import {
     respondToReview,
     deleteReviewResponse,
-    updateCafeAsOwner,
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,

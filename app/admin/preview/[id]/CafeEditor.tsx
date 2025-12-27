@@ -116,63 +116,6 @@ export default function CafeEditor({
         })
     }
 
-    const handleThumbnailChange = async (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        const is16by9 = await checkAspectRatio(file)
-
-        if (is16by9) {
-            setUploadingCover(true)
-            const result = await uploadCafeImageClient(file)
-            setUploadingCover(false)
-
-            if (result.success && result.url) {
-                if (cafe.thumbnail) {
-                    await adminDeleteCafeImage(cafe.thumbnail)
-                }
-                updateField("thumbnail", result.url)
-            }
-        } else {
-            setCroppingImage(file)
-            setCropperOpen(true)
-        }
-    }
-
-    const handleCropComplete = async (croppedBlob: Blob) => {
-        const file = new File(
-            [croppedBlob],
-            croppingImage?.name || "cover.webp",
-            {
-                type: "image/webp",
-                lastModified: Date.now(),
-            }
-        )
-
-        // Resize if needed
-        const finalFile = await resizeImage(file, {
-            maxWidth: 2560,
-            maxHeight: 1440,
-            quality: 0.9,
-            format: "image/webp",
-        })
-
-        setUploadingCover(true)
-        const result = await uploadCafeImageClient(finalFile)
-        setUploadingCover(false)
-
-        if (result.success && result.url) {
-            if (cafe.thumbnail) {
-                await adminDeleteCafeImage(cafe.thumbnail)
-            }
-            updateField("thumbnail", result.url)
-        }
-
-        setCropperOpen(false)
-        setCroppingImage(null)
-    }
     const [activeSection, setActiveSection] = useState<
         | "basic"
         | "images"
@@ -239,6 +182,67 @@ export default function CafeEditor({
             setHasChanges(true)
         },
         []
+    )
+
+    const handleThumbnailChange = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        const is16by9 = await checkAspectRatio(file)
+
+        if (is16by9) {
+            setUploadingCover(true)
+            const result = await uploadCafeImageClient(file)
+            setUploadingCover(false)
+
+            if (result.success && result.url) {
+                if (cafe.thumbnail) {
+                    await adminDeleteCafeImage(cafe.thumbnail)
+                }
+                updateField("thumbnail", result.url)
+            }
+        } else {
+            setCroppingImage(file)
+            setCropperOpen(true)
+        }
+    }
+
+    const handleCropComplete = useCallback(
+        async (croppedBlob: Blob) => {
+            const file = new File(
+                [croppedBlob],
+                croppingImage?.name || "cover.webp",
+                {
+                    type: "image/webp",
+                    lastModified: Date.now(),
+                }
+            )
+
+            // Resize if needed
+            const finalFile = await resizeImage(file, {
+                maxWidth: 2560,
+                maxHeight: 1440,
+                quality: 0.9,
+                format: "image/webp",
+            })
+
+            setUploadingCover(true)
+            const result = await uploadCafeImageClient(finalFile)
+            setUploadingCover(false)
+
+            if (result.success && result.url) {
+                if (cafe.thumbnail) {
+                    await adminDeleteCafeImage(cafe.thumbnail)
+                }
+                updateField("thumbnail", result.url)
+            }
+
+            setCropperOpen(false)
+            setCroppingImage(null)
+        },
+        [croppingImage, cafe.thumbnail, updateField]
     )
 
     const handleSave = async () => {
@@ -813,7 +817,7 @@ export default function CafeEditor({
                                                     )
                                                     updateField(
                                                         "thumbnail",
-                                                        null as any
+                                                        null as unknown as string
                                                     )
                                                 }}
                                                 className='p-2 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition'
@@ -905,6 +909,7 @@ export default function CafeEditor({
                                             value={url}
                                             className='relative h-48 w-auto shrink-0 rounded-lg overflow-hidden group cursor-move active:cursor-grabbing bg-gray-50 flex items-center justify-center border border-text/10'
                                         >
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img
                                                 src={url}
                                                 alt={`Gallery ${idx + 1}`}

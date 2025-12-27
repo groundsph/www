@@ -5,7 +5,6 @@ import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
 import {
     X,
-    Upload,
     Eye,
     Save,
     Send,
@@ -20,7 +19,6 @@ import {
     BlogCategory,
     BlogStatus,
     BLOG_CATEGORIES,
-    BLOG_STATUSES,
     generateSlug,
     estimateReadingTime,
 } from "@/utils/types/blog"

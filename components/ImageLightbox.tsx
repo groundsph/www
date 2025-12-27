@@ -21,13 +21,6 @@ export default function ImageLightbox({
 }: ImageLightboxProps) {
     const [currentIndex, setCurrentIndex] = useState(initialIndex)
 
-    // Reset index when opening with a new initial index
-    useEffect(() => {
-        if (isOpen) {
-            setCurrentIndex(initialIndex)
-        }
-    }, [isOpen, initialIndex])
-
     // Handle keyboard navigation
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {

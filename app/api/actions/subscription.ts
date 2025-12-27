@@ -7,7 +7,6 @@ import {
     toDbTier,
     toDisplayTier,
     CafeSubscription,
-    SubscriptionTier,
 } from "@/utils/types/owner"
 import {
     createCheckoutSession as helixCreateCheckout,

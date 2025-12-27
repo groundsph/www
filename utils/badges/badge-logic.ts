@@ -64,10 +64,7 @@ const BADGE_NAMES = {
 // Badge Checking Logic
 // ============================================
 
-interface BadgeCheckResult {
-    badgeName: string
-    shouldAward: boolean
-}
+
 
 /**
  * Get badge definition ID by name
@@ -226,7 +223,7 @@ async function checkGeographicBadges(
     // Map regions to island groups
     const islandGroups = new Set<IslandGroup>()
     for (const review of reviews) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase relational query type
+        // Supabase relational query type
         const cafe = review.cafe as { region: string } | null
         if (cafe?.region) {
             const group = getIslandGroup(cafe.region)

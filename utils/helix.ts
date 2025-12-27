@@ -13,7 +13,6 @@
 
 // Environment variables for HelixPay
 const HELIX_API_KEY = process.env.HELIX_API_KEY!;
-const HELIX_SECRET_KEY = process.env.HELIX_SECRET_KEY!;
 const HELIX_WEBHOOK_SECRET = process.env.HELIX_WEBHOOK_SECRET!;
 
 // API base URL (use sandbox for development)

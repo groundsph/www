@@ -1,7 +1,7 @@
 "use client"
 
 import { UploadCloud, X, ChevronLeft, ChevronRight } from "lucide-react"
-import Image from "next/image"
+
 import { useCallback, useState, useEffect } from "react"
 import { useDropzone } from "react-dropzone"
 import { cn } from "@/utils/cn"
@@ -126,6 +126,7 @@ export default function ImageUpload({
                             value={item}
                             className='relative h-32 w-auto shrink-0 rounded-lg overflow-hidden border border-text/10 group cursor-grab active:cursor-grabbing bg-gray-50 flex items-center justify-center'
                         >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={previewUrl}
                                 alt='Review image'

@@ -370,7 +370,7 @@ export default function CafeSubmissionForm({
             }
 
             // 5. Upload Ownership Proof Files (if owner)
-            let proofUrls: string[] = []
+            const proofUrls: string[] = []
             if (formData.is_owner && ownershipProofFiles.length > 0) {
                 setProcessingStatus("Uploading ownership proof documents...")
                 console.log(
@@ -414,10 +414,12 @@ export default function CafeSubmissionForm({
 
             // 6. Submit cafe data
             console.log("[Cafe Submit] Submitting to server...")
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Destructuring to exclude file fields
             const {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 thumbnail,
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 gallery,
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 ownership_proof_files,
                 ...serializableFormData
             } = formData
@@ -765,11 +767,9 @@ export default function CafeSubmissionForm({
                                         </label>
                                         {thumbnailFile ? (
                                             <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-text/20 bg-text/5'>
-                                                {/* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */}
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                                 <img
-                                                    src={URL.createObjectURL(
-                                                        thumbnailFile
-                                                    )}
+                                                    src={thumbnailPreview || ""}
                                                     alt='Thumbnail preview'
                                                     className='w-full h-full object-cover'
                                                 />

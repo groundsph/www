@@ -3,7 +3,6 @@
 import { CafeWithRatings } from "@/utils/types/extra"
 import { ArrowRightIcon } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
 import { motion } from "motion/react"
 
 export default function RecentCard({

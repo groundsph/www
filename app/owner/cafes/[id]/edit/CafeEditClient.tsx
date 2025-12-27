@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import {
     ArrowLeft,
     Save,
@@ -57,7 +56,6 @@ const formatLabel = (s: string) =>
 export default function CafeEditClient({
     cafe: initialCafe,
 }: CafeEditClientProps) {
-    const router = useRouter()
     const { addNotification } = useNotification()
     const [cafe, setCafe] = useState(initialCafe)
     const [saving, setSaving] = useState(false)

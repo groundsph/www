@@ -62,12 +62,7 @@ import {
     approveSuggestion,
     rejectSuggestion,
 } from "@/app/api/actions/suggestions"
-import {
-    getPendingClaims,
-    approveClaim,
-    rejectClaim,
-    CafeClaim,
-} from "@/app/api/actions/claim"
+import { approveClaim, rejectClaim, CafeClaim } from "@/app/api/actions/claim"
 import { EditSuggestion } from "@/utils/types/suggestions"
 import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
