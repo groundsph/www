@@ -9,6 +9,10 @@ import {
     SunIcon,
     Utensils,
     Laptop,
+    Armchair,
+    Toilet,
+    Droplet,
+    MilkOff,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 
@@ -25,6 +29,10 @@ const AMENITY_OPTIONS: AmenityOption[] = [
     { key: "has_aircon", label: "Air Conditioning", icon: SnowflakeIcon },
     { key: "is_pet_friendly", label: "Pet Friendly", icon: PawPrintIcon },
     { key: "has_outdoor_seating", label: "Outdoor Seating", icon: SunIcon },
+    { key: "has_indoor_seating", label: "Indoor Seating", icon: Armchair },
+    { key: "has_restroom", label: "Restroom", icon: Toilet },
+    { key: "has_bidet", label: "Bidet", icon: Droplet },
+    { key: "has_non_dairy", label: "Non-Dairy Milk", icon: MilkOff },
     { key: "serves_food", label: "Serves Food", icon: Utensils },
     { key: "is_work_friendly", label: "Work Friendly", icon: Laptop },
 ]

@@ -15,6 +15,10 @@ import {
     UserIcon,
     CalendarIcon,
     History,
+    Toilet,
+    Droplet,
+    MilkOff,
+    Armchair,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -302,6 +306,35 @@ export default function CafeSidebar({
                         Outdoor Seating
                     </li>
                 )}
+                {cafe.has_indoor_seating && (
+                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                        <Armchair className='w-4 h-4' />
+                        Indoor Seating
+                    </li>
+                )}
+                {cafe.has_restroom && (
+                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                        <Toilet className='w-4 h-4' />
+                        Restroom
+                    </li>
+                )}
+                {cafe.has_bidet && (
+                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                        <Droplet className='w-4 h-4' />
+                        Bidet
+                    </li>
+                )}
+                {cafe.has_non_dairy && (
+                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                        <MilkOff className='w-4 h-4' />
+                        Non-Dairy Milk
+                        {cafe.milk_options && cafe.milk_options.length > 0 && (
+                            <span className='text-xs text-text/60'>
+                                ({cafe.milk_options.join(", ")})
+                            </span>
+                        )}
+                    </li>
+                )}
                 {cafe.is_work_friendly && (
                     <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
                         <BriefcaseIcon className='w-4 h-4' />
@@ -314,6 +347,10 @@ export default function CafeSidebar({
                     !cafe.has_aircon &&
                     !cafe.is_pet_friendly &&
                     !cafe.has_outdoor_seating &&
+                    !cafe.has_indoor_seating &&
+                    !cafe.has_restroom &&
+                    !cafe.has_bidet &&
+                    !cafe.has_non_dairy &&
                     !cafe.is_work_friendly && (
                         <li className='text-text/50'>No amenities listed</li>
                     )}

@@ -126,6 +126,11 @@ export async function submitCafe(
                 has_aircon: formData.has_aircon,
                 is_pet_friendly: formData.is_pet_friendly,
                 has_outdoor_seating: formData.has_outdoor_seating,
+                has_indoor_seating: formData.has_indoor_seating,
+                has_restroom: formData.has_restroom,
+                has_bidet: formData.has_bidet,
+                has_non_dairy: formData.has_non_dairy,
+                milk_options: formData.milk_options.length > 0 ? formData.milk_options : null,
                 serves_food: formData.serves_food,
                 is_work_friendly: formData.is_work_friendly,
 

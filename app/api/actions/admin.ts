@@ -395,6 +395,11 @@ export async function updateCafe(
         has_aircon: boolean
         is_pet_friendly: boolean
         has_outdoor_seating: boolean
+        has_indoor_seating: boolean
+        has_restroom: boolean
+        has_bidet: boolean
+        has_non_dairy: boolean
+        milk_options: string[]
         serves_food: boolean
         is_work_friendly: boolean
         price_level: "low" | "medium" | "high"

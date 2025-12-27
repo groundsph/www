@@ -53,6 +53,10 @@ const AMENITY_FIELDS = [
     { key: "has_aircon", label: "Air Conditioning", icon: Snowflake },
     { key: "is_pet_friendly", label: "Pet Friendly", icon: PawPrint },
     { key: "has_outdoor_seating", label: "Outdoor Seating", icon: Sun },
+    { key: "has_indoor_seating", label: "Indoor Seating", icon: Briefcase },
+    { key: "has_restroom", label: "Restroom", icon: Utensils },
+    { key: "has_bidet", label: "Bidet", icon: Utensils },
+    { key: "has_non_dairy", label: "Non-Dairy Milk", icon: Coffee },
     { key: "serves_food", label: "Serves Food", icon: Utensils },
     { key: "is_work_friendly", label: "Work Friendly", icon: Briefcase },
 ] as const

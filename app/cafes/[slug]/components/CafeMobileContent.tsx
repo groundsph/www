@@ -20,6 +20,10 @@ import {
     CalendarIcon,
     UserIcon,
     History,
+    Toilet,
+    Droplet,
+    MilkOff,
+    Armchair,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -377,6 +381,30 @@ export function DetailsTabContent({
                             Outdoor
                         </span>
                     )}
+                    {cafe.has_indoor_seating && (
+                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                            <Armchair className='w-4 h-4' />
+                            Indoor Seating
+                        </span>
+                    )}
+                    {cafe.has_restroom && (
+                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                            <Toilet className='w-4 h-4' />
+                            Restroom
+                        </span>
+                    )}
+                    {cafe.has_bidet && (
+                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                            <Droplet className='w-4 h-4' />
+                            Bidet
+                        </span>
+                    )}
+                    {cafe.has_non_dairy && (
+                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                            <MilkOff className='w-4 h-4' />
+                            Non-Dairy Milk
+                        </span>
+                    )}
                     {cafe.is_work_friendly && (
                         <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
                             <BriefcaseIcon className='w-4 h-4' />
@@ -389,6 +417,10 @@ export function DetailsTabContent({
                         !cafe.has_aircon &&
                         !cafe.is_pet_friendly &&
                         !cafe.has_outdoor_seating &&
+                        !cafe.has_indoor_seating &&
+                        !cafe.has_restroom &&
+                        !cafe.has_bidet &&
+                        !cafe.has_non_dairy &&
                         !cafe.is_work_friendly && (
                             <span className='text-sm text-text/50'>
                                 No amenities listed

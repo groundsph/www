@@ -35,6 +35,11 @@ import {
     Plus,
     Upload,
     Users,
+    BadgeCheck,
+    Armchair,
+    Toilet,
+    Droplet,
+    MilkOff,
 } from "lucide-react"
 import {
     approveCafe,
@@ -894,6 +899,13 @@ export default function ManageDashboard({
         has_aircon: { icon: Snowflake, label: "Air Conditioning" },
         is_pet_friendly: { icon: PawPrint, label: "Pet Friendly" },
         has_outdoor_seating: { icon: Sun, label: "Outdoor Seating" },
+        has_indoor_seating: {
+            icon: Armchair,
+            label: "Indoor Seating",
+        },
+        has_restroom: { icon: BadgeCheck, label: "Restroom" },
+        has_bidet: { icon: BadgeCheck, label: "Bidet" },
+        has_non_dairy: { icon: BadgeCheck, label: "Non-Dairy Milk" },
         serves_food: { icon: Utensils, label: "Serves Food" },
         is_work_friendly: { icon: Briefcase, label: "Work Friendly" },
     }

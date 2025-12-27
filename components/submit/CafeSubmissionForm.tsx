@@ -1141,6 +1141,12 @@ export default function CafeSubmissionForm({
                                                 formData.is_pet_friendly,
                                             has_outdoor_seating:
                                                 formData.has_outdoor_seating,
+                                            has_indoor_seating:
+                                                formData.has_indoor_seating,
+                                            has_restroom: formData.has_restroom,
+                                            has_bidet: formData.has_bidet,
+                                            has_non_dairy:
+                                                formData.has_non_dairy,
                                             serves_food: formData.serves_food,
                                             is_work_friendly:
                                                 formData.is_work_friendly,
@@ -1822,6 +1828,10 @@ export default function CafeSubmissionForm({
                                             formData.has_aircon ||
                                             formData.is_pet_friendly ||
                                             formData.has_outdoor_seating ||
+                                            formData.has_indoor_seating ||
+                                            formData.has_restroom ||
+                                            formData.has_bidet ||
+                                            formData.has_non_dairy ||
                                             formData.serves_food) && (
                                             <div>
                                                 <h2 className='text-lg font-serif font-semibold mb-3'>
@@ -1862,6 +1872,26 @@ export default function CafeSubmissionForm({
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
                                                             <Sun className='w-4 h-4 text-primary' />{" "}
                                                             Outdoor Seating
+                                                        </span>
+                                                    )}
+                                                    {formData.has_indoor_seating && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            Indoor Seating
+                                                        </span>
+                                                    )}
+                                                    {formData.has_restroom && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            Restroom
+                                                        </span>
+                                                    )}
+                                                    {formData.has_bidet && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            Bidet
+                                                        </span>
+                                                    )}
+                                                    {formData.has_non_dairy && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            Non-Dairy Milk
                                                         </span>
                                                     )}
                                                     {formData.serves_food && (

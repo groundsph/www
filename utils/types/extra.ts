@@ -38,6 +38,10 @@ export interface CafeFilters {
     has_aircon?: boolean;
     is_pet_friendly?: boolean;
     has_outdoor_seating?: boolean;
+    has_indoor_seating?: boolean;
+    has_restroom?: boolean;
+    has_bidet?: boolean;
+    has_non_dairy?: boolean;
     is_work_friendly?: boolean;
     price_level?: Database['public']['Enums']['price_level']; // Uses the actual DB Enum type
     region?: string;
@@ -93,6 +97,11 @@ export interface CafeSubmission {
     has_aircon: boolean;
     is_pet_friendly: boolean;
     has_outdoor_seating: boolean;
+    has_indoor_seating: boolean;
+    has_restroom: boolean;
+    has_bidet: boolean;
+    has_non_dairy: boolean;
+    milk_options: string[];
     serves_food: boolean;
     is_work_friendly: boolean;
     price_level: Database['public']['Enums']['price_level'];
@@ -136,6 +145,11 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     has_aircon: false,
     is_pet_friendly: false,
     has_outdoor_seating: false,
+    has_indoor_seating: false,
+    has_restroom: false,
+    has_bidet: false,
+    has_non_dairy: false,
+    milk_options: [],
     serves_food: false,
     is_work_friendly: false,
     price_level: 'medium',

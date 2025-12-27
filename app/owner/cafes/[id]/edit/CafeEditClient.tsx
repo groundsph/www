@@ -216,6 +216,11 @@ export default function CafeEditClient({
             has_aircon: cafe.has_aircon || false,
             is_pet_friendly: cafe.is_pet_friendly || false,
             has_outdoor_seating: cafe.has_outdoor_seating || false,
+            has_indoor_seating: cafe.has_indoor_seating || false,
+            has_restroom: cafe.has_restroom || false,
+            has_bidet: cafe.has_bidet || false,
+            has_non_dairy: cafe.has_non_dairy || false,
+            milk_options: cafe.milk_options || [],
             serves_food: cafe.serves_food || false,
             is_work_friendly: cafe.is_work_friendly || false,
             price_level: cafe.price_level || "medium",
@@ -819,6 +824,11 @@ export default function CafeEditClient({
                                         cafe.is_pet_friendly || false,
                                     has_outdoor_seating:
                                         cafe.has_outdoor_seating || false,
+                                    has_indoor_seating:
+                                        cafe.has_indoor_seating || false,
+                                    has_restroom: cafe.has_restroom || false,
+                                    has_bidet: cafe.has_bidet || false,
+                                    has_non_dairy: cafe.has_non_dairy || false,
                                     serves_food: cafe.serves_food || false,
                                     is_work_friendly:
                                         cafe.is_work_friendly || false,
@@ -828,6 +838,32 @@ export default function CafeEditClient({
                                 }
                             />
                         </div>
+
+                        {/* Milk Options (conditional) */}
+                        {cafe.has_non_dairy && (
+                            <div>
+                                <label className='block text-sm font-medium text-text/60 mb-2'>
+                                    Non-Dairy Milk Options
+                                </label>
+                                <input
+                                    type='text'
+                                    value={(cafe.milk_options || []).join(", ")}
+                                    onChange={(e) => {
+                                        const options = e.target.value
+                                            .split(",")
+                                            .map((s) => s.trim())
+                                            .filter(Boolean)
+                                        updateField("milk_options", options)
+                                    }}
+                                    placeholder='Oat, Almond, Soy, Coconut...'
+                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
+                                />
+                                <p className='text-xs text-text/40 mt-1'>
+                                    Comma-separated list of available non-dairy
+                                    milk options
+                                </p>
+                            </div>
+                        )}
 
                         {/* Payment Methods */}
                         <div>

@@ -491,8 +491,12 @@ export type Database = {
           featured_until: string | null
           gallery: string[] | null
           has_aircon: boolean | null
+          has_bidet: boolean | null
+          has_indoor_seating: boolean | null
+          has_non_dairy: boolean | null
           has_outdoor_seating: boolean | null
           has_parking: boolean | null
+          has_restroom: boolean | null
           has_sockets: boolean | null
           has_wifi: boolean | null
           id: string
@@ -505,6 +509,7 @@ export type Database = {
           lat: number
           lng: number
           membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+          milk_options: string[] | null
           name: string
           operating_hours: Json | null
           owner_ids: string[] | null
@@ -536,8 +541,12 @@ export type Database = {
           featured_until?: string | null
           gallery?: string[] | null
           has_aircon?: boolean | null
+          has_bidet?: boolean | null
+          has_indoor_seating?: boolean | null
+          has_non_dairy?: boolean | null
           has_outdoor_seating?: boolean | null
           has_parking?: boolean | null
+          has_restroom?: boolean | null
           has_sockets?: boolean | null
           has_wifi?: boolean | null
           id?: string
@@ -552,6 +561,7 @@ export type Database = {
           membership_tier?:
             | Database["public"]["Enums"]["membership_tier"]
             | null
+          milk_options?: string[] | null
           name: string
           operating_hours?: Json | null
           owner_ids?: string[] | null
@@ -583,8 +593,12 @@ export type Database = {
           featured_until?: string | null
           gallery?: string[] | null
           has_aircon?: boolean | null
+          has_bidet?: boolean | null
+          has_indoor_seating?: boolean | null
+          has_non_dairy?: boolean | null
           has_outdoor_seating?: boolean | null
           has_parking?: boolean | null
+          has_restroom?: boolean | null
           has_sockets?: boolean | null
           has_wifi?: boolean | null
           id?: string
@@ -599,6 +613,7 @@ export type Database = {
           membership_tier?:
             | Database["public"]["Enums"]["membership_tier"]
             | null
+          milk_options?: string[] | null
           name?: string
           operating_hours?: Json | null
           owner_ids?: string[] | null
@@ -1126,8 +1141,12 @@ export type Database = {
           featured_until: string | null
           gallery: string[] | null
           has_aircon: boolean | null
+          has_bidet: boolean | null
+          has_indoor_seating: boolean | null
+          has_non_dairy: boolean | null
           has_outdoor_seating: boolean | null
           has_parking: boolean | null
+          has_restroom: boolean | null
           has_sockets: boolean | null
           has_wifi: boolean | null
           id: string
@@ -1140,6 +1159,7 @@ export type Database = {
           lat: number
           lng: number
           membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+          milk_options: string[] | null
           name: string
           operating_hours: Json | null
           owner_ids: string[] | null
@@ -1184,8 +1204,12 @@ export type Database = {
           featured_until: string | null
           gallery: string[] | null
           has_aircon: boolean | null
+          has_bidet: boolean | null
+          has_indoor_seating: boolean | null
+          has_non_dairy: boolean | null
           has_outdoor_seating: boolean | null
           has_parking: boolean | null
+          has_restroom: boolean | null
           has_sockets: boolean | null
           has_wifi: boolean | null
           id: string
@@ -1198,6 +1222,7 @@ export type Database = {
           lat: number
           lng: number
           membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+          milk_options: string[] | null
           name: string
           operating_hours: Json | null
           owner_ids: string[] | null
