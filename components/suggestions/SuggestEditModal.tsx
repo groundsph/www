@@ -827,6 +827,69 @@ export default function SuggestEditModal({
                                                         }
                                                     )}
                                                 </div>
+
+                                                {/* Milk Options - conditional on has_non_dairy */}
+                                                {(changes.has_non_dairy !==
+                                                undefined
+                                                    ? changes.has_non_dairy
+                                                    : cafe.has_non_dairy) ===
+                                                    true && (
+                                                    <div className='mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg'>
+                                                        <label className='text-sm font-medium text-text/60 block mb-2'>
+                                                            Non-Dairy Milk
+                                                            Options
+                                                        </label>
+                                                        <input
+                                                            type='text'
+                                                            value={
+                                                                changes.milk_options !==
+                                                                undefined
+                                                                    ? (
+                                                                          changes.milk_options as string[]
+                                                                      ).join(
+                                                                          ", "
+                                                                      )
+                                                                    : (
+                                                                          cafe.milk_options ??
+                                                                          []
+                                                                      ).join(
+                                                                          ", "
+                                                                      )
+                                                            }
+                                                            onChange={(e) => {
+                                                                const options =
+                                                                    e.target.value
+                                                                        .split(
+                                                                            ","
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                s
+                                                                            ) =>
+                                                                                s.trim()
+                                                                        )
+                                                                        .filter(
+                                                                            Boolean
+                                                                        )
+                                                                updateChange(
+                                                                    "milk_options",
+                                                                    options
+                                                                )
+                                                            }}
+                                                            placeholder='Oat, Almond, Soy, Coconut...'
+                                                            className={`w-full px-3 py-2 bg-background border rounded-lg text-sm outline-none transition-all ${
+                                                                hasChange(
+                                                                    "milk_options"
+                                                                )
+                                                                    ? "border-primary/50 ring-2 ring-primary/20"
+                                                                    : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                                                            }`}
+                                                        />
+                                                        <p className='text-xs text-text/40 mt-1'>
+                                                            Comma-separated list
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -978,6 +1041,166 @@ export default function SuggestEditModal({
                                                             }
                                                         )}
                                                     </div>
+
+                                                    {/* Custom Specialties Input */}
+                                                    <div className='flex gap-2 mt-2'>
+                                                        <input
+                                                            type='text'
+                                                            placeholder='Add custom (comma-separated)'
+                                                            className='flex-1 px-3 py-2 bg-background border border-text/10 rounded-lg text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                                                            onKeyDown={(e) => {
+                                                                if (
+                                                                    e.key ===
+                                                                    "Enter"
+                                                                ) {
+                                                                    e.preventDefault()
+                                                                    const input =
+                                                                        e.currentTarget
+                                                                    const items =
+                                                                        input.value
+                                                                            .split(
+                                                                                ","
+                                                                            )
+                                                                            .map(
+                                                                                (
+                                                                                    s
+                                                                                ) =>
+                                                                                    s
+                                                                                        .trim()
+                                                                                        .toLowerCase()
+                                                                                        .replace(
+                                                                                            /\s+/g,
+                                                                                            "_"
+                                                                                        )
+                                                                            )
+                                                                            .filter(
+                                                                                Boolean
+                                                                            )
+                                                                    if (
+                                                                        items.length >
+                                                                        0
+                                                                    ) {
+                                                                        const current =
+                                                                            getEffectiveArray(
+                                                                                "specialty"
+                                                                            )
+                                                                        const updated =
+                                                                            [
+                                                                                ...new Set(
+                                                                                    [
+                                                                                        ...current,
+                                                                                        ...items,
+                                                                                    ]
+                                                                                ),
+                                                                            ]
+                                                                        updateChange(
+                                                                            "specialty",
+                                                                            updated
+                                                                        )
+                                                                        input.value =
+                                                                            ""
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type='button'
+                                                            onClick={(e) => {
+                                                                const input = e
+                                                                    .currentTarget
+                                                                    .previousElementSibling as HTMLInputElement
+                                                                const items =
+                                                                    input.value
+                                                                        .split(
+                                                                            ","
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                s
+                                                                            ) =>
+                                                                                s
+                                                                                    .trim()
+                                                                                    .toLowerCase()
+                                                                                    .replace(
+                                                                                        /\s+/g,
+                                                                                        "_"
+                                                                                    )
+                                                                        )
+                                                                        .filter(
+                                                                            Boolean
+                                                                        )
+                                                                if (
+                                                                    items.length >
+                                                                    0
+                                                                ) {
+                                                                    const current =
+                                                                        getEffectiveArray(
+                                                                            "specialty"
+                                                                        )
+                                                                    const updated =
+                                                                        [
+                                                                            ...new Set(
+                                                                                [
+                                                                                    ...current,
+                                                                                    ...items,
+                                                                                ]
+                                                                            ),
+                                                                        ]
+                                                                    updateChange(
+                                                                        "specialty",
+                                                                        updated
+                                                                    )
+                                                                    input.value =
+                                                                        ""
+                                                                }
+                                                            }}
+                                                            className='px-4 py-2 bg-primary text-background rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer'
+                                                        >
+                                                            Add
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Display custom specialties */}
+                                                    {getEffectiveArray(
+                                                        "specialty"
+                                                    ).filter(
+                                                        (s) =>
+                                                            !SPECIALTY_OPTIONS.includes(
+                                                                s
+                                                            )
+                                                    ).length > 0 && (
+                                                        <div className='flex flex-wrap gap-1 mt-2'>
+                                                            {getEffectiveArray(
+                                                                "specialty"
+                                                            )
+                                                                .filter(
+                                                                    (s) =>
+                                                                        !SPECIALTY_OPTIONS.includes(
+                                                                            s
+                                                                        )
+                                                                )
+                                                                .map((item) => (
+                                                                    <span
+                                                                        key={
+                                                                            item
+                                                                        }
+                                                                        className='inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full cursor-pointer hover:bg-primary/20'
+                                                                        onClick={() =>
+                                                                            toggleArrayItem(
+                                                                                "specialty",
+                                                                                item
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {item.replace(
+                                                                            /_/g,
+                                                                            " "
+                                                                        )}
+                                                                        <XIcon className='w-3 h-3' />
+                                                                    </span>
+                                                                ))}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Tags / Vibe */}
@@ -1042,6 +1265,166 @@ export default function SuggestEditModal({
                                                             }
                                                         )}
                                                     </div>
+
+                                                    {/* Custom Tags Input */}
+                                                    <div className='flex gap-2 mt-2'>
+                                                        <input
+                                                            type='text'
+                                                            placeholder='Add custom (comma-separated)'
+                                                            className='flex-1 px-3 py-2 bg-background border border-text/10 rounded-lg text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                                                            onKeyDown={(e) => {
+                                                                if (
+                                                                    e.key ===
+                                                                    "Enter"
+                                                                ) {
+                                                                    e.preventDefault()
+                                                                    const input =
+                                                                        e.currentTarget
+                                                                    const items =
+                                                                        input.value
+                                                                            .split(
+                                                                                ","
+                                                                            )
+                                                                            .map(
+                                                                                (
+                                                                                    s
+                                                                                ) =>
+                                                                                    s
+                                                                                        .trim()
+                                                                                        .toLowerCase()
+                                                                                        .replace(
+                                                                                            /\s+/g,
+                                                                                            "_"
+                                                                                        )
+                                                                            )
+                                                                            .filter(
+                                                                                Boolean
+                                                                            )
+                                                                    if (
+                                                                        items.length >
+                                                                        0
+                                                                    ) {
+                                                                        const current =
+                                                                            getEffectiveArray(
+                                                                                "tags"
+                                                                            )
+                                                                        const updated =
+                                                                            [
+                                                                                ...new Set(
+                                                                                    [
+                                                                                        ...current,
+                                                                                        ...items,
+                                                                                    ]
+                                                                                ),
+                                                                            ]
+                                                                        updateChange(
+                                                                            "tags",
+                                                                            updated
+                                                                        )
+                                                                        input.value =
+                                                                            ""
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type='button'
+                                                            onClick={(e) => {
+                                                                const input = e
+                                                                    .currentTarget
+                                                                    .previousElementSibling as HTMLInputElement
+                                                                const items =
+                                                                    input.value
+                                                                        .split(
+                                                                            ","
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                s
+                                                                            ) =>
+                                                                                s
+                                                                                    .trim()
+                                                                                    .toLowerCase()
+                                                                                    .replace(
+                                                                                        /\s+/g,
+                                                                                        "_"
+                                                                                    )
+                                                                        )
+                                                                        .filter(
+                                                                            Boolean
+                                                                        )
+                                                                if (
+                                                                    items.length >
+                                                                    0
+                                                                ) {
+                                                                    const current =
+                                                                        getEffectiveArray(
+                                                                            "tags"
+                                                                        )
+                                                                    const updated =
+                                                                        [
+                                                                            ...new Set(
+                                                                                [
+                                                                                    ...current,
+                                                                                    ...items,
+                                                                                ]
+                                                                            ),
+                                                                        ]
+                                                                    updateChange(
+                                                                        "tags",
+                                                                        updated
+                                                                    )
+                                                                    input.value =
+                                                                        ""
+                                                                }
+                                                            }}
+                                                            className='px-4 py-2 bg-primary text-background rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer'
+                                                        >
+                                                            Add
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Display custom tags */}
+                                                    {getEffectiveArray(
+                                                        "tags"
+                                                    ).filter(
+                                                        (t) =>
+                                                            !TAG_OPTIONS.includes(
+                                                                t
+                                                            )
+                                                    ).length > 0 && (
+                                                        <div className='flex flex-wrap gap-1 mt-2'>
+                                                            {getEffectiveArray(
+                                                                "tags"
+                                                            )
+                                                                .filter(
+                                                                    (t) =>
+                                                                        !TAG_OPTIONS.includes(
+                                                                            t
+                                                                        )
+                                                                )
+                                                                .map((item) => (
+                                                                    <span
+                                                                        key={
+                                                                            item
+                                                                        }
+                                                                        className='inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full cursor-pointer hover:bg-primary/20'
+                                                                        onClick={() =>
+                                                                            toggleArrayItem(
+                                                                                "tags",
+                                                                                item
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {item.replace(
+                                                                            /_/g,
+                                                                            " "
+                                                                        )}
+                                                                        <XIcon className='w-3 h-3' />
+                                                                    </span>
+                                                                ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
