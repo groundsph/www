@@ -11,6 +11,7 @@ import {
     CheckCircle,
     ImageIcon,
     Lightbulb,
+    UserIcon,
 } from "lucide-react"
 import {
     getCafeContributions,
@@ -182,7 +183,7 @@ export default function ContributionHistoryModal({
                                                 </span>
                                                 <Link
                                                     href={`/profile/${log.author.username}`}
-                                                    className='flex items-center gap-1.5 hover:text-accent transition-colors'
+                                                    className='flex items-center gap-1.5 hover:text-accent transition-colors cursor-pointer hover:underline'
                                                 >
                                                     {log.author.avatar_url ? (
                                                         <Image
@@ -199,7 +200,7 @@ export default function ContributionHistoryModal({
                                                             className='rounded-full'
                                                         />
                                                     ) : (
-                                                        <div className='w-[18px] h-[18px] rounded-full bg-tertiary' />
+                                                        <UserIcon className='w-4 h-4' />
                                                     )}
                                                     <span className='text-sm font-medium'>
                                                         {

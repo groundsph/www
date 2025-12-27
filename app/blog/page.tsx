@@ -52,7 +52,7 @@ export default async function BlogPage({
             </section>
 
             {/* Category Tabs */}
-            <section className='sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-text/10'>
+            <section className='sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-text/10'>
                 <div className='max-w-7xl mx-auto px-4'>
                     <nav className='flex gap-1 overflow-x-auto py-3 scrollbar-hide'>
                         <Link
