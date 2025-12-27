@@ -113,14 +113,14 @@ export default function ImageLightbox({
                 <>
                     <button
                         onClick={goToPrevious}
-                        className='absolute left-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer'
+                        className='absolute left-4 z-10 px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm'
                         aria-label='Previous image'
                     >
                         <ChevronLeft className='w-6 h-6' />
                     </button>
                     <button
                         onClick={goToNext}
-                        className='absolute right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer'
+                        className='absolute right-4 z-10 px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm'
                         aria-label='Next image'
                     >
                         <ChevronRight className='w-6 h-6' />

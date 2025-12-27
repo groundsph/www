@@ -36,7 +36,7 @@ export default function CafeTabs({ tabContent, reviewCount }: CafeTabsProps) {
     return (
         <div className='w-full flex flex-col'>
             {/* Tab Headers */}
-            <div className='flex flex-row border-b border-text/10 sticky top-0 bg-background z-10'>
+            <div className='flex flex-row border-b border-text/10 sticky top-0 bg-background z-10 overflow-x-auto'>
                 {TABS.map((tab) => {
                     const Icon = tab.icon
                     const isActive = activeTab === tab.id
@@ -45,7 +45,7 @@ export default function CafeTabs({ tabContent, reviewCount }: CafeTabsProps) {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 font-semibold text-sm transition-colors relative cursor-pointer ${
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 font-semibold text-sm transition-colors relative cursor-pointer ${
                                 isActive
                                     ? "text-primary"
                                     : "text-text/50 hover:text-text/70"
@@ -72,7 +72,7 @@ export default function CafeTabs({ tabContent, reviewCount }: CafeTabsProps) {
             </div>
 
             {/* Tab Content */}
-            <div className='py-4'>
+            <div className='px-4 py-4'>
                 <AnimatePresence mode='wait'>
                     <motion.div
                         key={activeTab}

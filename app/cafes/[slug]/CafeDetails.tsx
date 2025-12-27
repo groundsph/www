@@ -205,7 +205,7 @@ export default function CafeDetails({
             />
 
             {/* Mobile Layout (< md) */}
-            <section className='md:hidden px-4 py-4 w-full'>
+            <section className='md:hidden py-4 w-full'>
                 <CafeTabs
                     reviewCount={reviews.length}
                     menuCount={menuItems.length}
@@ -312,7 +312,7 @@ export default function CafeDetails({
                                     e.stopPropagation()
                                     scroll("left")
                                 }}
-                                className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-primary hover:bg-primary/60 text-background rounded-full transition-all duration-200 cursor-pointer ${
+                                className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm transition-all duration-200 ${
                                     canScrollLeft
                                         ? "opacity-0 group-hover:opacity-100"
                                         : "opacity-0 pointer-events-none"
@@ -328,7 +328,7 @@ export default function CafeDetails({
                                     e.stopPropagation()
                                     scroll("right")
                                 }}
-                                className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center bg-primary hover:bg-primary/60 text-background rounded-full transition-all duration-200 cursor-pointer ${
+                                className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm transition-all duration-200 ${
                                     canScrollRight
                                         ? "opacity-0 group-hover:opacity-100"
                                         : "opacity-0 pointer-events-none"
