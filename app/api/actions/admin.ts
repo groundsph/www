@@ -2480,3 +2480,145 @@ export async function sendVerificationEmail(
 
     return { success: true }
 }
+
+// ============================================
+// User Role Management (Admin Only)
+// ============================================
+
+type UserRole = Database['public']['Enums']['user_role']
+
+export interface TeamMember {
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+    role: UserRole | null
+    created_at: string | null
+}
+
+/**
+ * Search users by username or display name for role assignment
+ * Admin only - only full admins can change roles
+ */
+export async function searchUsersForRoleAssignment(
+    query: string,
+    limit: number = 10
+): Promise<TeamMember[]> {
+    const db = await createClient()
+
+    // Verify admin access (only full admin can manage roles)
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin') {
+        return []
+    }
+
+    if (!query || query.length < 2) {
+        return []
+    }
+
+    const searchTerm = `%${query.trim()}%`
+
+    const { data: users, error } = await db
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, role, created_at')
+        .or(`username.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
+        .limit(limit)
+
+    if (error) {
+        console.error("Error searching users:", error)
+        return []
+    }
+
+    return users as TeamMember[]
+}
+
+/**
+ * Update a user's role
+ * Admin only - only full admins can change roles, and cannot change their own role
+ */
+export async function updateUserRole(
+    targetUserId: string,
+    newRole: UserRole
+): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    // Only full admin can change roles
+    if (profile?.role !== 'admin') {
+        return { success: false, error: "Only admins can change user roles" }
+    }
+
+    // Prevent changing own role
+    if (targetUserId === user.id) {
+        return { success: false, error: "You cannot change your own role" }
+    }
+
+    // Use admin client to bypass RLS
+    const adminDb = await createAdminClient()
+
+    const { error } = await adminDb
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', targetUserId)
+
+    if (error) {
+        console.error("Error updating user role:", error)
+        return { success: false, error: "Failed to update user role" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Get all admins and moderators
+ * Admin only
+ */
+export async function getAdminsAndModerators(): Promise<TeamMember[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin') {
+        return []
+    }
+
+    const { data: users, error } = await db
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, role, created_at')
+        .in('role', ['admin', 'moderator'])
+        .order('role', { ascending: true })
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        console.error("Error fetching admins and moderators:", error)
+        return []
+    }
+
+    return users as TeamMember[]
+}
+

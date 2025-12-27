@@ -57,6 +57,10 @@ import {
     getUsersWithBadge,
     awardBadgeToAllUsers,
     type FeaturedSchedule,
+    type TeamMember,
+    searchUsersForRoleAssignment,
+    updateUserRole,
+    getAdminsAndModerators,
 } from "@/app/api/actions/admin"
 import {
     approveSuggestion,
@@ -130,6 +134,7 @@ type TabType =
     | "suggestions"
     | "featured"
     | "claims"
+    | "team"
 
 export default function AdminDashboard({
     initialPendingCafes,
@@ -240,6 +245,13 @@ export default function AdminDashboard({
     const [awardLoading, setAwardLoading] = useState(false)
     const [searchLoading, setSearchLoading] = useState(false)
     const [isAwardingAll, setIsAwardingAll] = useState(false)
+
+    // Team management state
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+    const [teamSearchQuery, setTeamSearchQuery] = useState("")
+    const [teamSearchResults, setTeamSearchResults] = useState<TeamMember[]>([])
+    const [teamLoading, setTeamLoading] = useState(false)
+    const [teamSearchLoading, setTeamSearchLoading] = useState(false)
 
     const handleApprove = async (cafeId: string) => {
         setProcessing(cafeId)
@@ -760,6 +772,70 @@ export default function AdminDashboard({
         setAwardLoading(false)
     }
 
+    // Team management handlers
+    const loadTeamMembers = async () => {
+        setTeamLoading(true)
+        const members = await getAdminsAndModerators()
+        setTeamMembers(members)
+        setTeamLoading(false)
+    }
+
+    const handleTeamSearch = async (query: string) => {
+        setTeamSearchQuery(query)
+        if (query.length < 2) {
+            setTeamSearchResults([])
+            return
+        }
+        setTeamSearchLoading(true)
+        const results = await searchUsersForRoleAssignment(query)
+        // Filter out users who are already admins/moderators
+        const filtered = results.filter(
+            (u) => !teamMembers.some((tm) => tm.id === u.id)
+        )
+        setTeamSearchResults(filtered)
+        setTeamSearchLoading(false)
+    }
+
+    const handlePromoteUser = async (
+        userId: string,
+        role: "moderator" | "admin"
+    ) => {
+        setTeamLoading(true)
+        const result = await updateUserRole(userId, role)
+        if (result.success) {
+            // Refresh team members list
+            await loadTeamMembers()
+            // Clear search results
+            setTeamSearchResults((prev) => prev.filter((u) => u.id !== userId))
+        } else {
+            alert(result.error || "Failed to update user role")
+        }
+        setTeamLoading(false)
+    }
+
+    const handleDemoteUser = async (userId: string) => {
+        if (
+            !confirm("Are you sure you want to remove this user from the team?")
+        ) {
+            return
+        }
+        setTeamLoading(true)
+        const result = await updateUserRole(userId, "user")
+        if (result.success) {
+            await loadTeamMembers()
+        } else {
+            alert(result.error || "Failed to demote user")
+        }
+        setTeamLoading(false)
+    }
+
+    // Load team members when Team tab is selected
+    useEffect(() => {
+        if (activeTab === "team" && teamMembers.length === 0) {
+            loadTeamMembers()
+        }
+    }, [activeTab])
+
     const AMENITY_ICONS = {
         has_wifi: { icon: Wifi, label: "WiFi" },
         has_sockets: { icon: Plug, label: "Power Outlets" },
@@ -1045,6 +1121,17 @@ export default function AdminDashboard({
                 >
                     <Store className='w-4 h-4' />
                     Claims ({claims.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab("team")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                        activeTab === "team"
+                            ? "bg-blue-500/20 text-blue-500 border-blue-500/30"
+                            : "bg-text/5 border-text/10 hover:bg-text/10"
+                    }`}
+                >
+                    <Users className='w-4 h-4' />
+                    Team
                 </button>
             </div>
 
@@ -2824,6 +2911,174 @@ export default function AdminDashboard({
                             ))}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Team Tab */}
+            {activeTab === "team" && (
+                <div className='space-y-6'>
+                    <div className='flex items-center justify-between'>
+                        <h2 className='text-xl font-semibold flex items-center gap-2'>
+                            <Users className='w-5 h-5' />
+                            Team Management
+                        </h2>
+                        <button
+                            onClick={loadTeamMembers}
+                            disabled={teamLoading}
+                            className='flex items-center gap-2 px-3 py-2 bg-text/5 border border-text/10 rounded-lg hover:bg-text/10 transition disabled:opacity-50'
+                        >
+                            {teamLoading ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                                <RefreshCw className='w-4 h-4' />
+                            )}
+                            Refresh
+                        </button>
+                    </div>
+
+                    {/* Search for users to add */}
+                    <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                        <h3 className='font-medium mb-4'>Add Team Member</h3>
+                        <div className='relative'>
+                            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
+                            <input
+                                type='text'
+                                value={teamSearchQuery}
+                                onChange={(e) =>
+                                    handleTeamSearch(e.target.value)
+                                }
+                                placeholder='Search users by username or display name...'
+                                className='w-full pl-12 pr-4 py-3 bg-background border border-text/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                            />
+                            {teamSearchLoading && (
+                                <Loader2 className='absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40 animate-spin' />
+                            )}
+                        </div>
+
+                        {/* Search results */}
+                        {teamSearchResults.length > 0 && (
+                            <div className='mt-4 space-y-2'>
+                                {teamSearchResults.map((user) => (
+                                    <div
+                                        key={user.id}
+                                        className='flex items-center justify-between p-3 bg-background border border-text/10 rounded-lg'
+                                    >
+                                        <div className='flex items-center gap-3'>
+                                            {user.avatar_url ? (
+                                                <Image
+                                                    src={user.avatar_url}
+                                                    alt={user.display_name}
+                                                    width={40}
+                                                    height={40}
+                                                    className='rounded-full'
+                                                />
+                                            ) : (
+                                                <div className='w-10 h-10 rounded-full bg-text/10 flex items-center justify-center'>
+                                                    <Users className='w-5 h-5 text-text/40' />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className='font-medium'>
+                                                    {user.display_name}
+                                                </p>
+                                                <p className='text-sm text-text/60'>
+                                                    @{user.username}
+                                                </p>
+                                            </div>
+                                            {user.role && (
+                                                <span className='px-2 py-1 text-xs rounded-full bg-text/10'>
+                                                    {user.role}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className='flex gap-2'>
+                                            <button
+                                                onClick={() =>
+                                                    handlePromoteUser(
+                                                        user.id,
+                                                        "moderator"
+                                                    )
+                                                }
+                                                disabled={teamLoading}
+                                                className='px-3 py-1.5 text-sm bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/30 transition disabled:opacity-50'
+                                            >
+                                                Make Moderator
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Current team members */}
+                    <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                        <h3 className='font-medium mb-4'>
+                            Current Team ({teamMembers.length})
+                        </h3>
+                        {teamLoading && teamMembers.length === 0 ? (
+                            <div className='flex items-center justify-center py-8'>
+                                <Loader2 className='w-6 h-6 animate-spin text-text/40' />
+                            </div>
+                        ) : teamMembers.length === 0 ? (
+                            <p className='text-text/60 text-center py-8'>
+                                No team members found
+                            </p>
+                        ) : (
+                            <div className='space-y-2'>
+                                {teamMembers.map((member) => (
+                                    <div
+                                        key={member.id}
+                                        className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'
+                                    >
+                                        <div className='flex items-center gap-3'>
+                                            {member.avatar_url ? (
+                                                <Image
+                                                    src={member.avatar_url}
+                                                    alt={member.display_name}
+                                                    width={48}
+                                                    height={48}
+                                                    className='rounded-full'
+                                                />
+                                            ) : (
+                                                <div className='w-12 h-12 rounded-full bg-text/10 flex items-center justify-center'>
+                                                    <Users className='w-6 h-6 text-text/40' />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className='font-medium'>
+                                                    {member.display_name}
+                                                </p>
+                                                <p className='text-sm text-text/60'>
+                                                    @{member.username}
+                                                </p>
+                                            </div>
+                                            <span
+                                                className={`px-3 py-1 text-sm rounded-full ${
+                                                    member.role === "admin"
+                                                        ? "bg-red-500/20 text-red-500"
+                                                        : "bg-blue-500/20 text-blue-500"
+                                                }`}
+                                            >
+                                                {member.role}
+                                            </span>
+                                        </div>
+                                        {member.role === "moderator" && (
+                                            <button
+                                                onClick={() =>
+                                                    handleDemoteUser(member.id)
+                                                }
+                                                disabled={teamLoading}
+                                                className='px-3 py-1.5 text-sm bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
