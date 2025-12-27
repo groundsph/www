@@ -25,6 +25,8 @@ import {
     Upload,
     FileText,
     Trash2,
+    Search,
+    AlertCircle,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
@@ -53,6 +55,7 @@ import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
 import ImageCropper from "@/components/ui/ImageCropper"
 
 const STEPS = [
+    { id: 0, title: "Before We Begin", icon: Search },
     { id: 1, title: "Basic Info", icon: Coffee },
     { id: 2, title: "Location", icon: MapPin },
     { id: 3, title: "Amenities", icon: Settings },
@@ -70,10 +73,16 @@ interface CafeSubmissionFormProps {
 export default function CafeSubmissionForm({
     onSuccess,
 }: CafeSubmissionFormProps) {
-    const [currentStep, setCurrentStep] = useState(1)
+    const [currentStep, setCurrentStep] = useState(0)
     const [formData, setFormData] = useState<CafeSubmission>(
         DEFAULT_CAFE_SUBMISSION
     )
+
+    // "Before We Begin" step state
+    const [preSearchQuery, setPreSearchQuery] = useState("")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Cafe search results have dynamic shape
+    const [preSearchResults, setPreSearchResults] = useState<any[]>([])
+    const [isSearching, setIsSearching] = useState(false)
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(
         null
@@ -168,8 +177,10 @@ export default function CafeSubmissionForm({
         setProcessingStatus("")
         setIsProcessing(false)
         setSuccess(false)
-        setCurrentStep(1)
+        setCurrentStep(0)
         setError(null)
+        setPreSearchQuery("")
+        setPreSearchResults([])
         setPossibleDuplicates([])
         setCustomPaymentMethods("")
         setCustomSpecialties("")
@@ -179,6 +190,9 @@ export default function CafeSubmissionForm({
 
     const validateStep = (step: number): string | null => {
         switch (step) {
+            case 0:
+                // No strict validation for "Before We Begin" - just informational
+                break
             case 1:
                 if (!formData.name.trim()) return "Cafe name is required"
                 // Thumbnail is now optional
@@ -203,13 +217,23 @@ export default function CafeSubmissionForm({
             return
         }
         setError(null)
-        setCurrentStep((prev) => Math.min(prev + 1, STEPS.length))
+
+        // Auto-fill cafe name from search query when moving from step 0 to 1
+        if (
+            currentStep === 0 &&
+            preSearchQuery.trim() &&
+            !formData.name.trim()
+        ) {
+            updateFormData("name", preSearchQuery.trim())
+        }
+
+        setCurrentStep((prev) => Math.min(prev + 1, STEPS[STEPS.length - 1].id))
         window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
     const prevStep = () => {
         setError(null)
-        setCurrentStep((prev) => Math.max(prev - 1, 1))
+        setCurrentStep((prev) => Math.max(prev - 1, 0))
         window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
@@ -591,6 +615,230 @@ export default function CafeSubmissionForm({
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.2 }}
                     >
+                        {/* Step 0: Before We Begin */}
+                        {currentStep === 0 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Before We Begin
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        Please read through these guidelines
+                                        before submitting
+                                    </p>
+                                </div>
+
+                                {/* What qualifies as a cafe */}
+                                <div className='p-5 bg-primary/5 border border-primary/20 rounded-xl'>
+                                    <div className='flex items-start gap-3 mb-4'>
+                                        <div className='p-2 bg-primary/10 rounded-full text-primary'>
+                                            <Coffee className='w-5 h-5' />
+                                        </div>
+                                        <div>
+                                            <h4 className='font-semibold text-lg'>
+                                                What qualifies as a cafe?
+                                            </h4>
+                                            <p className='text-text/60 text-sm'>
+                                                Grounds focuses on sit-down
+                                                coffee experiences
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ul className='space-y-3 ml-1'>
+                                        <li className='flex items-start gap-3'>
+                                            <Check className='w-5 h-5 text-green-600 shrink-0 mt-0.5' />
+                                            <span className='text-sm'>
+                                                <strong>Seating area</strong> —
+                                                Must have tables and chairs for
+                                                customers to sit and enjoy their
+                                                drinks
+                                            </span>
+                                        </li>
+                                        <li className='flex items-start gap-3'>
+                                            <Check className='w-5 h-5 text-green-600 shrink-0 mt-0.5' />
+                                            <span className='text-sm'>
+                                                <strong>
+                                                    Coffee or tea service
+                                                </strong>{" "}
+                                                — Serves freshly prepared
+                                                coffee, espresso, or tea
+                                                beverages
+                                            </span>
+                                        </li>
+                                        <li className='flex items-start gap-3'>
+                                            <AlertCircle className='w-5 h-5 text-orange-500 shrink-0 mt-0.5' />
+                                            <span className='text-sm'>
+                                                <strong>
+                                                    Not kiosks or counters
+                                                </strong>{" "}
+                                                — Grab-and-go stands, mall
+                                                kiosks, or takeout-only counters
+                                                don&apos;t qualify
+                                            </span>
+                                        </li>
+                                        <li className='flex items-start gap-3'>
+                                            <AlertCircle className='w-5 h-5 text-orange-500 shrink-0 mt-0.5' />
+                                            <span className='text-sm'>
+                                                <strong>
+                                                    Not convenience stores
+                                                </strong>{" "}
+                                                — Stores with a coffee machine
+                                                (like 7-Eleven) are not cafes
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                {/* Search for existing cafe */}
+                                <div className='p-5 bg-secondary/30 border border-secondary/50 rounded-xl'>
+                                    <div className='flex items-start gap-3 mb-4'>
+                                        <div className='p-2 bg-secondary/50 rounded-full text-text/80'>
+                                            <Search className='w-5 h-5' />
+                                        </div>
+                                        <div>
+                                            <h4 className='font-semibold text-lg'>
+                                                Check if the cafe already exists
+                                            </h4>
+                                            <p className='text-text/60 text-sm'>
+                                                Search below to avoid submitting
+                                                duplicates
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className='relative'>
+                                        <input
+                                            type='text'
+                                            value={preSearchQuery}
+                                            onChange={async (e) => {
+                                                const query = e.target.value
+                                                setPreSearchQuery(query)
+
+                                                if (query.trim().length >= 3) {
+                                                    setIsSearching(true)
+                                                    try {
+                                                        const results =
+                                                            await searchCafesSimple(
+                                                                query.trim()
+                                                            )
+                                                        setPreSearchResults(
+                                                            results
+                                                        )
+                                                    } catch (err) {
+                                                        console.error(
+                                                            "[PreSearch] Error:",
+                                                            err
+                                                        )
+                                                        setPreSearchResults([])
+                                                    } finally {
+                                                        setIsSearching(false)
+                                                    }
+                                                } else {
+                                                    setPreSearchResults([])
+                                                }
+                                            }}
+                                            placeholder='Type the cafe name to search...'
+                                            className='w-full px-4 py-3 pl-11 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                        />
+                                        <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                        {isSearching && (
+                                            <Loader2 className='absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin' />
+                                        )}
+                                    </div>
+
+                                    {/* Search Results */}
+                                    <AnimatePresence>
+                                        {preSearchResults.length > 0 && (
+                                            <motion.div
+                                                initial={{
+                                                    opacity: 0,
+                                                    height: 0,
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    height: "auto",
+                                                }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className='overflow-hidden'
+                                            >
+                                                <div className='mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl'>
+                                                    <p className='text-sm font-medium text-yellow-800 mb-2'>
+                                                        Found{" "}
+                                                        {
+                                                            preSearchResults.length
+                                                        }{" "}
+                                                        similar cafe(s):
+                                                    </p>
+                                                    <div className='space-y-2'>
+                                                        {preSearchResults.map(
+                                                            (cafe) => (
+                                                                <a
+                                                                    key={
+                                                                        cafe.id
+                                                                    }
+                                                                    href={`/cafes/${cafe.slug}`}
+                                                                    target='_blank'
+                                                                    rel='noopener noreferrer'
+                                                                    className='flex items-center gap-3 p-2 bg-white/80 hover:bg-white rounded-lg border border-yellow-100 hover:border-yellow-300 transition-colors group'
+                                                                >
+                                                                    <div className='w-10 h-10 bg-gray-100 rounded-md overflow-hidden shrink-0'>
+                                                                        {cafe.thumbnail_url ? (
+                                                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                                                            <img
+                                                                                src={
+                                                                                    cafe.thumbnail_url
+                                                                                }
+                                                                                alt={
+                                                                                    cafe.name
+                                                                                }
+                                                                                className='w-full h-full object-cover'
+                                                                            />
+                                                                        ) : (
+                                                                            <div className='w-full h-full flex items-center justify-center text-gray-400'>
+                                                                                <Coffee className='w-5 h-5' />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className='flex-1 min-w-0'>
+                                                                        <p className='font-semibold text-sm truncate text-gray-900 group-hover:text-primary'>
+                                                                            {
+                                                                                cafe.name
+                                                                            }
+                                                                        </p>
+                                                                        <p className='text-xs text-gray-500 truncate'>
+                                                                            {cafe.address_display ||
+                                                                                "No address provided"}
+                                                                        </p>
+                                                                    </div>
+                                                                    <ExternalLink className='w-4 h-4 text-gray-400 group-hover:text-primary shrink-0' />
+                                                                </a>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                    <p className='text-xs text-yellow-700 mt-3'>
+                                                        If your cafe is listed
+                                                        above, no need to submit
+                                                        it again!
+                                                    </p>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    {preSearchQuery.trim().length >= 3 &&
+                                        preSearchResults.length === 0 &&
+                                        !isSearching && (
+                                            <p className='mt-3 text-sm text-green-700 flex items-center gap-2'>
+                                                <Check className='w-4 h-4' />
+                                                No existing cafes found with
+                                                that name. You&apos;re good to
+                                                go!
+                                            </p>
+                                        )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Step 1: Basic Info */}
                         {currentStep === 1 && (
                             <div className='space-y-6'>
@@ -2288,14 +2536,14 @@ export default function CafeSubmissionForm({
                 <button
                     type='button'
                     onClick={prevStep}
-                    disabled={currentStep === 1}
+                    disabled={currentStep === 0}
                     className='flex items-center gap-2 px-6 py-3 text-text/60 hover:text-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
                 >
                     <ChevronLeft className='w-5 h-5' />
                     Previous
                 </button>
 
-                {currentStep < STEPS.length ? (
+                {currentStep < STEPS[STEPS.length - 1].id ? (
                     <button
                         type='button'
                         onClick={nextStep}

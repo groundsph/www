@@ -533,7 +533,9 @@ export default function CafesPageClient() {
                                                     }`}
                                                 >
                                                     {openStatus.isOpen
-                                                        ? `Open | Closes at ${openStatus.closesAt}`
+                                                        ? openStatus.closesAt
+                                                            ? `Open | Closes at ${openStatus.closesAt}`
+                                                            : "Open 24/7"
                                                         : openStatus.opensAt
                                                           ? `Closed | Opens at ${openStatus.opensAt}`
                                                           : "Closed"}
