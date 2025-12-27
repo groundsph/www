@@ -901,7 +901,7 @@ export default function CafeEditor({
                                     onReorder={(newOrder) =>
                                         updateField("gallery", newOrder)
                                     }
-                                    className='flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-text/10 scrollbar-track-transparent'
+                                    className='flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-text/10'
                                 >
                                     {cafe.gallery.map((url, idx) => (
                                         <Reorder.Item
@@ -917,7 +917,7 @@ export default function CafeEditor({
                                             />
 
                                             {/* Move Controls */}
-                                            <div className='absolute bottom-2 left-2 right-2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-2 py-1 backdrop-blur-sm z-10'>
+                                            <div className='absolute bottom-2 left-2 right-2 flex justify-between md:opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-2 py-1 backdrop-blur-sm z-10'>
                                                 <button
                                                     type='button'
                                                     onClick={(e) => {
@@ -972,7 +972,7 @@ export default function CafeEditor({
                                                         ) || []
                                                     )
                                                 }}
-                                                className='absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-red-600 z-10'
+                                                className='absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full md:opacity-0 group-hover:opacity-100 transition hover:bg-red-600 z-10'
                                                 title='Remove image'
                                             >
                                                 <X className='w-4 h-4' />
