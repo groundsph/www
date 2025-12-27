@@ -17,6 +17,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { StarIcon } from "lucide-react"
 import MarkerClusterGroup from "react-leaflet-cluster"
 import { trackMapUsage } from "@/utils/badges/badge-logic"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface CafeMapProps {
     cafes: CafeWithRatings[]
@@ -236,7 +237,9 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                         {cafe.thumbnail && (
                                             /* eslint-disable-next-line @next/next/no-img-element -- Leaflet popups don't support next/image */
                                             <img
-                                                src={cafe.thumbnail}
+                                                src={getCafeThumbnailUrl(
+                                                    cafe.thumbnail
+                                                )}
                                                 alt={cafe.name}
                                                 className='object-cover w-full h-full'
                                             />

@@ -181,7 +181,7 @@ export default function CafeSubmissionForm({
         switch (step) {
             case 1:
                 if (!formData.name.trim()) return "Cafe name is required"
-                if (!thumbnailFile) return "Thumbnail image is required"
+                // Thumbnail is now optional
                 break
             case 2:
                 if (!formData.region) return "Please select a region"
@@ -292,21 +292,50 @@ export default function CafeSubmissionForm({
                 )
             }
 
-            // 1. Process Thumbnail
-            if (!thumbnailFile) {
-                throw new Error("Thumbnail is required")
+            // 1. Process Thumbnail (optional)
+            let thumbnailUrl: string | null = null
+            if (thumbnailFile) {
+                setProcessingStatus("Cropping and compressing thumbnail...")
+                const processedThumbnail = await cropAndResizeImage(
+                    thumbnailFile,
+                    {
+                        targetAspectRatio: 16 / 9,
+                        maxWidth: 2560,
+                        maxHeight: 1440,
+                        quality: 0.9,
+                        format: "image/webp",
+                    }
+                )
+
+                setIsProcessing(false)
+                setProcessingStatus("Uploading images...")
+
+                // 2. Upload Thumbnail
+                console.log("[Cafe Submit] Uploading thumbnail...")
+                setUploadProgress((prev) => ({ ...prev, thumbnail: 0 }))
+
+                const thumbnailResult = await uploadCafeImageWithProgress(
+                    processedThumbnail,
+                    (progress: number) => {
+                        setUploadProgress((prev) => ({
+                            ...prev,
+                            thumbnail: progress,
+                        }))
+                    }
+                )
+
+                if (!thumbnailResult.success || !thumbnailResult.url) {
+                    throw new Error(
+                        thumbnailResult.error || "Failed to upload thumbnail"
+                    )
+                }
+                thumbnailUrl = thumbnailResult.url
+            } else {
+                setIsProcessing(false)
+                setProcessingStatus("Uploading images...")
             }
 
-            setProcessingStatus("Cropping and compressing thumbnail...")
-            const processedThumbnail = await cropAndResizeImage(thumbnailFile, {
-                targetAspectRatio: 16 / 9,
-                maxWidth: 2560,
-                maxHeight: 1440,
-                quality: 0.9,
-                format: "image/webp",
-            })
-
-            // 2. Process Gallery Images
+            // 3. Process Gallery Images
             setProcessingStatus(
                 `Compressing ${galleryFiles.length} gallery images...`
             )
@@ -320,29 +349,6 @@ export default function CafeSubmissionForm({
                     format: "image/webp",
                 })
                 processedGalleryFiles.push(processed)
-            }
-
-            setIsProcessing(false)
-            setProcessingStatus("Uploading images...")
-
-            // 3. Upload Thumbnail
-            console.log("[Cafe Submit] Uploading thumbnail...")
-            setUploadProgress((prev) => ({ ...prev, thumbnail: 0 }))
-
-            const thumbnailResult = await uploadCafeImageWithProgress(
-                processedThumbnail,
-                (progress: number) => {
-                    setUploadProgress((prev) => ({
-                        ...prev,
-                        thumbnail: progress,
-                    }))
-                }
-            )
-
-            if (!thumbnailResult.success || !thumbnailResult.url) {
-                throw new Error(
-                    thumbnailResult.error || "Failed to upload thumbnail"
-                )
             }
 
             // 4. Upload Gallery Images
@@ -425,7 +431,7 @@ export default function CafeSubmissionForm({
             } = formData
             const result = await submitCafe(
                 serializableFormData,
-                thumbnailResult.url,
+                thumbnailUrl,
                 galleryUrls
             )
 
@@ -759,12 +765,17 @@ export default function CafeSubmissionForm({
                                     </div>
 
                                     <div>
-                                        <label className='block text-sm font-medium mb-2'>
+                                        <label className='block text-sm font-medium mb-1'>
                                             Cover Photo{" "}
-                                            <span className='text-red-500'>
-                                                *
+                                            <span className='text-text/50 font-normal'>
+                                                (Optional)
                                             </span>
                                         </label>
+                                        <p className='text-xs text-text/50 mb-2'>
+                                            Cafes without a cover photo
+                                            won&apos;t be featured on the
+                                            homepage.
+                                        </p>
                                         {thumbnailFile ? (
                                             <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-text/20 bg-text/5'>
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}

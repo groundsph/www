@@ -41,6 +41,7 @@ import {
     deleteMenuItem,
 } from "@/app/api/actions/owner"
 import { useNotification } from "@/components/NotificationProvider"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface CafeManagementClientProps {
     cafe: CafeWithRatings
@@ -309,7 +310,7 @@ export default function CafeManagementClient({
                     <div className='relative w-full md:w-48 h-32 md:h-32 rounded-xl overflow-hidden bg-text/10 shrink-0'>
                         {cafe.thumbnail ? (
                             <Image
-                                src={cafe.thumbnail}
+                                src={getCafeThumbnailUrl(cafe.thumbnail)}
                                 alt={cafe.name}
                                 fill
                                 className='object-cover'

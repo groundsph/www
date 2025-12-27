@@ -16,7 +16,7 @@ import {
     Store,
 } from "lucide-react"
 import { useState } from "react"
-import { isOpenNow } from "@/utils/extras"
+import { getCafeThumbnailUrl, isOpenNow } from "@/utils/extras"
 import { User } from "@supabase/supabase-js"
 
 interface CafeHeroProps {
@@ -75,7 +75,7 @@ export default function CafeHero({
             {/* Background Image */}
             <div className='absolute w-full h-full bg-linear-to-r from-black/70 to-transparent select-none'>
                 <Image
-                    src={cafe.thumbnail}
+                    src={getCafeThumbnailUrl(cafe.thumbnail)}
                     alt=''
                     fill
                     className='object-cover object-center -z-1'

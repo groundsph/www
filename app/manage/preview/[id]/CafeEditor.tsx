@@ -62,6 +62,7 @@ import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
 import { resizeImage } from "@/utils/image-processing"
 import ImageCropper from "@/components/ui/ImageCropper"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
@@ -588,12 +589,19 @@ export default function CafeEditor({
             {/* Cover Image */}
             <div className='relative h-auto aspect-6/2 rounded-xl overflow-hidden bg-text/5'>
                 {cafe.thumbnail ? (
-                    <Image
-                        src={cafe.thumbnail}
-                        alt={cafe.name}
-                        fill
-                        className='object-cover'
-                    />
+                    <>
+                        <Image
+                            src={getCafeThumbnailUrl(cafe.thumbnail)}
+                            alt={cafe.name}
+                            fill
+                            className='object-cover'
+                        />
+                        {cafe.thumbnail === "placeholder" && (
+                            <div className='absolute top-3 left-3 px-2 py-1 bg-amber-500/90 text-white text-xs font-medium rounded'>
+                                Placeholder Image
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <div className='w-full h-full flex items-center justify-center text-text/30'>
                         No cover image
@@ -768,12 +776,22 @@ export default function CafeEditor({
                             <div className='relative group'>
                                 <div className='relative h-auto aspect-video rounded-xl overflow-hidden bg-text/10'>
                                     {cafe.thumbnail ? (
-                                        <Image
-                                            src={cafe.thumbnail}
-                                            alt={cafe.name}
-                                            fill
-                                            className='object-cover'
-                                        />
+                                        <>
+                                            <Image
+                                                src={getCafeThumbnailUrl(
+                                                    cafe.thumbnail
+                                                )}
+                                                alt={cafe.name}
+                                                fill
+                                                className='object-cover'
+                                            />
+                                            {cafe.thumbnail ===
+                                                "placeholder" && (
+                                                <div className='absolute top-3 left-3 px-2 py-1 bg-amber-500/90 text-white text-xs font-medium rounded z-10'>
+                                                    Placeholder Image
+                                                </div>
+                                            )}
+                                        </>
                                     ) : (
                                         <div className='w-full h-full flex items-center justify-center text-text/30'>
                                             <ImagePlus className='w-12 h-12' />

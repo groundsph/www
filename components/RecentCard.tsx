@@ -4,6 +4,7 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { ArrowRightIcon } from "lucide-react"
 import Image from "next/image"
 import { motion } from "motion/react"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 export default function RecentCard({
     cafe,
@@ -24,7 +25,7 @@ export default function RecentCard({
             <div className='relative rounded-3xl overflow-clip w-full h-auto aspect-square select-none bg-secondary/10'>
                 {cafe.thumbnail && (
                     <Image
-                        src={cafe.thumbnail}
+                        src={getCafeThumbnailUrl(cafe.thumbnail)}
                         alt=''
                         fill
                         className='object-cover'

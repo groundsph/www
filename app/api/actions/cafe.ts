@@ -79,6 +79,7 @@ export async function getDailyFeatured() {
             cafe_rating_stats(average_rating, total_reviews)
         `)
         .eq("is_published", true)
+        .neq("thumbnail", "placeholder") // Exclude cafes without photos from featured
         .order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
         .limit(10) // Fetch a pool to rotate
 
@@ -189,6 +190,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             .from("cafes")
             .select("*, cafe_rating_stats(average_rating, total_reviews)")
             .eq("is_published", true)
+            .neq("thumbnail", "placeholder") // Exclude cafes without photos from featured
             .ilike("city_municipality", `%${city}%`)
             .order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
             .limit(10)
@@ -205,6 +207,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             .from("cafes")
             .select("*, cafe_rating_stats(average_rating, total_reviews)")
             .eq("is_published", true)
+            .neq("thumbnail", "placeholder") // Exclude cafes without photos from featured
             .ilike("region", `%${region}%`)
             .order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
             .limit(10)

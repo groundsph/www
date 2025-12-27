@@ -90,3 +90,19 @@ export function isOpenNow(operatingHours?: OperatingHours | null): { isOpen: boo
         return { isOpen: false };
     }
 }
+
+/**
+ * Placeholder URL constant for cafes without uploaded thumbnails
+ */
+export const CAFE_PLACEHOLDER_URL = "https://uriwhfpoprbrcehboadj.supabase.co/storage/v1/object/public/cafes/placeholder.jpg";
+
+/**
+ * Resolve cafe thumbnail - returns actual URL or placeholder image URL
+ * When thumbnail === "placeholder", returns the actual placeholder image URL
+ */
+export function getCafeThumbnailUrl(thumbnail: string): string {
+    if (thumbnail === "placeholder") {
+        return CAFE_PLACEHOLDER_URL;
+    }
+    return thumbnail;
+}

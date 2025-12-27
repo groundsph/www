@@ -69,6 +69,7 @@ import {
 import { approveClaim, rejectClaim, CafeClaim } from "@/app/api/actions/claim"
 import { EditSuggestion } from "@/utils/types/suggestions"
 import { uploadBadgeImage } from "@/utils/supabase/storage"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
@@ -1580,7 +1581,9 @@ export default function ManageDashboard({
                                             <div className='relative w-full sm:w-20 h-32 sm:h-20 shrink-0 rounded-lg overflow-hidden'>
                                                 {cafe.thumbnail ? (
                                                     <Image
-                                                        src={cafe.thumbnail}
+                                                        src={getCafeThumbnailUrl(
+                                                            cafe.thumbnail
+                                                        )}
                                                         alt={cafe.name}
                                                         fill
                                                         className='object-cover'
@@ -2722,9 +2725,9 @@ export default function ManageDashboard({
                                             <div className='flex items-center gap-3'>
                                                 {claim.cafe?.thumbnail ? (
                                                     <Image
-                                                        src={
+                                                        src={getCafeThumbnailUrl(
                                                             claim.cafe.thumbnail
-                                                        }
+                                                        )}
                                                         alt={
                                                             claim.cafe.name ||
                                                             "Cafe"

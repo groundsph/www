@@ -24,6 +24,7 @@ import {
     searchCafesForFeatured,
     checkFeaturedConflict,
 } from "@/app/api/actions/admin"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface FeaturedScheduleManagerProps {
     initialSchedules: FeaturedSchedule[]
@@ -476,7 +477,9 @@ export default function FeaturedScheduleManager({
                                     <div className='w-16 h-16 relative rounded-lg overflow-hidden shrink-0'>
                                         {schedule.cafe?.thumbnail ? (
                                             <Image
-                                                src={schedule.cafe.thumbnail}
+                                                src={getCafeThumbnailUrl(
+                                                    schedule.cafe.thumbnail
+                                                )}
                                                 alt={schedule.cafe.name}
                                                 fill
                                                 className='object-cover'
@@ -580,7 +583,9 @@ export default function FeaturedScheduleManager({
                                         <div className='w-10 h-10 relative rounded overflow-hidden shrink-0'>
                                             {selectedCafe.thumbnail ? (
                                                 <Image
-                                                    src={selectedCafe.thumbnail}
+                                                    src={getCafeThumbnailUrl(
+                                                        selectedCafe.thumbnail
+                                                    )}
                                                     alt={selectedCafe.name}
                                                     fill
                                                     className='object-cover'
@@ -643,9 +648,9 @@ export default function FeaturedScheduleManager({
                                                             <div className='w-8 h-8 relative rounded overflow-hidden shrink-0'>
                                                                 {cafe.thumbnail ? (
                                                                     <Image
-                                                                        src={
+                                                                        src={getCafeThumbnailUrl(
                                                                             cafe.thumbnail
-                                                                        }
+                                                                        )}
                                                                         alt={
                                                                             cafe.name
                                                                         }

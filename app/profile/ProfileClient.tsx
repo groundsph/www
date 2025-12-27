@@ -11,6 +11,7 @@ import {
 } from "@/app/api/actions/profile"
 import { getOwnedCafes } from "@/app/api/actions/owner"
 import { uploadAvatarClient } from "@/utils/supabase/storage-client"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -628,7 +629,9 @@ export default function ProfileClient() {
                                         {cafe.thumbnail ? (
                                             <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
                                                 <Image
-                                                    src={cafe.thumbnail}
+                                                    src={getCafeThumbnailUrl(
+                                                        cafe.thumbnail
+                                                    )}
                                                     alt={cafe.name}
                                                     fill
                                                     className='object-cover'
@@ -1062,7 +1065,9 @@ export default function ProfileClient() {
                                         <div className='relative w-10 h-10 rounded-lg overflow-hidden shrink-0'>
                                             {review.cafe?.thumbnail ? (
                                                 <Image
-                                                    src={review.cafe.thumbnail}
+                                                    src={getCafeThumbnailUrl(
+                                                        review.cafe.thumbnail
+                                                    )}
                                                     alt={review.cafe.name}
                                                     fill
                                                     className='object-cover'

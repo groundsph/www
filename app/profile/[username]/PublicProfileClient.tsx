@@ -5,6 +5,7 @@ import {
     getCafesByIds,
     getUserReviews,
 } from "@/app/api/actions/profile"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -634,7 +635,9 @@ export default function PublicProfileClient({
                                         <div className='relative w-10 h-10 rounded-lg overflow-hidden shrink-0'>
                                             {review.cafe?.thumbnail ? (
                                                 <Image
-                                                    src={review.cafe.thumbnail}
+                                                    src={getCafeThumbnailUrl(
+                                                        review.cafe.thumbnail
+                                                    )}
                                                     alt={review.cafe.name}
                                                     fill
                                                     className='object-cover'

@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface OwnerDashboardClientProps {
     cafes: OwnedCafe[]
@@ -200,7 +201,9 @@ export default function OwnerDashboardClient({
                             <div className='relative w-full sm:w-40 h-32 sm:h-auto bg-text/10 shrink-0'>
                                 {cafe.thumbnail ? (
                                     <Image
-                                        src={cafe.thumbnail}
+                                        src={getCafeThumbnailUrl(
+                                            cafe.thumbnail
+                                        )}
                                         alt={cafe.name}
                                         fill
                                         className='object-cover'

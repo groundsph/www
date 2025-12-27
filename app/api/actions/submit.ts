@@ -51,7 +51,7 @@ export interface SubmitCafeResult {
  */
 export async function submitCafe(
     formData: SerializableCafeSubmission,
-    thumbnailUrl: string,
+    thumbnailUrl: string | null,
     galleryUrls: string[]
 ): Promise<SubmitCafeResult> {
     const db = await createClient()
@@ -75,9 +75,8 @@ export async function submitCafe(
     if (formData.lat === null || formData.lng === null) {
         return { success: false, error: "Please select a location on the map" }
     }
-    if (!thumbnailUrl) {
-        return { success: false, error: "Thumbnail image is required" }
-    }
+    // Thumbnail is now optional - use placeholder if not provided
+    const finalThumbnail = thumbnailUrl || "placeholder"
 
     try {
         // Generate unique slug
@@ -106,7 +105,7 @@ export async function submitCafe(
                 name: formData.name.trim(),
                 slug,
                 description: formData.description.trim() || null,
-                thumbnail: thumbnailUrl,
+                thumbnail: finalThumbnail,
                 gallery: galleryUrls.length > 0 ? galleryUrls : null,
 
                 // Location

@@ -1,6 +1,6 @@
 "use client"
 
-import { getPriceLevel, isOpenNow } from "@/utils/extras"
+import { getCafeThumbnailUrl, getPriceLevel, isOpenNow } from "@/utils/extras"
 import Image from "next/image"
 import { AnimatePresence, motion } from "motion/react"
 import {
@@ -618,7 +618,9 @@ export default function CafesPageClient() {
                                     </div>
                                     <div className='flex-1 relative object-clip aspect-square md:aspect-auto'>
                                         <Image
-                                            src={cafe.thumbnail}
+                                            src={getCafeThumbnailUrl(
+                                                cafe.thumbnail
+                                            )}
                                             alt=''
                                             fill
                                             className='object-cover rounded-2xl'

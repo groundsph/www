@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"
 import { getCafeMenuItems } from "@/app/api/actions/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 export async function generateMetadata({
     params,
@@ -22,6 +23,10 @@ export async function generateMetadata({
 
     const { name, description, address_display, thumbnail, tags, specialty } =
         cafe
+
+    // Only use real thumbnails for OG images, not placeholders (will inherit site default)
+    const thumbnailUrl =
+        thumbnail && thumbnail !== "placeholder" ? thumbnail : undefined
 
     const metaDescription =
         description ||
@@ -46,13 +51,13 @@ export async function generateMetadata({
             title: name,
             description: metaDescription,
             type: "website",
-            images: thumbnail ? [{ url: thumbnail }] : undefined,
+            images: thumbnailUrl ? [{ url: thumbnailUrl }] : undefined,
         },
         twitter: {
             card: "summary_large_image",
             title: name,
             description: metaDescription,
-            images: thumbnail ? [thumbnail] : undefined,
+            images: thumbnailUrl ? [thumbnailUrl] : undefined,
         },
     }
 }
@@ -78,7 +83,7 @@ function generateJsonLd(cafe: CafeWithRatings) {
         "@type": "CafeOrCoffeeShop",
         name: cafe.name,
         description: cafe.description,
-        image: cafe.thumbnail,
+        image: cafe.thumbnail ? getCafeThumbnailUrl(cafe.thumbnail) : undefined,
         address: {
             "@type": "PostalAddress",
             streetAddress: cafe.address_display,

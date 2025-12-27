@@ -2165,6 +2165,7 @@ export async function searchCafesForFeatured(query: string): Promise<{
         .from('cafes')
         .select('id, name, slug, thumbnail, city_municipality, region')
         .eq('is_published', true)
+        .neq('thumbnail', 'placeholder') // Exclude cafes without photos from featured selection
         .ilike('name', `%${query}%`)
         .order('name')
         .limit(10)
