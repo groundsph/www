@@ -394,3 +394,140 @@ export async function trackMapUsage(): Promise<{ awarded: boolean; error?: strin
         return { awarded: false, error: "Failed to track map usage" }
     }
 }
+
+// ============================================
+// Badge Backfill Function (Admin Only)
+// ============================================
+
+/**
+ * Backfill badges for all existing users
+ * Checks scout, review, geographic, and supporter badges for each user
+ * This is an admin-only operation for one-time badge backfill
+ */
+export async function backfillBadgesForAllUsers(): Promise<{
+    success: boolean
+    usersProcessed: number
+    badgesAwarded: number
+    errors: string[]
+}> {
+    const db = await createClient()
+
+    // Verify admin access
+    const {
+        data: { user },
+    } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, usersProcessed: 0, badgesAwarded: 0, errors: ["Not authenticated"] }
+    }
+
+    const { data: profile } = await db
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    if (profile?.role !== "admin") {
+        return { success: false, usersProcessed: 0, badgesAwarded: 0, errors: ["Unauthorized - Admin only"] }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Get all user IDs
+    const { data: profiles, error: fetchError } = await adminDb
+        .from("profiles")
+        .select("id")
+
+    if (fetchError || !profiles) {
+        return {
+            success: false,
+            usersProcessed: 0,
+            badgesAwarded: 0,
+            errors: [`Failed to fetch users: ${fetchError?.message}`],
+        }
+    }
+
+    let usersProcessed = 0
+    let totalBadgesAwarded = 0
+    const errors: string[] = []
+
+    console.log(`[Badge Backfill] Starting backfill for ${profiles.length} users...`)
+
+    for (const userProfile of profiles) {
+        try {
+            // Check all badge types for this user
+            const awardedBadges = await checkAndAwardBadgesInternal(
+                db,
+                adminDb,
+                userProfile.id,
+                {
+                    scout: true,
+                    reviews: true,
+                    geographic: true,
+                    supporter: true,
+                }
+            )
+
+            totalBadgesAwarded += awardedBadges.length
+            usersProcessed++
+
+            if (awardedBadges.length > 0) {
+                console.log(`[Badge Backfill] User ${userProfile.id} earned: ${awardedBadges.join(", ")}`)
+            }
+        } catch (error) {
+            const errorMsg = `Error processing user ${userProfile.id}: ${error}`
+            console.error(`[Badge Backfill] ${errorMsg}`)
+            errors.push(errorMsg)
+        }
+    }
+
+    console.log(
+        `[Badge Backfill] Complete. Processed ${usersProcessed} users, awarded ${totalBadgesAwarded} badges.`
+    )
+
+    return {
+        success: true,
+        usersProcessed,
+        badgesAwarded: totalBadgesAwarded,
+        errors,
+    }
+}
+
+/**
+ * Internal badge check function that accepts db clients as parameters
+ * Used by both regular checks and backfill
+ */
+async function checkAndAwardBadgesInternal(
+    db: Awaited<ReturnType<typeof createClient>>,
+    adminDb: Awaited<ReturnType<typeof createAdminClient>>,
+    userId: string,
+    triggers: BadgeTriggers
+): Promise<string[]> {
+    const awardedBadges: string[] = []
+
+    try {
+        if (triggers.scout) {
+            const badges = await checkScoutBadges(db, adminDb, userId)
+            awardedBadges.push(...badges)
+        }
+
+        if (triggers.reviews) {
+            const badges = await checkReviewBadges(db, adminDb, userId)
+            awardedBadges.push(...badges)
+        }
+
+        if (triggers.geographic) {
+            const badges = await checkGeographicBadges(db, adminDb, userId)
+            awardedBadges.push(...badges)
+        }
+
+        if (triggers.supporter) {
+            const badges = await checkSupporterBadge(db, adminDb, userId)
+            awardedBadges.push(...badges)
+        }
+    } catch (error) {
+        console.error(`[Badge] Error in internal check for user ${userId}:`, error)
+    }
+
+    return awardedBadges
+}
+

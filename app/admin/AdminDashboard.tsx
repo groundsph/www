@@ -73,8 +73,9 @@ import { uploadBadgeImage } from "@/utils/supabase/storage"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
-import { Pencil, Store } from "lucide-react"
+import { Pencil, Store, RefreshCw } from "lucide-react"
 import FeaturedScheduleManager from "./FeaturedScheduleManager"
+import { backfillBadgesForAllUsers } from "@/utils/badges/badge-logic"
 
 const resizeBadgeImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -1799,14 +1800,46 @@ export default function AdminDashboard({
             {/* Badges Management */}
             {activeTab === "badges" && (
                 <>
-                    {/* Create Badge Button */}
-                    <div className='mb-6'>
+                    {/* Create Badge Button and Backfill Button */}
+                    <div className='mb-6 flex items-center gap-3 flex-wrap'>
                         <button
                             onClick={() => openBadgeModal()}
                             className='flex items-center gap-2 px-4 py-2 bg-amber-500/20 text-amber-500 rounded-lg hover:bg-amber-500/30 transition border border-amber-500/30'
                         >
                             <Plus className='w-4 h-4' />
                             Create Badge
+                        </button>
+                        <button
+                            onClick={async () => {
+                                if (
+                                    !confirm(
+                                        "This will check and award badges to all existing users based on their activity. Continue?"
+                                    )
+                                )
+                                    return
+                                setProcessing("backfill")
+                                const result = await backfillBadgesForAllUsers()
+                                setProcessing(null)
+                                if (result.success) {
+                                    alert(
+                                        `Backfill complete!\n\nUsers processed: ${result.usersProcessed}\nBadges awarded: ${result.badgesAwarded}${result.errors.length > 0 ? `\nErrors: ${result.errors.length}` : ""}`
+                                    )
+                                } else {
+                                    alert(
+                                        "Backfill failed: " +
+                                            result.errors.join(", ")
+                                    )
+                                }
+                            }}
+                            disabled={processing === "backfill"}
+                            className='flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/30 transition border border-blue-500/30 disabled:opacity-50'
+                        >
+                            <RefreshCw
+                                className={`w-4 h-4 ${processing === "backfill" ? "animate-spin" : ""}`}
+                            />
+                            {processing === "backfill"
+                                ? "Backfilling..."
+                                : "Backfill Badges"}
                         </button>
                     </div>
 
