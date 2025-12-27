@@ -43,7 +43,7 @@ import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
-import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
+import { resizeImage } from "@/utils/image-processing"
 import { useNotification } from "@/components/NotificationProvider"
 import ImageCropper from "@/components/ui/ImageCropper"
 

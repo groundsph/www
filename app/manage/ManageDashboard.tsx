@@ -837,7 +837,7 @@ export default function ManageDashboard({
         if (activeTab === "team" && teamMembers.length === 0) {
             loadTeamMembers()
         }
-    }, [activeTab])
+    }, [activeTab, teamMembers.length])
 
     const AMENITY_ICONS = {
         has_wifi: { icon: Wifi, label: "WiFi" },
