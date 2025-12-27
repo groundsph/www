@@ -1991,6 +1991,28 @@ export default function CafeSubmissionForm({
                                     days. We may contact you for additional
                                     information.
                                 </div>
+
+                                {/* Terms Agreement */}
+                                <p className='text-xs text-text/50 text-center'>
+                                    By submitting, you agree to our{" "}
+                                    <a
+                                        href='/legal/terms'
+                                        target='_blank'
+                                        className='text-primary hover:underline'
+                                    >
+                                        Terms of Service
+                                    </a>{" "}
+                                    and{" "}
+                                    <a
+                                        href='/legal/content-policy'
+                                        target='_blank'
+                                        className='text-primary hover:underline'
+                                    >
+                                        Content Policy
+                                    </a>
+                                    . You confirm that you have the right to
+                                    share any photos you upload.
+                                </p>
                             </div>
                         )}
                     </motion.div>

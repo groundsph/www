@@ -1,5 +1,9 @@
 import "@/app/map.css"
-import { getDailyFeatured, getAllCafes } from "@/app/api/actions/cafe"
+import {
+    getDailyFeatured,
+    getAllCafes,
+    getPublishedCafeCount,
+} from "@/app/api/actions/cafe"
 import LandingHero from "@/components/LandingHero"
 import RecentCard from "@/components/RecentCard"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -47,6 +51,7 @@ export default async function Home() {
     // Fetch data using server actions
     const featured = (await getDailyFeatured()) as CafeWithRatings | null
     const recentlyAdded = (await getAllCafes(1, 10, {})) as CafeWithRatings[]
+    const cafeCount = await getPublishedCafeCount()
 
     return (
         <>
@@ -64,8 +69,12 @@ export default async function Home() {
                     Found a spot we missed?
                 </h2>
                 <p className='max-w-md text-background text-center font-medium z-1'>
-                    Help the community discover the best coffee spots by sharing
-                    your favorite cafe.
+                    We currently have{" "}
+                    <span className='font-bold text-primary'>
+                        {cafeCount} cafes
+                    </span>{" "}
+                    in our catalogue waiting for you to browse. Help the
+                    community grow by sharing your favorite spots.
                 </p>
                 <Link
                     href='/submit'

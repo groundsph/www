@@ -54,7 +54,7 @@ export default function Footer() {
                     </div>
 
                     {/* Navigation */}
-                    <div className='grid grid-cols-2 gap-8'>
+                    <div className='grid grid-cols-2 md:grid-cols-3 gap-8'>
                         <div className='flex flex-col gap-3'>
                             <h4 className='font-serif font-semibold text-sm text-background/50 uppercase tracking-wider'>
                                 Explore
@@ -111,6 +111,29 @@ export default function Footer() {
                                 className='text-background/80 hover:text-background transition-colors text-sm'
                             >
                                 Contact
+                            </Link>
+                        </div>
+                        <div className='flex flex-col gap-3'>
+                            <h4 className='font-serif font-semibold text-sm text-background/50 uppercase tracking-wider'>
+                                Legal
+                            </h4>
+                            <Link
+                                href='/legal/terms'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                Terms of Service
+                            </Link>
+                            <Link
+                                href='/legal/privacy'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                Privacy Policy
+                            </Link>
+                            <Link
+                                href='/legal/content-policy'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                Content Policy
                             </Link>
                         </div>
                     </div>

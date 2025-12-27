@@ -325,6 +325,20 @@ export async function getReviewsByCafeId(cafeId: string) {
 }
 
 /**
+ * Get the count of published cafes
+ */
+export async function getPublishedCafeCount(): Promise<number> {
+    const db = await createClient()
+
+    const { count } = await db
+        .from("cafes")
+        .select("*", { count: "exact", head: true })
+        .eq("is_published", true)
+
+    return count || 0
+}
+
+/**
  * Simple search for cafe name existence check during submission
  */
 export async function searchCafesSimple(query: string) {
