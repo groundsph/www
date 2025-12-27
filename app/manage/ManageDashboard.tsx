@@ -111,7 +111,8 @@ const resizeBadgeImage = (file: File): Promise<File> => {
     })
 }
 
-interface AdminDashboardProps {
+interface ManageDashboardProps {
+    userRole: "admin" | "moderator"
     initialPendingCafes: CafeWithRatings[]
     initialPublishedCafes: CafeWithRatings[]
     pendingTotal: number
@@ -136,7 +137,8 @@ type TabType =
     | "claims"
     | "team"
 
-export default function AdminDashboard({
+export default function ManageDashboard({
+    userRole,
     initialPendingCafes,
     initialPublishedCafes,
     pendingTotal: initialPendingTotal,
@@ -149,7 +151,8 @@ export default function AdminDashboard({
     suggestions: initialSuggestions,
     featuredSchedules: initialFeaturedSchedules,
     pendingClaims: initialClaims = [],
-}: AdminDashboardProps) {
+}: ManageDashboardProps) {
+    const isFullAdmin = userRole === "admin"
     const [activeTab, setActiveTab] = useState<TabType>("pending")
 
     // Cafe pagination state
@@ -960,11 +963,24 @@ export default function AdminDashboard({
         <div className='w-full overflow-hidden space-y-8 [&_button]:cursor-pointer'>
             {/* Header */}
             <div className='border-b border-text/10 pb-6'>
-                <h1 className='text-3xl font-bold font-serif'>
-                    Admin Dashboard
-                </h1>
+                <div className='flex items-center gap-3'>
+                    <h1 className='text-3xl font-bold font-serif'>
+                        Manage Dashboard
+                    </h1>
+                    <span
+                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            isFullAdmin
+                                ? "bg-amber-500/20 text-amber-600 border border-amber-500/30"
+                                : "bg-blue-500/20 text-blue-600 border border-blue-500/30"
+                        }`}
+                    >
+                        {isFullAdmin ? "Admin" : "Moderator"}
+                    </span>
+                </div>
                 <p className='text-text/60 mt-2'>
-                    Manage cafe submissions and listings
+                    {isFullAdmin
+                        ? "Manage cafe submissions, platform settings, and team"
+                        : "Moderate cafe submissions and content"}
                 </p>
             </div>
 
@@ -994,145 +1010,163 @@ export default function AdminDashboard({
                 </div>
             </div>
 
-            {/* Storage Cleanup */}
-            <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
-                <h2 className='text-lg font-semibold mb-4 flex items-center gap-2'>
-                    <Trash2 className='w-5 h-5' />
-                    Storage Cleanup
-                </h2>
-                <p className='text-text/60 text-sm mb-4'>
-                    Clean up orphaned images that are no longer referenced in
-                    the database.
-                </p>
-                <div className='flex flex-wrap gap-3'>
-                    <button
-                        onClick={handleCleanupOrphans}
-                        disabled={cleanupLoading}
-                        className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
-                    >
-                        {cleanupLoading ? (
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                            <Trash2 className='w-4 h-4' />
-                        )}
-                        Clean Orphaned Images
-                    </button>
-                    <button
-                        onClick={handleProcessAvatarQueue}
-                        disabled={cleanupLoading}
-                        className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition disabled:opacity-50'
-                    >
-                        {cleanupLoading ? (
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                            <Trash2 className='w-4 h-4' />
-                        )}
-                        Process Avatar Queue
-                    </button>
-                </div>
-                {cleanupMessage && (
-                    <div className='mt-4 p-3 bg-text/5 border border-text/10 rounded-lg text-sm'>
-                        {cleanupMessage}
+            {/* Storage Cleanup - Admin Only */}
+            {isFullAdmin && (
+                <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                    <h2 className='text-lg font-semibold mb-4 flex items-center gap-2'>
+                        <Trash2 className='w-5 h-5' />
+                        Storage Cleanup
+                        <span className='px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-600 border border-amber-500/30'>
+                            Admin Only
+                        </span>
+                    </h2>
+                    <p className='text-text/60 text-sm mb-4'>
+                        Clean up orphaned images that are no longer referenced
+                        in the database.
+                    </p>
+                    <div className='flex flex-wrap gap-3'>
+                        <button
+                            onClick={handleCleanupOrphans}
+                            disabled={cleanupLoading}
+                            className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                        >
+                            {cleanupLoading ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                                <Trash2 className='w-4 h-4' />
+                            )}
+                            Clean Orphaned Images
+                        </button>
+                        <button
+                            onClick={handleProcessAvatarQueue}
+                            disabled={cleanupLoading}
+                            className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition disabled:opacity-50'
+                        >
+                            {cleanupLoading ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                                <Trash2 className='w-4 h-4' />
+                            )}
+                            Process Avatar Queue
+                        </button>
                     </div>
-                )}
-            </div>
+                    {cleanupMessage && (
+                        <div className='mt-4 p-3 bg-text/5 border border-text/10 rounded-lg text-sm'>
+                            {cleanupMessage}
+                        </div>
+                    )}
+                </div>
+            )}
 
-            {/* Tabs */}
-            <div className='flex gap-2 border-b border-text/10 pb-4 overflow-x-auto [&_button]:text-nowrap'>
-                <button
-                    onClick={() => setActiveTab("pending")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "pending"
-                            ? "bg-accent/20 text-accent border-accent/30"
-                            : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <FileText className='w-4 h-4' />
-                    Pending ({pendingCafes.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("published")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "published"
-                            ? "bg-accent/20 text-accent border-accent/30"
-                            : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <Globe className='w-4 h-4' />
-                    Published ({publishedCafes.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("reviews")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "reviews"
-                            ? "bg-red-500/20 text-red-500 border-red-500/30"
-                            : reportedReviews.length > 0
-                              ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
-                              : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <Flag className='w-4 h-4' />
-                    Reviews ({reportedReviews.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("badges")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "badges"
-                            ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
-                            : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <Award className='w-4 h-4' />
-                    Badges ({badges.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("suggestions")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "suggestions"
-                            ? "bg-primary/20 text-primary border-primary/30"
-                            : suggestions.length > 0
-                              ? "bg-primary/10 border-primary/20 text-primary/80 hover:bg-primary/20"
-                              : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <Pencil className='w-4 h-4' />
-                    Suggestions ({suggestions.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("featured")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "featured"
-                            ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
-                            : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <Star className='w-4 h-4' />
-                    Featured
-                </button>
-                <button
-                    onClick={() => setActiveTab("claims")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "claims"
-                            ? "bg-purple-500/20 text-purple-500 border-purple-500/30"
-                            : claims.length > 0
-                              ? "bg-purple-500/10 border-purple-500/20 text-purple-500/80 hover:bg-purple-500/20"
-                              : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <Store className='w-4 h-4' />
-                    Claims ({claims.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("team")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
-                        activeTab === "team"
-                            ? "bg-blue-500/20 text-blue-500 border-blue-500/30"
-                            : "bg-text/5 border-text/10 hover:bg-text/10"
-                    }`}
-                >
-                    <Users className='w-4 h-4' />
-                    Team
-                </button>
+            {/* Tabs - Content Moderation */}
+            <div className='space-y-2'>
+                <div className='flex gap-2 overflow-x-auto [&_button]:text-nowrap py-2'>
+                    {/* Content Moderation Section - All Roles */}
+                    <button
+                        onClick={() => setActiveTab("pending")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                            activeTab === "pending"
+                                ? "bg-accent/20 text-accent border-accent/30"
+                                : "bg-text/5 border-text/10 hover:bg-text/10"
+                        }`}
+                    >
+                        <FileText className='w-4 h-4' />
+                        Pending ({pendingCafes.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("published")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                            activeTab === "published"
+                                ? "bg-accent/20 text-accent border-accent/30"
+                                : "bg-text/5 border-text/10 hover:bg-text/10"
+                        }`}
+                    >
+                        <Globe className='w-4 h-4' />
+                        Published ({publishedCafes.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("reviews")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                            activeTab === "reviews"
+                                ? "bg-red-500/20 text-red-500 border-red-500/30"
+                                : reportedReviews.length > 0
+                                  ? "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20"
+                                  : "bg-text/5 border-text/10 hover:bg-text/10"
+                        }`}
+                    >
+                        <Flag className='w-4 h-4' />
+                        Reviews ({reportedReviews.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("suggestions")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                            activeTab === "suggestions"
+                                ? "bg-primary/20 text-primary border-primary/30"
+                                : suggestions.length > 0
+                                  ? "bg-primary/10 border-primary/20 text-primary/80 hover:bg-primary/20"
+                                  : "bg-text/5 border-text/10 hover:bg-text/10"
+                        }`}
+                    >
+                        <Pencil className='w-4 h-4' />
+                        Suggestions ({suggestions.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("claims")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                            activeTab === "claims"
+                                ? "bg-purple-500/20 text-purple-500 border-purple-500/30"
+                                : claims.length > 0
+                                  ? "bg-purple-500/10 border-purple-500/20 text-purple-500/80 hover:bg-purple-500/20"
+                                  : "bg-text/5 border-text/10 hover:bg-text/10"
+                        }`}
+                    >
+                        <Store className='w-4 h-4' />
+                        Claims ({claims.length})
+                    </button>
+
+                    {/* Admin Only Section - Divider */}
+                    {isFullAdmin && (
+                        <>
+                            <div className='hidden sm:flex items-center px-2'>
+                                <div className='w-px h-6 bg-text/20' />
+                            </div>
+                            <button
+                                onClick={() => setActiveTab("badges")}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                                    activeTab === "badges"
+                                        ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
+                                        : "bg-text/5 border-text/10 hover:bg-text/10"
+                                }`}
+                            >
+                                <Award className='w-4 h-4' />
+                                Badges ({badges.length})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("featured")}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                                    activeTab === "featured"
+                                        ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                        : "bg-text/5 border-text/10 hover:bg-text/10"
+                                }`}
+                            >
+                                <Star className='w-4 h-4' />
+                                Featured
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("team")}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                                    activeTab === "team"
+                                        ? "bg-blue-500/20 text-blue-500 border-blue-500/30"
+                                        : "bg-text/5 border-text/10 hover:bg-text/10"
+                                }`}
+                            >
+                                <Users className='w-4 h-4' />
+                                Team
+                            </button>
+                        </>
+                    )}
+                </div>
+                <div className='border-b border-text/10' />
             </div>
 
             {/* Search and Filter - only for cafe tabs */}

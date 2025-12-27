@@ -13,7 +13,21 @@ const nextConfig: NextConfig = {
         hostname: "uriwhfpoprbrcehboadj.supabase.co",
       },
     ]
-  }
+  },
+  async redirects() {
+    return [
+      {
+        source: '/admin',
+        destination: '/manage',
+        permanent: true,
+      },
+      {
+        source: '/admin/:path*',
+        destination: '/manage/:path*',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default nextConfig;

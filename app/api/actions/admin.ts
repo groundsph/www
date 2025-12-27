@@ -100,6 +100,25 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 /**
+ * Get the current user's role
+ * Returns 'admin', 'moderator', 'user', or null if not authenticated
+ */
+export async function getUserRole(): Promise<'admin' | 'moderator' | 'user' | null> {
+    const db = await createClient()
+    const { data: { user } } = await db.auth.getUser()
+
+    if (!user) return null
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    return profile?.role ?? 'user'
+}
+
+/**
  * Get all pending (unpublished) cafe submissions
  * Only accessible by admins/moderators
  */

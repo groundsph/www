@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import {
     isAdmin,
+    getUserRole,
     getPaginatedCafes,
     getCafeFilterOptions,
     getReportedReviews,
@@ -9,31 +10,37 @@ import {
 } from "@/app/api/actions/admin"
 import { getPendingSuggestions } from "@/app/api/actions/suggestions"
 import { getPendingClaims } from "@/app/api/actions/claim"
-import AdminDashboard from "./AdminDashboard"
+import ManageDashboard from "./ManageDashboard"
 
 export const metadata = {
-    title: "Admin Dashboard",
-    description: "Manage cafe submissions",
+    title: "Manage Dashboard",
+    description: "Manage cafe submissions and platform settings",
 }
 
-export default async function AdminPage() {
-    // Check admin access - redirect if not authorized
+export default async function ManagePage() {
+    // Check admin/moderator access - redirect if not authorized
     const hasAccess = await isAdmin()
     if (!hasAccess) {
         redirect("/")
     }
 
-    // Fetch initial admin data with pagination
+    // Get user's actual role for conditional rendering
+    const userRole = await getUserRole()
+    const isFullAdmin = userRole === "admin"
+
+    // Fetch initial data - some data only for admins
     const [
         pendingResult,
         publishedResult,
         filterOptions,
         reportedReviews,
-        badges,
         suggestions,
-        featuredSchedules,
         pendingClaims,
+        // Admin-only data
+        badges,
+        featuredSchedules,
     ] = await Promise.all([
+        // Moderator + Admin data
         getPaginatedCafes({
             isPublished: false,
             page: 1,
@@ -48,16 +55,18 @@ export default async function AdminPage() {
         }),
         getCafeFilterOptions(),
         getReportedReviews(),
-        getAllBadgeDefinitions(),
         getPendingSuggestions(),
-        getFeaturedSchedules(),
         getPendingClaims(),
+        // Admin-only data (fetch empty arrays for moderators)
+        isFullAdmin ? getAllBadgeDefinitions() : Promise.resolve([]),
+        isFullAdmin ? getFeaturedSchedules() : Promise.resolve([]),
     ])
 
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <AdminDashboard
+                <ManageDashboard
+                    userRole={userRole as "admin" | "moderator"}
                     initialPendingCafes={pendingResult.cafes}
                     initialPublishedCafes={publishedResult.cafes}
                     pendingTotal={pendingResult.total}
