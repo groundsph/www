@@ -14,22 +14,13 @@ import {
     Phone,
     Settings,
     FileText,
-    Trash2,
     ImagePlus,
-    Upload,
-    ChevronLeft,
-    ChevronRight,
-    X,
-    Eye,
-    Edit3,
 } from "lucide-react"
-import { Reorder } from "motion/react"
 import {
     updateCafeAsOwner,
     deleteCafeImageAsOwner,
     updateCafeStory,
 } from "@/app/api/actions/owner"
-import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import {
@@ -40,13 +31,15 @@ import {
 } from "@/utils/data/philippines"
 import AmenityToggles from "@/components/submit/AmenityToggles"
 import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
-import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
-import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
-import { resizeImage } from "@/utils/image-processing"
 import { useNotification } from "@/components/NotificationProvider"
-import ImageCropper from "@/components/ui/ImageCropper"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import {
+    ContactSection,
+    StorySection,
+    LocationSection,
+    ImageSection,
+} from "@/components/cafe-editor"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
@@ -75,31 +68,9 @@ export default function CafeEditClient({
         | "story"
     >("basic")
 
-    // Image management state
-    const [uploadingCover, setUploadingCover] = useState(false)
-    const [uploadingGallery, setUploadingGallery] = useState(false)
-
     // Custom inputs for comma-separated values
     const [customSpecialties, setCustomSpecialties] = useState("")
     const [customTags, setCustomTags] = useState("")
-
-    // Cropper State
-    const [croppingImage, setCroppingImage] = useState<File | null>(null)
-    const [cropperOpen, setCropperOpen] = useState(false)
-
-    // Helper for aspect ratio
-    const checkAspectRatio = (file: File): Promise<boolean> => {
-        return new Promise((resolve) => {
-            const img = new window.Image()
-            img.onload = () => {
-                const aspect = img.width / img.height
-                // Allow some tolerance for 16:9
-                const is16by9 = Math.abs(aspect - 16 / 9) < 0.05
-                resolve(is16by9)
-            }
-            img.src = URL.createObjectURL(file)
-        })
-    }
 
     // Story state
     const [storyContent, setStoryContent] = useState(
@@ -115,74 +86,6 @@ export default function CafeEditClient({
             setHasChanges(true)
         },
         []
-    )
-
-    // Manual Cropper Handlers
-    const handleThumbnailChange = async (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        const is16by9 = await checkAspectRatio(file)
-
-        if (is16by9) {
-            setUploadingCover(true)
-            const result = await uploadCafeImageClient(file)
-            setUploadingCover(false)
-
-            if (result.success && result.url) {
-                if (cafe.thumbnail) {
-                    await deleteCafeImageAsOwner(cafe.id, cafe.thumbnail)
-                }
-                updateField("thumbnail", result.url)
-            }
-        } else {
-            setCroppingImage(file)
-            setCropperOpen(true)
-        }
-        e.target.value = ""
-    }
-
-    const handleCropComplete = useCallback(
-        async (croppedBlob: Blob) => {
-            const file = new File(
-                [croppedBlob],
-                croppingImage?.name || "cover.webp",
-                {
-                    type: "image/webp",
-                    lastModified: Date.now(),
-                }
-            )
-
-            // Resize if needed
-            const finalFile = await resizeImage(file, {
-                maxWidth: 2560,
-                maxHeight: 1440,
-                quality: 0.9,
-                format: "image/webp",
-            })
-
-            setUploadingCover(true)
-            const result = await uploadCafeImageClient(finalFile)
-            setUploadingCover(false)
-
-            if (result.success && result.url) {
-                if (cafe.thumbnail) {
-                    await deleteCafeImageAsOwner(cafe.id, cafe.thumbnail)
-                }
-                updateField("thumbnail", result.url)
-            } else {
-                addNotification(
-                    result.error || "Failed to upload image",
-                    "error"
-                )
-            }
-
-            setCropperOpen(false)
-            setCroppingImage(null)
-        },
-        [croppingImage, cafe.thumbnail, updateField, cafe.id, addNotification]
     )
 
     const moveGalleryImage = (index: number, direction: "left" | "right") => {
@@ -488,323 +391,54 @@ export default function CafeEditClient({
 
                 {/* Images Section */}
                 {activeSection === "images" && (
-                    <div className='space-y-8'>
-                        {/* Cover Image */}
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-4'>
-                                Cover Image
-                            </label>
-                            <div className='relative group'>
-                                <div className='relative h-auto aspect-video rounded-xl overflow-hidden bg-text/10'>
-                                    {cafe.thumbnail ? (
-                                        <>
-                                            <Image
-                                                src={getCafeThumbnailUrl(
-                                                    cafe.thumbnail
-                                                )}
-                                                alt={cafe.name}
-                                                fill
-                                                className='object-cover'
-                                            />
-                                            {cafe.thumbnail ===
-                                                "placeholder" && (
-                                                <div className='absolute top-3 left-3 px-2 py-1 bg-amber-500/90 text-white text-xs font-medium rounded z-10'>
-                                                    Placeholder Image
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className='w-full h-full flex items-center justify-center text-text/30'>
-                                            <ImagePlus className='w-12 h-12' />
-                                        </div>
-                                    )}
-
-                                    {/* Overlay with actions */}
-                                    <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-4'>
-                                        <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition'>
-                                            {uploadingCover ? (
-                                                <Loader2 className='w-4 h-4 animate-spin' />
-                                            ) : (
-                                                <Upload className='w-4 h-4' />
-                                            )}
-                                            {cafe.thumbnail
-                                                ? "Change"
-                                                : "Upload"}
-                                            <input
-                                                type='file'
-                                                accept='image/jpeg,image/png,image/webp,image/gif'
-                                                className='hidden'
-                                                disabled={uploadingCover}
-                                                onChange={handleThumbnailChange}
-                                            />
-                                        </label>
-
-                                        {cafe.thumbnail && (
-                                            <button
-                                                onClick={async () => {
-                                                    if (
-                                                        !confirm(
-                                                            "Remove cover image?"
-                                                        )
-                                                    )
-                                                        return
-                                                    await deleteCafeImageAsOwner(
-                                                        cafe.id,
-                                                        cafe.thumbnail!
-                                                    )
-                                                    setCafe(
-                                                        (prev) =>
-                                                            ({
-                                                                ...prev,
-                                                                thumbnail: null,
-                                                            }) as unknown as typeof prev
-                                                    )
-                                                    setHasChanges(true)
-                                                }}
-                                                className='flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition'
-                                            >
-                                                <Trash2 className='w-4 h-4' />
-                                                Remove
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Gallery */}
-                        <div>
-                            <div className='flex items-center justify-between mb-4'>
-                                <label className='text-sm font-medium text-text/60'>
-                                    Gallery ({cafe.gallery?.length || 0} images)
-                                </label>
-                                <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition'>
-                                    {uploadingGallery ? (
-                                        <Loader2 className='w-4 h-4 animate-spin' />
-                                    ) : (
-                                        <ImagePlus className='w-4 h-4' />
-                                    )}
-                                    Add Photos
-                                    <input
-                                        type='file'
-                                        accept='image/jpeg,image/png,image/webp,image/gif'
-                                        multiple
-                                        className='hidden'
-                                        disabled={uploadingGallery}
-                                        onChange={async (e) => {
-                                            const files = Array.from(
-                                                e.target.files || []
-                                            )
-                                            if (files.length === 0) return
-
-                                            setUploadingGallery(true)
-                                            const newUrls: string[] = []
-
-                                            for (const file of files) {
-                                                // Resize only, allow any aspect ratio
-                                                const processedFile =
-                                                    await resizeImage(file, {
-                                                        maxWidth: 1920,
-                                                        maxHeight: 1920,
-                                                        quality: 0.85,
-                                                        format: "image/webp",
-                                                    })
-                                                const result =
-                                                    await uploadCafeImageClient(
-                                                        processedFile
-                                                    )
-                                                if (
-                                                    result.success &&
-                                                    result.url
-                                                ) {
-                                                    newUrls.push(result.url)
-                                                }
-                                            }
-
-                                            if (newUrls.length > 0) {
-                                                updateField("gallery", [
-                                                    ...(cafe.gallery || []),
-                                                    ...newUrls,
-                                                ])
-                                            }
-
-                                            setUploadingGallery(false)
-                                            e.target.value = ""
-                                        }}
-                                    />
-                                </label>
-                            </div>
-
-                            {cafe.gallery && cafe.gallery.length > 0 ? (
-                                <Reorder.Group
-                                    axis='x'
-                                    values={cafe.gallery}
-                                    onReorder={(newOrder) =>
-                                        updateField("gallery", newOrder)
-                                    }
-                                    className='flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-text/10'
-                                >
-                                    {cafe.gallery.map((url, idx) => (
-                                        <Reorder.Item
-                                            key={url}
-                                            value={url}
-                                            className='relative h-48 w-auto shrink-0 rounded-lg overflow-hidden group cursor-move active:cursor-grabbing bg-gray-50 flex items-center justify-center border border-text/10'
-                                        >
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={url}
-                                                alt={`Gallery ${idx + 1}`}
-                                                className='h-full w-auto object-contain pointer-events-none max-w-none'
-                                            />
-
-                                            {/* Move Controls */}
-                                            <div className='absolute bottom-2 left-2 right-2 flex justify-between md:opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-2 py-1 backdrop-blur-sm z-10'>
-                                                <button
-                                                    type='button'
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        moveGalleryImage(
-                                                            idx,
-                                                            "left"
-                                                        )
-                                                    }}
-                                                    className={`p-1 text-white hover:text-white/80 transition ${idx === 0 ? "opacity-20 cursor-not-allowed" : ""}`}
-                                                    disabled={idx === 0}
-                                                    title='Move left'
-                                                >
-                                                    <ChevronLeft className='w-4 h-4' />
-                                                </button>
-                                                <button
-                                                    type='button'
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        moveGalleryImage(
-                                                            idx,
-                                                            "right"
-                                                        )
-                                                    }}
-                                                    className={`p-1 text-white hover:text-white/80 transition ${idx === cafe.gallery!.length - 1 ? "opacity-20 cursor-not-allowed" : ""}`}
-                                                    disabled={
-                                                        idx ===
-                                                        cafe.gallery!.length - 1
-                                                    }
-                                                    title='Move right'
-                                                >
-                                                    <ChevronRight className='w-4 h-4' />
-                                                </button>
-                                            </div>
-
-                                            <button
-                                                type='button'
-                                                onClick={async () => {
-                                                    if (
-                                                        !confirm(
-                                                            "Remove this image?"
-                                                        )
-                                                    )
-                                                        return
-                                                    await deleteCafeImageAsOwner(
-                                                        cafe.id,
-                                                        url
-                                                    )
-                                                    updateField(
-                                                        "gallery",
-                                                        cafe.gallery?.filter(
-                                                            (_, i) => i !== idx
-                                                        ) || []
-                                                    )
-                                                }}
-                                                className='absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full md:opacity-0 group-hover:opacity-100 transition hover:bg-red-600 z-10'
-                                                title='Remove image'
-                                            >
-                                                <X className='w-4 h-4' />
-                                            </button>
-                                        </Reorder.Item>
-                                    ))}
-                                </Reorder.Group>
-                            ) : (
-                                <div className='bg-text/5 border border-text/10 border-dashed rounded-xl p-12 text-center text-text/40'>
-                                    <ImagePlus className='w-12 h-12 mx-auto mb-4 opacity-50' />
-                                    <p>No gallery images yet</p>
-                                    <p className='text-sm mt-1'>
-                                        Click &quot;Add Photos&quot; to upload
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <ImageSection
+                        thumbnail={cafe.thumbnail}
+                        gallery={cafe.gallery || []}
+                        cafeId={cafe.id}
+                        cafeName={cafe.name}
+                        onThumbnailChange={(url: string | null) => {
+                            setCafe(
+                                (prev) =>
+                                    ({
+                                        ...prev,
+                                        thumbnail: url ?? prev.thumbnail,
+                                    }) as typeof prev
+                            )
+                            setHasChanges(true)
+                        }}
+                        onGalleryChange={(urls: string[]) => {
+                            updateField("gallery", urls)
+                            setHasChanges(true)
+                        }}
+                        onDeleteImage={async (url: string) => {
+                            await deleteCafeImageAsOwner(cafe.id, url)
+                        }}
+                        colorScheme='primary'
+                    />
                 )}
 
                 {/* Location */}
                 {activeSection === "location" && (
-                    <div className='space-y-6'>
-                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Region
-                                </label>
-                                <input
-                                    type='text'
-                                    value={cafe.region || ""}
-                                    readOnly
-                                    className='w-full px-4 py-3 bg-text/5 border border-text/10 rounded-lg text-text/60'
-                                />
-                            </div>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Province
-                                </label>
-                                <input
-                                    type='text'
-                                    value={cafe.province || ""}
-                                    readOnly
-                                    className='w-full px-4 py-3 bg-text/5 border border-text/10 rounded-lg text-text/60'
-                                />
-                            </div>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    City/Municipality
-                                </label>
-                                <input
-                                    type='text'
-                                    value={cafe.city_municipality || ""}
-                                    readOnly
-                                    className='w-full px-4 py-3 bg-text/5 border border-text/10 rounded-lg text-text/60'
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Display Address
-                            </label>
-                            <input
-                                type='text'
-                                value={cafe.address_display}
-                                onChange={(e) =>
-                                    updateField(
-                                        "address_display",
-                                        e.target.value
-                                    )
-                                }
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                            />
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Map Location
-                            </label>
-                            <LocationPicker
-                                lat={cafe.lat}
-                                lng={cafe.lng}
-                                onChange={(lat: number, lng: number) => {
-                                    updateField("lat", lat)
-                                    updateField("lng", lng)
-                                }}
-                            />
-                        </div>
-                    </div>
+                    <LocationSection
+                        data={{
+                            region: cafe.region,
+                            province: cafe.province,
+                            city_municipality: cafe.city_municipality,
+                            address_display: cafe.address_display,
+                            area: cafe.area,
+                            lat: cafe.lat,
+                            lng: cafe.lng,
+                        }}
+                        onChange={(key, value) => {
+                            updateField(
+                                key as keyof typeof cafe,
+                                value as (typeof cafe)[keyof typeof cafe]
+                            )
+                            setHasChanges(true)
+                        }}
+                        readOnlyLocation={true}
+                        colorScheme='primary'
+                    />
                 )}
 
                 {/* Amenities */}
@@ -1132,174 +766,56 @@ export default function CafeEditClient({
 
                 {/* Contact */}
                 {activeSection === "contact" && (
-                    <div className='space-y-6'>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Website
-                                </label>
-                                <input
-                                    type='url'
-                                    value={cafe.website_url || ""}
-                                    onChange={(e) =>
-                                        updateField(
-                                            "website_url",
-                                            e.target.value
-                                        )
-                                    }
-                                    placeholder='https://...'
-                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                />
-                            </div>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Phone
-                                </label>
-                                <input
-                                    type='tel'
-                                    value={cafe.phone || ""}
-                                    onChange={(e) =>
-                                        updateField("phone", e.target.value)
-                                    }
-                                    placeholder='+63 XXX XXX XXXX'
-                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                />
-                            </div>
-                            <div className='md:col-span-2'>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Email
-                                </label>
-                                <input
-                                    type='email'
-                                    value={cafe.email || ""}
-                                    onChange={(e) =>
-                                        updateField("email", e.target.value)
-                                    }
-                                    placeholder='cafe@example.com'
-                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-4'>
-                                Social Links
-                            </label>
-                            <SocialLinksEditor
-                                value={(cafe.socials as CafeSocial[]) || []}
-                                onChange={(socials) =>
-                                    updateField("socials", socials)
-                                }
-                            />
-                        </div>
-                    </div>
+                    <ContactSection
+                        data={{
+                            website_url: cafe.website_url,
+                            phone: cafe.phone,
+                            email: cafe.email,
+                            socials: cafe.socials as CafeSocial[] | null,
+                        }}
+                        onChange={(key, value) => {
+                            updateField(
+                                key as keyof typeof cafe,
+                                value as unknown as (typeof cafe)[keyof typeof cafe]
+                            )
+                            setHasChanges(true)
+                        }}
+                        colorScheme='primary'
+                    />
                 )}
 
                 {/* Story Editor */}
                 {activeSection === "story" && (
-                    <div className='space-y-4'>
-                        <div className='flex items-center justify-between'>
-                            <div>
-                                <h3 className='font-medium'>Cafe Story</h3>
-                                <p className='text-sm text-text/60'>
-                                    Tell visitors about your cafe&apos;s
-                                    history, values, and what makes it special.
-                                    Markdown is supported.
-                                </p>
-                            </div>
-                            <div className='flex items-center gap-2'>
-                                <button
-                                    onClick={() =>
-                                        setStoryPreview(!storyPreview)
-                                    }
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                        storyPreview
-                                            ? "bg-primary/20 text-primary"
-                                            : "bg-text/10 text-text/60 hover:bg-text/20"
-                                    }`}
-                                >
-                                    {storyPreview ? (
-                                        <>
-                                            <Edit3 className='w-4 h-4' />
-                                            Edit
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Eye className='w-4 h-4' />
-                                            Preview
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {storyPreview ? (
-                            <div className='bg-text/5 border border-text/10 rounded-lg p-6 min-h-[300px] prose prose-sm max-w-none'>
-                                {storyContent ? (
-                                    <div className='whitespace-pre-wrap'>
-                                        {storyContent}
-                                    </div>
-                                ) : (
-                                    <p className='text-text/40 italic'>
-                                        No story written yet...
-                                    </p>
-                                )}
-                            </div>
-                        ) : (
-                            <div className='space-y-2'>
-                                <textarea
-                                    value={storyContent}
-                                    onChange={(e) => {
-                                        setStoryContent(e.target.value)
-                                        setStoryHasChanges(true)
-                                    }}
-                                    placeholder='Tell your story...&#10;&#10;You can share:&#10;• How your cafe started&#10;• What makes your coffee special&#10;• Your philosophy and values&#10;• The people behind your cafe'
-                                    className='w-full h-72 p-4 bg-text/5 border border-text/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none text-sm leading-relaxed'
-                                />
-                                <div className='flex items-center justify-between text-xs text-text/50'>
-                                    <span>
-                                        {storyContent.length} characters
-                                    </span>
-                                    <span>Markdown supported</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {storyHasChanges && (
-                            <button
-                                onClick={async () => {
-                                    setSavingStory(true)
-                                    const result = await updateCafeStory(
-                                        cafe.id,
-                                        storyContent
-                                    )
-                                    setSavingStory(false)
-                                    if (result.success) {
-                                        setStoryHasChanges(false)
-                                        addNotification(
-                                            "Story saved successfully!",
-                                            "success"
-                                        )
-                                    } else {
-                                        addNotification(
-                                            result.error ||
-                                                "Failed to save story",
-                                            "error"
-                                        )
-                                    }
-                                }}
-                                disabled={savingStory}
-                                className='flex items-center justify-center gap-2 w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50'
-                            >
-                                {savingStory ? (
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                ) : (
-                                    <Save className='w-4 h-4' />
-                                )}
-                                Save Story
-                            </button>
-                        )}
-                    </div>
+                    <StorySection
+                        content={storyContent}
+                        onChange={(content) => {
+                            setStoryContent(content)
+                            setStoryHasChanges(true)
+                        }}
+                        onSave={async () => {
+                            setSavingStory(true)
+                            const result = await updateCafeStory(
+                                cafe.id,
+                                storyContent
+                            )
+                            setSavingStory(false)
+                            if (result.success) {
+                                setStoryHasChanges(false)
+                                addNotification(
+                                    "Story saved successfully!",
+                                    "success"
+                                )
+                            } else {
+                                addNotification(
+                                    result.error || "Failed to save story",
+                                    "error"
+                                )
+                            }
+                        }}
+                        hasChanges={storyHasChanges}
+                        saving={savingStory}
+                        colorScheme='primary'
+                    />
                 )}
             </div>
 
@@ -1320,17 +836,6 @@ export default function CafeEditClient({
                     </button>
                 </div>
             )}
-            {/* Image Cropper */}
-            <ImageCropper
-                open={cropperOpen}
-                image={croppingImage}
-                aspect={16 / 9}
-                onComplete={handleCropComplete}
-                onCancel={() => {
-                    setCropperOpen(false)
-                    setCroppingImage(null)
-                }}
-            />
         </div>
     )
 }

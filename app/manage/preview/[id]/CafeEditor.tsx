@@ -40,12 +40,7 @@ import {
     searchUsersForOwner,
     getOwnerProfiles,
 } from "@/app/api/actions/admin"
-import {
-    addMenuItem,
-    updateMenuItem,
-    deleteMenuItem,
-} from "@/app/api/actions/owner"
-import { CafeMenuItem, MenuItemForm } from "@/utils/types/owner"
+import { CafeMenuItem } from "@/utils/types/owner"
 import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
@@ -63,6 +58,13 @@ import { Database } from "@/utils/types/database.types"
 import { resizeImage } from "@/utils/image-processing"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import {
+    ContactSection,
+    LocationSection,
+    ImageSection,
+    MenuItemModal,
+} from "@/components/cafe-editor"
+import { useMenuItems } from "@/utils/hooks/useMenuItems"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
@@ -84,21 +86,11 @@ export default function CafeEditor({
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
 
-    // Menu State
-    const [menuItems, setMenuItems] = useState<CafeMenuItem[]>(initialMenuItems)
-    const [showMenuModal, setShowMenuModal] = useState(false)
-    const [editingMenuItem, setEditingMenuItem] = useState<CafeMenuItem | null>(
-        null
-    )
-    const [menuForm, setMenuForm] = useState<MenuItemForm>({
-        name: "",
-        category: "Coffee",
-        price: 0,
-        description: "",
-        is_signature: false,
-        is_available: true,
+    // Menu Management (using shared hook)
+    const menu = useMenuItems({
+        initialItems: initialMenuItems,
+        cafeId: cafe.id,
     })
-    const [menuSaving, setMenuSaving] = useState(false)
 
     // Cropper State
     const [croppingImage, setCroppingImage] = useState<File | null>(null)
@@ -414,70 +406,6 @@ export default function CafeEditor({
         updateField("gallery", newGallery)
     }
 
-    // Menu handlers
-    const openAddMenu = () => {
-        setEditingMenuItem(null)
-        setMenuForm({
-            name: "",
-            category: "Coffee",
-            price: 0,
-            description: "",
-            is_signature: false,
-            is_available: true,
-        })
-        setShowMenuModal(true)
-    }
-
-    const openEditMenu = (item: CafeMenuItem) => {
-        setEditingMenuItem(item)
-        setMenuForm({
-            name: item.name,
-            category: item.category,
-            price: item.price,
-            description: item.description || "",
-            is_signature: item.is_signature,
-            is_available: item.is_available,
-        })
-        setShowMenuModal(true)
-    }
-
-    const handleSaveMenuItem = async () => {
-        if (!menuForm.name.trim() || menuForm.price <= 0) return
-
-        setMenuSaving(true)
-
-        if (editingMenuItem) {
-            const result = await updateMenuItem(editingMenuItem.id, menuForm)
-            if (result.success) {
-                setMenuItems((prev) =>
-                    prev.map((item) =>
-                        item.id === editingMenuItem.id
-                            ? { ...item, ...menuForm }
-                            : item
-                    )
-                )
-                setShowMenuModal(false)
-            }
-        } else {
-            const result = await addMenuItem(cafe.id, menuForm)
-            if (result.success && result.item) {
-                setMenuItems((prev) => [...prev, result.item!])
-                setShowMenuModal(false)
-            }
-        }
-
-        setMenuSaving(false)
-    }
-
-    const handleDeleteMenuItem = async (itemId: string) => {
-        if (!confirm("Delete this menu item?")) return
-
-        const result = await deleteMenuItem(itemId)
-        if (result.success) {
-            setMenuItems((prev) => prev.filter((item) => item.id !== itemId))
-        }
-    }
-
     const SECTIONS = [
         { id: "basic", title: "Basic Info", icon: Coffee },
         { id: "images", title: "Images", icon: ImagePlus },
@@ -774,320 +702,54 @@ export default function CafeEditor({
 
                 {/* Images Section */}
                 {activeSection === "images" && (
-                    <div className='space-y-8'>
-                        {/* Cover Image */}
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-4'>
-                                Cover Image
-                            </label>
-                            <div className='relative group'>
-                                <div className='relative h-auto aspect-video rounded-xl overflow-hidden bg-text/10'>
-                                    {cafe.thumbnail ? (
-                                        <>
-                                            <Image
-                                                src={getCafeThumbnailUrl(
-                                                    cafe.thumbnail
-                                                )}
-                                                alt={cafe.name}
-                                                fill
-                                                className='object-cover'
-                                            />
-                                            {cafe.thumbnail ===
-                                                "placeholder" && (
-                                                <div className='absolute top-3 left-3 px-2 py-1 bg-amber-500/90 text-white text-xs font-medium rounded z-10'>
-                                                    Placeholder Image
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className='w-full h-full flex items-center justify-center text-text/30'>
-                                            <ImagePlus className='w-12 h-12' />
-                                        </div>
-                                    )}
-
-                                    {/* Overlay with actions */}
-                                    {/* Overlay with actions */}
-                                    <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-4'>
-                                        <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition'>
-                                            {uploadingCover ? (
-                                                <Loader2 className='w-4 h-4 animate-spin' />
-                                            ) : (
-                                                <Upload className='w-4 h-4' />
-                                            )}
-                                            {cafe.thumbnail
-                                                ? "Change"
-                                                : "Upload"}
-                                            <input
-                                                type='file'
-                                                accept='image/jpeg,image/png,image/webp,image/gif'
-                                                className='hidden'
-                                                disabled={uploadingCover}
-                                                onChange={handleThumbnailChange}
-                                            />
-                                        </label>
-
-                                        {cafe.thumbnail && (
-                                            <button
-                                                type='button'
-                                                onClick={async () => {
-                                                    if (
-                                                        !confirm(
-                                                            "Remove cover image?"
-                                                        )
-                                                    )
-                                                        return
-
-                                                    await adminDeleteCafeImage(
-                                                        cafe.thumbnail!
-                                                    )
-                                                    updateField(
-                                                        "thumbnail",
-                                                        null as unknown as string
-                                                    )
-                                                }}
-                                                className='p-2 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition'
-                                            >
-                                                <Trash2 className='w-4 h-4' />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Gallery */}
-                        <div>
-                            <div className='flex items-center justify-between mb-4'>
-                                <label className='text-sm font-medium text-text/60'>
-                                    {/* Rest of gallery header if needed, but I'll stop here to match context */}
-                                    Gallery ({cafe.gallery?.length || 0} images)
-                                </label>
-                                <label className='cursor-pointer flex items-center gap-2 px-4 py-2 bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition'>
-                                    {uploadingGallery ? (
-                                        <Loader2 className='w-4 h-4 animate-spin' />
-                                    ) : (
-                                        <ImagePlus className='w-4 h-4' />
-                                    )}
-                                    Add Photos
-                                    <input
-                                        type='file'
-                                        accept='image/jpeg,image/png,image/webp,image/gif'
-                                        multiple
-                                        className='hidden'
-                                        disabled={uploadingGallery}
-                                        onChange={async (e) => {
-                                            const files = Array.from(
-                                                e.target.files || []
-                                            )
-                                            if (files.length === 0) return
-
-                                            setUploadingGallery(true)
-                                            const newUrls: string[] = []
-
-                                            for (const file of files) {
-                                                // Crop to 16:9 aspect ratio
-                                                const processedFile =
-                                                    await resizeImage(file, {
-                                                        maxWidth: 1920,
-                                                        maxHeight: 1920,
-                                                        quality: 0.85,
-                                                        format: "image/webp",
-                                                    })
-                                                const result =
-                                                    await uploadCafeImageClient(
-                                                        processedFile
-                                                    )
-                                                if (
-                                                    result.success &&
-                                                    result.url
-                                                ) {
-                                                    newUrls.push(result.url)
-                                                }
-                                            }
-
-                                            if (newUrls.length > 0) {
-                                                updateField("gallery", [
-                                                    ...(cafe.gallery || []),
-                                                    ...newUrls,
-                                                ])
-                                            }
-
-                                            setUploadingGallery(false)
-                                            e.target.value = ""
-                                        }}
-                                    />
-                                </label>
-                            </div>
-
-                            {cafe.gallery && cafe.gallery.length > 0 ? (
-                                <Reorder.Group
-                                    axis='x'
-                                    values={cafe.gallery}
-                                    onReorder={(newOrder) =>
-                                        updateField("gallery", newOrder)
-                                    }
-                                    className='flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-text/10'
-                                >
-                                    {cafe.gallery.map((url, idx) => (
-                                        <Reorder.Item
-                                            key={url}
-                                            value={url}
-                                            className='relative h-48 w-auto shrink-0 rounded-lg overflow-hidden group cursor-move active:cursor-grabbing bg-gray-50 flex items-center justify-center border border-text/10'
-                                        >
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={url}
-                                                alt={`Gallery ${idx + 1}`}
-                                                className='h-full w-auto object-contain pointer-events-none max-w-none'
-                                            />
-
-                                            {/* Move Controls */}
-                                            <div className='absolute bottom-2 left-2 right-2 flex justify-between md:opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-full px-2 py-1 backdrop-blur-sm z-10'>
-                                                <button
-                                                    type='button'
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        moveGalleryImage(
-                                                            idx,
-                                                            "left"
-                                                        )
-                                                    }}
-                                                    className={`p-1 text-white hover:text-white/80 transition ${idx === 0 ? "opacity-20 cursor-not-allowed" : ""}`}
-                                                    disabled={idx === 0}
-                                                    title='Move left'
-                                                >
-                                                    <ChevronLeft className='w-4 h-4' />
-                                                </button>
-                                                <button
-                                                    type='button'
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        moveGalleryImage(
-                                                            idx,
-                                                            "right"
-                                                        )
-                                                    }}
-                                                    className={`p-1 text-white hover:text-white/80 transition ${idx === cafe.gallery!.length - 1 ? "opacity-20 cursor-not-allowed" : ""}`}
-                                                    disabled={
-                                                        idx ===
-                                                        cafe.gallery!.length - 1
-                                                    }
-                                                    title='Move right'
-                                                >
-                                                    <ChevronRight className='w-4 h-4' />
-                                                </button>
-                                            </div>
-
-                                            <button
-                                                type='button'
-                                                onClick={async () => {
-                                                    if (
-                                                        !confirm(
-                                                            "Remove this image?"
-                                                        )
-                                                    )
-                                                        return
-                                                    await adminDeleteCafeImage(
-                                                        url
-                                                    )
-                                                    updateField(
-                                                        "gallery",
-                                                        cafe.gallery?.filter(
-                                                            (_, i) => i !== idx
-                                                        ) || []
-                                                    )
-                                                }}
-                                                className='absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full md:opacity-0 group-hover:opacity-100 transition hover:bg-red-600 z-10'
-                                                title='Remove image'
-                                            >
-                                                <X className='w-4 h-4' />
-                                            </button>
-                                        </Reorder.Item>
-                                    ))}
-                                </Reorder.Group>
-                            ) : (
-                                <div className='bg-text/5 border border-text/10 border-dashed rounded-xl p-12 text-center text-text/40'>
-                                    <ImagePlus className='w-12 h-12 mx-auto mb-4 opacity-50' />
-                                    <p>No gallery images yet</p>
-                                    <p className='text-sm mt-1'>
-                                        Click &quot;Add Photos&quot; to upload
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <ImageSection
+                        thumbnail={cafe.thumbnail}
+                        gallery={cafe.gallery || []}
+                        cafeId={cafe.id}
+                        cafeName={cafe.name}
+                        onThumbnailChange={(url: string | null) => {
+                            setCafe(
+                                (prev) =>
+                                    ({
+                                        ...prev,
+                                        thumbnail: url ?? prev.thumbnail,
+                                    }) as typeof prev
+                            )
+                            setHasChanges(true)
+                        }}
+                        onGalleryChange={(urls: string[]) => {
+                            updateField("gallery", urls)
+                            setHasChanges(true)
+                        }}
+                        onDeleteImage={async (url: string) => {
+                            await adminDeleteCafeImage(url)
+                        }}
+                        colorScheme='accent'
+                    />
                 )}
 
                 {/* Location */}
                 {activeSection === "location" && (
-                    <div className='space-y-6'>
-                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Region
-                                </label>
-                                <input
-                                    type='text'
-                                    value={cafe.region || ""}
-                                    readOnly
-                                    className='w-full px-4 py-3 bg-text/5 border border-text/10 rounded-lg text-text/60'
-                                />
-                            </div>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Province
-                                </label>
-                                <input
-                                    type='text'
-                                    value={cafe.province || ""}
-                                    readOnly
-                                    className='w-full px-4 py-3 bg-text/5 border border-text/10 rounded-lg text-text/60'
-                                />
-                            </div>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    City/Municipality
-                                </label>
-                                <input
-                                    type='text'
-                                    value={cafe.city_municipality || ""}
-                                    readOnly
-                                    className='w-full px-4 py-3 bg-text/5 border border-text/10 rounded-lg text-text/60'
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Display Address
-                            </label>
-                            <input
-                                type='text'
-                                value={cafe.address_display}
-                                onChange={(e) =>
-                                    updateField(
-                                        "address_display",
-                                        e.target.value
-                                    )
-                                }
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
-                            />
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Map Location
-                            </label>
-                            <LocationPicker
-                                lat={cafe.lat}
-                                lng={cafe.lng}
-                                onChange={(lat: number, lng: number) => {
-                                    updateField("lat", lat)
-                                    updateField("lng", lng)
-                                }}
-                            />
-                        </div>
-                    </div>
+                    <LocationSection
+                        data={{
+                            region: cafe.region,
+                            province: cafe.province,
+                            city_municipality: cafe.city_municipality,
+                            address_display: cafe.address_display,
+                            area: cafe.area,
+                            lat: cafe.lat,
+                            lng: cafe.lng,
+                        }}
+                        onChange={(key, value) => {
+                            updateField(
+                                key as keyof typeof cafe,
+                                value as (typeof cafe)[keyof typeof cafe]
+                            )
+                            setHasChanges(true)
+                        }}
+                        readOnlyLocation={true}
+                        colorScheme='accent'
+                    />
                 )}
 
                 {/* Amenities */}
@@ -1415,68 +1077,22 @@ export default function CafeEditor({
 
                 {/* Contact */}
                 {activeSection === "contact" && (
-                    <div className='space-y-6'>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Website
-                                </label>
-                                <input
-                                    type='url'
-                                    value={cafe.website_url || ""}
-                                    onChange={(e) =>
-                                        updateField(
-                                            "website_url",
-                                            e.target.value
-                                        )
-                                    }
-                                    placeholder='https://...'
-                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
-                                />
-                            </div>
-                            <div>
-                                <label className='block text-sm font-medium text-text/60 mb-2'>
-                                    Phone
-                                </label>
-                                <input
-                                    type='tel'
-                                    value={cafe.phone || ""}
-                                    onChange={(e) =>
-                                        updateField("phone", e.target.value)
-                                    }
-                                    placeholder='+63...'
-                                    className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Email
-                            </label>
-                            <input
-                                type='email'
-                                value={cafe.email || ""}
-                                onChange={(e) =>
-                                    updateField("email", e.target.value)
-                                }
-                                placeholder='cafe@example.com'
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
-                            />
-                        </div>
-
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-4'>
-                                Social Media Links
-                            </label>
-                            <SocialLinksEditor
-                                value={(cafe.socials as CafeSocial[]) || []}
-                                onChange={(socials) =>
-                                    updateField("socials", socials)
-                                }
-                            />
-                        </div>
-                    </div>
+                    <ContactSection
+                        data={{
+                            website_url: cafe.website_url,
+                            phone: cafe.phone,
+                            email: cafe.email,
+                            socials: (cafe.socials as CafeSocial[]) || [],
+                        }}
+                        onChange={(key, value) => {
+                            updateField(
+                                key as keyof typeof cafe,
+                                value as (typeof cafe)[keyof typeof cafe]
+                            )
+                            setHasChanges(true)
+                        }}
+                        colorScheme='accent'
+                    />
                 )}
 
                 {/* Story */}
@@ -1587,24 +1203,24 @@ Highlight unique features...'
                     <div className='space-y-4'>
                         <div className='flex items-center justify-between'>
                             <p className='text-text/60'>
-                                {menuItems.length} menu items
+                                {menu.items.length} menu items
                             </p>
                             <button
-                                onClick={openAddMenu}
+                                onClick={menu.openCreateModal}
                                 className='inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors'
                             >
                                 + Add Item
                             </button>
                         </div>
 
-                        {menuItems.length === 0 ? (
+                        {menu.items.length === 0 ? (
                             <div className='text-center py-8 text-text/50'>
                                 <Coffee className='w-12 h-12 mx-auto mb-3 opacity-30' />
                                 <p>No menu items yet</p>
                             </div>
                         ) : (
                             <div className='grid gap-2'>
-                                {menuItems.map((item) => (
+                                {menu.items.map((item) => (
                                     <div
                                         key={item.id}
                                         className='flex items-center gap-4 p-3 bg-text/5 rounded-lg border border-text/10'
@@ -1633,7 +1249,7 @@ Highlight unique features...'
                                         <div className='flex items-center gap-1'>
                                             <button
                                                 onClick={() =>
-                                                    openEditMenu(item)
+                                                    menu.openEditModal(item)
                                                 }
                                                 className='p-2 text-text/40 hover:text-text transition-colors'
                                             >
@@ -1641,9 +1257,7 @@ Highlight unique features...'
                                             </button>
                                             <button
                                                 onClick={() =>
-                                                    handleDeleteMenuItem(
-                                                        item.id
-                                                    )
+                                                    menu.deleteItem(item)
                                                 }
                                                 className='p-2 text-text/40 hover:text-red-500 transition-colors'
                                             >
@@ -1848,154 +1462,14 @@ Highlight unique features...'
             />
 
             {/* Menu Item Modal */}
-            {showMenuModal && (
-                <div
-                    className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
-                    onClick={() => setShowMenuModal(false)}
-                >
-                    <div
-                        className='bg-background rounded-2xl p-6 w-full max-w-md'
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h2 className='text-xl font-semibold mb-4'>
-                            {editingMenuItem
-                                ? "Edit Menu Item"
-                                : "Add Menu Item"}
-                        </h2>
-
-                        <div className='space-y-4'>
-                            <div>
-                                <label className='block text-sm font-medium mb-1'>
-                                    Name
-                                </label>
-                                <input
-                                    type='text'
-                                    value={menuForm.name}
-                                    onChange={(e) =>
-                                        setMenuForm({
-                                            ...menuForm,
-                                            name: e.target.value,
-                                        })
-                                    }
-                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg'
-                                />
-                            </div>
-
-                            <div>
-                                <label className='block text-sm font-medium mb-1'>
-                                    Category
-                                </label>
-                                <select
-                                    value={menuForm.category}
-                                    onChange={(e) =>
-                                        setMenuForm({
-                                            ...menuForm,
-                                            category: e.target.value,
-                                        })
-                                    }
-                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg'
-                                >
-                                    <option value='Coffee'>Coffee</option>
-                                    <option value='Non-Coffee'>
-                                        Non-Coffee
-                                    </option>
-                                    <option value='Espresso'>Espresso</option>
-                                    <option value='Tea'>Tea</option>
-                                    <option value='Pastry'>Pastry</option>
-                                    <option value='Food'>Food</option>
-                                    <option value='Dessert'>Dessert</option>
-                                    <option value='Other'>Other</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className='block text-sm font-medium mb-1'>
-                                    Price (₱)
-                                </label>
-                                <input
-                                    type='number'
-                                    min='0'
-                                    value={menuForm.price || ""}
-                                    onChange={(e) =>
-                                        setMenuForm({
-                                            ...menuForm,
-                                            price:
-                                                parseFloat(e.target.value) || 0,
-                                        })
-                                    }
-                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg'
-                                />
-                            </div>
-
-                            <div>
-                                <label className='block text-sm font-medium mb-1'>
-                                    Description
-                                </label>
-                                <textarea
-                                    value={menuForm.description || ""}
-                                    onChange={(e) =>
-                                        setMenuForm({
-                                            ...menuForm,
-                                            description: e.target.value,
-                                        })
-                                    }
-                                    rows={2}
-                                    className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg resize-none'
-                                />
-                            </div>
-
-                            <div className='flex gap-4'>
-                                <label className='flex items-center gap-2'>
-                                    <input
-                                        type='checkbox'
-                                        checked={menuForm.is_signature || false}
-                                        onChange={(e) =>
-                                            setMenuForm({
-                                                ...menuForm,
-                                                is_signature: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <span className='text-sm'>Signature</span>
-                                </label>
-                                <label className='flex items-center gap-2'>
-                                    <input
-                                        type='checkbox'
-                                        checked={menuForm.is_available ?? true}
-                                        onChange={(e) =>
-                                            setMenuForm({
-                                                ...menuForm,
-                                                is_available: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <span className='text-sm'>Available</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className='flex gap-3 mt-6'>
-                            <button
-                                onClick={() => setShowMenuModal(false)}
-                                className='flex-1 px-4 py-2 bg-text/10 rounded-lg font-medium'
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSaveMenuItem}
-                                disabled={menuSaving}
-                                className='flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium disabled:opacity-50'
-                            >
-                                {menuSaving
-                                    ? "Saving..."
-                                    : editingMenuItem
-                                      ? "Save"
-                                      : "Add"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <MenuItemModal
+                open={menu.modalOpen}
+                onClose={menu.closeModal}
+                onSave={menu.saveItem}
+                editingItem={menu.editingItem}
+                saving={menu.loading}
+                colorScheme='accent'
+            />
         </div>
     )
 }
