@@ -53,6 +53,9 @@ import SocialLinksEditor from "./SocialLinksEditor"
 import LocationPicker from "./LocationPicker"
 import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
 import ImageCropper from "@/components/ui/ImageCropper"
+import AmenitiesSection from "@/components/cafe-editor/AmenitiesSection"
+import HoursSection from "@/components/cafe-editor/HoursSection"
+import { CafeWithRatings } from "@/utils/types/extra"
 
 const STEPS = [
     { id: 0, title: "Before We Begin", icon: Search },
@@ -98,9 +101,7 @@ export default function CafeSubmissionForm({
     const [success, setSuccess] = useState(false)
 
     // Custom comma-separated inputs
-    const [customPaymentMethods, setCustomPaymentMethods] = useState("")
-    const [customSpecialties, setCustomSpecialties] = useState("")
-    const [customTags, setCustomTags] = useState("")
+    // NOTE: Custom inputs are now handled within AmenitiesSection
 
     // Duplicate checking
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Cafe search results have dynamic shape
@@ -182,9 +183,8 @@ export default function CafeSubmissionForm({
         setPreSearchQuery("")
         setPreSearchResults([])
         setPossibleDuplicates([])
-        setCustomPaymentMethods("")
-        setCustomSpecialties("")
-        setCustomTags("")
+        setPreSearchResults([])
+        setPossibleDuplicates([])
         clearDraft()
     }
 
@@ -1376,71 +1376,6 @@ export default function CafeSubmissionForm({
                                 </div>
 
                                 <div>
-                                    <label className='block text-sm font-medium mb-3'>
-                                        Amenities
-                                    </label>
-                                    <AmenityToggles
-                                        values={{
-                                            has_wifi: formData.has_wifi,
-                                            has_sockets: formData.has_sockets,
-                                            has_parking: formData.has_parking,
-                                            has_aircon: formData.has_aircon,
-                                            is_pet_friendly:
-                                                formData.is_pet_friendly,
-                                            has_outdoor_seating:
-                                                formData.has_outdoor_seating,
-                                            has_indoor_seating:
-                                                formData.has_indoor_seating,
-                                            has_restroom: formData.has_restroom,
-                                            has_bidet: formData.has_bidet,
-                                            has_non_dairy:
-                                                formData.has_non_dairy,
-                                            serves_food: formData.serves_food,
-                                            is_work_friendly:
-                                                formData.is_work_friendly,
-                                        }}
-                                        onChange={(key, value) =>
-                                            updateFormData(
-                                                key as keyof CafeSubmission,
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                                value as any
-                                            )
-                                        }
-                                    />
-                                </div>
-
-                                {/* Milk Options (conditional on has_non_dairy) */}
-                                {formData.has_non_dairy && (
-                                    <div className='p-4 bg-primary/5 border border-primary/20 rounded-xl'>
-                                        <label className='block text-sm font-medium mb-2'>
-                                            Non-Dairy Milk Options
-                                        </label>
-                                        <input
-                                            type='text'
-                                            value={formData.milk_options.join(
-                                                ", "
-                                            )}
-                                            onChange={(e) => {
-                                                const options = e.target.value
-                                                    .split(",")
-                                                    .map((s) => s.trim())
-                                                    .filter(Boolean)
-                                                updateFormData(
-                                                    "milk_options",
-                                                    options
-                                                )
-                                            }}
-                                            placeholder='Oat, Almond, Soy, Coconut...'
-                                            className='w-full px-4 py-3 bg-background border border-text/20 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
-                                        />
-                                        <p className='text-xs text-text/50 mt-2'>
-                                            Comma-separated list of available
-                                            non-dairy milk options
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div>
                                     <label className='block text-sm font-medium mb-2'>
                                         Price Level
                                     </label>
@@ -1473,407 +1408,17 @@ export default function CafeSubmissionForm({
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className='block text-sm font-medium mb-2'>
-                                        Payment Methods
-                                    </label>
-                                    <div className='flex flex-wrap gap-2 mb-3'>
-                                        {PAYMENT_METHODS.map((method) => {
-                                            const isSelected =
-                                                formData.payment_methods.includes(
-                                                    method
-                                                )
-                                            return (
-                                                <button
-                                                    key={method}
-                                                    type='button'
-                                                    onClick={() => {
-                                                        const current =
-                                                            formData.payment_methods
-                                                                .split(",")
-                                                                .map((s) =>
-                                                                    s.trim()
-                                                                )
-                                                                .filter(Boolean)
-                                                        const updated =
-                                                            isSelected
-                                                                ? current.filter(
-                                                                      (m) =>
-                                                                          m !==
-                                                                          method
-                                                                  )
-                                                                : [
-                                                                      ...current,
-                                                                      method,
-                                                                  ]
-                                                        updateFormData(
-                                                            "payment_methods",
-                                                            updated.join(", ")
-                                                        )
-                                                    }}
-                                                    className={cn(
-                                                        "px-3 py-1.5 rounded-full text-sm font-medium capitalize transition-all cursor-pointer",
-                                                        isSelected
-                                                            ? "bg-primary text-white"
-                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
-                                                    )}
-                                                >
-                                                    {method.replace("_", " ")}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                    <input
-                                        type='text'
-                                        value={customPaymentMethods}
-                                        onChange={(e) =>
-                                            setCustomPaymentMethods(
-                                                e.target.value
-                                            )
-                                        }
-                                        onBlur={() => {
-                                            if (customPaymentMethods.trim()) {
-                                                const current =
-                                                    formData.payment_methods
-                                                        .split(",")
-                                                        .map((s) => s.trim())
-                                                        .filter(Boolean)
-                                                const custom =
-                                                    customPaymentMethods
-                                                        .split(",")
-                                                        .map((s) => s.trim())
-                                                        .filter(Boolean)
-                                                const merged = [
-                                                    ...new Set([
-                                                        ...current,
-                                                        ...custom,
-                                                    ]),
-                                                ]
-                                                updateFormData(
-                                                    "payment_methods",
-                                                    merged.join(", ")
-                                                )
-                                                setCustomPaymentMethods("")
-                                            }
-                                        }}
-                                        placeholder='Add more (comma separated): e.g. PayPal, Grab Pay'
-                                        className='w-full px-4 py-2 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
-                                    />
-                                    {/* Show selected payment methods */}
-                                    {formData.payment_methods && (
-                                        <div className='flex flex-wrap gap-2 mt-3'>
-                                            {formData.payment_methods
-                                                .split(",")
-                                                .map((m) => m.trim())
-                                                .filter(Boolean)
-                                                .map((method) => (
-                                                    <span
-                                                        key={method}
-                                                        className='inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-medium capitalize'
-                                                    >
-                                                        {method.replace(
-                                                            /_/g,
-                                                            " "
-                                                        )}
-                                                        <button
-                                                            type='button'
-                                                            onClick={() => {
-                                                                const updated =
-                                                                    formData.payment_methods
-                                                                        .split(
-                                                                            ","
-                                                                        )
-                                                                        .map(
-                                                                            (
-                                                                                m
-                                                                            ) =>
-                                                                                m.trim()
-                                                                        )
-                                                                        .filter(
-                                                                            (
-                                                                                m
-                                                                            ) =>
-                                                                                m &&
-                                                                                m !==
-                                                                                    method
-                                                                        )
-                                                                        .join(
-                                                                            ", "
-                                                                        )
-                                                                updateFormData(
-                                                                    "payment_methods",
-                                                                    updated
-                                                                )
-                                                            }}
-                                                            className='ml-0.5 hover:text-red-500 cursor-pointer'
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className='block text-sm font-medium mb-2'>
-                                        Specialties
-                                    </label>
-                                    <div className='flex flex-wrap gap-2 mb-3'>
-                                        {CAFE_SPECIALTIES.map((spec) => {
-                                            const isSelected =
-                                                formData.specialty.includes(
-                                                    spec
-                                                )
-                                            return (
-                                                <button
-                                                    key={spec}
-                                                    type='button'
-                                                    onClick={() => {
-                                                        const updated =
-                                                            isSelected
-                                                                ? formData.specialty.filter(
-                                                                      (s) =>
-                                                                          s !==
-                                                                          spec
-                                                                  )
-                                                                : [
-                                                                      ...formData.specialty,
-                                                                      spec,
-                                                                  ]
-                                                        updateFormData(
-                                                            "specialty",
-                                                            updated
-                                                        )
-                                                    }}
-                                                    className={cn(
-                                                        "px-3 py-1.5 rounded-full text-sm font-medium capitalize transition-all cursor-pointer",
-                                                        isSelected
-                                                            ? "bg-primary text-white"
-                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
-                                                    )}
-                                                >
-                                                    {spec.replace("_", " ")}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                    <input
-                                        type='text'
-                                        value={customSpecialties}
-                                        onChange={(e) =>
-                                            setCustomSpecialties(e.target.value)
-                                        }
-                                        onBlur={() => {
-                                            if (customSpecialties.trim()) {
-                                                const custom = customSpecialties
-                                                    .split(",")
-                                                    .map((s) =>
-                                                        s
-                                                            .trim()
-                                                            .toLowerCase()
-                                                            .replace(
-                                                                /\s+/g,
-                                                                "_"
-                                                            )
-                                                    )
-                                                    .filter(Boolean)
-                                                const merged = [
-                                                    ...new Set([
-                                                        ...formData.specialty,
-                                                        ...custom,
-                                                    ]),
-                                                ]
-                                                updateFormData(
-                                                    "specialty",
-                                                    merged
-                                                )
-                                                setCustomSpecialties("")
-                                            }
-                                        }}
-                                        placeholder='Add more (comma separated): e.g. cold brew, single origin'
-                                        className='w-full px-4 py-2 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
-                                    />
-                                    {/* Show selected specialties */}
-                                    {formData.specialty.length > 0 && (
-                                        <div className='flex flex-wrap gap-2 mt-3'>
-                                            {formData.specialty.map((spec) => (
-                                                <span
-                                                    key={spec}
-                                                    className='inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-medium'
-                                                >
-                                                    {spec.replace(/_/g, " ")}
-                                                    <button
-                                                        type='button'
-                                                        onClick={() =>
-                                                            updateFormData(
-                                                                "specialty",
-                                                                formData.specialty.filter(
-                                                                    (s) =>
-                                                                        s !==
-                                                                        spec
-                                                                )
-                                                            )
-                                                        }
-                                                        className='ml-0.5 hover:text-red-500 cursor-pointer'
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className='block text-sm font-medium mb-2'>
-                                        Vibe Tags
-                                    </label>
-                                    <div className='flex flex-wrap gap-2 mb-3'>
-                                        {CAFE_VIBE_TAGS.map((tag) => {
-                                            const isSelected =
-                                                formData.tags.includes(tag)
-                                            return (
-                                                <button
-                                                    key={tag}
-                                                    type='button'
-                                                    onClick={() => {
-                                                        const updated =
-                                                            isSelected
-                                                                ? formData.tags.filter(
-                                                                      (t) =>
-                                                                          t !==
-                                                                          tag
-                                                                  )
-                                                                : [
-                                                                      ...formData.tags,
-                                                                      tag,
-                                                                  ]
-                                                        updateFormData(
-                                                            "tags",
-                                                            updated
-                                                        )
-                                                    }}
-                                                    className={cn(
-                                                        "px-3 py-1.5 rounded-full text-sm font-medium capitalize transition-all cursor-pointer",
-                                                        isSelected
-                                                            ? "bg-secondary text-text"
-                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
-                                                    )}
-                                                >
-                                                    {tag.replace("_", " ")}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                    <input
-                                        type='text'
-                                        value={customTags}
-                                        onChange={(e) =>
-                                            setCustomTags(e.target.value)
-                                        }
-                                        onBlur={() => {
-                                            if (customTags.trim()) {
-                                                const custom = customTags
-                                                    .split(",")
-                                                    .map((s) =>
-                                                        s
-                                                            .trim()
-                                                            .toLowerCase()
-                                                            .replace(
-                                                                /\s+/g,
-                                                                "_"
-                                                            )
-                                                    )
-                                                    .filter(Boolean)
-                                                const merged = [
-                                                    ...new Set([
-                                                        ...formData.tags,
-                                                        ...custom,
-                                                    ]),
-                                                ]
-                                                updateFormData("tags", merged)
-                                                setCustomTags("")
-                                            }
-                                        }}
-                                        placeholder='Add more (comma separated): e.g. hidden gem, rooftop'
-                                        className='w-full px-4 py-2 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
-                                    />
-                                    {/* Show selected tags */}
-                                    {formData.tags.length > 0 && (
-                                        <div className='flex flex-wrap gap-2 mt-3'>
-                                            {formData.tags.map((tag) => (
-                                                <span
-                                                    key={tag}
-                                                    className='inline-flex items-center gap-1 px-2.5 py-1 bg-secondary/20 text-text border border-secondary/30 rounded-full text-xs font-medium'
-                                                >
-                                                    {tag.replace(/_/g, " ")}
-                                                    <button
-                                                        type='button'
-                                                        onClick={() =>
-                                                            updateFormData(
-                                                                "tags",
-                                                                formData.tags.filter(
-                                                                    (t) =>
-                                                                        t !==
-                                                                        tag
-                                                                )
-                                                            )
-                                                        }
-                                                        className='ml-0.5 hover:text-red-500 cursor-pointer'
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className='block text-sm font-medium mb-2'>
-                                        Brew Methods
-                                    </label>
-                                    <div className='flex flex-wrap gap-2'>
-                                        {BREW_METHODS.map((method) => {
-                                            const isSelected =
-                                                formData.brew_methods.includes(
-                                                    method
-                                                )
-                                            return (
-                                                <button
-                                                    key={method}
-                                                    type='button'
-                                                    onClick={() => {
-                                                        const updated =
-                                                            isSelected
-                                                                ? formData.brew_methods.filter(
-                                                                      (m) =>
-                                                                          m !==
-                                                                          method
-                                                                  )
-                                                                : [
-                                                                      ...formData.brew_methods,
-                                                                      method,
-                                                                  ]
-                                                        updateFormData(
-                                                            "brew_methods",
-                                                            updated
-                                                        )
-                                                    }}
-                                                    className={cn(
-                                                        "px-3 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer",
-                                                        isSelected
-                                                            ? "bg-primary/20 text-primary border border-primary/30"
-                                                            : "bg-text/10 text-text/60 hover:bg-text/20"
-                                                    )}
-                                                >
-                                                    {method}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
+                                <AmenitiesSection
+                                    cafe={
+                                        formData as unknown as CafeWithRatings
+                                    }
+                                    onChange={(key, value) =>
+                                        updateFormData(
+                                            key as keyof CafeSubmission,
+                                            value
+                                        )
+                                    }
+                                />
 
                                 <div>
                                     <label className='block text-sm font-medium mb-2'>
@@ -1898,17 +1443,8 @@ export default function CafeSubmissionForm({
                         {/* Step 4: Operating Hours */}
                         {currentStep === 4 && (
                             <div className='space-y-6'>
-                                <div>
-                                    <h3 className='text-xl font-semibold font-serif mb-1'>
-                                        Operating Hours
-                                    </h3>
-                                    <p className='text-text/60 text-sm'>
-                                        When is the cafe open?
-                                    </p>
-                                </div>
-
-                                <OperatingHoursEditor
-                                    value={formData.operating_hours}
+                                <HoursSection
+                                    hours={formData.operating_hours}
                                     onChange={(hours) =>
                                         updateFormData("operating_hours", hours)
                                     }

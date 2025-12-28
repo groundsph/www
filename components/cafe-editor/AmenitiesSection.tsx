@@ -21,10 +21,27 @@ export default function AmenitiesSection({
 }: AmenitiesSectionProps) {
     const [customSpecialties, setCustomSpecialties] = useState("")
     const [customTags, setCustomTags] = useState("")
+    const [customPaymentMethods, setCustomPaymentMethods] = useState("")
 
     // Helper to convert snake_case to Title Case
     const formatLabel = (s: string) =>
         s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+
+    const addCustomPaymentMethods = () => {
+        if (!customPaymentMethods.trim()) return
+        const newMethods = customPaymentMethods
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        const current =
+            cafe.payment_methods
+                ?.split(",")
+                .map((s) => s.trim())
+                .filter(Boolean) || []
+        const unique = [...new Set([...current, ...newMethods])]
+        onChange("payment_methods", unique.join(", "))
+        setCustomPaymentMethods("")
+    }
 
     const addCustomSpecialties = () => {
         if (!customSpecialties.trim()) return
@@ -148,6 +165,65 @@ export default function AmenitiesSection({
                         )
                     })}
                 </div>
+                <div className='flex gap-2'>
+                    <input
+                        type='text'
+                        value={customPaymentMethods}
+                        onChange={(e) =>
+                            setCustomPaymentMethods(e.target.value)
+                        }
+                        onKeyDown={(e) =>
+                            e.key === "Enter" &&
+                            (e.preventDefault(), addCustomPaymentMethods())
+                        }
+                        placeholder='Add custom (comma-separated)'
+                        className='flex-1 px-3 py-2 bg-background border border-text/10 rounded-lg text-sm'
+                    />
+                    <button
+                        onClick={addCustomPaymentMethods}
+                        className='px-3 py-2 bg-text/10 rounded-lg text-sm hover:bg-text/20'
+                    >
+                        Add
+                    </button>
+                </div>
+                {cafe.payment_methods && cafe.payment_methods.length > 0 && (
+                    <div className='flex flex-wrap gap-1 mt-2'>
+                        {cafe.payment_methods
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .map((s) => (
+                                <span
+                                    key={s}
+                                    className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
+                                        colorScheme === "primary"
+                                            ? "bg-primary/20 text-primary"
+                                            : "bg-accent/20 text-accent"
+                                    }`}
+                                >
+                                    {formatLabel(s)}
+                                    <button
+                                        onClick={() => {
+                                            const current =
+                                                cafe.payment_methods
+                                                    ?.split(",")
+                                                    .map((x) => x.trim())
+                                                    .filter(Boolean) || []
+                                            onChange(
+                                                "payment_methods",
+                                                current
+                                                    .filter((x) => x !== s)
+                                                    .join(", ")
+                                            )
+                                        }}
+                                        className='hover:text-red-400'
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            ))}
+                    </div>
+                )}
             </div>
 
             {/* Specialties */}
