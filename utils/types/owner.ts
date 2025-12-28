@@ -33,6 +33,7 @@ export const SUBSCRIPTION_TIERS = {
             'Direct Cafe Editing',
         ],
         menuLimit: 0,
+        enabledFeatures: [] as TierFeature[],
     },
     pro: {
         name: 'Pro',
@@ -46,6 +47,7 @@ export const SUBSCRIPTION_TIERS = {
             'QR to Menu',
         ],
         menuLimit: 30,
+        enabledFeatures: ['menu', 'blog', 'analytics', 'verified_badge', 'qr_menu'] as TierFeature[],
     },
     premium: {
         name: 'Premium',
@@ -62,8 +64,82 @@ export const SUBSCRIPTION_TIERS = {
             '+ More Features in the Future',
         ],
         menuLimit: Infinity,
+        enabledFeatures: [
+            'menu', 'blog', 'analytics', 'verified_badge', 'qr_menu',
+            'events', 'highlighted_pins', 'direct_support', 'featured_slot_request',
+            'review_pinning', 'priority_ranking'
+        ] as TierFeature[],
     },
 } as const;
+
+// ============================================
+// Tier Feature Types & Helpers
+// ============================================
+
+/**
+ * Tier-specific feature flags that can be programmatically checked
+ */
+export type TierFeature =
+    | 'menu'
+    | 'blog'
+    | 'events'
+    | 'analytics'
+    | 'verified_badge'
+    | 'highlighted_pins'
+    | 'featured_slot_request'
+    | 'review_pinning'
+    | 'priority_ranking'
+    | 'qr_menu'
+    | 'direct_support';
+
+/**
+ * Check if a subscription tier has access to a specific feature
+ */
+export function canAccessFeature(tier: SubscriptionTier, feature: TierFeature): boolean {
+    const tierConfig = SUBSCRIPTION_TIERS[tier];
+    return (tierConfig.enabledFeatures as readonly TierFeature[]).includes(feature);
+}
+
+/**
+ * Get the minimum tier required for a specific feature
+ * Returns 'premium' as fallback if feature not found in any tier
+ */
+export function getRequiredTier(feature: TierFeature): SubscriptionTier {
+    const tierOrder: SubscriptionTier[] = ['free', 'pro', 'premium'];
+    for (const tier of tierOrder) {
+        if (canAccessFeature(tier, feature)) {
+            return tier;
+        }
+    }
+    return 'premium';
+}
+
+/**
+ * Get all features available for a tier
+ */
+export function getTierFeatures(tier: SubscriptionTier): TierFeature[] {
+    return [...SUBSCRIPTION_TIERS[tier].enabledFeatures] as TierFeature[];
+}
+
+/**
+ * Check if an upgrade from current tier to target tier would unlock a feature
+ */
+export function wouldUnlockFeature(
+    currentTier: SubscriptionTier,
+    targetTier: SubscriptionTier,
+    feature: TierFeature
+): boolean {
+    return !canAccessFeature(currentTier, feature) && canAccessFeature(targetTier, feature);
+}
+
+/**
+ * Get the display name for the tier required to use a feature
+ */
+export function getRequiredTierName(feature: TierFeature): string {
+    const tier = getRequiredTier(feature);
+    return SUBSCRIPTION_TIERS[tier].name;
+}
+
 
 // ============================================
 // Cafe Subscription

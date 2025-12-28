@@ -778,11 +778,12 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
         return { success: false, error: "Failed to verify subscription" }
     }
 
-    // 3. Update cafe tier
+    // 3. Update cafe tier and verification status
     await adminDb
         .from('cafes')
         .update({
             membership_tier: sub.tier,
+            is_verified: true,
             updated_at: new Date().toISOString()
         })
         .eq('id', cafeId)
