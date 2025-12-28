@@ -103,7 +103,7 @@ export default function StatsCards() {
                 {/* Users */}
                 <motion.div
                     variants={item}
-                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-colors'
+                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-all shadow-sm hover:shadow-md'
                 >
                     <div className='flex items-center gap-3 mb-2'>
                         <div className='p-2 bg-blue-100 text-blue-700 rounded-lg'>
@@ -121,7 +121,7 @@ export default function StatsCards() {
                 {/* Storage */}
                 <motion.div
                     variants={item}
-                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-colors'
+                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-all shadow-sm hover:shadow-md'
                 >
                     <div className='flex items-center gap-3 mb-2'>
                         <div className='p-2 bg-purple-100 text-purple-700 rounded-lg'>
@@ -178,7 +178,7 @@ export default function StatsCards() {
                 {/* Database */}
                 <motion.div
                     variants={item}
-                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-colors'
+                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-all shadow-sm hover:shadow-md'
                 >
                     <div className='flex items-center gap-3 mb-2'>
                         <div className='p-2 bg-indigo-100 text-indigo-700 rounded-lg'>
@@ -196,7 +196,7 @@ export default function StatsCards() {
                 {/* Cafes Total */}
                 <motion.div
                     variants={item}
-                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-colors'
+                    className='p-4 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-all shadow-sm hover:shadow-md'
                 >
                     <div className='flex items-center gap-3 mb-2'>
                         <div className='p-2 bg-orange-100 text-orange-700 rounded-lg'>
@@ -221,13 +221,13 @@ export default function StatsCards() {
                 {/* Pending Actions */}
                 <motion.div
                     variants={item}
-                    className='p-6 bg-background border border-text/10 rounded-xl'
+                    className='p-6 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-all shadow-sm hover:shadow-md'
                 >
                     <h3 className='font-semibold mb-4 text-text/80'>
                         Action Items
                     </h3>
                     <div className='grid grid-cols-2 gap-4'>
-                        <div className='p-3 bg-text/5 rounded-lg flex flex-col'>
+                        <div className='p-3 bg-text/5 rounded-lg flex flex-col hover:border-primary/30 transition-all shadow-inner'>
                             <span className='text-sm text-text/60 mb-1'>
                                 Pending Claims
                             </span>
@@ -239,7 +239,7 @@ export default function StatsCards() {
                             </span>
                         </div>
                         {/* We could add more pending items here if available in the API */}
-                        <div className='p-3 bg-text/5 rounded-lg flex flex-col'>
+                        <div className='p-3 bg-text/5 rounded-lg flex flex-col hover:border-primary/30 transition-all shadow-inner'>
                             <span className='text-sm text-text/60 mb-1'>
                                 Total Reviews
                             </span>
@@ -253,7 +253,7 @@ export default function StatsCards() {
                 {/* Storage Breakdown */}
                 <motion.div
                     variants={item}
-                    className='p-6 bg-background border border-text/10 rounded-xl'
+                    className='p-6 bg-background border border-text/10 rounded-xl hover:border-primary/30 transition-all shadow-sm hover:shadow-md'
                 >
                     <h3 className='font-semibold mb-4 text-text/80'>
                         Storage Usage Breakdown

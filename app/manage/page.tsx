@@ -3,102 +3,129 @@ import {
     isAdmin,
     getUserRole,
     getPaginatedCafes,
-    getCafeFilterOptions,
-    getReportedReviews,
-    getAllBadgeDefinitions,
-    getFeaturedSchedules,
 } from "@/app/api/actions/admin"
-import { getPendingSuggestions } from "@/app/api/actions/suggestions"
-import { getPendingClaims } from "@/app/api/actions/claim"
-import { getAdminBlogPosts } from "@/app/api/actions/blog"
-import { getAdminEvents } from "@/app/api/actions/events"
-import ManageDashboard from "./ManageDashboard"
+import StatsCards from "./StatsCards"
+import Link from "next/link"
+import { Store, Users, FileText, Settings, ArrowRight } from "lucide-react"
 
-export const metadata = {
-    title: "Manage Dashboard",
-    description: "Manage cafe submissions and platform settings",
-}
-
-export default async function ManagePage() {
-    // Check admin/moderator access - redirect if not authorized
+export default async function ManageOverviewPage() {
+    // The layout already handles access control, but we need the role
     const hasAccess = await isAdmin()
     if (!hasAccess) {
         redirect("/")
     }
 
-    // Get user's actual role for conditional rendering
     const userRole = await getUserRole()
     const isFullAdmin = userRole === "admin"
 
-    // Fetch initial data - some data only for admins
-    const [
-        pendingResult,
-        publishedResult,
-        filterOptions,
-        reportedReviews,
-        suggestions,
-        pendingClaims,
-        // Admin-only data
-        badges,
-        featuredSchedules,
-        blogPostsResult,
-        eventsResult,
-    ] = await Promise.all([
-        // Moderator + Admin data
-        getPaginatedCafes({
-            isPublished: false,
-            page: 1,
-            pageSize: 25,
-            sortBy: "date",
-        }),
-        getPaginatedCafes({
-            isPublished: true,
-            page: 1,
-            pageSize: 25,
-            sortBy: "name",
-        }),
-        getCafeFilterOptions(),
-        getReportedReviews(),
-        getPendingSuggestions(),
-        getPendingClaims(),
-        // Admin-only data (fetch empty arrays for moderators)
-        isFullAdmin ? getAllBadgeDefinitions() : Promise.resolve([]),
-        isFullAdmin ? getFeaturedSchedules() : Promise.resolve([]),
-        isFullAdmin
-            ? getAdminBlogPosts({ pageSize: 50 })
-            : Promise.resolve({
-                  posts: [],
-                  total: 0,
-                  page: 1,
-                  pageSize: 50,
-                  hasMore: false,
-              }),
-        isFullAdmin
-            ? getAdminEvents(1, 50)
-            : Promise.resolve({ events: [], total: 0 }),
-    ])
+    // Fetch pending cafes count
+    const pendingResult = await getPaginatedCafes({
+        isPublished: false,
+        page: 1,
+        pageSize: 1,
+    })
+    const pendingCount = pendingResult.total
+
+    const categories = [
+        {
+            name: "Cafes",
+            description:
+                "Manage pending submissions, published cafes, suggestions, and ownership claims.",
+            href: "/manage/cafes",
+            icon: <Store className='w-6 h-6' />,
+            color: "bg-amber-500/10 text-amber-700",
+            badge: pendingCount > 0 ? pendingCount : undefined,
+        },
+        {
+            name: "Community",
+            description: "Review reported content and manage team members.",
+            href: "/manage/community",
+            icon: <Users className='w-6 h-6' />,
+            color: "bg-blue-500/10 text-blue-700",
+        },
+        {
+            name: "Content",
+            description:
+                "Create and manage blog posts, events, and featured schedules.",
+            href: "/manage/content",
+            icon: <FileText className='w-6 h-6' />,
+            color: "bg-green-500/10 text-green-700",
+            adminOnly: true,
+        },
+        {
+            name: "System",
+            description:
+                "Manage badges, platform settings, and maintenance tools.",
+            href: "/manage/system",
+            icon: <Settings className='w-6 h-6' />,
+            color: "bg-purple-500/10 text-purple-700",
+            adminOnly: true,
+        },
+    ]
+
+    const visibleCategories = categories.filter(
+        (cat) => !cat.adminOnly || isFullAdmin
+    )
 
     return (
-        <main className='min-h-screen w-full bg-background pt-6 pb-12'>
-            <div className='w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <ManageDashboard
-                    userRole={userRole as "admin" | "moderator"}
-                    initialPendingCafes={pendingResult.cafes}
-                    initialPublishedCafes={publishedResult.cafes}
-                    pendingTotal={pendingResult.total}
-                    publishedTotal={publishedResult.total}
-                    pendingHasMore={pendingResult.hasMore}
-                    publishedHasMore={publishedResult.hasMore}
-                    filterOptions={filterOptions}
-                    reportedReviews={reportedReviews}
-                    badges={badges}
-                    suggestions={suggestions}
-                    featuredSchedules={featuredSchedules}
-                    pendingClaims={pendingClaims}
-                    blogPosts={blogPostsResult.posts}
-                    events={eventsResult.events}
-                />
+        <div className='space-y-8'>
+            {/* Header */}
+            <div>
+                <h1 className='text-2xl md:text-3xl font-bold text-text'>
+                    Manage Dashboard
+                </h1>
+                <p className='text-text/60 mt-1'>
+                    Welcome back! Here&apos;s an overview of your platform.
+                </p>
             </div>
-        </main>
+
+            {/* Stats Cards */}
+            {isFullAdmin && <StatsCards />}
+
+            {/* Quick Access Cards */}
+            <div>
+                <h2 className='text-lg font-semibold text-text mb-4'>
+                    Quick Access
+                </h2>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                    {visibleCategories.map((category) => (
+                        <Link
+                            key={category.href}
+                            href={category.href}
+                            className='group bg-background rounded-xl p-5 shadow-sm border border-tertiary/50 hover:shadow-md hover:border-primary/30 transition-all'
+                        >
+                            <div className='flex items-start justify-between'>
+                                <div className='relative'>
+                                    <div
+                                        className={`p-3 rounded-lg ${category.color}`}
+                                    >
+                                        {category.icon}
+                                    </div>
+                                    {category.badge && (
+                                        <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center'>
+                                            {category.badge > 9
+                                                ? "9+"
+                                                : category.badge}
+                                        </span>
+                                    )}
+                                </div>
+                                <ArrowRight className='w-5 h-5 text-text/30 group-hover:text-primary group-hover:translate-x-1 transition-all' />
+                            </div>
+                            <h3 className='font-semibold text-text mt-4'>
+                                {category.name}
+                                {category.badge && (
+                                    <span className='ml-2 text-sm font-normal text-red-500'>
+                                        {category.badge} pending
+                                    </span>
+                                )}
+                            </h3>
+                            <p className='text-sm text-text/60 mt-1'>
+                                {category.description}
+                            </p>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+        </div>
     )
 }
