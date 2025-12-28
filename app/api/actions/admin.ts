@@ -3,7 +3,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
-import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/supabase/storage"
+import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue, deleteSingleCafeImage } from "@/utils/supabase/storage"
 import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { Database } from "@/utils/types/database.types"
@@ -717,8 +717,14 @@ export async function getManualSubscriptions(): Promise<any[]> {
 
 /**
  * Verify a manual payment
+ * Returns proof info so client can download before deletion
  */
-export async function verifyManualPayment(cafeId: string, subscriptionId: string): Promise<AdminActionResult> {
+export async function verifyManualPayment(cafeId: string, subscriptionId: string): Promise<AdminActionResult & {
+    proofInfo?: {
+        url: string
+        filename: string
+    }
+}> {
     const db = await createClient()
 
     // Verify admin access
@@ -737,12 +743,31 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
 
     const adminDb = await createAdminClient()
 
-    // 1. Update subscription status
+    // 1. Get subscription with proof and cafe info
+    const { data: sub, error: fetchError } = await adminDb
+        .from('cafe_subscriptions')
+        .select(`
+            tier,
+            proof_of_payment_url,
+            created_at,
+            cafes:cafe_id (name)
+        `)
+        .eq('id', subscriptionId)
+        .eq('cafe_id', cafeId)
+        .single()
+
+    if (fetchError || !sub) {
+        console.error("Error fetching subscription:", fetchError)
+        return { success: false, error: "Subscription not found" }
+    }
+
+    // 2. Update subscription status
     const { error: subError } = await adminDb
         .from('cafe_subscriptions')
         .update({
             payment_verified: true,
-            status: 'active', // Ensure it's active
+            status: 'active',
+            proof_of_payment_url: null, // Clear the URL since we'll delete the file
             updated_at: new Date().toISOString()
         })
         .eq('id', subscriptionId)
@@ -753,31 +778,65 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
         return { success: false, error: "Failed to verify subscription" }
     }
 
-    // 2. Ensuring cafe tier is updated (it should have been set on submission, but double check)
-    // Get subscription tier
-    const { data: sub } = await adminDb
-        .from('cafe_subscriptions')
-        .select('tier')
-        .eq('id', subscriptionId)
-        .single()
+    // 3. Update cafe tier
+    await adminDb
+        .from('cafes')
+        .update({
+            membership_tier: sub.tier,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', cafeId)
 
-    if (sub) {
-        await adminDb
-            .from('cafes')
-            .update({
-                membership_tier: sub.tier,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', cafeId)
+    // 4. Prepare proof info for client download
+    let proofInfo: { url: string; filename: string } | undefined
+    if (sub.proof_of_payment_url) {
+        const cafeName = (sub.cafes as any)?.name || 'cafe'
+        const uploadDate = sub.created_at ? new Date(sub.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        const ext = sub.proof_of_payment_url.split('.').pop()?.split('?')[0] || 'jpg'
+        const sanitizedCafeName = cafeName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
+        const filename = `${sanitizedCafeName}_${uploadDate}.${ext}`
+
+        proofInfo = {
+            url: sub.proof_of_payment_url,
+            filename
+        }
     }
 
     // TODO: Send email notification to cafe owner
+
+    return { success: true, proofInfo }
+}
+
+/**
+ * Delete a subscription proof of payment file from storage
+ * Called by the client after successfully downloading the proof
+ */
+export async function deleteSubscriptionProof(proofUrl: string): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } = {} } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Delete the proof file from storage
+    await deleteSingleCafeImage(proofUrl)
 
     return { success: true }
 }
 
 /**
  * Reject a manual payment
+ * Also deletes the proof of payment file from storage
  */
 export async function rejectManualPayment(cafeId: string, subscriptionId: string, reason?: string): Promise<AdminActionResult> {
     const db = await createClient()
@@ -798,7 +857,17 @@ export async function rejectManualPayment(cafeId: string, subscriptionId: string
 
     const adminDb = await createAdminClient()
 
-    // 1. Delete the subscription record entirely
+    // 1. Get the proof URL before deleting the subscription
+    const { data: sub } = await adminDb
+        .from('cafe_subscriptions')
+        .select('proof_of_payment_url')
+        .eq('id', subscriptionId)
+        .eq('cafe_id', cafeId)
+        .single()
+
+    const proofUrl = sub?.proof_of_payment_url
+
+    // 2. Delete the subscription record entirely
     const { error: subError } = await adminDb
         .from('cafe_subscriptions')
         .delete()
@@ -810,7 +879,12 @@ export async function rejectManualPayment(cafeId: string, subscriptionId: string
         return { success: false, error: "Failed to reject subscription" }
     }
 
-    // 2. Downgrade cafe to free tier and remove verification
+    // 3. Delete the proof file from storage
+    if (proofUrl) {
+        await deleteSingleCafeImage(proofUrl)
+    }
+
+    // 4. Downgrade cafe to free tier and remove verification
     const { error: cafeError } = await adminDb
         .from('cafes')
         .update({

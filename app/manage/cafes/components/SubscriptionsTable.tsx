@@ -21,6 +21,7 @@ import {
 import {
     verifyManualPayment,
     rejectManualPayment,
+    deleteSubscriptionProof,
 } from "@/app/api/actions/admin"
 import { useNotification } from "@/components/NotificationProvider"
 
@@ -54,14 +55,51 @@ export default function SubscriptionsTable({
         return new Date(dateString).toLocaleDateString()
     }
 
+    // Helper to download a file with a specific filename
+    const downloadFile = async (url: string, filename: string) => {
+        try {
+            const response = await fetch(url)
+            const blob = await response.blob()
+            const blobUrl = window.URL.createObjectURL(blob)
+            const link = document.createElement("a")
+            link.href = blobUrl
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(blobUrl)
+        } catch (error) {
+            console.error("Failed to download file:", error)
+        }
+    }
+
     const handleVerify = async (cafeId: string, subscriptionId: string) => {
-        if (!confirm("Are you sure you want to verify this payment?")) return
+        if (
+            !confirm(
+                "Are you sure you want to verify this payment? The proof of payment will be downloaded and then deleted from storage."
+            )
+        )
+            return
 
         setActionLoading(subscriptionId)
         try {
             const result = await verifyManualPayment(cafeId, subscriptionId)
             if (result.success) {
-                addNotification("Payment verified successfully", "success")
+                // Download the proof file before deleting it from storage
+                if (result.proofInfo) {
+                    await downloadFile(
+                        result.proofInfo.url,
+                        result.proofInfo.filename
+                    )
+                    // Delete the proof file from storage after download
+                    await deleteSubscriptionProof(result.proofInfo.url)
+                    addNotification(
+                        "Payment verified, proof downloaded and deleted from storage",
+                        "success"
+                    )
+                } else {
+                    addNotification("Payment verified successfully", "success")
+                }
                 setSubscriptions((prev) =>
                     prev.map((sub) =>
                         sub.id === subscriptionId
@@ -69,6 +107,7 @@ export default function SubscriptionsTable({
                                   ...sub,
                                   payment_verified: true,
                                   status: "active",
+                                  proof_of_payment_url: null, // Clear the proof URL
                               }
                             : sub
                     )

@@ -59,6 +59,7 @@ export const SUBSCRIPTION_TIERS = {
             'Featured Slot per Month Request',
             'Featured Reviews (Review Pinning)',
             'Cafe Priority Ranking',
+            '+ More Features in the Future',
         ],
         menuLimit: Infinity,
     },
