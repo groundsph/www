@@ -8,9 +8,11 @@ const REVIEW_BUCKET = "reviews"
 const CAFE_BUCKET = "cafes"
 const BADGE_BUCKET = "badges"
 const BLOG_BUCKET = "blogs"
+const EVENT_BUCKET = "events"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CAFE_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_BLOG_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_EVENT_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_BADGE_FILE_SIZE = 500 * 1024 // 500KB
 const BADGE_IMAGE_DIMENSION = 512 // Badge images must be 512x512px
 
@@ -736,4 +738,106 @@ export async function deleteBlogPostImages(coverImage: string | null): Promise<v
     }
     // Note: Content images would need to be parsed from markdown and deleted
     // This is a simplified version that only handles cover images
+}
+
+// ============================================
+// Event Image Storage Functions
+// ============================================
+
+/**
+ * Upload an event cover image to Supabase Storage
+ * File is stored at: events/{cafeId}/{timestamp}-{random}.{ext} or events/{userId}/{timestamp}-{random}.{ext}
+ * Used for event cover images (recommended 16:9 aspect ratio)
+ */
+export async function uploadEventImage(formData: FormData, cafeId?: string): Promise<{
+    success: boolean
+    url?: string
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Get current user
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Check if user is admin/mod
+    const { data: profile } = await db
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    const isAdminOrMod = profile?.role === "admin" || profile?.role === "moderator"
+
+    // Check if cafe owner (if cafeId provided)
+    let isCafeOwner = false
+    if (cafeId) {
+        const { data: cafe } = await db
+            .from("cafes")
+            .select("owner_ids")
+            .eq("id", cafeId)
+            .single()
+
+        isCafeOwner = cafe?.owner_ids?.includes(user.id) || false
+    }
+
+    if (!isAdminOrMod && !isCafeOwner) {
+        return { success: false, error: "Not authorized to upload event images" }
+    }
+
+    const file = formData.get("image") as File | null
+    if (!file) {
+        return { success: false, error: "No file provided" }
+    }
+
+    // Validate file type
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    const isValidType = ["jpg", "jpeg", "png", "webp", "gif"].includes(fileExt)
+
+    if (!isValidType) {
+        return { success: false, error: "Invalid file type (JPEG, PNG, WebP, GIF only)" }
+    }
+
+    // Validate size
+    if (file.size > MAX_EVENT_IMAGE_SIZE) {
+        return { success: false, error: "File too large (max 5MB)" }
+    }
+
+    // Generate unique filename
+    // Use cafeId as folder if provided, otherwise use userId
+    const folder = cafeId || user.id
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${folder}/${fileName}`
+
+    // Use admin client to upload (bypass potential RLS issues)
+    const adminDb = await createAdminClient()
+
+    const { error: uploadError } = await adminDb.storage
+        .from(EVENT_BUCKET)
+        .upload(filePath, file)
+
+    if (uploadError) {
+        console.error("Event image upload error:", uploadError)
+        return { success: false, error: "Upload failed" }
+    }
+
+    const { data: urlData } = adminDb.storage
+        .from(EVENT_BUCKET)
+        .getPublicUrl(filePath)
+
+    return { success: true, url: urlData.publicUrl }
+}
+
+/**
+ * Delete an event image from storage
+ */
+export async function deleteEventImage(imageUrl: string): Promise<void> {
+    if (!imageUrl) return
+
+    const path = extractStoragePath(imageUrl, EVENT_BUCKET)
+    if (path) {
+        await deleteStorageFiles(EVENT_BUCKET, [path])
+    }
 }

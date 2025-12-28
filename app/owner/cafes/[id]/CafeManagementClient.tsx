@@ -30,6 +30,7 @@ import {
     Verified,
     X,
     FileText,
+    CalendarIcon,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -44,6 +45,8 @@ import {
 import { useNotification } from "@/components/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import BlogEditor from "@/components/blog/BlogEditor"
+import EventsManagement from "@/components/events/EventsManagement"
+import { EventWithCafe } from "@/utils/types/extra"
 
 interface CafeManagementClientProps {
     cafe: CafeWithRatings
@@ -86,7 +89,14 @@ const tierColors: Record<
     },
 }
 
-type Tab = "overview" | "reviews" | "menu" | "analytics" | "blog" | "settings"
+type Tab =
+    | "overview"
+    | "reviews"
+    | "menu"
+    | "analytics"
+    | "blog"
+    | "events"
+    | "settings"
 
 export default function CafeManagementClient({
     cafe,
@@ -131,6 +141,10 @@ export default function CafeManagementClient({
         }[]
     >([])
     const [blogLoading, setBlogLoading] = useState(false)
+
+    // Events management state
+    const [events, setEvents] = useState<EventWithCafe[]>([])
+    const [eventsLoading, setEventsLoading] = useState(false)
 
     const tier = subscription?.tier || "free"
     const tierConfig = SUBSCRIPTION_TIERS[tier]
@@ -324,6 +338,18 @@ export default function CafeManagementClient({
         if (tab === "blog" && blogPosts.length === 0) {
             loadBlogPosts()
         }
+        if (tab === "events" && events.length === 0) {
+            loadEvents()
+        }
+    }
+
+    // Load events for this cafe
+    const loadEvents = async () => {
+        setEventsLoading(true)
+        const { getCafeEvents } = await import("@/app/api/actions/events")
+        const cafeEvents = await getCafeEvents(cafe.id)
+        setEvents(cafeEvents)
+        setEventsLoading(false)
     }
 
     const tabs = [
@@ -350,6 +376,12 @@ export default function CafeManagementClient({
             id: "blog" as Tab,
             label: "Blog",
             icon: FileText,
+            locked: tier === "free",
+        },
+        {
+            id: "events" as Tab,
+            label: "Events",
+            icon: CalendarIcon,
             locked: tier === "free",
         },
         { id: "settings" as Tab, label: "Settings", icon: Settings },
@@ -1154,6 +1186,28 @@ export default function CafeManagementClient({
                                         </div>
                                     ))}
                                 </div>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {activeTab === "events" && tier !== "free" && (
+                        <motion.div
+                            key='events'
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className='space-y-6'
+                        >
+                            {eventsLoading ? (
+                                <div className='flex items-center justify-center py-12'>
+                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
+                                </div>
+                            ) : (
+                                <EventsManagement
+                                    initialEvents={events}
+                                    cafeId={cafe.id}
+                                    cafeName={cafe.name}
+                                />
                             )}
                         </motion.div>
                     )}

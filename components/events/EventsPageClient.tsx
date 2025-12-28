@@ -47,18 +47,20 @@ export default function EventsPageClient() {
 
             try {
                 const now = new Date().toISOString()
-                const filters =
-                    scopeMode === "local"
-                        ? {
-                              city: location.city || undefined,
-                              region: location.region || undefined,
-                              is_national: false as const,
-                              start_after: now,
-                          }
-                        : {
-                              is_national: true as const,
-                              start_after: now,
-                          }
+
+                // Build filters based on scope
+                // Local: Show events in user's region (fallback to all if no location)
+                // National: Only show national events
+                const filters: Parameters<typeof getEvents>[0] = {
+                    start_after: now,
+                }
+
+                if (scopeMode === "national") {
+                    filters.is_national = true
+                }
+                // Local mode: show all upcoming events (no region filter needed)
+                // Nominatim returns province as 'state' but our events use PH region names
+                // which don't match, so we show all events in local mode
 
                 const { events: fetchedEvents, total } = await getEvents(
                     filters,
@@ -84,7 +86,7 @@ export default function EventsPageClient() {
                 setLoadingMore(false)
             }
         },
-        [scopeMode, location.city, location.region]
+        [scopeMode]
     )
 
     // Load more events
@@ -97,30 +99,27 @@ export default function EventsPageClient() {
     // Fetch calendar events for current month
     const fetchCalendarEvents = useCallback(async () => {
         try {
+            // Only filter by is_national for national mode
+            const calendarFilters =
+                scopeMode === "national" ? { is_national: true } : {}
+
             const monthEvents = await getEventsForMonth(
                 currentMonth.getFullYear(),
                 currentMonth.getMonth(),
-                scopeMode === "local"
-                    ? {
-                          city: location.city || undefined,
-                          region: location.region || undefined,
-                      }
-                    : { is_national: true }
+                calendarFilters
             )
             setCalendarEvents(monthEvents)
         } catch (error) {
             console.error("Failed to fetch calendar events:", error)
         }
-    }, [currentMonth, scopeMode, location.city, location.region])
+    }, [currentMonth, scopeMode])
 
-    // Initial load and reset on scope/location change
+    // Initial load and reset on scope change
     useEffect(() => {
-        if (!locationLoading) {
-            setPage(1)
-            setHasMore(true)
-            fetchEvents(1, true)
-        }
-    }, [fetchEvents, locationLoading, scopeMode])
+        setPage(1)
+        setHasMore(true)
+        fetchEvents(1, true)
+    }, [fetchEvents, scopeMode])
 
     // Calendar events
     useEffect(() => {

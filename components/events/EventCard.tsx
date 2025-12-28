@@ -85,7 +85,7 @@ export default function EventCard({
                         src={event.image_url}
                         alt={event.title}
                         fill
-                        className='object-cover group-hover:scale-105 transition-transform duration-300'
+                        className='object-cover'
                     />
                 ) : (
                     <div className='absolute inset-0 flex items-center justify-center'>

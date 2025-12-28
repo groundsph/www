@@ -39,6 +39,7 @@ import {
     Toilet,
     Droplet,
     MilkOff,
+    CalendarIcon,
 } from "lucide-react"
 import {
     approveCafe,
@@ -83,6 +84,8 @@ import { backfillBadgesForAllUsers } from "@/utils/badges/badge-logic"
 import { BlogPost } from "@/utils/types/blog"
 import BlogEditor from "@/components/blog/BlogEditor"
 import ImageLightbox from "@/components/ImageLightbox"
+import EventsManagement from "@/components/events/EventsManagement"
+import { EventWithCafe } from "@/utils/types/extra"
 
 const resizeBadgeImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -134,6 +137,7 @@ interface ManageDashboardProps {
     featuredSchedules: FeaturedSchedule[]
     pendingClaims?: CafeClaim[]
     blogPosts?: BlogPost[]
+    events?: EventWithCafe[]
 }
 
 type TabType =
@@ -146,6 +150,7 @@ type TabType =
     | "claims"
     | "team"
     | "blog"
+    | "events"
 
 export default function ManageDashboard({
     userRole,
@@ -162,6 +167,7 @@ export default function ManageDashboard({
     featuredSchedules: initialFeaturedSchedules,
     pendingClaims: initialClaims = [],
     blogPosts: initialBlogPosts = [],
+    events: initialEvents = [],
 }: ManageDashboardProps) {
     const isFullAdmin = userRole === "admin"
     const [activeTab, setActiveTab] = useState<TabType>("pending")
@@ -273,6 +279,9 @@ export default function ManageDashboard({
     const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(
         null
     )
+
+    // Events management state
+    const [events, setEvents] = useState<EventWithCafe[]>(initialEvents)
 
     // Suggestion image lightbox state
     const [suggestionLightboxImages, setSuggestionLightboxImages] = useState<
@@ -1246,6 +1255,17 @@ export default function ManageDashboard({
                             >
                                 <FileText className='w-4 h-4' />
                                 Blog ({blogPosts.length})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("events")}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition border ${
+                                    activeTab === "events"
+                                        ? "bg-cyan-500/20 text-cyan-500 border-cyan-500/30"
+                                        : "bg-text/5 border-text/10 hover:bg-text/10"
+                                }`}
+                            >
+                                <CalendarIcon className='w-4 h-4' />
+                                Events ({events.length})
                             </button>
                         </>
                     )}
@@ -3523,6 +3543,11 @@ export default function ManageDashboard({
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* Events Tab */}
+            {activeTab === "events" && (
+                <EventsManagement initialEvents={events} />
             )}
 
             {/* Blog Editor Modal */}

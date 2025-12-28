@@ -133,7 +133,7 @@ export default function EventCalendar({
                             onClick={() => handleDateClick(day)}
                             className={`
                                 relative p-2 min-h-[80px] border-b border-r border-text/5 
-                                transition-colors text-left flex flex-col
+                                transition-colors text-left flex flex-col overflow-hidden
                                 ${isCurrentMonth ? "hover:bg-text/5" : "bg-text/2"}
                                 ${isSelected ? "bg-primary/10" : ""}
                             `}
@@ -142,8 +142,8 @@ export default function EventCalendar({
                                 className={`
                                     w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium
                                     ${!isCurrentMonth ? "text-text/30" : "text-text"}
-                                    ${isTodayDate ? "bg-primary text-white" : ""}
-                                    ${isSelected && !isTodayDate ? "bg-text text-background" : ""}
+                                    ${isTodayDate ? "bg-primary text-background!" : ""}
+                                    ${isSelected && !isTodayDate ? "bg-primary/60 text-background!" : ""}
                                 `}
                             >
                                 {format(day, "d")}
@@ -151,13 +151,13 @@ export default function EventCalendar({
 
                             {/* Event indicators */}
                             {hasEvents && (
-                                <div className='mt-1 space-y-1 flex-1 overflow-hidden'>
+                                <div className='mt-1 space-y-0.5 flex-1 overflow-hidden w-full'>
                                     {dayEvents.slice(0, 2).map((event) => (
                                         <div
                                             key={event.id}
                                             className={`
-                                                text-xs px-1.5 py-0.5 rounded truncate
-                                                ${event.is_national ? "bg-primary/20 text-primary" : "bg-secondary/20 text-secondary"}
+                                                text-xs px-1.5 py-1 rounded w-full truncate block
+                                                ${event.is_national ? "bg-primary/20 text-primary" : "bg-secondary text-white"}
                                             `}
                                             title={event.title}
                                         >
@@ -165,7 +165,7 @@ export default function EventCalendar({
                                         </div>
                                     ))}
                                     {dayEvents.length > 2 && (
-                                        <div className='text-xs text-text/50 px-1.5'>
+                                        <div className='text-xs text-text/50 px-1'>
                                             +{dayEvents.length - 2} more
                                         </div>
                                     )}

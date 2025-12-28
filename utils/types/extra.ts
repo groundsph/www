@@ -19,6 +19,7 @@ export interface Event {
     location_name: string | null;
     address: string | null;
     city: string | null;
+    province: string | null;
     region: string | null;
     cafe_id: string | null;
     image_url: string | null;

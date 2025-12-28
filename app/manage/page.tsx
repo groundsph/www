@@ -11,6 +11,7 @@ import {
 import { getPendingSuggestions } from "@/app/api/actions/suggestions"
 import { getPendingClaims } from "@/app/api/actions/claim"
 import { getAdminBlogPosts } from "@/app/api/actions/blog"
+import { getAdminEvents } from "@/app/api/actions/events"
 import ManageDashboard from "./ManageDashboard"
 
 export const metadata = {
@@ -41,6 +42,7 @@ export default async function ManagePage() {
         badges,
         featuredSchedules,
         blogPostsResult,
+        eventsResult,
     ] = await Promise.all([
         // Moderator + Admin data
         getPaginatedCafes({
@@ -71,6 +73,9 @@ export default async function ManagePage() {
                   pageSize: 50,
                   hasMore: false,
               }),
+        isFullAdmin
+            ? getAdminEvents(1, 50)
+            : Promise.resolve({ events: [], total: 0 }),
     ])
 
     return (
@@ -91,6 +96,7 @@ export default async function ManagePage() {
                     featuredSchedules={featuredSchedules}
                     pendingClaims={pendingClaims}
                     blogPosts={blogPostsResult.posts}
+                    events={eventsResult.events}
                 />
             </div>
         </main>

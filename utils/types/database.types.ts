@@ -705,6 +705,7 @@ export type Database = {
           image_url: string | null
           is_national: boolean | null
           location_name: string | null
+          province: string | null
           region: string | null
           start_date: string
           status: Database["public"]["Enums"]["event_status"] | null
@@ -724,6 +725,7 @@ export type Database = {
           image_url?: string | null
           is_national?: boolean | null
           location_name?: string | null
+          province?: string | null
           region?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["event_status"] | null
@@ -743,6 +745,7 @@ export type Database = {
           image_url?: string | null
           is_national?: boolean | null
           location_name?: string | null
+          province?: string | null
           region?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["event_status"] | null
