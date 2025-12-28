@@ -25,7 +25,7 @@ export default async function OwnerPage() {
     // If user has no cafes, show helpful message
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
-            <div className='w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
+            <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                 <OwnerDashboardClient cafes={ownedCafes} />
             </div>
         </main>

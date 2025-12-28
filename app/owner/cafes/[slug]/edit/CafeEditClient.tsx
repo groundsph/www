@@ -31,19 +31,14 @@ import {
     StorySection,
     LocationSection,
     ImageSection,
-    MenuSection,
-    MenuItemModal,
     AmenitiesSection,
     HoursSection,
 } from "@/components/cafe-editor"
-import { useMenuItems } from "@/utils/hooks/useMenuItems"
-import { CafeMenuItem } from "@/utils/types/owner"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
 interface CafeEditClientProps {
     cafe: CafeWithRatings
-    menuItems?: CafeMenuItem[]
 }
 
 // Helper to convert snake_case to Title Case
@@ -52,22 +47,10 @@ const formatLabel = (s: string) =>
 
 export default function CafeEditClient({
     cafe: initialCafe,
-    menuItems: initialMenuItems = [],
 }: CafeEditClientProps) {
     const { addNotification } = useNotification()
     const [cafe, setCafe] = useState(initialCafe)
 
-    // Menu Management
-    const menu = useMenuItems({
-        initialItems: initialMenuItems,
-        cafeId: cafe.id,
-        onSuccess: () => {
-            addNotification("Menu updated successfully", "success")
-        },
-        onError: (error) => {
-            addNotification(error, "error")
-        },
-    })
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
     const [activeSection, setActiveSection] = useState<
@@ -78,7 +61,6 @@ export default function CafeEditClient({
         | "hours"
         | "contact"
         | "story"
-        | "menu"
     >("basic")
 
     // Story state
@@ -164,7 +146,6 @@ export default function CafeEditClient({
         { id: "hours", title: "Hours", icon: Clock },
         { id: "contact", title: "Contact", icon: Phone },
         { id: "story", title: "Story", icon: FileText },
-        { id: "menu", title: "Menu", icon: Coffee },
     ] as const
 
     // Price level mapping for UI
@@ -180,7 +161,7 @@ export default function CafeEditClient({
             <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-text/10'>
                 <div className='flex items-center gap-4'>
                     <Link
-                        href={`/owner/cafes/${cafe.id}`}
+                        href={`/owner/cafes/${cafe.slug}`}
                         className='p-2 hover:bg-text/5 rounded-lg transition'
                     >
                         <ArrowLeft className='w-5 h-5' />
@@ -496,26 +477,6 @@ export default function CafeEditClient({
                     />
                 )}
             </div>
-
-            {/* Menu Section */}
-            {activeSection === "menu" && (
-                <div className='w-full min-h-[400px] bg-text/5 border border-text/10 rounded-xl p-6'>
-                    <MenuSection
-                        menu={menu}
-                        colorScheme='primary'
-                    />
-                </div>
-            )}
-
-            {/* Menu Item Modal */}
-            <MenuItemModal
-                open={menu.modalOpen}
-                onClose={menu.closeModal}
-                onSave={menu.saveItem}
-                editingItem={menu.editingItem}
-                saving={menu.loading}
-                colorScheme='primary'
-            />
 
             {/* Sticky Save Button (Mobile) */}
             {hasChanges && (

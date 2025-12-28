@@ -667,6 +667,169 @@ export async function getPaginatedCafes(params: CafePaginationParams): Promise<P
     }
 }
 
+// ============================================
+// Manual Payments / Subscriptions
+// ============================================
+
+/**
+ * Get all manual subscriptions (pending and verified)
+ */
+export async function getManualSubscriptions(): Promise<any[]> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } = {} } = await db.auth.getUser()
+    if (!user) return []
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return []
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Fetch subscriptions with cafe details
+    const { data: subscriptions, error } = await adminDb
+        .from('cafe_subscriptions')
+        .select(`
+            *,
+            cafes:cafe_id (
+                id,
+                name,
+                slug
+            )
+        `)
+        .eq('is_manual_payment', true)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error("Error fetching manual subscriptions:", error)
+        return []
+    }
+
+    return subscriptions
+}
+
+/**
+ * Verify a manual payment
+ */
+export async function verifyManualPayment(cafeId: string, subscriptionId: string): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } = {} } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // 1. Update subscription status
+    const { error: subError } = await adminDb
+        .from('cafe_subscriptions')
+        .update({
+            payment_verified: true,
+            status: 'active', // Ensure it's active
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', subscriptionId)
+        .eq('cafe_id', cafeId)
+
+    if (subError) {
+        console.error("Error verifying subscription:", subError)
+        return { success: false, error: "Failed to verify subscription" }
+    }
+
+    // 2. Ensuring cafe tier is updated (it should have been set on submission, but double check)
+    // Get subscription tier
+    const { data: sub } = await adminDb
+        .from('cafe_subscriptions')
+        .select('tier')
+        .eq('id', subscriptionId)
+        .single()
+
+    if (sub) {
+        await adminDb
+            .from('cafes')
+            .update({
+                membership_tier: sub.tier,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', cafeId)
+    }
+
+    // TODO: Send email notification to cafe owner
+
+    return { success: true }
+}
+
+/**
+ * Reject a manual payment
+ */
+export async function rejectManualPayment(cafeId: string, subscriptionId: string, reason?: string): Promise<AdminActionResult> {
+    const db = await createClient()
+
+    // Verify admin access
+    const { data: { user } = {} } = await db.auth.getUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const { data: profile } = await db
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // 1. Delete the subscription record entirely
+    const { error: subError } = await adminDb
+        .from('cafe_subscriptions')
+        .delete()
+        .eq('id', subscriptionId)
+        .eq('cafe_id', cafeId)
+
+    if (subError) {
+        console.error("Error rejecting subscription:", subError)
+        return { success: false, error: "Failed to reject subscription" }
+    }
+
+    // 2. Downgrade cafe to free tier and remove verification
+    const { error: cafeError } = await adminDb
+        .from('cafes')
+        .update({
+            membership_tier: 'free',
+            is_verified: false,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', cafeId)
+
+    if (cafeError) {
+        console.error("Error updating cafe tier:", cafeError)
+        // Non-critical, continue but log
+    }
+
+    // TODO: Send rejection email with reason
+
+    return { success: true }
+}
+
 export interface CafeFilterOptions {
     provinces: string[]
     cities: { province: string; cities: string[] }[]

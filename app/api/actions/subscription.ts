@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import {
     OwnerActionResult,
     SubscriptionCheckoutResult,
@@ -247,6 +248,9 @@ export async function syncSubscriptionStatus(
             current_period_end: subscription.current_period_end,
             created_at: subscription.created_at,
             updated_at: subscription.updated_at,
+            proof_of_payment_url: subscription.proof_of_payment_url,
+            is_manual_payment: subscription.is_manual_payment ?? undefined,
+            payment_verified: subscription.payment_verified ?? undefined,
         }
     }
 }
@@ -350,6 +354,66 @@ export async function handleSubscriptionCancellation(
     }
 
     return { success: true }
+}
+
+/**
+ * Submit manual payment proof for subscription
+ */
+export async function submitManualPayment(
+    cafeId: string,
+    tier: 'pro' | 'premium',
+    proofUrl: string
+): Promise<OwnerActionResult> {
+    const db = await createAdminClient()
+
+    // Verify ownership
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized to manage this cafe' }
+    }
+
+    try {
+        // Calculate period (6 months)
+        const startDate = new Date()
+        const endDate = new Date()
+        endDate.setMonth(endDate.getMonth() + 6)
+
+        // Upsert subscription record
+        const { error } = await db
+            .from('cafe_subscriptions')
+            .upsert({
+                cafe_id: cafeId,
+                tier: toDbTier(tier),
+                status: 'active', // Grants immediate access
+                is_manual_payment: true,
+                payment_verified: false,
+                proof_of_payment_url: proofUrl,
+                current_period_start: startDate.toISOString(),
+                current_period_end: endDate.toISOString(),
+                updated_at: new Date().toISOString(),
+            }, {
+                onConflict: 'cafe_id'
+            })
+
+        if (error) {
+            console.error('Error submitting manual payment:', error)
+            return { success: false, error: 'Failed to submit payment record' }
+        }
+
+        // Update cafe membership status immediately
+        await db
+            .from('cafes')
+            .update({
+                membership_tier: toDbTier(tier),
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', cafeId)
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error processing manual payment:', error)
+        return { success: false, error: 'An unexpected error occurred' }
+    }
 }
 
 /**

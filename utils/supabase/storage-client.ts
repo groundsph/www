@@ -236,7 +236,9 @@ export async function uploadAvatarClient(file: File): Promise<UploadResult> {
  */
 export async function uploadCafeImageWithProgress(
     file: File,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    bucketName: string = CAFE_BUCKET,
+    explicitPath?: string
 ): Promise<UploadResult> {
     const db = createLocalClient()
 
@@ -268,11 +270,16 @@ export async function uploadCafeImageWithProgress(
         }
     }
 
-    // Generate unique filename
-    const fileName = `${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(7)}.${fileExt}`
-    const filePath = `${user.id}/${fileName}`
+    // Generate unique filename or use explicit path
+    let filePath: string
+    if (explicitPath) {
+        filePath = explicitPath
+    } else {
+        const fileName = `${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(7)}.${fileExt}`
+        filePath = `${user.id}/${fileName}`
+    }
 
     // Construct the URL for the Supabase Storage API
     const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -281,7 +288,7 @@ export async function uploadCafeImageWithProgress(
         return { success: false, error: "Configuration error" }
     }
 
-    const uploadUrl = `${projectUrl}/storage/v1/object/${CAFE_BUCKET}/${filePath}`
+    const uploadUrl = `${projectUrl}/storage/v1/object/${bucketName}/${filePath}`
 
     return new Promise((resolve) => {
         const xhr = new XMLHttpRequest()
@@ -301,11 +308,17 @@ export async function uploadCafeImageWithProgress(
         xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
                 // Success
-                const { data: urlData } = db.storage
-                    .from(CAFE_BUCKET)
-                    .getPublicUrl(filePath)
 
-                resolve({ success: true, url: urlData.publicUrl })
+                // If private bucket (like cafe-payments), return the filePath as URL ref
+                // Otherwise get public URL
+                if (bucketName === 'cafe-payments') {
+                    resolve({ success: true, url: filePath })
+                } else {
+                    const { data: urlData } = db.storage
+                        .from(bucketName)
+                        .getPublicUrl(filePath)
+                    resolve({ success: true, url: urlData.publicUrl })
+                }
             } else {
                 console.error("Upload failed", xhr.status, xhr.responseText)
                 resolve({ success: false, error: `Upload failed: ${xhr.statusText}` })

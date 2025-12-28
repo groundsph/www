@@ -623,7 +623,7 @@ export default function ProfileClient() {
                                 {ownedCafes.slice(0, 3).map((cafe) => (
                                     <Link
                                         key={cafe.id}
-                                        href={`/owner/cafes/${cafe.id}`}
+                                        href={`/owner/cafes/${cafe.slug}`}
                                         className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group'
                                     >
                                         {cafe.thumbnail ? (

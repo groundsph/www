@@ -435,6 +435,9 @@ export type Database = {
           current_period_start: string | null
           helix_subscription_id: string | null
           id: string
+          is_manual_payment: boolean | null
+          payment_verified: boolean | null
+          proof_of_payment_url: string | null
           status: Database["public"]["Enums"]["subscription_status"]
           tier: Database["public"]["Enums"]["membership_tier"]
           updated_at: string | null
@@ -446,6 +449,9 @@ export type Database = {
           current_period_start?: string | null
           helix_subscription_id?: string | null
           id?: string
+          is_manual_payment?: boolean | null
+          payment_verified?: boolean | null
+          proof_of_payment_url?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           tier?: Database["public"]["Enums"]["membership_tier"]
           updated_at?: string | null
@@ -457,6 +463,9 @@ export type Database = {
           current_period_start?: string | null
           helix_subscription_id?: string | null
           id?: string
+          is_manual_payment?: boolean | null
+          payment_verified?: boolean | null
+          proof_of_payment_url?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           tier?: Database["public"]["Enums"]["membership_tier"]
           updated_at?: string | null

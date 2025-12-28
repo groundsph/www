@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
 
 // Event input type for create/update operations
@@ -401,6 +402,22 @@ export async function createEvent(
             return {
                 success: false,
                 error: "You can only create events for cafes you own",
+            }
+        }
+
+        // Tier check - only Premium can create events
+        const adminClient = await createAdminClient()
+        const { data: subscription } = await adminClient
+            .from("cafe_subscriptions")
+            .select("tier")
+            .eq("cafe_id", input.cafe_id)
+            .single()
+
+        const tier = subscription?.tier || "free"
+        if (tier !== "premium") {
+            return {
+                success: false,
+                error: "Event creation is an exclusive Feature for Premium subscribers. Upgrade to host events!",
             }
         }
     }

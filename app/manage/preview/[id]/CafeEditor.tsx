@@ -303,7 +303,7 @@ export default function CafeEditor({
             <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-text/10'>
                 <div className='flex items-center gap-4'>
                     <Link
-                        href='/admin'
+                        href='/manage/cafes'
                         className='p-2 hover:bg-text/5 rounded-lg transition'
                     >
                         <ArrowLeft className='w-5 h-5' />

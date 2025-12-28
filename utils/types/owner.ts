@@ -31,32 +31,34 @@ export const SUBSCRIPTION_TIERS = {
         priceDisplay: '₱0',
         features: [
             'Direct Cafe Editing',
-            'Community Discord (Coming Soon)',
         ],
         menuLimit: 0,
     },
     pro: {
         name: 'Pro',
-        price: 499,
-        priceDisplay: '₱499/month',
+        price: 2000,
+        priceDisplay: '₱2,000 / 6 months (Founder\'s Promo)',
         features: [
             'Verified Badge for Cafe',
-            'Site/Cafe Analytics (Coming Soon)',
-            'Cafe Menu (5 Item Limit)',
+            'Cafe Menu (30 Item Limit)',
             'Blog Posts',
+            'Site/Cafe Analytics',
+            'QR to Menu',
         ],
-        menuLimit: 5,
+        menuLimit: 30,
     },
     premium: {
         name: 'Premium',
-        price: 999,
-        priceDisplay: '₱999/month',
+        price: 4000,
+        priceDisplay: '₱4,000 / 6 months (Founder\'s Promo)',
         features: [
             'Unlimited Cafe Menu',
-            'Events (Coming Soon)',
-            'Direct Support',
+            'Events',
             'Highlighted Map Pins',
-            'Featured Slot per Month',
+            'Direct Support',
+            'Featured Slot per Month Request',
+            'Featured Reviews (Review Pinning)',
+            'Cafe Priority Ranking',
         ],
         menuLimit: Infinity,
     },
@@ -76,6 +78,10 @@ export interface CafeSubscription {
     current_period_end: string | null;
     created_at: string | null;
     updated_at: string | null;
+    // Manual Payment Fields
+    proof_of_payment_url?: string | null;
+    is_manual_payment?: boolean;
+    payment_verified?: boolean;
 }
 
 // ============================================

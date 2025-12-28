@@ -44,6 +44,21 @@ export async function isOwnerOfCafe(cafeId: string): Promise<boolean> {
 }
 
 /**
+ * Get cafe ID by slug (for slug-based routes)
+ */
+export async function getCafeIdBySlug(slug: string): Promise<string | null> {
+    const db = await createClient()
+
+    const { data: cafe } = await db
+        .from('cafes')
+        .select('id')
+        .eq('slug', slug)
+        .single()
+
+    return cafe?.id || null
+}
+
+/**
  * Check if user is owner of cafe OR an admin/moderator
  */
 

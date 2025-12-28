@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import { createClient } from "@/utils/supabase/server"
 import {
     getCafeForOwnerManagement,
-    getCafeMenuItems,
+    getCafeIdBySlug,
 } from "@/app/api/actions/owner"
 import CafeEditClient from "./CafeEditClient"
 
@@ -13,25 +13,28 @@ export const metadata: Metadata = {
 }
 
 interface Props {
-    params: Promise<{ id: string }>
+    params: Promise<{ slug: string }>
 }
 
 export default async function CafeEditPage({ params }: Props) {
-    const { id } = await params
+    const { slug } = await params
     const db = await createClient()
     const {
         data: { user },
     } = await db.auth.getUser()
 
     if (!user) {
-        redirect(`/auth?redirect=/owner/cafes/${id}/edit`)
+        redirect(`/auth?redirect=/owner/cafes/${slug}/edit`)
+    }
+
+    // Get cafe ID from slug
+    const cafeId = await getCafeIdBySlug(slug)
+    if (!cafeId) {
+        notFound()
     }
 
     // Fetch cafe data with ownership check
-    const [cafe, menuItems] = await Promise.all([
-        getCafeForOwnerManagement(id),
-        getCafeMenuItems(id),
-    ])
+    const cafe = await getCafeForOwnerManagement(cafeId)
 
     if (!cafe) {
         notFound()
@@ -40,10 +43,7 @@ export default async function CafeEditPage({ params }: Props) {
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <CafeEditClient
-                    cafe={cafe}
-                    menuItems={menuItems}
-                />
+                <CafeEditClient cafe={cafe} />
             </div>
         </main>
     )

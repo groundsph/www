@@ -365,24 +365,28 @@ export default function CafeManagementClient({
             label: "Menu",
             icon: UtensilsCrossed,
             locked: tier === "free",
+            requiredTier: "Pro",
         },
         {
             id: "analytics" as Tab,
             label: "Analytics",
             icon: BarChart3,
             locked: tier === "free",
+            requiredTier: "Pro",
         },
         {
             id: "blog" as Tab,
             label: "Blog",
             icon: FileText,
             locked: tier === "free",
+            requiredTier: "Pro",
         },
         {
             id: "events" as Tab,
             label: "Events",
             icon: CalendarIcon,
-            locked: tier === "free",
+            locked: tier !== "premium",
+            requiredTier: "Premium",
         },
         { id: "settings" as Tab, label: "Settings", icon: Settings },
     ]
@@ -501,7 +505,7 @@ export default function CafeManagementClient({
                                     )}
                                     {isLocked && (
                                         <span className='ml-1 text-xs bg-text/10 px-1.5 py-0.5 rounded'>
-                                            Pro+
+                                            {tab.requiredTier}
                                         </span>
                                     )}
                                 </button>
@@ -550,7 +554,7 @@ export default function CafeManagementClient({
                                     </div>
                                     {tier !== "premium" && (
                                         <Link
-                                            href={`/owner/cafes/${cafe.id}/subscription`}
+                                            href={`/owner/subscriptions?cafe=${cafe.slug}`}
                                             className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
                                         >
                                             Upgrade
@@ -1120,7 +1124,7 @@ export default function CafeManagementClient({
                                 </div>
                             ) : blogPosts.length === 0 ? (
                                 <div className='text-center py-12 text-text/60'>
-                                    <FileText className='w-12 h-12 mx-auto mb-3 opacity-30' />
+                                    <FileText className='w-12 h-12 mx-auto mb-3 text-text opacity-30' />
                                     <p className='font-medium'>
                                         No blog posts yet
                                     </p>
@@ -1231,7 +1235,7 @@ export default function CafeManagementClient({
                                     support.
                                 </p>
                                 <Link
-                                    href={`/owner/cafes/${cafe.id}/edit`}
+                                    href={`/owner/cafes/${cafe.slug}/edit`}
                                     className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
                                 >
                                     <Edit2 className='w-4 h-4' />

@@ -90,7 +90,7 @@ export default function ContentManagement({
             </div>
 
             {/* Stats */}
-            <div className='grid grid-cols-3 gap-4'>
+            <div className='grid grid-cols-2 lg:grid-cols-3 gap-4'>
                 <div className='bg-background rounded-xl p-4 shadow-sm border border-tertiary/50'>
                     <div className='text-2xl font-bold'>{blogPosts.length}</div>
                     <div className='text-text/60 text-sm'>Blog Posts</div>

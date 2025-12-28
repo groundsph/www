@@ -10,7 +10,10 @@ import AmenityToggles from "@/components/submit/AmenityToggles"
 
 interface AmenitiesSectionProps {
     cafe: CafeWithRatings
-    onChange: (key: keyof CafeWithRatings, value: any) => void
+    onChange: (
+        key: keyof CafeWithRatings,
+        value: string | boolean | string[]
+    ) => void
     colorScheme?: "primary" | "accent"
 }
 

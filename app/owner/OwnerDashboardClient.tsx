@@ -121,6 +121,7 @@ export default function OwnerDashboardClient({
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            className='w-full'
         >
             {/* Header */}
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8'>
@@ -270,7 +271,7 @@ export default function OwnerDashboardClient({
                                     {/* Actions */}
                                     <div className='flex items-center gap-2'>
                                         <Link
-                                            href={`/owner/cafes/${cafe.id}`}
+                                            href={`/owner/cafes/${cafe.slug}`}
                                             className='inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors'
                                         >
                                             <Settings className='w-4 h-4' />

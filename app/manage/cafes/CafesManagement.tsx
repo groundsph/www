@@ -50,6 +50,8 @@ import { EditSuggestion } from "@/utils/types/suggestions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
 import ImageLightbox from "@/components/ImageLightbox"
+import SubscriptionsTable from "./components/SubscriptionsTable"
+import { CreditCard } from "lucide-react"
 
 interface CafesManagementProps {
     userRole: "admin" | "moderator"
@@ -62,9 +64,16 @@ interface CafesManagementProps {
     filterOptions: CafeFilterOptions
     suggestions: EditSuggestion[]
     pendingClaims?: CafeClaim[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    manualSubscriptions: any[]
 }
 
-type TabType = "pending" | "published" | "suggestions" | "claims"
+type TabType =
+    | "pending"
+    | "published"
+    | "suggestions"
+    | "claims"
+    | "subscriptions"
 
 export default function CafesManagement({
     initialPendingCafes,
@@ -76,6 +85,7 @@ export default function CafesManagement({
     filterOptions,
     suggestions: initialSuggestions,
     pendingClaims: initialClaims = [],
+    manualSubscriptions,
 }: CafesManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
 
@@ -444,7 +454,25 @@ export default function CafesManagement({
                     <Store className='w-4 h-4' />
                     Claims ({claims.length})
                 </button>
+                <button
+                    onClick={() => setActiveTab("subscriptions")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                        activeTab === "subscriptions"
+                            ? "bg-primary text-white"
+                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
+                    }`}
+                >
+                    <CreditCard className='w-4 h-4' />
+                    Subscriptions
+                </button>
             </div>
+
+            {/* Subscriptions Tab */}
+            {activeTab === "subscriptions" && (
+                <SubscriptionsTable
+                    initialSubscriptions={manualSubscriptions}
+                />
+            )}
 
             {/* Search and Filter - only for cafe tabs */}
             {(activeTab === "pending" || activeTab === "published") && (

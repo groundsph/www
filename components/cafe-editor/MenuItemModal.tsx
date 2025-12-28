@@ -57,6 +57,7 @@ export default function MenuItemModal({
     useEffect(() => {
         if (open) {
             if (editingItem) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setForm({
                     category: editingItem.category,
                     name: editingItem.name,
