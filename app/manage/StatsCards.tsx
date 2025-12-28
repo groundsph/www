@@ -7,8 +7,6 @@ import {
     DatabaseIcon,
     HardDriveIcon,
     CoffeeIcon,
-    FileTextIcon,
-    CheckCircleIcon,
     AlertCircleIcon,
     ServerIcon,
 } from "lucide-react"

@@ -127,7 +127,7 @@ export default function SystemManagement({
         }[]
     >([])
     const [badgeUsersTotal, setBadgeUsersTotal] = useState(0)
-    const [badgeUsersHasMore, setBadgeUsersHasMore] = useState(false)
+    const [, setBadgeUsersHasMore] = useState(false)
     const [awardLoading, setAwardLoading] = useState(false)
     const [searchLoading, setSearchLoading] = useState(false)
     const [isAwardingAll, setIsAwardingAll] = useState(false)

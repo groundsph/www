@@ -282,7 +282,7 @@ export default function ManageDashboard({
     )
 
     // Events management state
-    const [events, setEvents] = useState<EventWithCafe[]>(initialEvents)
+    const [events] = useState<EventWithCafe[]>(initialEvents)
 
     // Suggestion image lightbox state
     const [suggestionLightboxImages, setSuggestionLightboxImages] = useState<

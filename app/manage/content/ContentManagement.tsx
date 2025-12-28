@@ -34,7 +34,7 @@ export default function ContentManagement({
 }: ContentManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("blog")
     const [blogPosts, setBlogPosts] = useState(initialBlogPosts)
-    const [events, setEvents] = useState(initialEvents)
+    const [events] = useState(initialEvents)
 
     const [showBlogEditor, setShowBlogEditor] = useState(false)
     const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(
