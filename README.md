@@ -13,6 +13,9 @@
 - **Reviews & Ratings** — Share your cafe experiences with the community
 - **Badges & Achievements** — Earn badges for your cafe adventures
 - **Cafe Passport** — Track your favorites and wishlist
+- **Blog & Stories** — Read and share stories about the coffee community
+- **Community Events** — Discover cafe events and meetups
+- **Cafe Owner Dashboard** — Claim and manage your cafe listings
 - **Admin Dashboard** — Moderate submissions, reviews, and manage content
 - **Responsive Design** — Optimized for both mobile and desktop experiences
 
@@ -86,13 +89,17 @@
 ```
 grounds-website/
 ├── app/                    # Next.js App Router pages
-│   ├── admin/              # Admin dashboard
 │   ├── api/                # API routes and server actions
 │   ├── auth/               # Authentication pages
+│   ├── blog/               # Blog posts
 │   ├── cafes/              # Cafe directory and details
 │   ├── contact/            # Contact page
 │   ├── donate/             # Donation page
+│   ├── events/             # Community events
+│   ├── legal/              # Legal pages (privacy, terms)
+│   ├── manage/             # Admin & moderator dashboard
 │   ├── map/                # Interactive map
+│   ├── owner/              # Cafe owner dashboard
 │   ├── profile/            # User profiles
 │   └── submit/             # Cafe submission
 ├── components/             # Reusable React components
