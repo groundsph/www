@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -31,6 +31,20 @@ import qrph from "@/assets/qrph-dono.jpg"
 import gcash from "@/assets/gcash-dono.png"
 
 export default function SubscriptionsPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className='flex items-center justify-center min-h-[60vh]'>
+                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
+                </div>
+            }
+        >
+            <SubscriptionsContent />
+        </Suspense>
+    )
+}
+
+function SubscriptionsContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const preselectedSlug = searchParams.get("cafe")
