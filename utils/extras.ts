@@ -59,7 +59,7 @@ export function isOpenNow(operatingHours?: OperatingHours | null): { isOpen: boo
                 if (nextHours.is_24_hours) {
                     return { isOpen: false, opensAt: `${nextDay.charAt(0).toUpperCase() + nextDay.slice(1)} 12:00 AM` };
                 }
-                return { isOpen: false, opensAt: `${nextDay.charAt(0).toUpperCase() + nextDay.slice(1)} ${nextHours.open}` };
+                return { isOpen: false, opensAt: `${nextDay.charAt(0).toUpperCase() + nextDay.slice(1)} ${formatTimeTo12Hour(nextHours.open)}` };
             }
         }
         return { isOpen: false };
@@ -70,12 +70,25 @@ export function isOpenNow(operatingHours?: OperatingHours | null): { isOpen: boo
         return { isOpen: true, closesAt: undefined };
     }
 
-    const isOpen = currentTime >= todayHours.open && currentTime < todayHours.close;
+    // Handle overnight hours (e.g., 10:00 AM - 1:00 AM where close < open)
+    const isOvernightHours = todayHours.close < todayHours.open;
+
+    let isOpen: boolean;
+    if (isOvernightHours) {
+        // For overnight hours: open if current time is after opening OR before closing
+        isOpen = currentTime >= todayHours.open || currentTime < todayHours.close;
+    } else {
+        // Normal hours: open if current time is between open and close
+        isOpen = currentTime >= todayHours.open && currentTime < todayHours.close;
+    }
 
     if (isOpen) {
-        return { isOpen: true, closesAt: todayHours.close };
-    } else if (currentTime < todayHours.open) {
-        return { isOpen: false, opensAt: todayHours.open };
+        return { isOpen: true, closesAt: formatTimeTo12Hour(todayHours.close) };
+    } else if (!isOvernightHours && currentTime < todayHours.open) {
+        return { isOpen: false, opensAt: formatTimeTo12Hour(todayHours.open) };
+    } else if (isOvernightHours && currentTime >= todayHours.close && currentTime < todayHours.open) {
+        // For overnight: we're in the closed window between close and next open
+        return { isOpen: false, opensAt: formatTimeTo12Hour(todayHours.open) };
     } else {
         // Already closed today, find next opening
         const todayIndex = days.indexOf(currentDay);
@@ -84,7 +97,7 @@ export function isOpenNow(operatingHours?: OperatingHours | null): { isOpen: boo
             const nextDay = days[nextDayIndex];
             const nextHours = operatingHours.find(h => h.day === nextDay && !h.is_closed);
             if (nextHours) {
-                return { isOpen: false, opensAt: `${nextDay.charAt(0).toUpperCase() + nextDay.slice(1)} ${nextHours.open}` };
+                return { isOpen: false, opensAt: `${nextDay.charAt(0).toUpperCase() + nextDay.slice(1)} ${formatTimeTo12Hour(nextHours.open)}` };
             }
         }
         return { isOpen: false };

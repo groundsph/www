@@ -180,16 +180,10 @@ export default function CafeSidebar({
                     <span className='text-xs font-semibold text-text/60'>
                         {openStatus.isOpen
                             ? openStatus.closesAt
-                                ? `Closes at ${formatTimeTo12Hour(
-                                      openStatus.closesAt
-                                  )}`
+                                ? `Closes at ${openStatus.closesAt}`
                                 : "Open 24/7"
                             : openStatus.opensAt
-                              ? `Opens at ${
-                                    openStatus.opensAt.split(" ")[0]
-                                } ${formatTimeTo12Hour(
-                                    openStatus.opensAt.split(" ")[1]
-                                )}`
+                              ? `Opens at ${openStatus.opensAt}`
                               : ""}
                     </span>
                 </div>
