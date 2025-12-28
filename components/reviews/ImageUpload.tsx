@@ -211,7 +211,7 @@ export default function ImageUpload({
                 >
                     <input {...getInputProps()} />
                     <div className='p-3 bg-text/5 rounded-full inline-block'>
-                        <UploadCloud className='w-6 h-6 text-text/60' />
+                        <UploadCloud className='w-6 h-6 text-text opacity-60' />
                     </div>
                     <div className='flex flex-col gap-0.5'>
                         <p className='text-sm font-semibold text-text/80'>

@@ -63,7 +63,7 @@ export default function StarRating({
                             className={`${sizeClasses[size]} ${
                                 isFilled
                                     ? "fill-primary text-primary"
-                                    : "fill-transparent text-text/20"
+                                    : "fill-transparent text-text opacity-20"
                             } transition-colors duration-200`}
                         />
                     </div>

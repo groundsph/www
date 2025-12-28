@@ -250,7 +250,7 @@ export default function ReviewItem({
                             className={`w-4 h-4 ${
                                 i < review.rating
                                     ? "fill-primary text-primary"
-                                    : "fill-text/5 text-text/10"
+                                    : "fill-text/5 text-text opacity-10"
                             }`}
                         />
                     ))}

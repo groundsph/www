@@ -10,4 +10,6 @@ export { default as LocationSection, type LocationData } from "./LocationSection
 export { default as ImageSection } from "./ImageSection"
 export { default as MenuItemModal } from "./MenuItemModal"
 export { default as MenuSection } from "./MenuSection"
+export { default as AmenitiesSection } from "./AmenitiesSection"
+export { default as HoursSection } from "./HoursSection"
 
