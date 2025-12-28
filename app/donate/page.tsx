@@ -1,5 +1,13 @@
 import { Metadata } from "next"
-import { Heart, QrCode, Smartphone } from "lucide-react"
+import {
+    Heart,
+    QrCode,
+    Smartphone,
+    Server,
+    Code,
+    Users,
+    Rocket,
+} from "lucide-react"
 import Image from "next/image"
 
 export const metadata: Metadata = {
@@ -76,6 +84,86 @@ export default function DonatePage() {
                                 alt='GCash QR Code'
                                 className='rounded max-w-md h-auto aspect-square'
                             />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Why Support Section */}
+                <div className='mt-12'>
+                    <h2 className='font-serif text-2xl font-bold text-text mb-6 text-center'>
+                        Why we need your support
+                    </h2>
+                    <div className='grid sm:grid-cols-2 gap-4'>
+                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                            <div className='flex items-start gap-4'>
+                                <div className='bg-primary/10 p-2 rounded-lg'>
+                                    <Server className='w-5 h-5 text-primary' />
+                                </div>
+                                <div>
+                                    <h3 className='font-semibold text-text mb-1'>
+                                        Server & Domain
+                                    </h3>
+                                    <p className='text-sm text-text/70'>
+                                        Your donations cover our monthly server,
+                                        database, storage, and domain costs to
+                                        keep the platform online.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                            <div className='flex items-start gap-4'>
+                                <div className='bg-primary/10 p-2 rounded-lg'>
+                                    <Code className='w-5 h-5 text-primary' />
+                                </div>
+                                <div>
+                                    <h3 className='font-semibold text-text mb-1'>
+                                        Development
+                                    </h3>
+                                    <p className='text-sm text-text/70'>
+                                        Support the hours spent coding new
+                                        features, fixing bugs, and improving the
+                                        user experience.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                            <div className='flex items-start gap-4'>
+                                <div className='bg-primary/10 p-2 rounded-lg'>
+                                    <Users className='w-5 h-5 text-primary' />
+                                </div>
+                                <div>
+                                    <h3 className='font-semibold text-text mb-1'>
+                                        Community Growth
+                                    </h3>
+                                    <p className='text-sm text-text/70'>
+                                        Help us organize events, create content,
+                                        and support coffee communities across
+                                        the Philippines.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                            <div className='flex items-start gap-4'>
+                                <div className='bg-primary/10 p-2 rounded-lg'>
+                                    <Rocket className='w-5 h-5 text-primary' />
+                                </div>
+                                <div>
+                                    <h3 className='font-semibold text-text mb-1'>
+                                        Ad-Free Experience
+                                    </h3>
+                                    <p className='text-sm text-text/70'>
+                                        We want to keep Grounds clean and
+                                        focused on coffee, without relying on
+                                        intrusive ads.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
