@@ -373,6 +373,13 @@ export async function submitManualPayment(
     }
 
     try {
+        // Get cafe info for notification
+        const { data: cafe } = await db
+            .from('cafes')
+            .select('name, slug, owner_ids')
+            .eq('id', cafeId)
+            .single()
+
         // Calculate period (6 months)
         const startDate = new Date()
         const endDate = new Date()
@@ -408,6 +415,28 @@ export async function submitManualPayment(
                 updated_at: new Date().toISOString(),
             })
             .eq('id', cafeId)
+
+        // Send Discord notification
+        if (cafe) {
+            const ownerIds = cafe.owner_ids as string[] | null
+            let ownerName: string | undefined
+            if (ownerIds && ownerIds.length > 0) {
+                const { data: profile } = await db
+                    .from('profiles')
+                    .select('display_name')
+                    .eq('id', ownerIds[0])
+                    .single()
+                ownerName = profile?.display_name || undefined
+            }
+
+            const { notifySubscriptionSubmission } = await import('@/utils/discord')
+            await notifySubscriptionSubmission(
+                cafe.name,
+                cafe.slug,
+                tier === 'pro' ? 'Pro' : 'Premium',
+                ownerName
+            )
+        }
 
         return { success: true }
     } catch (error) {

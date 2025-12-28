@@ -4,7 +4,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue, deleteSingleCafeImage } from "@/utils/supabase/storage"
-import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
+import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedEmail, sendSubscriptionRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { Database } from "@/utils/types/database.types"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
@@ -750,7 +750,7 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
             tier,
             proof_of_payment_url,
             created_at,
-            cafes:cafe_id (name)
+            cafes:cafe_id (name, slug, owner_ids)
         `)
         .eq('id', subscriptionId)
         .eq('cafe_id', cafeId)
@@ -789,8 +789,9 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
 
     // 4. Prepare proof info for client download
     let proofInfo: { url: string; filename: string } | undefined
+    const cafeName = (sub.cafes as any)?.name || 'cafe'
+    const cafeSlug = (sub.cafes as any)?.slug || ''
     if (sub.proof_of_payment_url) {
-        const cafeName = (sub.cafes as any)?.name || 'cafe'
         const uploadDate = sub.created_at ? new Date(sub.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         const ext = sub.proof_of_payment_url.split('.').pop()?.split('?')[0] || 'jpg'
         const sanitizedCafeName = cafeName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
@@ -802,7 +803,26 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
         }
     }
 
-    // TODO: Send email notification to cafe owner
+    // 5. Send email notification to cafe owner (only to primary owner)
+    const ownerIds = (sub.cafes as any)?.owner_ids as string[] | undefined
+    if (ownerIds && ownerIds.length > 0) {
+        // Get primary owner's email from auth and display name from profiles
+        const [{ data: userData }, { data: profile }] = await Promise.all([
+            adminDb.auth.admin.getUserById(ownerIds[0]),
+            adminDb.from('profiles').select('display_name').eq('id', ownerIds[0]).single()
+        ])
+
+        if (userData?.user?.email) {
+            const displayTier = sub.tier === 'basic' ? 'Pro' : 'Premium'
+            await sendSubscriptionApprovedEmail(
+                userData.user.email,
+                cafeName,
+                cafeSlug,
+                displayTier,
+                profile?.display_name || undefined
+            )
+        }
+    }
 
     return { success: true, proofInfo }
 }
@@ -857,15 +877,22 @@ export async function rejectManualPayment(cafeId: string, subscriptionId: string
 
     const adminDb = await createAdminClient()
 
-    // 1. Get the proof URL before deleting the subscription
+    // 1. Get the subscription with cafe info before deleting
     const { data: sub } = await adminDb
         .from('cafe_subscriptions')
-        .select('proof_of_payment_url')
+        .select(`
+            tier,
+            proof_of_payment_url,
+            cafes:cafe_id (name, owner_ids)
+        `)
         .eq('id', subscriptionId)
         .eq('cafe_id', cafeId)
         .single()
 
     const proofUrl = sub?.proof_of_payment_url
+    const cafeName = (sub?.cafes as any)?.name || 'cafe'
+    const ownerIds = (sub?.cafes as any)?.owner_ids as string[] | undefined
+    const tier = sub?.tier
 
     // 2. Delete the subscription record entirely
     const { error: subError } = await adminDb
@@ -899,7 +926,24 @@ export async function rejectManualPayment(cafeId: string, subscriptionId: string
         // Non-critical, continue but log
     }
 
-    // TODO: Send rejection email with reason
+    // 5. Send rejection email to primary owner
+    if (ownerIds && ownerIds.length > 0 && tier) {
+        const [{ data: userData }, { data: ownerProfile }] = await Promise.all([
+            adminDb.auth.admin.getUserById(ownerIds[0]),
+            adminDb.from('profiles').select('display_name').eq('id', ownerIds[0]).single()
+        ])
+
+        if (userData?.user?.email) {
+            const displayTier = tier === 'basic' ? 'Pro' : 'Premium'
+            await sendSubscriptionRejectedEmail(
+                userData.user.email,
+                cafeName,
+                displayTier,
+                ownerProfile?.display_name || undefined,
+                reason
+            )
+        }
+    }
 
     return { success: true }
 }
