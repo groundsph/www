@@ -864,7 +864,7 @@ export default function SystemManagement({
                                                         className='object-cover'
                                                     />
                                                 ) : (
-                                                    <div className='w-full h-full flex items-center justify-center text-text/30 text-sm font-semibold'>
+                                                    <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-sm font-semibold'>
                                                         {user.display_name?.[0]?.toUpperCase()}
                                                     </div>
                                                 )}
@@ -932,7 +932,7 @@ export default function SystemManagement({
                                                             className='object-cover'
                                                         />
                                                     ) : (
-                                                        <div className='w-full h-full flex items-center justify-center text-text/30 text-sm font-semibold'>
+                                                        <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-sm font-semibold'>
                                                             {user.display_name?.[0]?.toUpperCase()}
                                                         </div>
                                                     )}

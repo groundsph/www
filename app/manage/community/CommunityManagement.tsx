@@ -275,7 +275,7 @@ export default function CommunityManagement({
                                                         className='object-cover'
                                                     />
                                                 ) : (
-                                                    <div className='w-full h-full flex items-center justify-center text-text/30'>
+                                                    <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
                                                         <MessageSquare className='w-5 h-5' />
                                                     </div>
                                                 )}
@@ -515,7 +515,7 @@ export default function CommunityManagement({
                                                     className='object-cover'
                                                 />
                                             ) : (
-                                                <div className='w-full h-full flex items-center justify-center text-text/30 text-lg font-semibold'>
+                                                <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-lg font-semibold'>
                                                     {user.display_name?.[0]?.toUpperCase() ||
                                                         "?"}
                                                 </div>
@@ -589,7 +589,7 @@ export default function CommunityManagement({
                                                     className='object-cover'
                                                 />
                                             ) : (
-                                                <div className='w-full h-full flex items-center justify-center text-text/30 text-lg font-semibold'>
+                                                <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-lg font-semibold'>
                                                     {member.display_name?.[0]?.toUpperCase() ||
                                                         "?"}
                                                 </div>

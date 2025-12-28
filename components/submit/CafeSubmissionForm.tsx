@@ -2028,7 +2028,7 @@ export default function CafeSubmissionForm({
                                                 className='w-full h-full object-cover'
                                             />
                                         ) : (
-                                            <div className='w-full h-full flex items-center justify-center text-text/30'>
+                                            <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
                                                 <MapPin className='w-16 h-16' />
                                             </div>
                                         )}

@@ -156,7 +156,7 @@ export default function ImageSection({
                                 )}
                             </>
                         ) : (
-                            <div className='w-full h-full flex items-center justify-center text-text/30'>
+                            <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
                                 <ImagePlus className='w-12 h-12' />
                             </div>
                         )}

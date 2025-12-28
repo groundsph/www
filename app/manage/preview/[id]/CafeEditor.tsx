@@ -449,7 +449,7 @@ export default function CafeEditor({
                         )}
                     </>
                 ) : (
-                    <div className='w-full h-full flex items-center justify-center text-text/30'>
+                    <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
                         No cover image
                     </div>
                 )}
