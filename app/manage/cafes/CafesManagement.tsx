@@ -580,7 +580,7 @@ export default function CafesManagement({
                 <>
                     {currentCafes.length === 0 ? (
                         <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <AlertCircle className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <AlertCircle className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
                             <p className='text-text/60 text-lg'>
                                 {searchQuery
                                     ? `No cafes found for "${searchQuery}"`
@@ -615,7 +615,7 @@ export default function CafesManagement({
                                                     />
                                                 ) : (
                                                     <div className='w-full h-full bg-tertiary/30 flex items-center justify-center'>
-                                                        <MapPin className='w-6 h-6 text-text/30' />
+                                                        <MapPin className='w-6 h-6 text-text opacity-30' />
                                                     </div>
                                                 )}
                                             </div>
@@ -891,7 +891,7 @@ export default function CafesManagement({
                 <>
                     {suggestions.length === 0 ? (
                         <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <Pencil className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <Pencil className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
                             <h3 className='text-lg font-semibold'>
                                 No pending suggestions
                             </h3>
@@ -1143,7 +1143,7 @@ export default function CafesManagement({
                 <>
                     {claims.length === 0 ? (
                         <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <Store className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <Store className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
                             <h3 className='text-lg font-semibold'>
                                 No pending claims
                             </h3>

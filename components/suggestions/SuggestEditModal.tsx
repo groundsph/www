@@ -1746,7 +1746,7 @@ export default function SuggestEditModal({
                                                                     className='object-cover'
                                                                 />
                                                             ) : (
-                                                                <div className='w-full h-full flex items-center justify-center text-text/30'>
+                                                                <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
                                                                     <ImagePlus className='w-6 h-6' />
                                                                 </div>
                                                             )}

@@ -415,7 +415,7 @@ export default function CafeManagementClient({
                             />
                         ) : (
                             <div className='w-full h-full flex items-center justify-center'>
-                                <Building2 className='w-10 h-10 text-text/30' />
+                                <Building2 className='w-10 h-10 text-text opacity-30' />
                             </div>
                         )}
                     </div>
@@ -862,7 +862,7 @@ export default function CafeManagementClient({
                                                 </div>
                                             ) : (
                                                 <div className='w-16 h-16 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
-                                                    <UtensilsCrossed className='w-6 h-6 text-text/30' />
+                                                    <UtensilsCrossed className='w-6 h-6 text-text opacity-30' />
                                                 </div>
                                             )}
                                             <div className='flex-1 min-w-0'>
