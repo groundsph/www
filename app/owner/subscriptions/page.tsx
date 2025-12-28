@@ -176,7 +176,7 @@ function SubscriptionsContent() {
     }
 
     return (
-        <div className='max-w-4xl mx-auto py-8 px-4 [&_button]:cursor-pointer'>
+        <div className='max-w-6xl w-full mx-auto py-8 px-4 [&_button]:cursor-pointer'>
             <Link
                 href='/owner'
                 className='inline-flex items-center gap-2 text-text/60 hover:text-text mb-6 transition-colors'

@@ -349,6 +349,51 @@ export type Database = {
           },
         ]
       }
+      cafe_page_views: {
+        Row: {
+          cafe_id: string
+          country: string | null
+          device_type: string | null
+          id: string
+          referrer: string | null
+          viewed_at: string
+          visitor_id: string | null
+        }
+        Insert: {
+          cafe_id: string
+          country?: string | null
+          device_type?: string | null
+          id?: string
+          referrer?: string | null
+          viewed_at?: string
+          visitor_id?: string | null
+        }
+        Update: {
+          cafe_id?: string
+          country?: string | null
+          device_type?: string | null
+          id?: string
+          referrer?: string | null
+          viewed_at?: string
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafe_page_views_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafe_page_views_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cafe_rating_stats: {
         Row: {
           average_rating: number | null

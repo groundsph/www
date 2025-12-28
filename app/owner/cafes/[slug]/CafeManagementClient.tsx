@@ -146,6 +146,17 @@ export default function CafeManagementClient({
     const [events, setEvents] = useState<EventWithCafe[]>([])
     const [eventsLoading, setEventsLoading] = useState(false)
 
+    // Analytics state
+    const [analytics, setAnalytics] = useState<{
+        totalViews: number
+        uniqueVisitors: number
+        viewsByDay: { date: string; views: number; uniqueVisitors: number }[]
+        deviceBreakdown: { mobile: number; desktop: number; tablet: number }
+        topReferrers: { referrer: string; count: number }[]
+    } | null>(null)
+    const [analyticsLoading, setAnalyticsLoading] = useState(false)
+    const [analyticsPeriod, setAnalyticsPeriod] = useState<7 | 30 | 90>(30)
+
     const tier = subscription?.tier || "free"
     const tierConfig = SUBSCRIPTION_TIERS[tier]
     const colors = tierColors[tier]
@@ -341,6 +352,9 @@ export default function CafeManagementClient({
         if (tab === "events" && events.length === 0) {
             loadEvents()
         }
+        if (tab === "analytics" && !analytics) {
+            loadAnalytics()
+        }
     }
 
     // Load events for this cafe
@@ -350,6 +364,15 @@ export default function CafeManagementClient({
         const cafeEvents = await getCafeEvents(cafe.id)
         setEvents(cafeEvents)
         setEventsLoading(false)
+    }
+
+    // Load analytics for this cafe
+    const loadAnalytics = async (days: 7 | 30 | 90 = analyticsPeriod) => {
+        setAnalyticsLoading(true)
+        const { getCafeAnalytics } = await import("@/app/api/actions/analytics")
+        const data = await getCafeAnalytics(cafe.id, days)
+        setAnalytics(data)
+        setAnalyticsLoading(false)
     }
 
     const tabs = [
@@ -928,171 +951,307 @@ export default function CafeManagementClient({
                             exit={{ opacity: 0, y: -10 }}
                             className='space-y-6'
                         >
-                            {/* Overview Stats */}
-                            <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                                <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
-                                    <p className='text-sm text-text/60'>
-                                        Total Reviews
-                                    </p>
-                                    <p className='text-3xl font-bold mt-1'>
-                                        {reviews.length}
-                                    </p>
-                                </div>
-                                <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
-                                    <p className='text-sm text-text/60'>
-                                        Average Rating
-                                    </p>
-                                    <p className='text-3xl font-bold mt-1 flex items-center gap-1'>
-                                        {reviews.length > 0
-                                            ? (
-                                                  reviews.reduce(
-                                                      (sum, r) =>
-                                                          sum + r.rating,
-                                                      0
-                                                  ) / reviews.length
-                                              ).toFixed(1)
-                                            : "—"}
-                                        <Star className='w-5 h-5 text-yellow-500 fill-yellow-500' />
-                                    </p>
-                                </div>
-                                <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
-                                    <p className='text-sm text-text/60'>
-                                        Response Rate
-                                    </p>
-                                    <p className='text-3xl font-bold mt-1'>
-                                        {reviews.length > 0
-                                            ? Math.round(
-                                                  (reviews.filter(
-                                                      (r) => r.owner_response
-                                                  ).length /
-                                                      reviews.length) *
-                                                      100
-                                              )
-                                            : 0}
-                                        %
-                                    </p>
-                                </div>
-                                <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
-                                    <p className='text-sm text-text/60'>
-                                        Pending Responses
-                                    </p>
-                                    <p className='text-3xl font-bold mt-1'>
-                                        {
-                                            reviews.filter(
-                                                (r) => !r.owner_response
-                                            ).length
-                                        }
-                                    </p>
+                            {/* Period Selector */}
+                            <div className='flex items-center justify-between'>
+                                <h2 className='text-lg font-semibold'>
+                                    Page Analytics
+                                </h2>
+                                <div className='flex gap-2'>
+                                    {([7, 30, 90] as const).map((days) => (
+                                        <button
+                                            key={days}
+                                            onClick={() => {
+                                                setAnalyticsPeriod(days)
+                                                loadAnalytics(days)
+                                            }}
+                                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                                analyticsPeriod === days
+                                                    ? "bg-primary text-white"
+                                                    : "bg-text/10 text-text/70 hover:bg-text/20"
+                                            }`}
+                                        >
+                                            {days}d
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* Rating Distribution */}
-                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
-                                <h3 className='font-semibold mb-4'>
-                                    Rating Distribution
-                                </h3>
-                                <div className='space-y-3'>
-                                    {[5, 4, 3, 2, 1].map((rating) => {
-                                        const count = reviews.filter(
-                                            (r) => r.rating === rating
-                                        ).length
-                                        const percentage =
-                                            reviews.length > 0
-                                                ? (count / reviews.length) * 100
-                                                : 0
-                                        return (
-                                            <div
-                                                key={rating}
-                                                className='flex items-center gap-3'
-                                            >
-                                                <div className='flex items-center gap-1 w-12'>
-                                                    <span className='font-medium'>
-                                                        {rating}
-                                                    </span>
-                                                    <Star className='w-4 h-4 text-yellow-500 fill-yellow-500' />
-                                                </div>
-                                                <div className='flex-1 h-4 bg-text/10 rounded-full overflow-hidden'>
-                                                    <div
-                                                        className='h-full bg-primary rounded-full transition-all duration-500'
-                                                        style={{
-                                                            width: `${percentage}%`,
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div className='w-20 text-right'>
-                                                    <span className='text-sm font-medium'>
-                                                        {count}
-                                                    </span>
-                                                    <span className='text-sm text-text/50 ml-1'>
-                                                        ({percentage.toFixed(0)}
-                                                        %)
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
+                            {analyticsLoading ? (
+                                <div className='flex items-center justify-center py-12'>
+                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
                                 </div>
-                            </div>
-
-                            {/* Recent Activity */}
-                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
-                                <h3 className='font-semibold mb-4'>
-                                    Recent Reviews
-                                </h3>
-                                {reviews.length === 0 ? (
-                                    <p className='text-text/60 text-center py-8'>
-                                        No reviews yet
-                                    </p>
-                                ) : (
-                                    <div className='space-y-4'>
-                                        {reviews.slice(0, 5).map((review) => (
-                                            <div
-                                                key={review.id}
-                                                className='flex items-start gap-3 p-3 bg-background/50 rounded-lg'
-                                            >
-                                                <div className='flex-1 min-w-0'>
-                                                    <div className='flex items-center gap-2'>
-                                                        <span className='font-medium text-sm'>
-                                                            {
-                                                                review.author
-                                                                    .display_name
-                                                            }
-                                                        </span>
-                                                        <div className='flex items-center gap-0.5'>
-                                                            {[...Array(5)].map(
-                                                                (_, i) => (
-                                                                    <Star
-                                                                        key={i}
-                                                                        className={`w-3 h-3 ${i < review.rating ? "text-yellow-500 fill-yellow-500" : "text-text/20"}`}
-                                                                    />
-                                                                )
-                                                            )}
-                                                        </div>
-                                                        {review.owner_response && (
-                                                            <Check className='w-4 h-4 text-green-500' />
-                                                        )}
-                                                    </div>
-                                                    <p className='text-sm text-text/70 line-clamp-2 mt-1'>
-                                                        {review.comment}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
+                            ) : analytics ? (
+                                <>
+                                    {/* Page View Stats */}
+                                    <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                            <p className='text-sm text-text/60'>
+                                                Page Views
+                                            </p>
+                                            <p className='text-3xl font-bold mt-1'>
+                                                {analytics.totalViews.toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                            <p className='text-sm text-text/60'>
+                                                Unique Visitors
+                                            </p>
+                                            <p className='text-3xl font-bold mt-1'>
+                                                {analytics.uniqueVisitors.toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                            <p className='text-sm text-text/60'>
+                                                Total Reviews
+                                            </p>
+                                            <p className='text-3xl font-bold mt-1'>
+                                                {reviews.length}
+                                            </p>
+                                        </div>
+                                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                            <p className='text-sm text-text/60'>
+                                                Avg Rating
+                                            </p>
+                                            <p className='text-3xl font-bold mt-1 flex items-center gap-1'>
+                                                {reviews.length > 0
+                                                    ? (
+                                                          reviews.reduce(
+                                                              (sum, r) =>
+                                                                  sum +
+                                                                  r.rating,
+                                                              0
+                                                          ) / reviews.length
+                                                      ).toFixed(1)
+                                                    : "—"}
+                                                <Star className='w-5 h-5 text-yellow-500 fill-yellow-500' />
+                                            </p>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Coming Soon */}
-                            <div className='p-6 bg-linear-to-br from-primary/5 to-secondary/5 rounded-xl border border-primary/20'>
-                                <h3 className='font-semibold mb-2'>
-                                    📊 More Analytics Coming Soon
-                                </h3>
-                                <p className='text-sm text-text/60'>
-                                    Page views, visitor trends, and conversion
-                                    tracking will be available in a future
-                                    update.
-                                </p>
-                            </div>
+                                    {/* Views Trend Chart */}
+                                    <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                        <h3 className='font-semibold mb-4'>
+                                            Views Trend
+                                        </h3>
+                                        <div className='h-40 flex items-end gap-1'>
+                                            {analytics.viewsByDay
+                                                .slice(
+                                                    -Math.min(
+                                                        analyticsPeriod,
+                                                        30
+                                                    )
+                                                )
+                                                .map((day, i) => {
+                                                    const maxViews = Math.max(
+                                                        ...analytics.viewsByDay.map(
+                                                            (d) => d.views
+                                                        ),
+                                                        1
+                                                    )
+                                                    const height =
+                                                        (day.views / maxViews) *
+                                                        100
+                                                    return (
+                                                        <div
+                                                            key={day.date}
+                                                            className='flex-1 relative group'
+                                                            title={`${day.date}: ${day.views} views`}
+                                                        >
+                                                            <div
+                                                                className='bg-primary/70 hover:bg-primary rounded-t transition-all'
+                                                                style={{
+                                                                    height: `${Math.max(height, 2)}%`,
+                                                                }}
+                                                            />
+                                                            <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-text text-background text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+                                                                {new Date(
+                                                                    day.date
+                                                                ).toLocaleDateString(
+                                                                    "en-US",
+                                                                    {
+                                                                        month: "short",
+                                                                        day: "numeric",
+                                                                    }
+                                                                )}
+                                                                : {day.views}{" "}
+                                                                views
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                        </div>
+                                        <div className='flex justify-between text-xs text-text/40 mt-2'>
+                                            <span>
+                                                {new Date(
+                                                    analytics.viewsByDay[
+                                                        Math.max(
+                                                            0,
+                                                            analytics.viewsByDay
+                                                                .length -
+                                                                analyticsPeriod
+                                                        )
+                                                    ]?.date || ""
+                                                ).toLocaleDateString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                })}
+                                            </span>
+                                            <span>Today</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Device & Referrer Grid */}
+                                    <div className='grid md:grid-cols-2 gap-6'>
+                                        {/* Device Breakdown */}
+                                        <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                            <h3 className='font-semibold mb-4'>
+                                                Device Breakdown
+                                            </h3>
+                                            <div className='space-y-3'>
+                                                {Object.entries(
+                                                    analytics.deviceBreakdown
+                                                ).map(([device, count]) => {
+                                                    const total =
+                                                        Object.values(
+                                                            analytics.deviceBreakdown
+                                                        ).reduce(
+                                                            (a, b) => a + b,
+                                                            0
+                                                        ) || 1
+                                                    const percentage =
+                                                        (count / total) * 100
+                                                    return (
+                                                        <div
+                                                            key={device}
+                                                            className='flex items-center gap-3'
+                                                        >
+                                                            <span className='w-16 text-sm capitalize'>
+                                                                {device}
+                                                            </span>
+                                                            <div className='flex-1 h-4 bg-text/10 rounded-full overflow-hidden'>
+                                                                <div
+                                                                    className={`h-full rounded-full transition-all ${
+                                                                        device ===
+                                                                        "mobile"
+                                                                            ? "bg-blue-500"
+                                                                            : device ===
+                                                                                "desktop"
+                                                                              ? "bg-green-500"
+                                                                              : "bg-amber-500"
+                                                                    }`}
+                                                                    style={{
+                                                                        width: `${percentage}%`,
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <span className='w-16 text-right text-sm text-text/60'>
+                                                                {count} (
+                                                                {percentage.toFixed(
+                                                                    0
+                                                                )}
+                                                                %)
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Top Referrers */}
+                                        <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                            <h3 className='font-semibold mb-4'>
+                                                Top Referrers
+                                            </h3>
+                                            {analytics.topReferrers.length ===
+                                            0 ? (
+                                                <p className='text-text/50 text-sm'>
+                                                    No referrer data yet
+                                                </p>
+                                            ) : (
+                                                <div className='space-y-2'>
+                                                    {analytics.topReferrers.map(
+                                                        (ref, i) => (
+                                                            <div
+                                                                key={
+                                                                    ref.referrer
+                                                                }
+                                                                className='flex items-center justify-between p-2 bg-background/50 rounded-lg'
+                                                            >
+                                                                <span className='text-sm truncate flex-1'>
+                                                                    {
+                                                                        ref.referrer
+                                                                    }
+                                                                </span>
+                                                                <span className='text-sm font-medium text-primary ml-2'>
+                                                                    {ref.count}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Rating Distribution */}
+                                    <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                        <h3 className='font-semibold mb-4'>
+                                            Rating Distribution
+                                        </h3>
+                                        <div className='space-y-3'>
+                                            {[5, 4, 3, 2, 1].map((rating) => {
+                                                const count = reviews.filter(
+                                                    (r) => r.rating === rating
+                                                ).length
+                                                const percentage =
+                                                    reviews.length > 0
+                                                        ? (count /
+                                                              reviews.length) *
+                                                          100
+                                                        : 0
+                                                return (
+                                                    <div
+                                                        key={rating}
+                                                        className='flex items-center gap-3'
+                                                    >
+                                                        <div className='flex items-center gap-1 w-12'>
+                                                            <span className='font-medium'>
+                                                                {rating}
+                                                            </span>
+                                                            <Star className='w-4 h-4 text-yellow-500 fill-yellow-500' />
+                                                        </div>
+                                                        <div className='flex-1 h-4 bg-text/10 rounded-full overflow-hidden'>
+                                                            <div
+                                                                className='h-full bg-primary rounded-full transition-all duration-500'
+                                                                style={{
+                                                                    width: `${percentage}%`,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div className='w-20 text-right'>
+                                                            <span className='text-sm font-medium'>
+                                                                {count}
+                                                            </span>
+                                                            <span className='text-sm text-text/50 ml-1'>
+                                                                (
+                                                                {percentage.toFixed(
+                                                                    0
+                                                                )}
+                                                                %)
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className='text-center py-12 text-text/60'>
+                                    <BarChart3 className='w-12 h-12 mx-auto mb-3 opacity-30' />
+                                    <p>Loading analytics...</p>
+                                </div>
+                            )}
                         </motion.div>
                     )}
 

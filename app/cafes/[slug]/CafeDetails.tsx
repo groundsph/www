@@ -26,6 +26,7 @@ import ContributionHistoryModal from "@/components/history/ContributionHistoryMo
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
+import { trackCafePageView } from "@/utils/analytics"
 
 export interface Review {
     id: string
@@ -122,6 +123,11 @@ export default function CafeDetails({
         window.addEventListener("resize", checkScroll)
         return () => window.removeEventListener("resize", checkScroll)
     }, [gallery])
+
+    // Track page view for analytics
+    useEffect(() => {
+        trackCafePageView(cafe.id)
+    }, [cafe.id])
 
     const scroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
