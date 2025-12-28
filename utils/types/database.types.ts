@@ -1208,6 +1208,7 @@ export type Database = {
       }
       can_add_menu_item: { Args: { p_cafe_id: string }; Returns: boolean }
       count_cafe_menu_items: { Args: { p_cafe_id: string }; Returns: number }
+      get_admin_stats: { Args: never; Returns: Json }
       get_cafe_tier: {
         Args: { p_cafe_id: string }
         Returns: Database["public"]["Enums"]["membership_tier"]

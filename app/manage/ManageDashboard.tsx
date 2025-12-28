@@ -86,6 +86,7 @@ import BlogEditor from "@/components/blog/BlogEditor"
 import ImageLightbox from "@/components/ImageLightbox"
 import EventsManagement from "@/components/events/EventsManagement"
 import { EventWithCafe } from "@/utils/types/extra"
+import StatsCards from "./StatsCards"
 
 const resizeBadgeImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -1066,7 +1067,14 @@ export default function ManageDashboard({
                 </p>
             </div>
 
-            {/* Stats */}
+            {/* System Stats - Admin Only */}
+            {isFullAdmin && (
+                <div className='mb-8'>
+                    <StatsCards />
+                </div>
+            )}
+
+            {/* Quick Stats - Moderators & Admins */}
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                 <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                     <div className='text-4xl font-bold'>
