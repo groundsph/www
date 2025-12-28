@@ -429,10 +429,9 @@ export async function submitManualPayment(
                 ownerName = profile?.display_name || undefined
             }
 
-            const { notifySubscriptionSubmission } = await import('@/utils/discord')
-            await notifySubscriptionSubmission(
-                cafe.name,
-                cafe.slug,
+            const { notifyDiscordSubscription } = await import('@/app/api/actions/notify')
+            await notifyDiscordSubscription(
+                { name: cafe.name, slug: cafe.slug },
                 tier === 'pro' ? 'Pro' : 'Premium',
                 ownerName
             )
