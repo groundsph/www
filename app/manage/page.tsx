@@ -79,9 +79,6 @@ export default async function ManageOverviewPage() {
                 </p>
             </div>
 
-            {/* Stats Cards */}
-            {isFullAdmin && <StatsCards />}
-
             {/* Quick Access Cards */}
             <div>
                 <h2 className='text-lg font-semibold text-text mb-4'>
@@ -126,6 +123,9 @@ export default async function ManageOverviewPage() {
                     ))}
                 </div>
             </div>
+
+            {/* Stats Cards */}
+            {isFullAdmin && <StatsCards />}
         </div>
     )
 }
