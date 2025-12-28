@@ -147,7 +147,7 @@ export default function ReviewItem({
                             />
                         ) : (
                             <div className='w-full h-full flex items-center justify-center'>
-                                <User className='w-5 h-5 text-text/40' />
+                                <User className='w-5 h-5 text-text opacity-40' />
                             </div>
                         )}
                     </div>

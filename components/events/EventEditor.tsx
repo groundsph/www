@@ -309,7 +309,7 @@ export default function EventEditor({
                                     className='w-full px-4 py-3 rounded-xl border border-text/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none'
                                 />
                                 <div className='relative'>
-                                    <Clock className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                    <Clock className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                     <input
                                         type='time'
                                         value={startTimeValue}
@@ -338,7 +338,7 @@ export default function EventEditor({
                                     className='w-full px-4 py-3 rounded-xl border border-text/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none'
                                 />
                                 <div className='relative'>
-                                    <Clock className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                    <Clock className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                     <input
                                         type='time'
                                         value={endTimeValue}

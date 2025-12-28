@@ -562,7 +562,7 @@ export default function SystemManagement({
                     {/* Badge Grid */}
                     {badges.length === 0 ? (
                         <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <Award className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <Award className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
                             <p className='text-text/60 text-lg'>
                                 No badges yet
                             </p>

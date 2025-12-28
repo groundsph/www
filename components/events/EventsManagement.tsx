@@ -179,7 +179,7 @@ export default function EventsManagement({
             {/* Events List */}
             {events.length === 0 ? (
                 <div className='py-16 text-center'>
-                    <CalendarIcon className='w-12 h-12 mx-auto text-text/20 mb-4' />
+                    <CalendarIcon className='w-12 h-12 mx-auto text-text opacity-20 mb-4' />
                     <p className='text-text/60 font-medium'>No events yet</p>
                     <p className='text-text/40 text-sm mt-1'>
                         Create your first event to get started
@@ -203,7 +203,7 @@ export default function EventsManagement({
                                     />
                                 ) : (
                                     <div className='w-full h-full flex items-center justify-center'>
-                                        <CalendarIcon className='w-8 h-8 text-text/20' />
+                                        <CalendarIcon className='w-8 h-8 text-text opacity-20' />
                                     </div>
                                 )}
                             </div>
@@ -241,7 +241,7 @@ export default function EventsManagement({
                             {/* Actions */}
                             <div className='flex items-center gap-2'>
                                 {loadingId === event.id ? (
-                                    <Loader2Icon className='w-5 h-5 animate-spin text-text/40' />
+                                    <Loader2Icon className='w-5 h-5 animate-spin text-text opacity-40' />
                                 ) : (
                                     <>
                                         {event.status === "draft" && (

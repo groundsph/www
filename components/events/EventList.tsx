@@ -42,7 +42,7 @@ export default function EventList({
     if (events.length === 0) {
         return (
             <div className='flex flex-col items-center justify-center py-16 text-center'>
-                <CalendarX className='w-16 h-16 text-text/30 mb-4' />
+                <CalendarX className='w-16 h-16 text-text opacity-30 mb-4' />
                 <p className='text-text/60 text-lg'>{emptyMessage}</p>
             </div>
         )

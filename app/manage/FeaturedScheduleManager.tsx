@@ -617,7 +617,7 @@ export default function FeaturedScheduleManager({
                                     </div>
                                 ) : (
                                     <div className='relative'>
-                                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                         <input
                                             type='text'
                                             value={cafeSearchQuery}

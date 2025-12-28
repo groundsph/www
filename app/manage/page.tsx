@@ -109,7 +109,7 @@ export default async function ManageOverviewPage() {
                                         </span>
                                     )}
                                 </div>
-                                <ArrowRight className='w-5 h-5 text-text/30 group-hover:text-primary group-hover:translate-x-1 transition-all' />
+                                <ArrowRight className='w-5 h-5 text-text opacity-30 group-hover:text-primary group-hover:translate-x-1 transition-all' />
                             </div>
                             <h3 className='font-semibold text-text mt-4'>
                                 {category.name}

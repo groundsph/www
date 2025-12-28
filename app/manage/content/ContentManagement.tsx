@@ -159,7 +159,7 @@ export default function ContentManagement({
                     {/* Blog Posts List */}
                     {blogPosts.length === 0 ? (
                         <div className='text-center py-16'>
-                            <FileText className='w-12 h-12 mx-auto text-text/30 mb-4' />
+                            <FileText className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
                             <p className='text-text/60 text-lg'>
                                 No blog posts yet
                             </p>

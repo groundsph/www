@@ -89,7 +89,7 @@ export default function EventCard({
                     />
                 ) : (
                     <div className='absolute inset-0 flex items-center justify-center'>
-                        <CalendarIcon className='w-16 h-16 text-text/20' />
+                        <CalendarIcon className='w-16 h-16 text-text opacity-20' />
                     </div>
                 )}
                 {/* Date badge */}
@@ -126,7 +126,7 @@ export default function EventCard({
                     <div className='flex items-center gap-2 text-sm text-text/60'>
                         <CalendarIcon className='w-4 h-4 shrink-0' />
                         <span>{formatDateRange()}</span>
-                        <span className='text-text/30'>•</span>
+                        <span className='text-text opacity-30'>•</span>
                         <span>{formatTime()}</span>
                     </div>
 
