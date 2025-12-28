@@ -6,6 +6,55 @@ import { CafeSocial } from './cafe';
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 export type Views<T extends keyof Database['public']['Views']> = Database['public']['Views'][T]['Row'];
 
+// Event status enum type
+export type EventStatus = 'draft' | 'published' | 'cancelled';
+
+// Event type (matches events table)
+export interface Event {
+    id: string;
+    title: string;
+    description: string | null;
+    start_date: string;
+    end_date: string | null;
+    location_name: string | null;
+    address: string | null;
+    city: string | null;
+    region: string | null;
+    cafe_id: string | null;
+    image_url: string | null;
+    ticket_link: string | null;
+    is_national: boolean;
+    created_by: string | null;
+    status: EventStatus;
+    created_at: string;
+    updated_at: string;
+}
+
+// Event with related data
+export interface EventWithCafe extends Event {
+    cafe?: {
+        id: string;
+        name: string;
+        slug: string;
+        thumbnail: string;
+    } | null;
+    creator?: {
+        id: string;
+        display_name: string;
+        avatar_url: string | null;
+    } | null;
+}
+
+// Event filters for querying
+export interface EventFilters {
+    city?: string;
+    region?: string;
+    status?: EventStatus;
+    is_national?: boolean;
+    start_after?: string;
+    start_before?: string;
+}
+
 // 2. Define your CafeWithRatings manually to ensure all fields are present
 // Override operating_hours and socials from Json to their proper types
 export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials'> & {

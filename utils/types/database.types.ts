@@ -692,6 +692,88 @@ export type Database = {
           },
         ]
       }
+      events: {
+        Row: {
+          address: string | null
+          cafe_id: string | null
+          city: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_national: boolean | null
+          location_name: string | null
+          region: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["event_status"] | null
+          ticket_link: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          cafe_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_national?: boolean | null
+          location_name?: string | null
+          region?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["event_status"] | null
+          ticket_link?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          cafe_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_national?: boolean | null
+          location_name?: string | null
+          region?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["event_status"] | null
+          ticket_link?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       featured_schedules: {
         Row: {
           cafe_id: string
@@ -1267,6 +1349,7 @@ export type Database = {
         | "VERIFY"
         | "MEDIA"
         | "SUGGEST"
+      event_status: "draft" | "published" | "cancelled"
       interaction_type: "like" | "report"
       membership_tier: "free" | "basic" | "premium"
       price_level: "low" | "medium" | "high"
@@ -1421,6 +1504,7 @@ export const Constants = {
         "MEDIA",
         "SUGGEST",
       ],
+      event_status: ["draft", "published", "cancelled"],
       interaction_type: ["like", "report"],
       membership_tier: ["free", "basic", "premium"],
       price_level: ["low", "medium", "high"],

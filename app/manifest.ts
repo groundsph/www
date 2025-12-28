@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Grounds - Discover Cebu\'s Best Cafes',
+        name: 'Grounds - Discover the Philippines\' Best Cafes',
         short_name: 'Grounds',
-        description: 'Discover and explore the best cafes in Cebu',
+        description: 'Discover and explore the best cafes in the Philippines',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
@@ -15,17 +15,36 @@ export default function manifest(): MetadataRoute.Manifest {
                 sizes: 'any',
                 type: 'image/x-icon',
             },
-            // TODO: Add more icon sizes as needed
-            // {
-            //     src: '/icon-192.png',
-            //     sizes: '192x192',
-            //     type: 'image/png',
-            // },
-            // {
-            //     src: '/icon-512.png',
-            //     sizes: '512x512',
-            //     type: 'image/png',
-            // },
+            {
+                src: '/android-icon-36x36.png',
+                sizes: '36x36',
+                type: 'image/png',
+            },
+            {
+                src: '/android-icon-48x48.png',
+                sizes: '48x48',
+                type: 'image/png',
+            },
+            {
+                src: '/android-icon-72x72.png',
+                sizes: '72x72',
+                type: 'image/png',
+            },
+            {
+                src: '/android-icon-96x96.png',
+                sizes: '96x96',
+                type: 'image/png',
+            },
+            {
+                src: '/android-icon-144x144.png',
+                sizes: '144x144',
+                type: 'image/png',
+            },
+            {
+                src: '/android-icon-192x192.png',
+                sizes: '192x192',
+                type: 'image/png',
+            },
         ],
     }
 }

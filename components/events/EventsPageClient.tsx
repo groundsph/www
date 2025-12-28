@@ -1,0 +1,331 @@
+"use client"
+
+import { useState, useEffect, useCallback, useRef } from "react"
+import {
+    CalendarIcon,
+    ListIcon,
+    MapPinIcon,
+    GlobeIcon,
+    Loader2Icon,
+} from "lucide-react"
+import { useUserLocation } from "@/hooks/useUserLocation"
+import { getEvents, getEventsForMonth } from "@/app/api/actions/events"
+import { EventWithCafe, Event } from "@/utils/types/extra"
+import EventList from "@/components/events/EventList"
+import EventCalendar from "@/components/events/EventCalendar"
+import { format } from "date-fns"
+
+type ViewMode = "list" | "calendar"
+type ScopeMode = "local" | "national"
+
+const PAGE_SIZE = 12
+
+export default function EventsPageClient() {
+    const { location, loading: locationLoading } = useUserLocation()
+    const [viewMode, setViewMode] = useState<ViewMode>("list")
+    const [scopeMode, setScopeMode] = useState<ScopeMode>("local")
+    const [events, setEvents] = useState<EventWithCafe[]>([])
+    const [calendarEvents, setCalendarEvents] = useState<Event[]>([])
+    const [loading, setLoading] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const [page, setPage] = useState(1)
+    const [currentMonth] = useState(new Date())
+    const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([])
+
+    // Ref for infinite scroll sentinel
+    const loadMoreRef = useRef<HTMLDivElement>(null)
+
+    // Initial fetch and reset when scope/location changes
+    const fetchEvents = useCallback(
+        async (pageNum: number = 1, reset: boolean = false) => {
+            if (pageNum === 1) {
+                setLoading(true)
+            } else {
+                setLoadingMore(true)
+            }
+
+            try {
+                const now = new Date().toISOString()
+                const filters =
+                    scopeMode === "local"
+                        ? {
+                              city: location.city || undefined,
+                              region: location.region || undefined,
+                              is_national: false as const,
+                              start_after: now,
+                          }
+                        : {
+                              is_national: true as const,
+                              start_after: now,
+                          }
+
+                const { events: fetchedEvents, total } = await getEvents(
+                    filters,
+                    pageNum,
+                    PAGE_SIZE
+                )
+
+                if (reset || pageNum === 1) {
+                    setEvents(fetchedEvents)
+                } else {
+                    setEvents((prev) => [...prev, ...fetchedEvents])
+                }
+
+                // Check if there are more events to load
+                const totalLoaded =
+                    (pageNum - 1) * PAGE_SIZE + fetchedEvents.length
+                setHasMore(totalLoaded < total)
+                setPage(pageNum)
+            } catch (error) {
+                console.error("Failed to fetch events:", error)
+            } finally {
+                setLoading(false)
+                setLoadingMore(false)
+            }
+        },
+        [scopeMode, location.city, location.region]
+    )
+
+    // Load more events
+    const loadMore = useCallback(() => {
+        if (!loadingMore && hasMore && !loading) {
+            fetchEvents(page + 1)
+        }
+    }, [fetchEvents, page, loadingMore, hasMore, loading])
+
+    // Fetch calendar events for current month
+    const fetchCalendarEvents = useCallback(async () => {
+        try {
+            const monthEvents = await getEventsForMonth(
+                currentMonth.getFullYear(),
+                currentMonth.getMonth(),
+                scopeMode === "local"
+                    ? {
+                          city: location.city || undefined,
+                          region: location.region || undefined,
+                      }
+                    : { is_national: true }
+            )
+            setCalendarEvents(monthEvents)
+        } catch (error) {
+            console.error("Failed to fetch calendar events:", error)
+        }
+    }, [currentMonth, scopeMode, location.city, location.region])
+
+    // Initial load and reset on scope/location change
+    useEffect(() => {
+        if (!locationLoading) {
+            setPage(1)
+            setHasMore(true)
+            fetchEvents(1, true)
+        }
+    }, [fetchEvents, locationLoading, scopeMode])
+
+    // Calendar events
+    useEffect(() => {
+        if (!locationLoading && viewMode === "calendar") {
+            fetchCalendarEvents()
+        }
+    }, [fetchCalendarEvents, locationLoading, viewMode])
+
+    // Intersection Observer for infinite scroll
+    useEffect(() => {
+        if (viewMode !== "list") return
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (
+                    entries[0].isIntersecting &&
+                    hasMore &&
+                    !loadingMore &&
+                    !loading
+                ) {
+                    loadMore()
+                }
+            },
+            { threshold: 0.1, rootMargin: "100px" }
+        )
+
+        const sentinel = loadMoreRef.current
+        if (sentinel) {
+            observer.observe(sentinel)
+        }
+
+        return () => {
+            if (sentinel) {
+                observer.unobserve(sentinel)
+            }
+        }
+    }, [viewMode, hasMore, loadingMore, loading, loadMore])
+
+    const handleDateSelect = (date: Date, dateEvents: Event[]) => {
+        setSelectedDateEvents(dateEvents)
+    }
+
+    return (
+        <main className='w-full min-h-screen [&_button]:cursor-pointer'>
+            {/* Hero Section */}
+            <section className='bg-linear-to-b from-primary/10 to-background py-12 px-6'>
+                <div className='max-w-6xl mx-auto'>
+                    <h1 className='text-4xl md:text-5xl font-bold font-serif text-text mb-4'>
+                        Coffee Events
+                    </h1>
+                    <p className='text-lg text-text/70 max-w-2xl'>
+                        Discover coffee meetups, workshops, cupping sessions,
+                        and community gatherings happening across the
+                        Philippines.
+                    </p>
+
+                    {/* Location indicator */}
+                    {!locationLoading && location.city && (
+                        <div className='mt-4 flex items-center gap-2 text-sm text-text/60'>
+                            <MapPinIcon className='w-4 h-4' />
+                            <span>
+                                Showing events near {location.city}
+                                {location.region && `, ${location.region}`}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* Controls */}
+            <section className='sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-text/10'>
+                <div className='max-w-6xl mx-auto px-6 py-4'>
+                    <div className='flex flex-wrap items-center justify-between gap-4'>
+                        {/* Scope Toggle */}
+                        <div className='flex bg-text/5 rounded-lg p-1'>
+                            <button
+                                onClick={() => setScopeMode("local")}
+                                className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+                                    ${scopeMode === "local" ? "bg-background shadow-sm text-text" : "text-text/60 hover:text-text"}
+                                `}
+                            >
+                                <MapPinIcon className='w-4 h-4' />
+                                Local
+                            </button>
+                            <button
+                                onClick={() => setScopeMode("national")}
+                                className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+                                    ${scopeMode === "national" ? "bg-background shadow-sm text-text" : "text-text/60 hover:text-text"}
+                                `}
+                            >
+                                <GlobeIcon className='w-4 h-4' />
+                                National
+                            </button>
+                        </div>
+
+                        {/* View Toggle */}
+                        <div className='flex bg-text/5 rounded-lg p-1'>
+                            <button
+                                onClick={() => setViewMode("list")}
+                                className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+                                    ${viewMode === "list" ? "bg-background shadow-sm text-text" : "text-text/60 hover:text-text"}
+                                `}
+                            >
+                                <ListIcon className='w-4 h-4' />
+                                List
+                            </button>
+                            <button
+                                onClick={() => setViewMode("calendar")}
+                                className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+                                    ${viewMode === "calendar" ? "bg-background shadow-sm text-text" : "text-text/60 hover:text-text"}
+                                `}
+                            >
+                                <CalendarIcon className='w-4 h-4' />
+                                Calendar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Content */}
+            <section className='max-w-6xl mx-auto px-6 py-8'>
+                {locationLoading ? (
+                    <div className='flex items-center justify-center py-16'>
+                        <Loader2Icon className='w-8 h-8 animate-spin text-primary' />
+                        <span className='ml-3 text-text/60'>
+                            Detecting your location...
+                        </span>
+                    </div>
+                ) : viewMode === "list" ? (
+                    <>
+                        <EventList
+                            events={events}
+                            loading={loading}
+                            emptyMessage={
+                                scopeMode === "local"
+                                    ? `No local events found${location.city ? ` in ${location.city}` : ""}. Check out national events!`
+                                    : "No national events at the moment. Check back soon!"
+                            }
+                        />
+
+                        {/* Infinite scroll sentinel */}
+                        <div
+                            ref={loadMoreRef}
+                            className='py-8 flex justify-center'
+                        >
+                            {loadingMore && (
+                                <div className='flex items-center gap-2 text-text/60'>
+                                    <Loader2Icon className='w-5 h-5 animate-spin' />
+                                    <span>Loading more events...</span>
+                                </div>
+                            )}
+                            {!hasMore && events.length > 0 && (
+                                <p className='text-text/40 text-sm'>
+                                    You&apos;ve seen all events
+                                </p>
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+                        <div className='lg:col-span-2'>
+                            <EventCalendar
+                                events={calendarEvents}
+                                onDateSelect={handleDateSelect}
+                                loading={loading}
+                            />
+                        </div>
+                        <div className='space-y-4'>
+                            <h3 className='font-semibold text-lg'>
+                                {selectedDateEvents.length > 0
+                                    ? `Events on ${format(new Date(), "MMM d")}`
+                                    : "Select a date"}
+                            </h3>
+                            {selectedDateEvents.length > 0 ? (
+                                <div className='space-y-3'>
+                                    {selectedDateEvents.map((event) => (
+                                        <div
+                                            key={event.id}
+                                            className='p-4 bg-text/5 rounded-lg'
+                                        >
+                                            <h4 className='font-semibold'>
+                                                {event.title}
+                                            </h4>
+                                            {event.location_name && (
+                                                <p className='text-sm text-text/60'>
+                                                    {event.location_name}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className='text-text/60 text-sm'>
+                                    Click on a date with events to see details.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </section>
+        </main>
+    )
+}
