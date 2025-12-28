@@ -82,6 +82,7 @@ import FeaturedScheduleManager from "./FeaturedScheduleManager"
 import { backfillBadgesForAllUsers } from "@/utils/badges/badge-logic"
 import { BlogPost } from "@/utils/types/blog"
 import BlogEditor from "@/components/blog/BlogEditor"
+import ImageLightbox from "@/components/ImageLightbox"
 
 const resizeBadgeImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -272,6 +273,19 @@ export default function ManageDashboard({
     const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(
         null
     )
+
+    // Suggestion image lightbox state
+    const [suggestionLightboxImages, setSuggestionLightboxImages] = useState<
+        string[]
+    >([])
+    const [suggestionLightboxIndex, setSuggestionLightboxIndex] = useState(0)
+    const [showSuggestionLightbox, setShowSuggestionLightbox] = useState(false)
+
+    const openSuggestionLightbox = (images: string[], index: number = 0) => {
+        setSuggestionLightboxImages(images)
+        setSuggestionLightboxIndex(index)
+        setShowSuggestionLightbox(true)
+    }
 
     const handleApprove = async (cafeId: string) => {
         setProcessing(cafeId)
@@ -2077,9 +2091,21 @@ export default function ManageDashboard({
                             {suggestions.map((suggestion) => {
                                 const isExpanded =
                                     expandedSuggestion === suggestion.id
-                                const changesCount = Object.keys(
+                                // Count text field changes
+                                const textChangesCount = Object.keys(
                                     suggestion.suggested_changes || {}
                                 ).length
+                                // Count image changes
+                                const imageChanges = suggestion.suggested_images
+                                const imageChangesCount = imageChanges
+                                    ? (imageChanges.add_to_gallery?.length ||
+                                          0) +
+                                      (imageChanges.remove_from_gallery
+                                          ?.length || 0) +
+                                      (imageChanges.new_thumbnail ? 1 : 0)
+                                    : 0
+                                const changesCount =
+                                    textChangesCount + imageChangesCount
 
                                 return (
                                     <div
@@ -2193,6 +2219,174 @@ export default function ManageDashboard({
                                                             )
                                                         )}
                                                     </div>
+                                                    {/* Image Changes */}
+                                                    {imageChanges &&
+                                                        imageChangesCount >
+                                                            0 && (
+                                                            <div className='mt-4 pt-4 border-t border-text/10'>
+                                                                <h5 className='text-sm font-semibold mb-3'>
+                                                                    Image
+                                                                    Changes
+                                                                </h5>
+                                                                <div className='space-y-4'>
+                                                                    {imageChanges.new_thumbnail && (
+                                                                        <div className='space-y-2'>
+                                                                            <span className='text-sm font-medium text-text/60 block'>
+                                                                                New
+                                                                                Cover
+                                                                                Photo:
+                                                                            </span>
+                                                                            <button
+                                                                                onClick={() =>
+                                                                                    openSuggestionLightbox(
+                                                                                        [
+                                                                                            imageChanges.new_thumbnail!,
+                                                                                        ]
+                                                                                    )
+                                                                                }
+                                                                                className='relative block rounded-lg overflow-hidden hover:ring-2 hover:ring-primary transition cursor-pointer'
+                                                                            >
+                                                                                <Image
+                                                                                    src={
+                                                                                        imageChanges.new_thumbnail
+                                                                                    }
+                                                                                    alt='New thumbnail'
+                                                                                    width={
+                                                                                        300
+                                                                                    }
+                                                                                    height={
+                                                                                        0
+                                                                                    }
+                                                                                    style={{
+                                                                                        height: "auto",
+                                                                                    }}
+                                                                                    className='rounded-lg max-h-48 w-auto'
+                                                                                />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                    {imageChanges.add_to_gallery &&
+                                                                        imageChanges
+                                                                            .add_to_gallery
+                                                                            .length >
+                                                                            0 && (
+                                                                            <div className='space-y-2'>
+                                                                                <span className='text-sm font-medium text-text/60 block'>
+                                                                                    Add
+                                                                                    to
+                                                                                    Gallery
+                                                                                    (
+                                                                                    {
+                                                                                        imageChanges
+                                                                                            .add_to_gallery
+                                                                                            .length
+                                                                                    }
+                                                                                    ):
+                                                                                </span>
+                                                                                <div className='flex flex-wrap gap-3'>
+                                                                                    {imageChanges.add_to_gallery.map(
+                                                                                        (
+                                                                                            url,
+                                                                                            idx
+                                                                                        ) => (
+                                                                                            <button
+                                                                                                key={
+                                                                                                    idx
+                                                                                                }
+                                                                                                onClick={() =>
+                                                                                                    openSuggestionLightbox(
+                                                                                                        imageChanges.add_to_gallery!,
+                                                                                                        idx
+                                                                                                    )
+                                                                                                }
+                                                                                                className='relative block rounded-lg overflow-hidden hover:ring-2 hover:ring-primary transition cursor-pointer'
+                                                                                            >
+                                                                                                <Image
+                                                                                                    src={
+                                                                                                        url
+                                                                                                    }
+                                                                                                    alt={`Add to gallery ${idx + 1}`}
+                                                                                                    width={
+                                                                                                        150
+                                                                                                    }
+                                                                                                    height={
+                                                                                                        0
+                                                                                                    }
+                                                                                                    style={{
+                                                                                                        height: "auto",
+                                                                                                    }}
+                                                                                                    className='rounded-lg max-h-32 w-auto'
+                                                                                                />
+                                                                                            </button>
+                                                                                        )
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    {imageChanges.remove_from_gallery &&
+                                                                        imageChanges
+                                                                            .remove_from_gallery
+                                                                            .length >
+                                                                            0 && (
+                                                                            <div className='space-y-2'>
+                                                                                <span className='text-sm font-medium text-text/60 block'>
+                                                                                    Remove
+                                                                                    from
+                                                                                    Gallery
+                                                                                    (
+                                                                                    {
+                                                                                        imageChanges
+                                                                                            .remove_from_gallery
+                                                                                            .length
+                                                                                    }
+                                                                                    ):
+                                                                                </span>
+                                                                                <div className='flex flex-wrap gap-3'>
+                                                                                    {imageChanges.remove_from_gallery.map(
+                                                                                        (
+                                                                                            url,
+                                                                                            idx
+                                                                                        ) => (
+                                                                                            <button
+                                                                                                key={
+                                                                                                    idx
+                                                                                                }
+                                                                                                onClick={() =>
+                                                                                                    openSuggestionLightbox(
+                                                                                                        imageChanges.remove_from_gallery!,
+                                                                                                        idx
+                                                                                                    )
+                                                                                                }
+                                                                                                className='relative block rounded-lg overflow-hidden hover:ring-2 hover:ring-red-500 transition cursor-pointer group'
+                                                                                            >
+                                                                                                <Image
+                                                                                                    src={
+                                                                                                        url
+                                                                                                    }
+                                                                                                    alt={`Remove from gallery ${idx + 1}`}
+                                                                                                    width={
+                                                                                                        150
+                                                                                                    }
+                                                                                                    height={
+                                                                                                        0
+                                                                                                    }
+                                                                                                    style={{
+                                                                                                        height: "auto",
+                                                                                                    }}
+                                                                                                    className='rounded-lg max-h-32 w-auto opacity-60'
+                                                                                                />
+                                                                                                <div className='absolute inset-0 flex items-center justify-center bg-red-500/20'>
+                                                                                                    <X className='w-8 h-8 text-red-500' />
+                                                                                                </div>
+                                                                                            </button>
+                                                                                        )
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                 </div>
 
                                                 {/* Actions */}
@@ -3343,6 +3537,15 @@ export default function ManageDashboard({
                     </div>
                 </div>
             )}
+
+            {/* Suggestion Image Lightbox */}
+            <ImageLightbox
+                images={suggestionLightboxImages}
+                initialIndex={suggestionLightboxIndex}
+                isOpen={showSuggestionLightbox}
+                onClose={() => setShowSuggestionLightbox(false)}
+                altPrefix='Suggestion Image'
+            />
         </div>
     )
 }

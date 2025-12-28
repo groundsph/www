@@ -38,6 +38,8 @@ import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { resizeImage } from "@/utils/image-processing"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import ImageCropper from "@/components/ui/ImageCropper"
+import ImageUpload from "@/components/reviews/ImageUpload"
 
 interface SuggestEditModalProps {
     isOpen: boolean
@@ -132,11 +134,13 @@ export default function SuggestEditModal({
         null
     )
     const [newGalleryFiles, setNewGalleryFiles] = useState<File[]>([])
-    const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
     const [removeFromGallery, setRemoveFromGallery] = useState<string[]>([])
     const [uploadingImages, setUploadingImages] = useState(false)
 
-    // Reset form when modal opens/closes
+    // Cover photo cropper state
+    const [croppingImage, setCroppingImage] = useState<File | null>(null)
+    const [cropperOpen, setCropperOpen] = useState(false)
+
     useEffect(() => {
         if (isOpen) {
             setChanges({})
@@ -145,10 +149,63 @@ export default function SuggestEditModal({
             setNewThumbnail(null)
             setThumbnailPreview(null)
             setNewGalleryFiles([])
-            setGalleryPreviews([])
             setRemoveFromGallery([])
+            setCroppingImage(null)
+            setCropperOpen(false)
         }
     }, [isOpen])
+
+    // Check if image is 16:9 aspect ratio
+    const checkAspectRatio = (file: File): Promise<boolean> => {
+        return new Promise((resolve) => {
+            const img = new window.Image()
+            img.onload = () => {
+                const aspect = img.width / img.height
+                const is16by9 = Math.abs(aspect - 16 / 9) < 0.05
+                resolve(is16by9)
+            }
+            img.src = URL.createObjectURL(file)
+        })
+    }
+
+    // Handle cover photo selection
+    const handleCoverPhotoSelect = async (file: File) => {
+        const is16by9 = await checkAspectRatio(file)
+        if (is16by9) {
+            // Already 16:9, process directly
+            setNewThumbnail(file)
+            setThumbnailPreview(URL.createObjectURL(file))
+        } else {
+            // Open cropper for non-16:9 images
+            setCroppingImage(file)
+            setCropperOpen(true)
+        }
+    }
+
+    // Handle crop completion
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        const file = new File(
+            [croppedBlob],
+            croppingImage?.name || "cover.webp",
+            {
+                type: "image/webp",
+                lastModified: Date.now(),
+            }
+        )
+
+        // Resize final cropped image
+        const finalFile = await resizeImage(file, {
+            maxWidth: 2560,
+            maxHeight: 1440,
+            quality: 0.9,
+            format: "image/webp",
+        })
+
+        setNewThumbnail(finalFile)
+        setThumbnailPreview(URL.createObjectURL(finalFile))
+        setCropperOpen(false)
+        setCroppingImage(null)
+    }
 
     const toggleSection = (section: string) => {
         setExpandedSections((prev) => {
@@ -1722,13 +1779,8 @@ export default function SuggestEditModal({
                                                                         if (
                                                                             file
                                                                         ) {
-                                                                            setNewThumbnail(
+                                                                            handleCoverPhotoSelect(
                                                                                 file
-                                                                            )
-                                                                            setThumbnailPreview(
-                                                                                URL.createObjectURL(
-                                                                                    file
-                                                                                )
                                                                             )
                                                                         }
                                                                     }}
@@ -1767,7 +1819,7 @@ export default function SuggestEditModal({
                                                         Gallery Photos
                                                     </label>
 
-                                                    {/* Existing Gallery */}
+                                                    {/* Existing Gallery - Mark for Removal */}
                                                     {cafe.gallery &&
                                                         cafe.gallery.length >
                                                             0 && (
@@ -1846,132 +1898,30 @@ export default function SuggestEditModal({
                                                             </div>
                                                         )}
 
-                                                    {/* New Gallery Images */}
-                                                    {galleryPreviews.length >
-                                                        0 && (
-                                                        <div className='space-y-2'>
-                                                            <p className='text-xs text-text/40'>
-                                                                New photos to
-                                                                add
-                                                            </p>
-                                                            <div className='flex flex-wrap gap-2'>
-                                                                {galleryPreviews.map(
-                                                                    (
-                                                                        preview,
-                                                                        idx
-                                                                    ) => (
-                                                                        <div
-                                                                            key={
-                                                                                idx
-                                                                            }
-                                                                            className='relative w-16 h-16 rounded overflow-hidden border-2 border-primary'
-                                                                        >
-                                                                            <Image
-                                                                                src={
-                                                                                    preview
-                                                                                }
-                                                                                alt={`New ${idx + 1}`}
-                                                                                fill
-                                                                                className='object-cover'
-                                                                            />
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    URL.revokeObjectURL(
-                                                                                        preview
-                                                                                    )
-                                                                                    setGalleryPreviews(
-                                                                                        (
-                                                                                            prev
-                                                                                        ) =>
-                                                                                            prev.filter(
-                                                                                                (
-                                                                                                    _,
-                                                                                                    i
-                                                                                                ) =>
-                                                                                                    i !==
-                                                                                                    idx
-                                                                                            )
-                                                                                    )
-                                                                                    setNewGalleryFiles(
-                                                                                        (
-                                                                                            prev
-                                                                                        ) =>
-                                                                                            prev.filter(
-                                                                                                (
-                                                                                                    _,
-                                                                                                    i
-                                                                                                ) =>
-                                                                                                    i !==
-                                                                                                    idx
-                                                                                            )
-                                                                                    )
-                                                                                }}
-                                                                                className='absolute top-0.5 right-0.5 p-0.5 bg-red-500 rounded-full text-white hover:bg-red-600 cursor-pointer'
-                                                                            >
-                                                                                <XIcon className='w-3 h-3' />
-                                                                            </button>
-                                                                            <div className='absolute bottom-0.5 left-0.5 px-1 py-0.5 bg-primary text-white text-[8px] font-medium rounded'>
-                                                                                NEW
-                                                                            </div>
-                                                                        </div>
-                                                                    )
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Add Gallery Photos */}
-                                                    <label className='flex items-center gap-2 px-3 py-2 bg-text/5 hover:bg-text/10 rounded-lg border border-text/10 cursor-pointer transition-colors text-sm w-fit'>
-                                                        <ImagePlus className='w-4 h-4' />
-                                                        <span>
-                                                            Add gallery photos
-                                                        </span>
-                                                        <input
-                                                            type='file'
-                                                            accept='image/*'
-                                                            multiple
-                                                            className='hidden'
-                                                            onChange={(e) => {
-                                                                const files =
-                                                                    Array.from(
-                                                                        e.target
-                                                                            .files ||
-                                                                            []
-                                                                    )
-                                                                if (
-                                                                    files.length >
-                                                                    0
-                                                                ) {
-                                                                    setNewGalleryFiles(
+                                                    {/* Add New Gallery Photos - using ImageUpload component */}
+                                                    <div className='space-y-2'>
+                                                        <p className='text-xs text-text/40'>
+                                                            Add new photos (drag
+                                                            to reorder)
+                                                        </p>
+                                                        <ImageUpload
+                                                            value={
+                                                                newGalleryFiles
+                                                            }
+                                                            onChange={(files) =>
+                                                                setNewGalleryFiles(
+                                                                    files.filter(
                                                                         (
-                                                                            prev
-                                                                        ) => [
-                                                                            ...prev,
-                                                                            ...files,
-                                                                        ]
+                                                                            f
+                                                                        ): f is File =>
+                                                                            f instanceof
+                                                                            File
                                                                     )
-                                                                    setGalleryPreviews(
-                                                                        (
-                                                                            prev
-                                                                        ) => [
-                                                                            ...prev,
-                                                                            ...files.map(
-                                                                                (
-                                                                                    f
-                                                                                ) =>
-                                                                                    URL.createObjectURL(
-                                                                                        f
-                                                                                    )
-                                                                            ),
-                                                                        ]
-                                                                    )
-                                                                }
-                                                                // Reset input
-                                                                e.target.value =
-                                                                    ""
-                                                            }}
+                                                                )
+                                                            }
+                                                            maxImages={0}
                                                         />
-                                                    </label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -2026,6 +1976,18 @@ export default function SuggestEditModal({
                     </motion.div>
                 </>
             )}
+
+            {/* Image Cropper Modal */}
+            <ImageCropper
+                open={cropperOpen}
+                image={croppingImage}
+                aspect={16 / 9}
+                onComplete={handleCropComplete}
+                onCancel={() => {
+                    setCropperOpen(false)
+                    setCroppingImage(null)
+                }}
+            />
         </AnimatePresence>
     )
 }
