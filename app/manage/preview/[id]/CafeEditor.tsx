@@ -1,7 +1,5 @@
 "use client"
 
-import { Reorder } from "motion/react"
-
 import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -21,13 +19,10 @@ import {
     EyeOff,
     FileText,
     Trash2,
-    ImagePlus,
-    Upload,
     BadgeCheck,
     Users,
     Search,
-    ChevronLeft,
-    ChevronRight,
+    ImagePlus,
 } from "lucide-react"
 import {
     approveCafe,
@@ -41,7 +36,6 @@ import {
     getOwnerProfiles,
 } from "@/app/api/actions/admin"
 import { CafeMenuItem } from "@/utils/types/owner"
-import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import {
@@ -53,16 +47,15 @@ import {
 import AmenityToggles from "@/components/submit/AmenityToggles"
 import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
-import LocationPicker from "@/components/submit/LocationPicker"
 import { Database } from "@/utils/types/database.types"
-import { resizeImage } from "@/utils/image-processing"
-import ImageCropper from "@/components/ui/ImageCropper"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import {
     ContactSection,
     LocationSection,
     ImageSection,
+    MenuSection,
     MenuItemModal,
+    StorySection,
 } from "@/components/cafe-editor"
 import { useMenuItems } from "@/utils/hooks/useMenuItems"
 
@@ -92,23 +85,6 @@ export default function CafeEditor({
         cafeId: cafe.id,
     })
 
-    // Cropper State
-    const [croppingImage, setCroppingImage] = useState<File | null>(null)
-    const [cropperOpen, setCropperOpen] = useState(false)
-
-    const checkAspectRatio = (file: File): Promise<boolean> => {
-        return new Promise((resolve) => {
-            const img = new window.Image()
-            img.onload = () => {
-                const aspect = img.width / img.height
-                // Allow some tolerance for 16:9
-                const is16by9 = Math.abs(aspect - 16 / 9) < 0.05
-                resolve(is16by9)
-            }
-            img.src = URL.createObjectURL(file)
-        })
-    }
-
     const [activeSection, setActiveSection] = useState<
         | "basic"
         | "images"
@@ -120,10 +96,6 @@ export default function CafeEditor({
         | "menu"
         | "owners"
     >("basic")
-
-    // Image management state
-    const [uploadingCover, setUploadingCover] = useState(false)
-    const [uploadingGallery, setUploadingGallery] = useState(false)
 
     // Story state
     const [storyContent, setStoryContent] = useState(
@@ -175,67 +147,6 @@ export default function CafeEditor({
             setHasChanges(true)
         },
         []
-    )
-
-    const handleThumbnailChange = async (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        const is16by9 = await checkAspectRatio(file)
-
-        if (is16by9) {
-            setUploadingCover(true)
-            const result = await uploadCafeImageClient(file)
-            setUploadingCover(false)
-
-            if (result.success && result.url) {
-                if (cafe.thumbnail) {
-                    await adminDeleteCafeImage(cafe.thumbnail)
-                }
-                updateField("thumbnail", result.url)
-            }
-        } else {
-            setCroppingImage(file)
-            setCropperOpen(true)
-        }
-    }
-
-    const handleCropComplete = useCallback(
-        async (croppedBlob: Blob) => {
-            const file = new File(
-                [croppedBlob],
-                croppingImage?.name || "cover.webp",
-                {
-                    type: "image/webp",
-                    lastModified: Date.now(),
-                }
-            )
-
-            // Resize if needed
-            const finalFile = await resizeImage(file, {
-                maxWidth: 2560,
-                maxHeight: 1440,
-                quality: 0.9,
-                format: "image/webp",
-            })
-
-            setUploadingCover(true)
-            const result = await uploadCafeImageClient(finalFile)
-            setUploadingCover(false)
-
-            if (result.success && result.url) {
-                if (cafe.thumbnail) {
-                    await adminDeleteCafeImage(cafe.thumbnail)
-                }
-                updateField("thumbnail", result.url)
-            }
-
-            setCropperOpen(false)
-            setCroppingImage(null)
-        },
-        [croppingImage, cafe.thumbnail, updateField]
     )
 
     const handleSave = async () => {
@@ -1096,179 +1007,50 @@ export default function CafeEditor({
                 )}
 
                 {/* Story */}
+                {/* Story Section */}
                 {activeSection === "story" && (
-                    <div className='space-y-6'>
-                        <div>
-                            <div className='flex items-center justify-between mb-2'>
-                                <label className='block text-sm font-medium text-text/60'>
-                                    Cafe Story (Markdown)
-                                </label>
-                                <div className='flex items-center gap-2'>
-                                    {storyContent && (
-                                        <button
-                                            onClick={async () => {
-                                                if (
-                                                    !confirm(
-                                                        "Are you sure you want to delete this story?"
-                                                    )
-                                                )
-                                                    return
-                                                setSavingStory(true)
-                                                const result =
-                                                    await deleteCafeStory(
-                                                        cafe.id
-                                                    )
-                                                setSavingStory(false)
-                                                if (result.success) {
-                                                    setStoryContent("")
-                                                    setStoryHasChanges(false)
-                                                } else {
-                                                    alert(
-                                                        result.error ||
-                                                            "Failed to delete story"
-                                                    )
-                                                }
-                                            }}
-                                            disabled={savingStory}
-                                            className='flex items-center gap-1 px-3 py-1.5 bg-red-500/20 text-red-500 rounded-lg text-sm hover:bg-red-500/30 transition disabled:opacity-50'
-                                        >
-                                            <Trash2 className='w-4 h-4' />
-                                            Delete
-                                        </button>
-                                    )}
-                                    {storyHasChanges && (
-                                        <button
-                                            onClick={async () => {
-                                                setSavingStory(true)
-                                                const result =
-                                                    await upsertCafeStory(
-                                                        cafe.id,
-                                                        storyContent
-                                                    )
-                                                setSavingStory(false)
-                                                if (result.success) {
-                                                    setStoryHasChanges(false)
-                                                } else {
-                                                    alert(
-                                                        result.error ||
-                                                            "Failed to save story"
-                                                    )
-                                                }
-                                            }}
-                                            disabled={savingStory}
-                                            className='flex items-center gap-1 px-3 py-1.5 bg-accent/20 text-accent rounded-lg text-sm hover:bg-accent/30 transition disabled:opacity-50'
-                                        >
-                                            {savingStory ? (
-                                                <Loader2 className='w-4 h-4 animate-spin' />
-                                            ) : (
-                                                <Save className='w-4 h-4' />
-                                            )}
-                                            Save Story
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <textarea
-                                value={storyContent}
-                                onChange={(e) => {
-                                    setStoryContent(e.target.value)
-                                    setStoryHasChanges(true)
-                                }}
-                                rows={20}
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 font-mono text-sm resize-y'
-                                placeholder='Write the cafe story in markdown format...
-
-# About the Cafe
-
-Start with a compelling introduction...
-
-## The Story
-
-Share the history and journey...
-
-## What Makes It Special
-
-Highlight unique features...'
-                            />
-                            <p className='text-xs text-text/40 mt-2'>
-                                Supports markdown syntax: # headings, **bold**,
-                                *italic*, [links](url), etc.
-                            </p>
-                        </div>
-                    </div>
+                    <StorySection
+                        content={storyContent}
+                        onChange={(content) => {
+                            setStoryContent(content)
+                            setStoryHasChanges(true)
+                        }}
+                        onSave={async () => {
+                            setSavingStory(true)
+                            const result = await upsertCafeStory(
+                                cafe.id,
+                                storyContent
+                            )
+                            setSavingStory(false)
+                            if (result.success) {
+                                setStoryHasChanges(false)
+                            } else {
+                                alert(result.error || "Failed to save story")
+                            }
+                        }}
+                        onDelete={async () => {
+                            setSavingStory(true)
+                            const result = await deleteCafeStory(cafe.id)
+                            setSavingStory(false)
+                            if (result.success) {
+                                setStoryContent("")
+                                setStoryHasChanges(false)
+                            } else {
+                                alert(result.error || "Failed to delete story")
+                            }
+                        }}
+                        hasChanges={storyHasChanges}
+                        saving={savingStory}
+                        colorScheme='accent'
+                    />
                 )}
 
                 {/* Menu Section */}
                 {activeSection === "menu" && (
-                    <div className='space-y-4'>
-                        <div className='flex items-center justify-between'>
-                            <p className='text-text/60'>
-                                {menu.items.length} menu items
-                            </p>
-                            <button
-                                onClick={menu.openCreateModal}
-                                className='inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors'
-                            >
-                                + Add Item
-                            </button>
-                        </div>
-
-                        {menu.items.length === 0 ? (
-                            <div className='text-center py-8 text-text/50'>
-                                <Coffee className='w-12 h-12 mx-auto mb-3 opacity-30' />
-                                <p>No menu items yet</p>
-                            </div>
-                        ) : (
-                            <div className='grid gap-2'>
-                                {menu.items.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className='flex items-center gap-4 p-3 bg-text/5 rounded-lg border border-text/10'
-                                    >
-                                        <div className='flex-1 min-w-0'>
-                                            <div className='flex items-center gap-2'>
-                                                <span className='font-medium'>
-                                                    {item.name}
-                                                </span>
-                                                {item.is_signature && (
-                                                    <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
-                                                        ★
-                                                    </span>
-                                                )}
-                                                {!item.is_available && (
-                                                    <span className='px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded'>
-                                                        Off
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className='text-sm text-text/60'>
-                                                {item.category} · ₱
-                                                {item.price.toFixed(0)}
-                                            </p>
-                                        </div>
-                                        <div className='flex items-center gap-1'>
-                                            <button
-                                                onClick={() =>
-                                                    menu.openEditModal(item)
-                                                }
-                                                className='p-2 text-text/40 hover:text-text transition-colors'
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    menu.deleteItem(item)
-                                                }
-                                                className='p-2 text-text/40 hover:text-red-500 transition-colors'
-                                            >
-                                                <Trash2 className='w-4 h-4' />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <MenuSection
+                        menu={menu}
+                        colorScheme='accent'
+                    />
                 )}
 
                 {/* Owners Section */}
@@ -1438,28 +1220,6 @@ Highlight unique features...'
                     </div>
                 )}
             </div>
-            {/* Image Cropper */}
-            <ImageCropper
-                open={cropperOpen}
-                image={croppingImage}
-                aspect={16 / 9}
-                onComplete={handleCropComplete}
-                onCancel={() => {
-                    setCropperOpen(false)
-                    setCroppingImage(null)
-                }}
-            />
-            {/* Image Cropper */}
-            <ImageCropper
-                open={cropperOpen}
-                image={croppingImage}
-                aspect={16 / 9}
-                onComplete={handleCropComplete}
-                onCancel={() => {
-                    setCropperOpen(false)
-                    setCroppingImage(null)
-                }}
-            />
 
             {/* Menu Item Modal */}
             <MenuItemModal

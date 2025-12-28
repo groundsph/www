@@ -9,4 +9,5 @@ export { default as StorySection } from "./StorySection"
 export { default as LocationSection, type LocationData } from "./LocationSection"
 export { default as ImageSection } from "./ImageSection"
 export { default as MenuItemModal } from "./MenuItemModal"
+export { default as MenuSection } from "./MenuSection"
 

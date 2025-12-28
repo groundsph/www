@@ -9,7 +9,7 @@ import { useState, useCallback } from "react"
 import { type CafeMenuItem, type MenuItemForm } from "@/utils/types/owner"
 import { addMenuItem, updateMenuItem, deleteMenuItem } from "@/app/api/actions/owner"
 
-interface UseMenuItemsOptions {
+export interface UseMenuItemsOptions {
     /** Initial menu items */
     initialItems: CafeMenuItem[]
     /** Cafe ID for operations */
@@ -20,7 +20,7 @@ interface UseMenuItemsOptions {
     onError?: (error: string) => void
 }
 
-interface UseMenuItemsReturn {
+export interface UseMenuItemsReturn {
     /** Current list of menu items */
     items: CafeMenuItem[]
     /** Whether an operation is in progress */

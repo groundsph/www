@@ -1,7 +1,10 @@
 import { Metadata } from "next"
 import { redirect, notFound } from "next/navigation"
 import { createClient } from "@/utils/supabase/server"
-import { getCafeForOwnerManagement } from "@/app/api/actions/owner"
+import {
+    getCafeForOwnerManagement,
+    getCafeMenuItems,
+} from "@/app/api/actions/owner"
 import CafeEditClient from "./CafeEditClient"
 
 export const metadata: Metadata = {
@@ -25,7 +28,10 @@ export default async function CafeEditPage({ params }: Props) {
     }
 
     // Fetch cafe data with ownership check
-    const cafe = await getCafeForOwnerManagement(id)
+    const [cafe, menuItems] = await Promise.all([
+        getCafeForOwnerManagement(id),
+        getCafeMenuItems(id),
+    ])
 
     if (!cafe) {
         notFound()
@@ -34,7 +40,10 @@ export default async function CafeEditPage({ params }: Props) {
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <CafeEditClient cafe={cafe} />
+                <CafeEditClient
+                    cafe={cafe}
+                    menuItems={menuItems}
+                />
             </div>
         </main>
     )
