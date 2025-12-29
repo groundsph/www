@@ -25,7 +25,7 @@ import {
     adminCleanupOrphanedImages,
     adminProcessAvatarQueue,
 } from "@/app/api/actions/admin"
-import { uploadBadgeImage } from "@/utils/supabase/storage"
+import { uploadBadgeImageAction } from "@/utils/storage/actions"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
 import { backfillBadgesForAllUsers } from "@/utils/badges/badge-logic"
@@ -240,7 +240,7 @@ export default function SystemManagement({
                 if (badgeImageFile) {
                     const formData = new FormData()
                     formData.append("image", badgeImageFile)
-                    const uploadResult = await uploadBadgeImage(formData)
+                    const uploadResult = await uploadBadgeImageAction(formData)
                     if (!uploadResult.success) {
                         setBadgeError(
                             uploadResult.error || "Failed to upload image"

@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getStorageProvider, STORAGE_BUCKETS, type StorageBucket } from "@/utils/storage"
 
 export interface SystemStats {
     system: {
@@ -21,6 +22,7 @@ export interface SystemStats {
         }
         storage_limit_bytes?: number
         storage_left_bytes?: number
+        provider?: string
     }
     business: {
         cafes_total: number
@@ -39,7 +41,92 @@ export interface StatsResult {
 }
 
 /**
- * Fetch system stats using the admin RPC function
+ * Get storage stats from the configured provider (R2 or Supabase)
+ */
+async function getStorageStats(): Promise<{
+    total_bytes: number
+    buckets: {
+        cafes: number
+        reviews: number
+        avatars: number
+        blogs: number
+        badges: number
+        menu_photos: number
+        events: number
+        ownership_proofs: number
+    }
+    provider: string
+}> {
+    const storage = await getStorageProvider()
+
+    const buckets: StorageBucket[] = [
+        STORAGE_BUCKETS.CAFES,
+        STORAGE_BUCKETS.REVIEWS,
+        STORAGE_BUCKETS.AVATARS,
+        STORAGE_BUCKETS.BLOGS,
+        STORAGE_BUCKETS.BADGES,
+        STORAGE_BUCKETS.MENU_PHOTOS,
+        STORAGE_BUCKETS.EVENTS,
+        STORAGE_BUCKETS.OWNERSHIP_PROOFS,
+    ]
+
+    const bucketSizes: Record<string, number> = {
+        cafes: 0,
+        reviews: 0,
+        avatars: 0,
+        blogs: 0,
+        badges: 0,
+        menu_photos: 0,
+        events: 0,
+        ownership_proofs: 0,
+    }
+
+    // Map bucket names to stats keys
+    const bucketKeyMap: Record<StorageBucket, keyof typeof bucketSizes> = {
+        "cafes": "cafes",
+        "reviews": "reviews",
+        "avatars": "avatars",
+        "blogs": "blogs",
+        "badges": "badges",
+        "menu-photos": "menu_photos",
+        "events": "events",
+        "ownership-proofs": "ownership_proofs",
+    }
+
+    // Fetch sizes for each bucket
+    for (const bucket of buckets) {
+        try {
+            const listResult = await storage.list(bucket, { limit: 10000 })
+            if (listResult.success && listResult.files) {
+                const size = listResult.files.reduce((sum, file) => sum + (file.size || 0), 0)
+                const key = bucketKeyMap[bucket]
+                bucketSizes[key] = size
+            }
+        } catch (error) {
+            console.warn(`Failed to get size for bucket ${bucket}:`, error)
+        }
+    }
+
+    const total_bytes = Object.values(bucketSizes).reduce((sum, size) => sum + size, 0)
+
+    return {
+        total_bytes,
+        buckets: bucketSizes as {
+            cafes: number
+            reviews: number
+            avatars: number
+            blogs: number
+            badges: number
+            menu_photos: number
+            events: number
+            ownership_proofs: number
+        },
+        provider: storage.name,
+    }
+}
+
+/**
+ * Fetch system stats using the admin RPC function and provider storage stats
  * Only accessible by admins and moderators
  */
 export async function getSystemStats(): Promise<StatsResult> {
@@ -62,23 +149,7 @@ export async function getSystemStats(): Promise<StatsResult> {
         return { success: false, error: "Unauthorized access" }
     }
 
-    // 3. Call RPC function
-    // We use the authenticated client, assuming the user has permission to call this RPC
-    // OR the RPC is defined with SECURITY DEFINER and revoked from public, strictly controlled?
-    // The RPC is 'security definer', so it bypasses RLS within the function execution.
-    // However, we need to ensure the user CAN call it. By default, 'public' might have execute permission.
-    // Ideally, we should use admin client to call it if it's restricted, or rely on the function logic.
-    // Since we're doing a role check in code, calling it with the user's client is fine provided the function is accessible.
-    // But to be safe and robust against RLS/permission issues on the function itself, 
-    // we can use the admin client? Actually, 'createClient' is sufficient if the function is exposed.
-    // The plan said "Call `supabase.rpc('get_admin_stats')`".
-
-    // Default limit: 1GB (can be overridden by env var per project if needed)
-    // Supabase Free Tier is 1GB. Pro starts at 100GB.
-    const STORAGE_LIMIT_GB = 1
-    const STORAGE_LIMIT_BYTES = STORAGE_LIMIT_GB * 1024 * 1024 * 1024
-
-    // Remove @ts-ignore as types should be synced now
+    // 3. Call RPC function for system & business stats
     const { data, error } = await db.rpc('get_admin_stats')
 
     if (error) {
@@ -88,7 +159,26 @@ export async function getSystemStats(): Promise<StatsResult> {
 
     const stats = data as unknown as SystemStats
 
-    // Calculate storage left
+    // 4. Get storage stats from provider (R2 or Supabase)
+    try {
+        const storageStats = await getStorageStats()
+
+        // Replace SQL-based storage stats with provider-based stats
+        stats.storage = {
+            total_bytes: storageStats.total_bytes,
+            buckets: storageStats.buckets,
+            provider: storageStats.provider,
+        }
+    } catch (error) {
+        console.warn("Failed to get storage stats from provider, using DB stats:", error)
+        // Fall back to stats from DB if provider fails
+    }
+
+    // 5. Calculate storage limits (R2 has 10GB free tier)
+    const isR2 = stats.storage?.provider === "cloudflare-r2"
+    const STORAGE_LIMIT_GB = isR2 ? 10 : 1 // R2 = 10GB free, Supabase = 1GB free
+    const STORAGE_LIMIT_BYTES = STORAGE_LIMIT_GB * 1024 * 1024 * 1024
+
     if (stats && stats.storage) {
         stats.storage.storage_limit_bytes = STORAGE_LIMIT_BYTES
         stats.storage.storage_left_bytes = Math.max(0, STORAGE_LIMIT_BYTES - stats.storage.total_bytes)
@@ -96,3 +186,4 @@ export async function getSystemStats(): Promise<StatsResult> {
 
     return { success: true, data: stats }
 }
+
