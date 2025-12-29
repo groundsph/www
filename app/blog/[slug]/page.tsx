@@ -56,11 +56,11 @@ export default async function BlogPostPage({
     // Get related posts (same category, excluding current)
     const { posts: relatedPosts } = await getPublishedBlogPosts({
         category: post.category,
-        pageSize: 3,
+        pageSize: 5,
     })
     const filteredRelated = relatedPosts
         .filter((p) => p.id !== post.id)
-        .slice(0, 2)
+        .slice(0, 3)
 
     const readingTime = estimateReadingTime(post.content)
     const categoryInfo = BLOG_CATEGORIES.find((c) => c.value === post.category)
@@ -211,40 +211,62 @@ export default async function BlogPostPage({
 
                 {/* Related Posts */}
                 {filteredRelated.length > 0 && (
-                    <section>
-                        <h2 className='text-2xl font-bold font-serif text-text mb-6'>
-                            Related Posts
-                        </h2>
-                        <div className='grid md:grid-cols-2 gap-6'>
-                            {filteredRelated.map((relatedPost) => (
+                    <section className='max-w-6xl mx-auto'>
+                        <div className='flex items-center justify-between mb-8'>
+                            <h2 className='text-2xl font-bold font-serif text-text'>
+                                Related Posts
+                            </h2>
+                            <Link
+                                href='/blog'
+                                className='text-primary text-sm font-medium hover:underline'
+                            >
+                                View all items
+                            </Link>
+                        </div>
+
+                        <div className='flex flex-col gap-4'>
+                            {filteredRelated.map((relatedPost, idx) => (
                                 <Link
                                     key={relatedPost.id}
                                     href={`/blog/${relatedPost.slug}`}
-                                    className='group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-text/5'
+                                    className='group flex items-start gap-5 hover:bg-secondary/5 p-4 -mx-4 rounded-xl transition-all'
                                 >
-                                    <div className='relative aspect-video'>
-                                        {relatedPost.cover_image ? (
-                                            <Image
-                                                src={relatedPost.cover_image}
-                                                alt={relatedPost.title}
-                                                fill
-                                                className='object-cover group-hover:scale-105 transition-transform duration-300'
-                                            />
-                                        ) : (
-                                            <div className='w-full h-full bg-linear-to-br from-secondary/20 to-tertiary/20 flex items-center justify-center'>
-                                                <Coffee className='w-8 h-8 text-primary/30' />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className='p-4'>
-                                        <h3 className='font-bold text-text group-hover:text-primary transition-colors line-clamp-2'>
+                                    <span className='font-serif text-3xl font-bold text-text/10 group-hover:text-primary transition-colors min-w-10 text-right mt-0.5'>
+                                        {String(idx + 1).padStart(2, "0")}
+                                    </span>
+                                    <div className='flex flex-col gap-1.5'>
+                                        <h3 className='font-bold text-lg text-text group-hover:text-primary transition-colors leading-tight'>
                                             {relatedPost.title}
                                         </h3>
                                         {relatedPost.excerpt && (
-                                            <p className='text-sm text-text/60 mt-1 line-clamp-2'>
+                                            <p className='text-text/50 text-sm line-clamp-2 leading-relaxed'>
                                                 {relatedPost.excerpt}
                                             </p>
                                         )}
+                                        <div className='flex items-center gap-3 mt-1 text-xs text-text/40'>
+                                            <span className='font-medium text-text/60 bg-text/5 px-2 py-0.5 rounded-md'>
+                                                {
+                                                    BLOG_CATEGORIES.find(
+                                                        (c) =>
+                                                            c.value ===
+                                                            relatedPost.category
+                                                    )?.label
+                                                }
+                                            </span>
+                                            {relatedPost.published_at && (
+                                                <span>
+                                                    {new Date(
+                                                        relatedPost.published_at
+                                                    ).toLocaleDateString(
+                                                        "en-US",
+                                                        {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                        }
+                                                    )}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </Link>
                             ))}

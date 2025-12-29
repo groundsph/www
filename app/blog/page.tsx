@@ -2,7 +2,7 @@ import { getPublishedBlogPosts, getFeaturedPosts } from "@/app/api/actions/blog"
 import { BLOG_CATEGORIES, estimateReadingTime } from "@/utils/types/blog"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Coffee } from "lucide-react"
+import { ArrowRight, Coffee, MapPin, BookOpen } from "lucide-react"
 
 export const metadata = {
     title: "Blog | Grounds PH",
@@ -39,12 +39,24 @@ export default async function BlogPage({
     return (
         <main className='w-full min-h-screen bg-background'>
             {/* Hero Section */}
-            <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-16 md:py-24'>
-                <div className='max-w-7xl mx-auto px-4'>
-                    <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold font-serif text-text mb-4'>
+            <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-20 overflow-hidden'>
+                {/* Decorative Background Elements */}
+                <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
+                    <Coffee className='absolute -top-6 -right-6 w-48 h-48 text-primary/5 rotate-12' />
+                    <BookOpen className='absolute -bottom-12 -left-12 w-64 h-64 text-secondary/5 -rotate-12' />
+                    <div className='absolute top-1/4 right-1/4 w-32 h-32 bg-accent/5 rounded-full blur-3xl' />
+                    <div className='absolute bottom-1/4 left-1/3 w-40 h-40 bg-primary/5 rounded-full blur-3xl' />
+                    <MapPin className='absolute top-20 right-[20%] w-16 h-16 text-text/5 rotate-12' />
+                </div>
+
+                <div className='max-w-7xl mx-auto px-4 relative z-10'>
+                    <span className='inline-block px-3 py-1 mb-4 bg-background/50 backdrop-blur-sm border border-text/5 rounded-full text-xs font-medium text-text/60 uppercase tracking-wider'>
+                        Grounds Editorial
+                    </span>
+                    <h1 className='text-5xl md:text-6xl lg:text-7xl font-bold font-serif text-text mb-6 tracking-tight'>
                         The Grounds Blog
                     </h1>
-                    <p className='text-lg md:text-xl text-text/70 max-w-2xl'>
+                    <p className='text-xl md:text-2xl text-text/70 max-w-2xl font-light leading-relaxed'>
                         Discover coffee stories, brewing guides, cafe updates,
                         and news from the Philippine coffee community.
                     </p>
@@ -175,7 +187,7 @@ export default async function BlogPage({
                             </p>
                         </div>
                     ) : (
-                        <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10'>
+                        <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-2'>
                             {posts.map((post) => (
                                 <article
                                     key={post.id}
