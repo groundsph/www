@@ -256,33 +256,62 @@ export default function StatsCards() {
                     <h3 className='font-semibold mb-4 text-text/80'>
                         Storage Usage Breakdown
                     </h3>
-                    <div className='space-y-3'>
-                        {Object.entries(stats.storage.buckets).map(
-                            ([bucket, size]) => (
-                                <div
-                                    key={bucket}
-                                    className='flex items-center justify-between'
-                                >
-                                    <span className='capitalize text-sm text-text/70'>
-                                        {bucket}
-                                    </span>
-                                    <div className='flex items-center gap-3'>
-                                        <div className='w-24 h-2 bg-text/10 rounded-full overflow-hidden'>
-                                            <div
-                                                className='h-full bg-primary/60 rounded-full'
-                                                style={{
-                                                    width: `${Math.min((size / stats.storage.total_bytes) * 100, 100)}%`,
-                                                }}
-                                            ></div>
-                                        </div>
-                                        <span className='text-sm font-mono text-text/60 min-w-[60px] text-right'>
-                                            {formatBytes(size)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )
-                        )}
-                    </div>
+                    <table className='w-full'>
+                        <thead>
+                            <tr className='text-xs text-text/40 border-b border-text/10'>
+                                <th className='text-left pb-2 font-medium'>
+                                    Bucket
+                                </th>
+                                <th className='text-left pb-2 font-medium w-32'>
+                                    Usage
+                                </th>
+                                <th className='text-right pb-2 font-medium w-20'>
+                                    Size
+                                </th>
+                                <th className='text-right pb-2 font-medium w-12'>
+                                    %
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {Object.entries(stats.storage.buckets).map(
+                                ([bucket, size]) => {
+                                    const percentage =
+                                        stats.storage.total_bytes > 0
+                                            ? (size /
+                                                  stats.storage.total_bytes) *
+                                              100
+                                            : 0
+                                    return (
+                                        <tr
+                                            key={bucket}
+                                            className='border-b border-text/5 last:border-0'
+                                        >
+                                            <td className='py-2 capitalize text-sm text-text/70'>
+                                                {bucket.split("_").join(" ")}
+                                            </td>
+                                            <td className='py-2'>
+                                                <div className='w-full h-2 bg-text/10 rounded-full overflow-hidden'>
+                                                    <div
+                                                        className='h-full bg-primary/60 rounded-full'
+                                                        style={{
+                                                            width: `${Math.min(percentage, 100)}%`,
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                            </td>
+                                            <td className='py-2 text-sm font-mono text-text/60 text-right'>
+                                                {formatBytes(size)}
+                                            </td>
+                                            <td className='py-2 text-xs text-text/40 text-right'>
+                                                {percentage.toFixed(1)}%
+                                            </td>
+                                        </tr>
+                                    )
+                                }
+                            )}
+                        </tbody>
+                    </table>
                 </motion.div>
             </div>
         </motion.div>

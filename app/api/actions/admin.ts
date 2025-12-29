@@ -1234,7 +1234,16 @@ export async function deleteCafeStory(cafeId: string): Promise<AdminActionResult
  */
 export async function adminCleanupOrphanedImages(): Promise<{
     success: boolean
-    deleted?: { cafes: number; reviews: number; avatars: number }
+    deleted?: {
+        cafes: number
+        reviews: number
+        avatars: number
+        blogs: number
+        events: number
+        menuPhotos: number
+        badges: number
+        ownershipProofs: number
+    }
     error?: string
 }> {
     const db = await createClient()

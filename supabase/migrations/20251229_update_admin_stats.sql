@@ -1,4 +1,4 @@
-create or replace function admin_get_stats()
+create or replace function get_admin_stats()
 returns json
 language plpgsql
 security definer

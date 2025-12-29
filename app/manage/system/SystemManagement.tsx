@@ -451,10 +451,38 @@ export default function SystemManagement({
             const total =
                 result.deleted.cafes +
                 result.deleted.reviews +
-                result.deleted.avatars
-            setCleanupMessage(
-                `Cleaned up ${total} orphaned files: ${result.deleted.cafes} cafe images, ${result.deleted.reviews} review images, ${result.deleted.avatars} avatars`
-            )
+                result.deleted.avatars +
+                result.deleted.blogs +
+                result.deleted.events +
+                result.deleted.menuPhotos +
+                result.deleted.badges +
+                result.deleted.ownershipProofs
+
+            const parts = []
+            if (result.deleted.cafes > 0)
+                parts.push(`${result.deleted.cafes} cafe images`)
+            if (result.deleted.reviews > 0)
+                parts.push(`${result.deleted.reviews} review images`)
+            if (result.deleted.avatars > 0)
+                parts.push(`${result.deleted.avatars} avatars`)
+            if (result.deleted.blogs > 0)
+                parts.push(`${result.deleted.blogs} blog images`)
+            if (result.deleted.events > 0)
+                parts.push(`${result.deleted.events} event images`)
+            if (result.deleted.menuPhotos > 0)
+                parts.push(`${result.deleted.menuPhotos} menu photos`)
+            if (result.deleted.badges > 0)
+                parts.push(`${result.deleted.badges} badge images`)
+            if (result.deleted.ownershipProofs > 0)
+                parts.push(`${result.deleted.ownershipProofs} ownership proofs`)
+
+            if (total === 0) {
+                setCleanupMessage("No orphaned files found! Storage is clean.")
+            } else {
+                setCleanupMessage(
+                    `Cleaned up ${total} orphaned files: ${parts.join(", ")}`
+                )
+            }
         } else {
             setCleanupMessage(result.error || "Cleanup failed")
         }

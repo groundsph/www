@@ -9,6 +9,8 @@ const CAFE_BUCKET = "cafes"
 const BADGE_BUCKET = "badges"
 const BLOG_BUCKET = "blogs"
 const EVENT_BUCKET = "events"
+const MENU_PHOTOS_BUCKET = "menu-photos"
+const OWNERSHIP_PROOFS_BUCKET = "ownership-proofs"
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CAFE_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_BLOG_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -127,14 +129,42 @@ export async function deleteAvatarImage(avatarUrl: string | null): Promise<void>
  * Clean up orphaned images from storage buckets
  * This finds files in storage that are not referenced in the database
  * Should be run periodically by admins to free up storage space
+ * 
+ * Checks the following buckets:
+ * - cafes: thumbnail + gallery in cafes table
+ * - reviews: images array in reviews table
+ * - avatars: avatar_url in profiles table
+ * - blogs: cover_image in blog_posts table
+ * - events: image_url in events table
+ * - menu-photos: image_url in menu_items table
+ * - badges: image_url in badge_definitions table
+ * - ownership-proofs: proof_urls in cafe_claims table
  */
 export async function cleanupOrphanedImages(): Promise<{
     success: boolean
-    deleted: { cafes: number; reviews: number; avatars: number }
+    deleted: {
+        cafes: number
+        reviews: number
+        avatars: number
+        blogs: number
+        events: number
+        menuPhotos: number
+        badges: number
+        ownershipProofs: number
+    }
     error?: string
 }> {
     const adminDb = await createAdminClient()
-    const deleted = { cafes: 0, reviews: 0, avatars: 0 }
+    const deleted = {
+        cafes: 0,
+        reviews: 0,
+        avatars: 0,
+        blogs: 0,
+        events: 0,
+        menuPhotos: 0,
+        badges: 0,
+        ownershipProofs: 0
+    }
 
     try {
         // 1. Clean orphaned cafe images
@@ -222,6 +252,147 @@ export async function cleanupOrphanedImages(): Promise<{
                     if (!profileRef) {
                         await adminDb.storage.from(AVATAR_BUCKET).remove([fullPath])
                         deleted.avatars++
+                    }
+                }
+            }
+        }
+
+        // 4. Clean orphaned blog images
+        const { data: blogFolders } = await adminDb.storage.from(BLOG_BUCKET).list('', { limit: 1000 })
+        if (blogFolders) {
+            for (const folder of blogFolders) {
+                if (folder.id) continue
+
+                const { data: userFiles } = await adminDb.storage.from(BLOG_BUCKET).list(folder.name, { limit: 1000 })
+                if (!userFiles) continue
+
+                for (const file of userFiles) {
+                    const fullPath = `${folder.name}/${file.name}`
+                    const publicUrl = adminDb.storage.from(BLOG_BUCKET).getPublicUrl(fullPath).data.publicUrl
+
+                    // Check if this URL exists in blog_posts table
+                    const { data: blogRef } = await adminDb
+                        .from('blog_posts')
+                        .select('id')
+                        .eq('cover_image', publicUrl)
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (!blogRef) {
+                        await adminDb.storage.from(BLOG_BUCKET).remove([fullPath])
+                        deleted.blogs++
+                    }
+                }
+            }
+        }
+
+        // 5. Clean orphaned event images
+        const { data: eventFolders } = await adminDb.storage.from(EVENT_BUCKET).list('', { limit: 1000 })
+        if (eventFolders) {
+            for (const folder of eventFolders) {
+                if (folder.id) continue
+
+                const { data: eventFiles } = await adminDb.storage.from(EVENT_BUCKET).list(folder.name, { limit: 1000 })
+                if (!eventFiles) continue
+
+                for (const file of eventFiles) {
+                    const fullPath = `${folder.name}/${file.name}`
+                    const publicUrl = adminDb.storage.from(EVENT_BUCKET).getPublicUrl(fullPath).data.publicUrl
+
+                    // Check if this URL exists in events table
+                    const { data: eventRef } = await adminDb
+                        .from('events')
+                        .select('id')
+                        .eq('image_url', publicUrl)
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (!eventRef) {
+                        await adminDb.storage.from(EVENT_BUCKET).remove([fullPath])
+                        deleted.events++
+                    }
+                }
+            }
+        }
+
+        // 6. Clean orphaned menu photo images
+        const { data: menuFolders } = await adminDb.storage.from(MENU_PHOTOS_BUCKET).list('', { limit: 1000 })
+        if (menuFolders) {
+            for (const folder of menuFolders) {
+                if (folder.id) continue
+
+                const { data: menuFiles } = await adminDb.storage.from(MENU_PHOTOS_BUCKET).list(folder.name, { limit: 1000 })
+                if (!menuFiles) continue
+
+                for (const file of menuFiles) {
+                    const fullPath = `${folder.name}/${file.name}`
+                    const publicUrl = adminDb.storage.from(MENU_PHOTOS_BUCKET).getPublicUrl(fullPath).data.publicUrl
+
+                    // Check if this URL exists in cafe_menu_items table
+                    const { data: menuRef } = await adminDb
+                        .from('cafe_menu_items')
+                        .select('id')
+                        .eq('image_url', publicUrl)
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (!menuRef) {
+                        await adminDb.storage.from(MENU_PHOTOS_BUCKET).remove([fullPath])
+                        deleted.menuPhotos++
+                    }
+                }
+            }
+        }
+
+        // 7. Clean orphaned badge images (stored at root level, not in folders)
+        const { data: badgeFiles } = await adminDb.storage.from(BADGE_BUCKET).list('', { limit: 1000 })
+        if (badgeFiles) {
+            for (const file of badgeFiles) {
+                // Badge images are stored at root level
+                if (!file.name || file.id === null) continue
+
+                const fullPath = file.name
+                const publicUrl = adminDb.storage.from(BADGE_BUCKET).getPublicUrl(fullPath).data.publicUrl
+
+                // Check if this URL exists in badge_definitions table
+                const { data: badgeRef } = await adminDb
+                    .from('badge_definitions')
+                    .select('id')
+                    .eq('image_url', publicUrl)
+                    .limit(1)
+                    .maybeSingle()
+
+                if (!badgeRef) {
+                    await adminDb.storage.from(BADGE_BUCKET).remove([fullPath])
+                    deleted.badges++
+                }
+            }
+        }
+
+        // 8. Clean orphaned ownership proof files
+        const { data: proofFolders } = await adminDb.storage.from(OWNERSHIP_PROOFS_BUCKET).list('', { limit: 1000 })
+        if (proofFolders) {
+            for (const folder of proofFolders) {
+                if (folder.id) continue
+
+                const { data: proofFiles } = await adminDb.storage.from(OWNERSHIP_PROOFS_BUCKET).list(folder.name, { limit: 1000 })
+                if (!proofFiles) continue
+
+                for (const file of proofFiles) {
+                    const fullPath = `${folder.name}/${file.name}`
+
+                    // For ownership-proofs, we store paths not public URLs
+                    // Check if this path exists in cafe_claims table proof_urls array
+                    const { data: claimRef } = await adminDb
+                        .from('cafe_claims')
+                        .select('id')
+                        .contains('proof_urls', [fullPath])
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (!claimRef) {
+                        await adminDb.storage.from(OWNERSHIP_PROOFS_BUCKET).remove([fullPath])
+                        deleted.ownershipProofs++
                     }
                 }
             }
@@ -846,7 +1017,6 @@ export async function deleteEventImage(imageUrl: string): Promise<void> {
 // Menu Photo Storage Functions
 // ============================================
 
-const MENU_PHOTOS_BUCKET = "menu-photos"
 const MAX_MENU_PHOTO_SIZE = 5 * 1024 * 1024 // 5MB
 
 /**

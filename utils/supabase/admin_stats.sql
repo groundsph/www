@@ -16,6 +16,9 @@ declare
   avatars_size bigint;
   blogs_size bigint;
   badges_size bigint;
+  menu_photos_size bigint;
+  events_size bigint;
+  ownership_proofs_size bigint;
 
   -- Business metrics
   cafes_total integer;
@@ -49,14 +52,21 @@ begin
   select coalesce(sum((metadata->>'size')::bigint), 0) into badges_size 
   from storage.objects where bucket_id = 'badges';
 
+  select coalesce(sum((metadata->>'size')::bigint), 0) into menu_photos_size 
+  from storage.objects where bucket_id = 'menu-photos';
+
+  select coalesce(sum((metadata->>'size')::bigint), 0) into events_size 
+  from storage.objects where bucket_id = 'events';
+
+  select coalesce(sum((metadata->>'size')::bigint), 0) into ownership_proofs_size 
+  from storage.objects where bucket_id = 'ownership-proofs';
+
   -- 3. Business Stats
   select count(*) into cafes_total from public.cafes;
   select count(*) into cafes_verified from public.cafes where is_verified = true;
   select count(*) into cafes_published from public.cafes where is_published = true;
   
   -- Check if tables exist before querying to avoid errors if features aren't fully deployed
-  -- Reviews (assuming table is 'reviews' or 'cafe_reviews', let's check standard 'reviews' as per utility files)
-  -- The utility file referenced 'reviews' table.
   if to_regclass('public.reviews') is not null then
     select count(*) into reviews_total from public.reviews;
   else
@@ -87,7 +97,10 @@ begin
         'reviews', reviews_size,
         'avatars', avatars_size,
         'blogs', blogs_size,
-        'badges', badges_size
+        'badges', badges_size,
+        'menu_photos', menu_photos_size,
+        'events', events_size,
+        'ownership_proofs', ownership_proofs_size
       )
     ),
     'business', json_build_object(
