@@ -286,11 +286,46 @@ async function updateDatabaseUrls(
     console.log(`\n🔄 Updating URLs in ${mapping.table}...`)
 
     for (const column of mapping.columns) {
-        // Fetch rows with Supabase URLs
-        const { data: rows, error } = await supabase
-            .from(mapping.table)
-            .select(`id, ${column}`)
-            .like(column, `%supabase.co/storage%`)
+        // For array columns, we need a different query approach
+        // since LIKE doesn't work on arrays directly
+        const isArrayColumn = ["gallery", "images", "proof_urls"].includes(column)
+
+        let rows: { id: string;[key: string]: unknown }[] | null = null
+        let error: { message: string } | null = null
+
+        if (isArrayColumn) {
+            // For array columns, fetch all rows that have any non-null value
+            // We'll filter in JS since Supabase doesn't support LIKE on arrays
+            const result = await supabase
+                .from(mapping.table)
+                .select(`id, ${column}`)
+                .not(column, "is", null)
+
+            rows = result.data as { id: string;[key: string]: unknown }[] | null
+            error = result.error
+
+            // Filter rows that contain Supabase URLs
+            if (rows) {
+                rows = rows.filter(row => {
+                    const value = row[column]
+                    if (Array.isArray(value)) {
+                        return value.some((url: string) =>
+                            typeof url === "string" && url.includes("supabase.co/storage")
+                        )
+                    }
+                    return false
+                })
+            }
+        } else {
+            // For string columns, use LIKE as before
+            const result = await supabase
+                .from(mapping.table)
+                .select(`id, ${column}`)
+                .like(column, `%supabase.co/storage%`)
+
+            rows = result.data as { id: string;[key: string]: unknown }[] | null
+            error = result.error
+        }
 
         if (error) {
             errors.push(`Failed to query ${mapping.table}.${column}: ${error.message}`)
