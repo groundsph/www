@@ -1,3 +1,19 @@
+/**
+ * @deprecated LEGACY: Supabase-specific storage utilities
+ * 
+ * This file contains Supabase-specific storage functions that haven't been migrated
+ * to the provider-agnostic storage module yet.
+ * 
+ * STILL IN USE:
+ * - cleanupOrphanedImages() - Admin cleanup function that lists all buckets
+ * - processAvatarDeletionQueue() - Background job for avatar cleanup
+ * 
+ * For new code, use:
+ * - Server actions: @/utils/storage/actions
+ * - Client utilities: @/utils/storage/client
+ * 
+ * This file will be removed once all functions are migrated to the new storage module.
+ */
 "use server"
 
 import { createClient } from "@/utils/supabase/server"

@@ -1,6 +1,11 @@
 /**
- * Client-side storage utilities for direct browser uploads to Supabase
- * These functions upload files directly from the browser, avoiding server action serialization issues
+ * @deprecated LEGACY: Supabase-specific client-side storage utilities
+ * 
+ * This file is deprecated. For new code, use:
+ * - @/utils/storage/client - Provider-agnostic client utilities
+ * 
+ * This file uploads directly to Supabase Storage from the browser.
+ * It will be removed after full migration to the new storage module.
  */
 
 import { createLocalClient } from "./client"
