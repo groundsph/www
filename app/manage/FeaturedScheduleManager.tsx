@@ -15,6 +15,7 @@ import {
     Star,
     MapPin,
     AlertTriangle,
+    Check,
 } from "lucide-react"
 import {
     FeaturedSchedule,
@@ -23,6 +24,8 @@ import {
     deleteFeaturedSchedule,
     searchCafesForFeatured,
     checkFeaturedConflict,
+    adminGetFeaturedRequests,
+    adminUpdateFeaturedRequestStatus,
 } from "@/app/api/actions/admin"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
@@ -75,6 +78,40 @@ export default function FeaturedScheduleManager({
 
     // Conflict warning state
     const [conflictWarning, setConflictWarning] = useState<string | null>(null)
+
+    // Feature Requests state
+    const [featureRequests, setFeatureRequests] = useState<any[]>([])
+    const [loadingRequests, setLoadingRequests] = useState(false)
+
+    useEffect(() => {
+        loadPendingRequests()
+    }, [])
+
+    const loadPendingRequests = async () => {
+        setLoadingRequests(true)
+        const reqs = await adminGetFeaturedRequests("pending")
+        setFeatureRequests(reqs)
+        setLoadingRequests(false)
+    }
+
+    const handleRequestAction = async (
+        requestId: string,
+        action: "approved" | "rejected"
+    ) => {
+        if (!confirm(`Are you sure you want to ${action} this request?`)) return
+
+        const result = await adminUpdateFeaturedRequestStatus(requestId, action)
+        if (result.success) {
+            // Remove from list
+            setFeatureRequests((prev) => prev.filter((r) => r.id !== requestId))
+
+            // If approved, maybe offer to open create modal?
+            // For now just success message
+            // alert(`Request ${action} successfully`)
+        } else {
+            alert(result.error || `Failed to ${action} request`)
+        }
+    }
 
     // Debounced cafe search
     useEffect(() => {
@@ -350,6 +387,94 @@ export default function FeaturedScheduleManager({
                     Add Featured
                 </button>
             </div>
+
+            {/* Pending Requests Section */}
+            {featureRequests.length > 0 && (
+                <div className='bg-gradient-to-r from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl p-4'>
+                    <h3 className='text-lg font-semibold text-purple-900 flex items-center gap-2 mb-3'>
+                        <Star className='w-5 h-5 text-purple-600 fill-purple-200' />
+                        Pending Requests ({featureRequests.length})
+                    </h3>
+                    <div className='space-y-3'>
+                        {featureRequests.map((req) => (
+                            <div
+                                key={req.id}
+                                className='bg-white/60 p-3 rounded-lg border border-purple-100 flex flex-col sm:flex-row sm:items-center gap-3'
+                            >
+                                {/* Cafe Info */}
+                                <div className='flex items-center gap-3 flex-1'>
+                                    <div className='w-10 h-10 relative rounded-lg overflow-hidden shrink-0 bg-gray-100'>
+                                        {req.cafe?.thumbnail ? (
+                                            <Image
+                                                src={getCafeThumbnailUrl(
+                                                    req.cafe.thumbnail
+                                                )}
+                                                alt={req.cafe.name}
+                                                fill
+                                                className='object-cover'
+                                            />
+                                        ) : (
+                                            <div className='w-full h-full flex items-center justify-center text-xs text-gray-400'>
+                                                No img
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className='font-medium text-purple-900'>
+                                            {req.cafe?.name}
+                                        </div>
+                                        <div className='text-xs text-purple-700/70'>
+                                            Requested for:{" "}
+                                            <span className='font-semibold'>
+                                                {req.requested_month}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Owner Info */}
+                                <div className='text-sm text-gray-600 sm:text-right'>
+                                    <div className='text-xs opacity-70'>
+                                        Owner
+                                    </div>
+                                    <div>
+                                        {req.owner?.display_name ||
+                                            req.owner?.email}
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className='flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-purple-100 mt-2 sm:mt-0'>
+                                    <button
+                                        onClick={() =>
+                                            handleRequestAction(
+                                                req.id,
+                                                "approved"
+                                            )
+                                        }
+                                        className='p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition'
+                                        title='Approve'
+                                    >
+                                        <Check className='w-4 h-4' />
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            handleRequestAction(
+                                                req.id,
+                                                "rejected"
+                                            )
+                                        }
+                                        className='p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition'
+                                        title='Reject'
+                                    >
+                                        <X className='w-4 h-4' />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Calendar View */}
             <div className='bg-text/5 border border-text/10 rounded-xl p-2 sm:p-4 overflow-x-auto'>

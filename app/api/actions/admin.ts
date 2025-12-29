@@ -2993,3 +2993,75 @@ export async function getAdminsAndModerators(): Promise<TeamMember[]> {
     return users as TeamMember[]
 }
 
+// ============================================
+// Featured Slot Requests (Admin)
+// ============================================
+
+/**
+ * Get all featured slot requests (optionally filtered by status)
+ */
+export async function adminGetFeaturedRequests(status?: 'pending' | 'approved' | 'rejected') {
+    const isAdminUser = await isAdmin()
+    if (!isAdminUser) return []
+
+    const db = await createClient()
+
+    let query = db
+        .from('featured_slot_requests')
+        .select(`
+            *,
+            cafe:cafes(id, name, slug, thumbnail, city_municipality, region),
+            owner:profiles!featured_slot_requests_owner_id_fkey(id, username, display_name, email)
+        `)
+        .order('created_at', { ascending: false })
+
+    if (status) {
+        query = query.eq('status', status)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+        console.error('Error fetching featured requests:', error)
+        return []
+    }
+
+    return data
+}
+
+/**
+ * Update featured slot request status
+ */
+export async function adminUpdateFeaturedRequestStatus(
+    requestId: string,
+    status: 'approved' | 'rejected',
+    adminNotes?: string
+): Promise<AdminActionResult> {
+    const isAdminUser = await isAdmin()
+    if (!isAdminUser) {
+        return { success: false, error: 'Not authorized' }
+    }
+
+    const db = await createClient()
+
+    const updates: any = {
+        status,
+        processed_at: new Date().toISOString(),
+    }
+
+    if (adminNotes !== undefined) {
+        updates.admin_notes = adminNotes
+    }
+
+    const { error } = await db
+        .from('featured_slot_requests')
+        .update(updates)
+        .eq('id', requestId)
+
+    if (error) {
+        console.error('Error updating featured request:', error)
+        return { success: false, error: 'Failed to update request' }
+    }
+
+    return { success: true }
+}

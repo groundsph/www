@@ -33,6 +33,7 @@ import {
     UtensilsCrossed,
     Verified,
     FileText,
+    Calendar,
     CalendarIcon,
     Download,
     Copy,
@@ -40,7 +41,7 @@ import {
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
     respondToReview,
     deleteReviewResponse,
@@ -49,6 +50,9 @@ import {
     deleteMenuItem,
     pinReview,
     unpinReview,
+    requestFeaturedSlot,
+    getFeaturedSlotRequests,
+    FeaturedSlotRequest,
 } from "@/app/api/actions/owner"
 import { useNotification } from "@/components/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
@@ -115,6 +119,10 @@ export default function CafeManagementClient({
     reviews: initialReviews,
     menuItems: initialMenuItems,
 }: CafeManagementClientProps) {
+    const tier = subscription?.tier || "free"
+    const tierConfig = SUBSCRIPTION_TIERS[tier]
+    const colors = tierColors[tier]
+
     const { addNotification } = useNotification()
     const [activeTab, setActiveTab] = useState<Tab>("overview")
     const [reviews, setReviews] = useState(initialReviews)
@@ -157,12 +165,32 @@ export default function CafeManagementClient({
         deviceBreakdown: { mobile: number; desktop: number; tablet: number }
         topReferrers: { referrer: string; count: number }[]
     } | null>(null)
+
+    // Featured Slot Requests state
+    const [featuredRequests, setFeaturedRequests] = useState<
+        FeaturedSlotRequest[]
+    >([])
+    const [isLoadingRequests, setIsLoadingRequests] = useState(false)
+
+    // Fetch featured requests on load
+    useEffect(() => {
+        const fetchRequests = async () => {
+            if (tier === "premium") {
+                setIsLoadingRequests(true)
+                try {
+                    const reqs = await getFeaturedSlotRequests(cafe.id)
+                    setFeaturedRequests(reqs)
+                } catch (e) {
+                    console.error("Failed to fetch featured requests", e)
+                } finally {
+                    setIsLoadingRequests(false)
+                }
+            }
+        }
+        fetchRequests()
+    }, [tier, cafe.id])
     const [analyticsLoading, setAnalyticsLoading] = useState(false)
     const [analyticsPeriod, setAnalyticsPeriod] = useState<7 | 30 | 90>(30)
-
-    const tier = subscription?.tier || "free"
-    const tierConfig = SUBSCRIPTION_TIERS[tier]
-    const colors = tierColors[tier]
 
     // Handle review response
     const handleSubmitResponse = async (reviewId: string) => {
@@ -910,6 +938,129 @@ export default function CafeManagementClient({
                                                     Discord Channel
                                                 </a>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Featured Slot Requests - Premium only */}
+                            {tier === "premium" && (
+                                <div className='mt-6 p-4 bg-linear-to-r from-purple-50 to-purple-100/50 rounded-xl border border-purple-200'>
+                                    <div className='flex items-start gap-3'>
+                                        <div className='p-2 bg-purple-500 rounded-lg'>
+                                            <Calendar className='w-5 h-5 text-white' />
+                                        </div>
+                                        <div className='flex-1'>
+                                            <div className='flex justify-between items-start'>
+                                                <div>
+                                                    <h3 className='font-semibold text-purple-900'>
+                                                        Featured Slot Request
+                                                    </h3>
+                                                    <p className='text-sm text-purple-800/70 mt-1'>
+                                                        Request to be featured
+                                                        on the home page for a
+                                                        specific month.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={async () => {
+                                                        // Calculate next month
+                                                        const now = new Date()
+                                                        let year =
+                                                            now.getFullYear()
+                                                        let month =
+                                                            now.getMonth() + 1 // Next month (0-indexed current month + 1)
+                                                        if (month > 11) {
+                                                            month = 0
+                                                            year++
+                                                        }
+                                                        const nextMonthDate =
+                                                            new Date(
+                                                                year,
+                                                                month,
+                                                                1
+                                                            )
+                                                        const formattedMonth = `${year}-${String(month + 1).padStart(2, "0")}-01`
+
+                                                        // Confirm dialog
+                                                        if (
+                                                            !confirm(
+                                                                `Request featured slot for ${nextMonthDate.toLocaleString("default", { month: "long", year: "numeric" })}?`
+                                                            )
+                                                        )
+                                                            return
+
+                                                        const result =
+                                                            await requestFeaturedSlot(
+                                                                cafe.id,
+                                                                formattedMonth
+                                                            )
+                                                        if (result.success) {
+                                                            addNotification(
+                                                                "Request submitted successfully!",
+                                                                "success"
+                                                            )
+                                                            // Refresh requests
+                                                            const reqs =
+                                                                await getFeaturedSlotRequests(
+                                                                    cafe.id
+                                                                )
+                                                            setFeaturedRequests(
+                                                                reqs
+                                                            )
+                                                        } else {
+                                                            addNotification(
+                                                                result.error ||
+                                                                    "Failed to submit request",
+                                                                "error"
+                                                            )
+                                                        }
+                                                    }}
+                                                    className='px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors'
+                                                >
+                                                    Request Next Month
+                                                </button>
+                                            </div>
+
+                                            {/* Requests List */}
+                                            {featuredRequests.length > 0 && (
+                                                <div className='mt-4 space-y-2'>
+                                                    {featuredRequests.map(
+                                                        (req) => (
+                                                            <div
+                                                                key={req.id}
+                                                                className='flex justify-between items-center p-2 bg-white/60 rounded-lg border border-purple-100 text-sm'
+                                                            >
+                                                                <span className='font-medium text-purple-900'>
+                                                                    {new Date(
+                                                                        req.requested_month
+                                                                    ).toLocaleString(
+                                                                        "default",
+                                                                        {
+                                                                            month: "long",
+                                                                            year: "numeric",
+                                                                        }
+                                                                    )}
+                                                                </span>
+                                                                <span
+                                                                    className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize 
+                                                                ${
+                                                                    req.status ===
+                                                                    "approved"
+                                                                        ? "bg-green-100 text-green-700"
+                                                                        : req.status ===
+                                                                            "rejected"
+                                                                          ? "bg-red-100 text-red-700"
+                                                                          : "bg-yellow-100 text-yellow-700"
+                                                                }`}
+                                                                >
+                                                                    {req.status}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
