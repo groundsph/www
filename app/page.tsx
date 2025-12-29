@@ -10,10 +10,8 @@ import LandingHero from "@/components/LandingHero"
 import RecentlyAddedSection from "@/components/RecentlyAddedSection"
 import { CafeWithRatings } from "@/utils/types/extra"
 import Link from "next/link"
-import { CalendarIcon, MapPinIcon, ArrowRightIcon, Coffee } from "lucide-react"
-import Image from "next/image"
+import { MapPinIcon, ArrowRightIcon, Coffee } from "lucide-react"
 import { format } from "date-fns"
-import { BLOG_CATEGORIES } from "@/utils/types/blog"
 import SupportersSection from "@/components/SupportersSection"
 
 // SSR revalidation every hour
@@ -105,147 +103,111 @@ export default async function Home() {
             {/* Recently Added */}
             <RecentlyAddedSection cafes={recentlyAdded} />
 
-            {/* Upcoming Events */}
-            {upcomingEvents.length > 0 && (
-                <section className='w-full min-h-max flex flex-col'>
-                    <div className='flex items-center justify-between px-6'>
-                        <h2 className='font-semibold font-serif text-2xl'>
-                            Upcoming Events
-                        </h2>
-                        <Link
-                            href='/events'
-                            className='text-primary text-sm font-medium hover:underline flex items-center gap-1'
-                        >
-                            View all <ArrowRightIcon className='w-4 h-4' />
-                        </Link>
-                    </div>
-                    <div className='flex flex-row gap-8 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory scroll-px-4'>
-                        {upcomingEvents.map((event, idx) => {
-                            const startDate = new Date(event.start_date)
-                            return (
-                                <Link
-                                    key={event.id}
-                                    href='/events'
-                                    className='min-w-full md:min-w-80 md:w-80 snap-center md:snap-start flex flex-col gap-2 bg-background border-text/10 border shadow-sm rounded-4xl p-4 group hover:border-primary/30 transition-colors'
-                                    style={{
-                                        animationDelay: `${idx * 100}ms`,
-                                    }}
-                                >
-                                    <div className='relative rounded-3xl overflow-clip w-full h-auto aspect-video select-none bg-secondary/10'>
-                                        {event.image_url ? (
-                                            <Image
-                                                src={event.image_url}
-                                                alt={event.title}
-                                                fill
-                                                className='object-cover'
-                                                draggable={false}
-                                                sizes='(max-width: 768px) 100vw, 320px'
-                                            />
-                                        ) : (
-                                            <div className='w-full h-full flex items-center justify-center'>
-                                                <CalendarIcon className='w-12 h-12 text-text opacity-20' />
-                                            </div>
-                                        )}
-                                        {/* Date badge */}
-                                        <div className='absolute top-3 left-3 flex flex-col items-center bg-background/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md'>
-                                            <span className='text-xs font-medium text-primary uppercase'>
-                                                {format(startDate, "MMM")}
-                                            </span>
-                                            <span className='text-2xl font-bold text-text'>
-                                                {format(startDate, "d")}
-                                            </span>
-                                        </div>
-                                        {event.is_national && (
-                                            <div className='absolute top-3 right-3 bg-primary text-white text-xs font-semibold px-2 py-1 rounded-full'>
-                                                National
-                                            </div>
-                                        )}
-                                    </div>
-                                    <span className='font-semibold text-xl line-clamp-1 group-hover:text-primary transition-colors'>
-                                        {event.title}
-                                    </span>
-                                    {event.location_name && (
-                                        <span className='text-text/60 text-sm flex items-center gap-1'>
-                                            <MapPinIcon className='w-3 h-3' />
-                                            {event.location_name}
-                                            {event.city && `, ${event.city}`}
-                                        </span>
-                                    )}
-                                    <div className='flex-1' />
-                                    <div className='flex flex-row justify-end items-center gap-2 text-text/60 group-hover:text-primary transition-colors'>
-                                        View Details{" "}
+            {/* Stories & Events Section - Side by Side */}
+            {(latestPosts.length > 0 || upcomingEvents.length > 0) && (
+                <section className='w-full px-6 py-12 mb-8'>
+                    <div className='w-full grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16'>
+                        {/* Latest Stories - Chapter Style */}
+                        {latestPosts.length > 0 && (
+                            <div className='flex flex-col'>
+                                <div className='flex items-center justify-between mb-2'>
+                                    <h2 className='font-semibold font-serif text-2xl'>
+                                        Latest Stories
+                                    </h2>
+                                    <Link
+                                        href='/blog'
+                                        className='text-primary text-sm font-medium hover:underline flex items-center gap-1'
+                                    >
+                                        Read more{" "}
                                         <ArrowRightIcon className='w-4 h-4' />
-                                    </div>
-                                </Link>
-                            )
-                        })}
-                    </div>
-                </section>
-            )}
+                                    </Link>
+                                </div>
+                                <div className='flex flex-col gap-8'>
+                                    {latestPosts
+                                        .slice(0, 4)
+                                        .map((post, idx) => (
+                                            <Link
+                                                key={post.id}
+                                                href={`/blog/${post.slug}`}
+                                                className='group flex items-start gap-5 hover:opacity-80 transition-all hover:bg-secondary/10 py-2 px-2 rounded-xl'
+                                            >
+                                                <span className='font-serif text-3xl md:text-4xl font-bold text-text/30 group-hover:text-primary transition-colors min-w-12 text-right'>
+                                                    {String(idx + 1).padStart(
+                                                        2,
+                                                        "0"
+                                                    )}
+                                                </span>
+                                                <div className='flex flex-col gap-1 pt-1'>
+                                                    <span className='font-semibold text-lg md:text-xl group-hover:text-primary transition-colors line-clamp-2'>
+                                                        {post.title}
+                                                    </span>
+                                                    {post.excerpt && (
+                                                        <span className='text-text/50 text-sm line-clamp-2'>
+                                                            {post.excerpt}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </Link>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
 
-            {/* Latest Stories */}
-            {latestPosts.length > 0 && (
-                <section className='w-full min-h-max flex flex-col mb-8'>
-                    <div className='flex items-center justify-between px-6'>
-                        <h2 className='font-semibold font-serif text-2xl'>
-                            Latest Stories
-                        </h2>
-                        <Link
-                            href='/blog'
-                            className='text-primary text-sm font-medium hover:underline flex items-center gap-1'
-                        >
-                            Read more <ArrowRightIcon className='w-4 h-4' />
-                        </Link>
-                    </div>
-                    <div className='flex flex-row gap-8 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory scroll-px-4'>
-                        {latestPosts.map((post, idx) => (
-                            <Link
-                                key={post.id}
-                                href={`/blog/${post.slug}`}
-                                className='min-w-full md:min-w-80 md:w-80 snap-center md:snap-start flex flex-col gap-2 bg-background border-text/10 border shadow-sm rounded-4xl p-4 group hover:border-primary/30 transition-colors'
-                                style={{
-                                    animationDelay: `${idx * 100}ms`,
-                                }}
-                            >
-                                <div className='relative rounded-3xl overflow-clip w-full h-auto aspect-video select-none bg-secondary/10'>
-                                    {post.cover_image ? (
-                                        <Image
-                                            src={post.cover_image}
-                                            alt={post.title}
-                                            fill
-                                            className='object-cover'
-                                            draggable={false}
-                                            sizes='(max-width: 768px) 100vw, 320px'
-                                        />
-                                    ) : (
-                                        <div className='w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-secondary/20'>
-                                            <Coffee className='w-12 h-12 text-primary/40' />
-                                        </div>
-                                    )}
-                                    {/* Category badge */}
-                                    <div className='absolute top-3 left-3 bg-primary/90 text-white text-xs font-medium px-2 py-1 rounded-full'>
-                                        {
-                                            BLOG_CATEGORIES.find(
-                                                (c) => c.value === post.category
-                                            )?.label
-                                        }
-                                    </div>
+                        {/* Upcoming Events - Chapter Style */}
+                        {upcomingEvents.length > 0 && (
+                            <div className='flex flex-col'>
+                                <div className='flex items-center justify-between mb-2'>
+                                    <h2 className='font-semibold font-serif text-2xl'>
+                                        Upcoming Events
+                                    </h2>
+                                    <Link
+                                        href='/events'
+                                        className='text-primary text-sm font-medium hover:underline flex items-center gap-1'
+                                    >
+                                        View all{" "}
+                                        <ArrowRightIcon className='w-4 h-4' />
+                                    </Link>
                                 </div>
-                                <span className='font-semibold text-xl line-clamp-2 group-hover:text-primary transition-colors'>
-                                    {post.title}
-                                </span>
-                                {post.excerpt && (
-                                    <span className='text-text/60 text-sm line-clamp-2'>
-                                        {post.excerpt}
-                                    </span>
-                                )}
-                                <div className='flex-1' />
-                                <div className='flex flex-row justify-end items-center gap-2 text-text/60 group-hover:text-primary transition-colors'>
-                                    Read More{" "}
-                                    <ArrowRightIcon className='w-4 h-4' />
+                                <div className='flex flex-col gap-8'>
+                                    {upcomingEvents.slice(0, 4).map((event) => {
+                                        const startDate = new Date(
+                                            event.start_date
+                                        )
+                                        return (
+                                            <Link
+                                                key={event.id}
+                                                href='/events'
+                                                className='group flex items-start gap-5 hover:opacity-80 transition-all hover:bg-secondary/10 py-2 px-2 rounded-xl'
+                                            >
+                                                <span className='font-serif text-3xl md:text-4xl font-bold text-text/30 group-hover:text-primary transition-colors min-w-12 text-right'>
+                                                    {format(startDate, "dd")}
+                                                </span>
+                                                <div className='flex flex-col gap-1 pt-1'>
+                                                    <span className='font-semibold text-lg md:text-xl group-hover:text-primary transition-colors line-clamp-2'>
+                                                        {event.title}
+                                                    </span>
+                                                    <div className='flex flex-wrap items-center gap-2 text-text/50 text-sm'>
+                                                        {event.location_name && (
+                                                            <span className='flex items-center gap-1'>
+                                                                <MapPinIcon className='w-3 h-3' />
+                                                                {
+                                                                    event.location_name
+                                                                }
+                                                            </span>
+                                                        )}
+                                                        {event.is_national && (
+                                                            <span className='bg-primary/10 text-primary text-xs font-medium px-2 py-0.5 rounded-full'>
+                                                                National
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        )
+                                    })}
                                 </div>
-                            </Link>
-                        ))}
+                            </div>
+                        )}
                     </div>
                 </section>
             )}
