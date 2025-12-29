@@ -57,8 +57,8 @@ export default async function BlogPage({
                         The Grounds Blog
                     </h1>
                     <p className='text-xl md:text-2xl text-text/70 max-w-2xl font-light leading-relaxed'>
-                        Discover coffee stories, brewing guides, cafe updates,
-                        and news from the Philippine coffee community.
+                        Discover stories, brewing guides, cafe updates, and news
+                        from the Philippine community.
                     </p>
                 </div>
             </section>

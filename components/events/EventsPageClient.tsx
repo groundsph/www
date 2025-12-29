@@ -7,6 +7,7 @@ import {
     MapPinIcon,
     GlobeIcon,
     Loader2Icon,
+    Coffee,
 } from "lucide-react"
 import { useUserLocation } from "@/hooks/useUserLocation"
 import { getEvents, getEventsForMonth } from "@/app/api/actions/events"
@@ -165,24 +166,40 @@ export default function EventsPageClient() {
     return (
         <main className='w-full min-h-screen [&_button]:cursor-pointer'>
             {/* Hero Section */}
-            <section className='bg-linear-to-b from-primary/10 to-background py-12 px-6'>
-                <div className='max-w-6xl mx-auto'>
-                    <h1 className='text-4xl md:text-5xl font-bold font-serif text-text mb-4'>
-                        Coffee Events
+            <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-20 overflow-hidden'>
+                {/* Decorative Background Elements */}
+                <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
+                    <Coffee className='absolute -top-6 -right-6 w-48 h-48 text-primary/5 rotate-12' />
+                    <CalendarIcon className='absolute -bottom-12 -left-12 w-64 h-64 text-secondary opacity-5 -rotate-12' />
+                    <div className='absolute top-1/4 right-1/4 w-32 h-32 bg-accent/5 rounded-full blur-3xl' />
+                    <div className='absolute bottom-1/4 left-1/3 w-40 h-40 bg-primary/5 rounded-full blur-3xl' />
+                    <MapPinIcon className='absolute top-20 right-[20%] w-16 h-16 text-text/5 rotate-12' />
+                </div>
+
+                <div className='max-w-7xl mx-auto px-6 relative z-10'>
+                    <span className='inline-block px-3 py-1 mb-4 bg-background/50 backdrop-blur-sm border border-text/5 rounded-full text-xs font-medium text-text/60 uppercase tracking-wider'>
+                        Community & Culture
+                    </span>
+                    <h1 className='text-5xl md:text-6xl lg:text-7xl font-bold font-serif text-text mb-6 tracking-tight'>
+                        Events
                     </h1>
-                    <p className='text-lg text-text/70 max-w-2xl'>
-                        Discover coffee meetups, workshops, cupping sessions,
-                        and community gatherings happening across the
-                        Philippines.
+                    <p className='text-xl md:text-2xl text-text/70 max-w-2xl font-light leading-relaxed'>
+                        Discover meetups, workshops, cupping sessions, and
+                        community gatherings happening across the Philippines.
                     </p>
 
                     {/* Location indicator */}
                     {!locationLoading && location.city && (
-                        <div className='mt-4 flex items-center gap-2 text-sm text-text/60'>
-                            <MapPinIcon className='w-4 h-4' />
+                        <div className='mt-6 items-center gap-2 text-sm md:text-base text-text/60 font-medium bg-background/30 backdrop-blur-sm self-start inline-flex px-4 py-2 rounded-full border border-text/5 shadow-sm'>
+                            <MapPinIcon className='w-4 h-4 text-primary' />
                             <span>
-                                Showing events near {location.city}
-                                {location.region && `, ${location.region}`}
+                                Showing events in{" "}
+                                <span className='text-text'>
+                                    {location.city}
+                                </span>
+                                {location.region && (
+                                    <span>, {location.region}</span>
+                                )}
                             </span>
                         </div>
                     )}
