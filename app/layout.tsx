@@ -23,8 +23,11 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
     metadataBase: new URL("https://grounds.ph"),
     title: {
-        default: "Grounds",
+        default: "Grounds - Discover the Best Cafes in the Philippines",
         template: "%s | Grounds",
+    },
+    alternates: {
+        canonical: "https://grounds.ph",
     },
     description:
         "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",

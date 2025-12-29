@@ -203,6 +203,8 @@ export default function LandingHero({
                                     fill
                                     className='object-cover'
                                     draggable={false}
+                                    priority
+                                    sizes='(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 80vw'
                                 />
                             )}
                         </motion.div>

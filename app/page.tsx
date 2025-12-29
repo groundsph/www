@@ -139,6 +139,7 @@ export default async function Home() {
                                                 fill
                                                 className='object-cover'
                                                 draggable={false}
+                                                sizes='(max-width: 768px) 100vw, 320px'
                                             />
                                         ) : (
                                             <div className='w-full h-full flex items-center justify-center'>
@@ -214,6 +215,7 @@ export default async function Home() {
                                             fill
                                             className='object-cover'
                                             draggable={false}
+                                            sizes='(max-width: 768px) 100vw, 320px'
                                         />
                                     ) : (
                                         <div className='w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-secondary/20'>

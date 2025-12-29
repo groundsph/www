@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  trailingSlash: false,
 };
 
 export default nextConfig;

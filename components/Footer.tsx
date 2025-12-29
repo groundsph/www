@@ -43,13 +43,13 @@ export default function Footer() {
                             >
                                 <Facebook className='w-5 h-5' />
                             </a>
-                            <a
-                                href='mailto:adrianbonpin@grounds.ph'
+                            <Link
+                                href='/contact'
                                 className='text-background/50 hover:text-background transition-colors'
-                                aria-label='Email'
+                                aria-label='Contact'
                             >
                                 <Mail className='w-5 h-5' />
-                            </a>
+                            </Link>
                         </div>
                     </div>
 

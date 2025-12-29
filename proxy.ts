@@ -7,6 +7,29 @@ const protectedRoutesExact = ["/profile"]
 const protectedRoutesPrefixes = ["/submit"]
 
 export async function proxy(request: NextRequest) {
+    // -----------------------------------------------------------------------------
+    // 1. Initial Redirects (WWW -> non-WWW, HTTP -> HTTPS)
+    // -----------------------------------------------------------------------------
+    const url = request.nextUrl.clone();
+    const hostname = request.headers.get("host") || "";
+    const protocol = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
+
+    // Redirect WWW to non-WWW
+    if (hostname.startsWith("www.")) {
+        url.hostname = hostname.replace("www.", "");
+        url.protocol = "https";
+        return NextResponse.redirect(url, 301);
+    }
+
+    // Redirect HTTP to HTTPS (in production, if x-forwarded-proto check passes)
+    if (protocol === "http" && hostname !== "localhost") {
+        url.protocol = "https";
+        return NextResponse.redirect(url, 301);
+    }
+
+    // -----------------------------------------------------------------------------
+    // 2. Auth & Protected Routes Logic
+    // -----------------------------------------------------------------------------
     let supabaseResponse = NextResponse.next({
         request,
     })
@@ -66,20 +89,20 @@ export async function proxy(request: NextRequest) {
 
     // Redirect to auth if accessing protected route without being logged in
     if (isProtectedRoute && !user) {
-        const url = request.nextUrl.clone()
-        url.pathname = "/auth"
-        url.searchParams.set("redirect", pathname)
-        return NextResponse.redirect(url)
+        const authUrl = request.nextUrl.clone()
+        authUrl.pathname = "/auth"
+        authUrl.searchParams.set("redirect", pathname)
+        return NextResponse.redirect(authUrl)
     }
 
     // If user is logged in but hasn't completed profile setup, redirect to profile setup
     // (except if already on auth page or callback)
     if (isProtectedRoute && user && !profileCompleted && !pathname.startsWith("/auth")) {
-        const url = request.nextUrl.clone()
-        url.pathname = "/auth"
-        url.searchParams.set("setup", "username")
-        url.searchParams.set("redirect", pathname)
-        return NextResponse.redirect(url)
+        const authUrl = request.nextUrl.clone()
+        authUrl.pathname = "/auth"
+        authUrl.searchParams.set("setup", "username")
+        authUrl.searchParams.set("redirect", pathname)
+        return NextResponse.redirect(authUrl)
     }
 
     // Redirect away from auth if already logged in AND has completed profile setup
@@ -92,11 +115,11 @@ export async function proxy(request: NextRequest) {
         }
         // User is fully set up, redirect them away from auth
         const redirect = request.nextUrl.searchParams.get("redirect") || "/"
-        const url = request.nextUrl.clone()
-        url.pathname = redirect
-        url.searchParams.delete("redirect")
-        url.searchParams.delete("setup")
-        return NextResponse.redirect(url)
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = redirect
+        redirectUrl.searchParams.delete("redirect")
+        redirectUrl.searchParams.delete("setup")
+        return NextResponse.redirect(redirectUrl)
     }
 
     return supabaseResponse

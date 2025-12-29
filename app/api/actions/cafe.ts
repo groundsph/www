@@ -75,7 +75,32 @@ export async function getDailyFeatured() {
     const { data: cafes } = await db
         .from("cafes")
         .select(`
-            *,
+            id,
+            name,
+            slug,
+            thumbnail,
+            city_municipality,
+            region,
+            address_display,
+            price_level,
+            description,
+            is_verified,
+            membership_tier,
+            roaster,
+            specialty,
+            tags,
+            operating_hours,
+            has_wifi,
+            has_sockets,
+            has_parking,
+            has_aircon,
+            is_pet_friendly,
+            has_outdoor_seating,
+            has_indoor_seating,
+            has_restroom,
+            has_bidet,
+            has_non_dairy,
+            is_work_friendly,
             cafe_rating_stats(average_rating, total_reviews)
         `)
         .eq("is_published", true)
@@ -246,7 +271,35 @@ export async function getAllCafes(
 
     let query = db
         .from("cafes")
-        .select("*, cafe_rating_stats(average_rating, total_reviews)")
+        .select(`
+            id,
+            name,
+            slug,
+            thumbnail,
+            city_municipality,
+            region,
+            address_display,
+            price_level,
+            description,
+            is_verified,
+            membership_tier,
+            roaster,
+            specialty,
+            tags,
+            operating_hours,
+            has_wifi,
+            has_sockets,
+            has_parking,
+            has_aircon,
+            is_pet_friendly,
+            has_outdoor_seating,
+            has_indoor_seating,
+            has_restroom,
+            has_bidet,
+            has_non_dairy,
+            is_work_friendly,
+            cafe_rating_stats(average_rating, total_reviews)
+        `)
         .eq("is_published", true)
 
     // Filters
