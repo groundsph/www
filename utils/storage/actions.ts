@@ -567,3 +567,309 @@ export async function getOwnershipProofSignedUrlAction(
         return { success: false, error: "Failed to create signed URL" }
     }
 }
+
+// ============================================
+// Cleanup Actions (Admin only)
+// ============================================
+
+export interface CleanupResult {
+    success: boolean
+    deleted: {
+        cafes: number
+        reviews: number
+        avatars: number
+        blogs: number
+        events: number
+        menuPhotos: number
+        badges: number
+        ownershipProofs: number
+    }
+    error?: string
+}
+
+/**
+ * Clean up orphaned images across all storage buckets
+ * This function lists all files in storage and checks if they're referenced in the database
+ * Files not referenced anywhere are deleted
+ */
+export async function cleanupOrphanedImages(): Promise<CleanupResult> {
+    const user = await getAuthenticatedUser()
+    if (!user) {
+        return { success: false, deleted: { cafes: 0, reviews: 0, avatars: 0, blogs: 0, events: 0, menuPhotos: 0, badges: 0, ownershipProofs: 0 }, error: "Not authenticated" }
+    }
+
+    const isAdmin = await isUserAdmin(user.id)
+    if (!isAdmin) {
+        return { success: false, deleted: { cafes: 0, reviews: 0, avatars: 0, blogs: 0, events: 0, menuPhotos: 0, badges: 0, ownershipProofs: 0 }, error: "Admin access required" }
+    }
+
+    const { createAdminClient } = await import("@/utils/supabase/admin")
+    const adminDb = await createAdminClient()
+    const storage = await getStorageProvider()
+
+    const deleted = {
+        cafes: 0,
+        reviews: 0,
+        avatars: 0,
+        blogs: 0,
+        events: 0,
+        menuPhotos: 0,
+        badges: 0,
+        ownershipProofs: 0,
+    }
+
+    try {
+        // Helper to check if URL is referenced
+        const isUrlReferenced = async (
+            table: string,
+            column: string,
+            url: string,
+            isArray: boolean = false
+        ): Promise<boolean> => {
+            if (isArray) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data } = await (adminDb as any)
+                    .from(table)
+                    .select("id")
+                    .contains(column, [url])
+                    .limit(1)
+                    .maybeSingle()
+                return !!data
+            } else {
+                // For avatar_url, match with LIKE to handle cache busters
+                const baseUrl = url.split("?")[0]
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data } = await (adminDb as any)
+                    .from(table)
+                    .select("id")
+                    .like(column, `${baseUrl}%`)
+                    .limit(1)
+                    .maybeSingle()
+                return !!data
+            }
+        }
+
+        // 1. Clean cafe images
+        const cafeFiles = await storage.list(STORAGE_BUCKETS.CAFES, { limit: 1000 })
+        if (cafeFiles.success && cafeFiles.files) {
+            for (const file of cafeFiles.files) {
+                if (file.isDirectory) continue
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.CAFES, file.path)
+
+                // Check thumbnail
+                const { data: thumbRef } = await adminDb
+                    .from("cafes")
+                    .select("id")
+                    .eq("thumbnail", publicUrl)
+                    .limit(1)
+                    .maybeSingle()
+
+                // Check gallery
+                const { data: galleryRef } = await adminDb
+                    .from("cafes")
+                    .select("id")
+                    .contains("gallery", [publicUrl])
+                    .limit(1)
+                    .maybeSingle()
+
+                if (!thumbRef && !galleryRef) {
+                    await storage.delete(STORAGE_BUCKETS.CAFES, [file.path])
+                    deleted.cafes++
+                }
+            }
+        }
+
+        // 2. Clean review images
+        const reviewFiles = await storage.list(STORAGE_BUCKETS.REVIEWS, { limit: 1000 })
+        if (reviewFiles.success && reviewFiles.files) {
+            for (const file of reviewFiles.files) {
+                if (file.isDirectory) continue
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.REVIEWS, file.path)
+                const referenced = await isUrlReferenced("reviews", "images", publicUrl, true)
+                if (!referenced) {
+                    await storage.delete(STORAGE_BUCKETS.REVIEWS, [file.path])
+                    deleted.reviews++
+                }
+            }
+        }
+
+        // 3. Clean avatar images
+        const avatarFiles = await storage.list(STORAGE_BUCKETS.AVATARS, { limit: 1000 })
+        if (avatarFiles.success && avatarFiles.files) {
+            for (const file of avatarFiles.files) {
+                if (file.isDirectory) continue
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.AVATARS, file.path)
+                const referenced = await isUrlReferenced("profiles", "avatar_url", publicUrl, false)
+                if (!referenced) {
+                    await storage.delete(STORAGE_BUCKETS.AVATARS, [file.path])
+                    deleted.avatars++
+                }
+            }
+        }
+
+        // 4. Clean blog images
+        const blogFiles = await storage.list(STORAGE_BUCKETS.BLOGS, { limit: 1000 })
+        if (blogFiles.success && blogFiles.files) {
+            for (const file of blogFiles.files) {
+                if (file.isDirectory) continue
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.BLOGS, file.path)
+                const { data: blogRef } = await adminDb
+                    .from("blog_posts")
+                    .select("id")
+                    .eq("cover_image", publicUrl)
+                    .limit(1)
+                    .maybeSingle()
+                if (!blogRef) {
+                    await storage.delete(STORAGE_BUCKETS.BLOGS, [file.path])
+                    deleted.blogs++
+                }
+            }
+        }
+
+        // 5. Clean event images
+        const eventFiles = await storage.list(STORAGE_BUCKETS.EVENTS, { limit: 1000 })
+        if (eventFiles.success && eventFiles.files) {
+            for (const file of eventFiles.files) {
+                if (file.isDirectory) continue
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.EVENTS, file.path)
+                const { data: eventRef } = await adminDb
+                    .from("events")
+                    .select("id")
+                    .eq("image_url", publicUrl)
+                    .limit(1)
+                    .maybeSingle()
+                if (!eventRef) {
+                    await storage.delete(STORAGE_BUCKETS.EVENTS, [file.path])
+                    deleted.events++
+                }
+            }
+        }
+
+        // 6. Clean menu photos
+        const menuFiles = await storage.list(STORAGE_BUCKETS.MENU_PHOTOS, { limit: 1000 })
+        if (menuFiles.success && menuFiles.files) {
+            for (const file of menuFiles.files) {
+                if (file.isDirectory) continue
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.MENU_PHOTOS, file.path)
+                const { data: menuRef } = await adminDb
+                    .from("cafe_menu_items")
+                    .select("id")
+                    .eq("image_url", publicUrl)
+                    .limit(1)
+                    .maybeSingle()
+                if (!menuRef) {
+                    await storage.delete(STORAGE_BUCKETS.MENU_PHOTOS, [file.path])
+                    deleted.menuPhotos++
+                }
+            }
+        }
+
+        // 7. Clean badge images
+        const badgeFiles = await storage.list(STORAGE_BUCKETS.BADGES, { limit: 1000 })
+        if (badgeFiles.success && badgeFiles.files) {
+            for (const file of badgeFiles.files) {
+                if (file.isDirectory) continue
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.BADGES, file.path)
+                const { data: badgeRef } = await adminDb
+                    .from("badge_definitions")
+                    .select("id")
+                    .eq("image_url", publicUrl)
+                    .limit(1)
+                    .maybeSingle()
+                if (!badgeRef) {
+                    await storage.delete(STORAGE_BUCKETS.BADGES, [file.path])
+                    deleted.badges++
+                }
+            }
+        }
+
+        // 8. Clean ownership proofs
+        const proofFiles = await storage.list(STORAGE_BUCKETS.OWNERSHIP_PROOFS, { limit: 1000 })
+        if (proofFiles.success && proofFiles.files) {
+            for (const file of proofFiles.files) {
+                if (file.isDirectory) continue
+                // Ownership proofs store paths, not URLs
+                const { data: claimRef } = await adminDb
+                    .from("cafe_claims")
+                    .select("id")
+                    .contains("proof_urls", [file.path])
+                    .limit(1)
+                    .maybeSingle()
+                if (!claimRef) {
+                    await storage.delete(STORAGE_BUCKETS.OWNERSHIP_PROOFS, [file.path])
+                    deleted.ownershipProofs++
+                }
+            }
+        }
+
+        return { success: true, deleted }
+    } catch (error) {
+        console.error("[Storage] Cleanup error:", error)
+        return { success: false, deleted, error: "Cleanup failed" }
+    }
+}
+
+/**
+ * Process the avatar deletion queue
+ * Deletes avatars that were queued when profiles were deleted
+ */
+export async function processAvatarDeletionQueue(): Promise<{
+    success: boolean
+    processed: number
+    error?: string
+}> {
+    const user = await getAuthenticatedUser()
+    if (!user) {
+        return { success: false, processed: 0, error: "Not authenticated" }
+    }
+
+    const isAdmin = await isUserAdmin(user.id)
+    if (!isAdmin) {
+        return { success: false, processed: 0, error: "Admin access required" }
+    }
+
+    const { createAdminClient } = await import("@/utils/supabase/admin")
+    const adminDb = await createAdminClient()
+    const storage = await getStorageProvider()
+    let processed = 0
+
+    try {
+        // Fetch pending deletions
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: queue, error: fetchError } = await (adminDb as any)
+            .from("avatar_deletion_queue")
+            .select("id, avatar_url")
+            .limit(100) as { data: { id: string; avatar_url: string }[] | null; error: { message: string } | null }
+
+        if (fetchError) {
+            console.warn("Avatar deletion queue not found or error:", fetchError.message)
+            return { success: true, processed: 0 }
+        }
+
+        if (!queue || queue.length === 0) {
+            return { success: true, processed: 0 }
+        }
+
+        for (const item of queue) {
+            // Extract path from URL and delete
+            const path = storage.extractPathFromUrl(item.avatar_url, STORAGE_BUCKETS.AVATARS)
+            if (path) {
+                await storage.delete(STORAGE_BUCKETS.AVATARS, [path])
+            }
+
+            // Remove from queue
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (adminDb as any)
+                .from("avatar_deletion_queue")
+                .delete()
+                .eq("id", item.id)
+
+            processed++
+        }
+
+        return { success: true, processed }
+    } catch (error) {
+        console.error("[Storage] Avatar queue error:", error)
+        return { success: false, processed, error: "Processing failed" }
+    }
+}

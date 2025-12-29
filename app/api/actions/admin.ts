@@ -3,8 +3,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
-import { deleteCafeImagesAction, deleteSingleCafeImageAction } from "@/utils/storage/actions"
-import { cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/supabase/storage"
+import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
 import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedEmail, sendSubscriptionRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { Database } from "@/utils/types/database.types"
