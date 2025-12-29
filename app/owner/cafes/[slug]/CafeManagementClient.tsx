@@ -20,8 +20,10 @@ import {
     Crown,
     Edit2,
     ExternalLink,
+    Headphones,
     Loader2,
     MessageSquare,
+    Pin,
     Plus,
     QrCode,
     Send,
@@ -45,6 +47,8 @@ import {
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
+    pinReview,
+    unpinReview,
 } from "@/app/api/actions/owner"
 import { useNotification } from "@/components/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
@@ -61,6 +65,8 @@ interface CafeManagementClientProps {
         rating: number
         comment: string
         created_at: string | null
+        is_pinned_by_owner: boolean
+        pinned_at: string | null
         author: {
             id: string
             username: string
@@ -869,6 +875,45 @@ export default function CafeManagementClient({
                                     </p>
                                 </button>
                             </div>
+
+                            {/* Premium Support - Premium only */}
+                            {tier === "premium" && (
+                                <div className='mt-6 p-4 bg-linear-to-r from-amber-50 to-amber-100/50 rounded-xl border border-amber-200'>
+                                    <div className='flex items-start gap-3'>
+                                        <div className='p-2 bg-amber-500 rounded-lg'>
+                                            <Headphones className='w-5 h-5 text-white' />
+                                        </div>
+                                        <div className='flex-1'>
+                                            <h3 className='font-semibold text-amber-900'>
+                                                Premium Support
+                                            </h3>
+                                            <p className='text-sm text-amber-800/70 mt-1'>
+                                                As a Premium member, you have
+                                                priority access to our support
+                                                team.
+                                            </p>
+                                            <div className='flex flex-wrap gap-3 mt-3'>
+                                                <a
+                                                    href='mailto:support@grounds.ph?subject=Premium%20Support%20Request'
+                                                    className='inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors'
+                                                >
+                                                    <Send className='w-4 h-4' />
+                                                    Email Support
+                                                </a>
+                                                <a
+                                                    href='https://discord.gg/grounds'
+                                                    target='_blank'
+                                                    rel='noopener noreferrer'
+                                                    className='inline-flex items-center gap-2 px-4 py-2 bg-white text-amber-700 border border-amber-300 rounded-lg text-sm font-medium hover:bg-amber-50 transition-colors'
+                                                >
+                                                    <ExternalLink className='w-4 h-4' />
+                                                    Discord Channel
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </motion.div>
                     )}
 
@@ -952,6 +997,72 @@ export default function CafeManagementClient({
                                                     </div>
                                                 </div>
                                             </div>
+                                            {/* Pin button - Premium only */}
+                                            {tier === "premium" && (
+                                                <button
+                                                    onClick={async () => {
+                                                        if (
+                                                            review.is_pinned_by_owner
+                                                        ) {
+                                                            const result =
+                                                                await unpinReview(
+                                                                    review.id,
+                                                                    cafe.id
+                                                                )
+                                                            if (
+                                                                result.success
+                                                            ) {
+                                                                addNotification(
+                                                                    "Review unpinned",
+                                                                    "success"
+                                                                )
+                                                                window.location.reload()
+                                                            } else {
+                                                                addNotification(
+                                                                    result.error ||
+                                                                        "Failed to unpin",
+                                                                    "error"
+                                                                )
+                                                            }
+                                                        } else {
+                                                            const result =
+                                                                await pinReview(
+                                                                    review.id,
+                                                                    cafe.id
+                                                                )
+                                                            if (
+                                                                result.success
+                                                            ) {
+                                                                addNotification(
+                                                                    "Review pinned!",
+                                                                    "success"
+                                                                )
+                                                                window.location.reload()
+                                                            } else {
+                                                                addNotification(
+                                                                    result.error ||
+                                                                        "Failed to pin",
+                                                                    "error"
+                                                                )
+                                                            }
+                                                        }
+                                                    }}
+                                                    className={`p-2 rounded-lg transition-colors ${
+                                                        review.is_pinned_by_owner
+                                                            ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
+                                                            : "bg-text/5 text-text/40 hover:bg-text/10 hover:text-text/60"
+                                                    }`}
+                                                    title={
+                                                        review.is_pinned_by_owner
+                                                            ? "Unpin review"
+                                                            : "Pin review (max 3)"
+                                                    }
+                                                >
+                                                    <Pin
+                                                        className={`w-4 h-4 ${review.is_pinned_by_owner ? "fill-amber-600" : ""}`}
+                                                    />
+                                                </button>
+                                            )}
                                         </div>
 
                                         {/* Review Content */}

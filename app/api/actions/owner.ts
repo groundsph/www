@@ -459,13 +459,15 @@ export async function getVerificationStatus(
 // ============================================
 
 /**
- * Get reviews for a cafe with owner response status
+ * Get reviews for a cafe with owner response status and pin status
  */
 export async function getCafeReviewsForOwner(cafeId: string): Promise<{
     id: string
     rating: number
     comment: string
     created_at: string | null
+    is_pinned_by_owner: boolean
+    pinned_at: string | null
     author: {
         id: string
         username: string
@@ -486,10 +488,13 @@ export async function getCafeReviewsForOwner(cafeId: string): Promise<{
             rating,
             comment,
             created_at,
+            is_pinned_by_owner,
+            pinned_at,
             user:profiles!reviews_user_id_fkey(id, username, display_name, avatar_url)
         `)
         .eq('cafe_id', cafeId)
         .eq('status', 'published')
+        .order('is_pinned_by_owner', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
 
     if (error || !reviews) {
@@ -513,6 +518,8 @@ export async function getCafeReviewsForOwner(cafeId: string): Promise<{
         rating: review.rating,
         comment: review.comment,
         created_at: review.created_at,
+        is_pinned_by_owner: review.is_pinned_by_owner ?? false,
+        pinned_at: review.pinned_at,
         author: review.user as {
             id: string
             username: string
@@ -613,6 +620,109 @@ export async function deleteReviewResponse(
     if (error) {
         console.error('Error deleting response:', error)
         return { success: false, error: 'Failed to delete response' }
+    }
+
+    return { success: true }
+}
+
+// ============================================
+// Review Pinning (Premium Feature)
+// ============================================
+
+/**
+ * Pin a review (Premium only, max 3 pinned)
+ */
+export async function pinReview(
+    reviewId: string,
+    cafeId: string
+): Promise<OwnerActionResult> {
+    const db = await createClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    // Check ownership
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized' }
+    }
+
+    // Check tier - review pinning is Premium only
+    const { data: subscription } = await db
+        .from('cafe_subscriptions')
+        .select('tier')
+        .eq('cafe_id', cafeId)
+        .single()
+
+    const tier = subscription?.tier || 'free'
+    if (tier !== 'premium') {
+        return { success: false, error: 'Review pinning is a Premium feature' }
+    }
+
+    // Check count of currently pinned reviews (max 3)
+    const { count } = await db
+        .from('reviews')
+        .select('*', { count: 'exact', head: true })
+        .eq('cafe_id', cafeId)
+        .eq('is_pinned_by_owner', true)
+
+    if ((count || 0) >= 3) {
+        return { success: false, error: 'Maximum 3 reviews can be pinned' }
+    }
+
+    // Pin the review
+    const { error } = await db
+        .from('reviews')
+        .update({
+            is_pinned_by_owner: true,
+            pinned_at: new Date().toISOString()
+        })
+        .eq('id', reviewId)
+        .eq('cafe_id', cafeId)
+
+    if (error) {
+        console.error('Error pinning review:', error)
+        return { success: false, error: 'Failed to pin review' }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Unpin a review
+ */
+export async function unpinReview(
+    reviewId: string,
+    cafeId: string
+): Promise<OwnerActionResult> {
+    const db = await createClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    // Check ownership
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized' }
+    }
+
+    // Unpin the review
+    const { error } = await db
+        .from('reviews')
+        .update({
+            is_pinned_by_owner: false,
+            pinned_at: null
+        })
+        .eq('id', reviewId)
+        .eq('cafe_id', cafeId)
+
+    if (error) {
+        console.error('Error unpinning review:', error)
+        return { success: false, error: 'Failed to unpin review' }
     }
 
     return { success: true }
@@ -909,4 +1019,109 @@ export async function getOwnerResponsesForCafe(
     return new Map(
         responses.map(r => [r.review_id, r as unknown as OwnerReviewResponse])
     )
+}
+
+// ============================================
+// Featured Slot Requests (Premium Feature)
+// ============================================
+
+export interface FeaturedSlotRequest {
+    id: string
+    cafe_id: string
+    owner_id: string
+    requested_month: string
+    status: 'pending' | 'approved' | 'rejected'
+    admin_notes: string | null
+    created_at: string
+    processed_at: string | null
+}
+
+/**
+ * Request a featured slot for a specific month (Premium only, 1 per month)
+ */
+export async function requestFeaturedSlot(
+    cafeId: string,
+    requestedMonth: string // Format: YYYY-MM-01
+): Promise<OwnerActionResult> {
+    const db = await createClient()
+    const userId = await getCurrentUserId()
+
+    if (!userId) {
+        return { success: false, error: 'Not authenticated' }
+    }
+
+    // Check ownership
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized' }
+    }
+
+    // Check tier - featured slot requests are Premium only
+    const { data: subscription } = await db
+        .from('cafe_subscriptions')
+        .select('tier')
+        .eq('cafe_id', cafeId)
+        .single()
+
+    const tier = subscription?.tier || 'free'
+    if (tier !== 'premium') {
+        return { success: false, error: 'Featured slot requests are a Premium feature' }
+    }
+
+    // Check if already requested for this month
+    const { data: existingRequest } = await db
+        .from('featured_slot_requests')
+        .select('id, status')
+        .eq('cafe_id', cafeId)
+        .eq('requested_month', requestedMonth)
+        .single()
+
+    if (existingRequest) {
+        return {
+            success: false,
+            error: `You already have a ${existingRequest.status} request for this month`
+        }
+    }
+
+    // Submit the request
+    const { error } = await db
+        .from('featured_slot_requests')
+        .insert({
+            cafe_id: cafeId,
+            owner_id: userId,
+            requested_month: requestedMonth,
+            status: 'pending'
+        })
+
+    if (error) {
+        console.error('Error submitting featured slot request:', error)
+        return { success: false, error: 'Failed to submit request' }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Get featured slot requests for a cafe
+ */
+export async function getFeaturedSlotRequests(
+    cafeId: string
+): Promise<FeaturedSlotRequest[]> {
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) return []
+
+    const db = await createClient()
+
+    const { data, error } = await db
+        .from('featured_slot_requests')
+        .select('*')
+        .eq('cafe_id', cafeId)
+        .order('requested_month', { ascending: false })
+
+    if (error) {
+        console.error('Error fetching featured slot requests:', error)
+        return []
+    }
+
+    return (data || []) as FeaturedSlotRequest[]
 }

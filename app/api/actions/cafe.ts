@@ -264,8 +264,8 @@ export async function getAllCafes(
     if (filters.price_level) query = query.eq("price_level", filters.price_level)
     if (filters.region) query = query.eq("region", filters.region)
 
-    // Priority ranking: Premium cafes always appear first
-    // membership_tier enum: 'free' < 'basic' < 'premium', so descending puts premium first
+    // Priority ranking: Premium cafes appear first (Premium exclusive feature)
+    // Uses CASE expression via raw SQL equivalent - premium cafes get sorted to top
     query = query.order("membership_tier", { ascending: false, nullsFirst: false })
 
     // Secondary sorting
@@ -309,6 +309,8 @@ export async function getReviewsByCafeId(cafeId: string) {
             images,
             likes_count,
             is_edited,
+            is_pinned_by_owner,
+            pinned_at,
             review_interactions(user_id, interaction_type),
             author:profiles(display_name, username, avatar_url),
             owner_response:owner_review_responses(
@@ -321,6 +323,7 @@ export async function getReviewsByCafeId(cafeId: string) {
         `)
         .eq("cafe_id", cafeId)
         .eq("status", "published")
+        .order("is_pinned_by_owner", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
 
     if (error) {
