@@ -1256,6 +1256,7 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_stats: { Args: never; Returns: Json }
       approve_cafe_claim: {
         Args: { admin_id: string; claim_id: string; notes?: string }
         Returns: boolean

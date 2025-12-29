@@ -15,6 +15,9 @@ export interface SystemStats {
             avatars: number
             blogs: number
             badges: number
+            menu_photos: number
+            events: number
+            ownership_proofs: number
         }
         storage_limit_bytes?: number
         storage_left_bytes?: number
