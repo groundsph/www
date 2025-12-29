@@ -428,3 +428,85 @@ export async function uploadOwnershipProofWithProgress(
         xhr.send(file)
     })
 }
+
+// ============================================
+// Menu Photo Upload (Client-side)
+// ============================================
+
+const MENU_PHOTOS_BUCKET = "menu-photos"
+const MAX_MENU_PHOTO_SIZE = 5 * 1024 * 1024 // 5MB
+
+/**
+ * Upload a menu item photo with progress tracking
+ * Files are stored at: menu-photos/{cafeId}/{timestamp}-{random}.{ext}
+ * Bucket is public for easy access and CDN caching
+ */
+export async function uploadMenuPhotoWithProgress(
+    file: File,
+    cafeId: string,
+    onProgress?: (progress: number) => void
+): Promise<UploadResult> {
+    const db = createLocalClient()
+
+    // Get current user
+    const {
+        data: { user },
+    } = await db.auth.getUser()
+
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Validate file type
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "webp"
+    const EXTENSIONS_WITH_WEBP = [...ALLOWED_EXTENSIONS, "webp"]
+    if (!EXTENSIONS_WITH_WEBP.includes(fileExt) && fileExt !== "") {
+        return {
+            success: false,
+            error: "Invalid file type (JPEG, PNG, WebP, GIF only)",
+        }
+    }
+
+    // Validate size
+    if (file.size > MAX_MENU_PHOTO_SIZE) {
+        return { success: false, error: "File too large (max 5MB)" }
+    }
+
+    // Generate unique filename with cafeId path
+    const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(7)}.${fileExt}`
+    const filePath = `${cafeId}/${fileName}`
+
+    console.log("[uploadMenuPhotoWithProgress] cafeId:", cafeId, "filePath:", filePath)
+
+    // Simulate progress since Supabase client doesn't support progress
+    if (onProgress) {
+        onProgress(50)
+    }
+
+    // Use Supabase client's upload method
+    const { data, error } = await db.storage
+        .from(MENU_PHOTOS_BUCKET)
+        .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+        })
+
+    if (error) {
+        console.error("Upload failed:", error)
+        return { success: false, error: error.message }
+    }
+
+    if (onProgress) {
+        onProgress(100)
+    }
+
+    // Get public URL
+    const { data: urlData } = db.storage
+        .from(MENU_PHOTOS_BUCKET)
+        .getPublicUrl(data.path)
+
+    return { success: true, url: urlData.publicUrl }
+}
+

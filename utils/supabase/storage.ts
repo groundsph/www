@@ -841,3 +841,118 @@ export async function deleteEventImage(imageUrl: string): Promise<void> {
         await deleteStorageFiles(EVENT_BUCKET, [path])
     }
 }
+
+// ============================================
+// Menu Photo Storage Functions
+// ============================================
+
+const MENU_PHOTOS_BUCKET = "menu-photos"
+const MAX_MENU_PHOTO_SIZE = 5 * 1024 * 1024 // 5MB
+
+/**
+ * Upload a menu photo to Supabase Storage (uses admin client to bypass RLS)
+ * File is stored at: menu-photos/{cafeId}/{timestamp}-{random}.{ext}
+ */
+export async function uploadMenuPhoto(formData: FormData): Promise<{
+    success: boolean
+    url?: string
+    error?: string
+}> {
+    const db = await createClient()
+
+    // Get current user
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    const file = formData.get("image") as File | null
+    const cafeId = formData.get("cafeId") as string | null
+
+    if (!file) {
+        return { success: false, error: "No file provided" }
+    }
+
+    if (!cafeId) {
+        return { success: false, error: "No cafe ID provided" }
+    }
+
+    // Check if user is admin/mod or cafe owner
+    const { data: profile } = await db
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    const isAdminOrMod = profile?.role === "admin" || profile?.role === "moderator"
+
+    // Check if cafe owner
+    const { data: cafe } = await db
+        .from("cafes")
+        .select("owner_ids")
+        .eq("id", cafeId)
+        .single()
+
+    const isCafeOwner = cafe?.owner_ids?.includes(user.id) || false
+
+    if (!isAdminOrMod && !isCafeOwner) {
+        return { success: false, error: "Not authorized to upload menu photos for this cafe" }
+    }
+
+    // Validate file type (check both extension and MIME type)
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || ""
+    const validExtensions = ["jpg", "jpeg", "png", "webp", "gif"]
+    const validMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    const isValidType = validExtensions.includes(fileExt) || validMimeTypes.includes(file.type)
+
+    if (!isValidType) {
+        console.log("Invalid file:", { name: file.name, type: file.type, ext: fileExt })
+        return { success: false, error: "Invalid file type (JPEG, PNG, WebP, GIF only)" }
+    }
+
+    // Determine extension to use for filename
+    const uploadExt = fileExt && validExtensions.includes(fileExt) ? fileExt :
+        file.type === "image/jpeg" ? "jpg" :
+            file.type === "image/png" ? "png" :
+                file.type === "image/webp" ? "webp" :
+                    file.type === "image/gif" ? "gif" : "webp"
+
+    // Validate size
+    if (file.size > MAX_MENU_PHOTO_SIZE) {
+        return { success: false, error: "File too large (max 5MB)" }
+    }
+
+    // Generate unique filename
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${uploadExt}`
+    const filePath = `${cafeId}/${fileName}`
+
+    // Use admin client to upload (bypass RLS/JWT issues)
+    const adminDb = await createAdminClient()
+
+    const { error: uploadError } = await adminDb.storage
+        .from(MENU_PHOTOS_BUCKET)
+        .upload(filePath, file)
+
+    if (uploadError) {
+        console.error("Menu photo upload error:", uploadError)
+        return { success: false, error: "Upload failed" }
+    }
+
+    const { data: urlData } = adminDb.storage
+        .from(MENU_PHOTOS_BUCKET)
+        .getPublicUrl(filePath)
+
+    return { success: true, url: urlData.publicUrl }
+}
+
+/**
+ * Delete a menu photo from storage
+ */
+export async function deleteMenuPhoto(imageUrl: string): Promise<void> {
+    if (!imageUrl) return
+
+    const path = extractStoragePath(imageUrl, MENU_PHOTOS_BUCKET)
+    if (path) {
+        await deleteStorageFiles(MENU_PHOTOS_BUCKET, [path])
+    }
+}

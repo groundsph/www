@@ -256,8 +256,22 @@ export default function CafeDetails({
                                                     .map((item) => (
                                                         <div
                                                             key={item.id}
-                                                            className='flex justify-between items-start p-3 bg-tertiary/50 rounded-lg'
+                                                            className='flex justify-between items-start p-3 bg-tertiary/50 rounded-lg gap-3'
                                                         >
+                                                            {item.image_url && (
+                                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                                    <Image
+                                                                        src={
+                                                                            item.image_url
+                                                                        }
+                                                                        alt={
+                                                                            item.name
+                                                                        }
+                                                                        fill
+                                                                        className='object-cover'
+                                                                    />
+                                                                </div>
+                                                            )}
                                                             <div className='flex-1 min-w-0'>
                                                                 <div className='flex items-center gap-2'>
                                                                     <span className='font-medium'>
@@ -439,8 +453,22 @@ export default function CafeDetails({
                                                 .map((item) => (
                                                     <div
                                                         key={item.id}
-                                                        className='flex justify-between items-start p-3 bg-tertiary/50 rounded-lg'
+                                                        className='flex justify-between items-start p-3 bg-tertiary/50 rounded-lg gap-3'
                                                     >
+                                                        {item.image_url && (
+                                                            <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                                <Image
+                                                                    src={
+                                                                        item.image_url
+                                                                    }
+                                                                    alt={
+                                                                        item.name
+                                                                    }
+                                                                    fill
+                                                                    className='object-cover'
+                                                                />
+                                                            </div>
+                                                        )}
                                                         <div className='flex-1 min-w-0'>
                                                             <div className='flex items-center gap-2'>
                                                                 <span className='font-medium'>

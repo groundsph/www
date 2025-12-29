@@ -1,6 +1,6 @@
 {
     "name": "grounds-website",
-    "version": "0.9.5",
+    "version": "0.9.6",
     "private": true,
     "scripts": {
         "dev": "next dev --experimental-https",
@@ -16,12 +16,14 @@
         "@supabase/ssr": "^0.8.0",
         "@supabase/supabase-js": "^2.87.1",
         "@tailwindcss/typography": "^0.5.19",
+        "browser-image-compression": "^2.0.2",
         "clsx": "^2.1.1",
         "date-fns": "^4.1.0",
         "leaflet": "^1.9.4",
         "lucide-react": "^0.556.0",
         "motion": "^12.23.26",
         "next": "16.0.10",
+        "qrcode.react": "^4.2.0",
         "react": "19.2.0",
         "react-dom": "19.2.0",
         "react-dropzone": "^14.3.8",

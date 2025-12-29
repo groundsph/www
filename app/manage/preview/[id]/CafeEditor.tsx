@@ -887,6 +887,7 @@ export default function CafeEditor({
                 editingItem={menu.editingItem}
                 saving={menu.loading}
                 colorScheme='accent'
+                cafeId={cafe.id}
             />
         </div>
     )

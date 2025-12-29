@@ -51,6 +51,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
     }))
 
-    return [...staticPages, ...cafePages, ...blogPages]
+    // Menu pages for cafes that have menu items
+    const { data: cafesWithMenus } = await db
+        .from('cafe_menu_items')
+        .select('cafe_id, cafes!inner(slug, updated_at)')
+        .eq('is_available', true)
+
+    // Get unique cafe slugs that have menu items
+    const menuCafeSlugs = new Set<string>()
+    const menuPages: MetadataRoute.Sitemap = []
+
+    if (cafesWithMenus) {
+        for (const item of cafesWithMenus) {
+            const cafeData = item.cafes as unknown as { slug: string; updated_at: string | null }
+            if (cafeData?.slug && !menuCafeSlugs.has(cafeData.slug)) {
+                menuCafeSlugs.add(cafeData.slug)
+                menuPages.push({
+                    url: `${baseUrl}/cafes/${cafeData.slug}/menu`,
+                    lastModified: cafeData.updated_at || new Date(),
+                    changeFrequency: 'weekly',
+                    priority: 0.7,
+                })
+            }
+        }
+    }
+
+    return [...staticPages, ...cafePages, ...blogPages, ...menuPages]
 }
 

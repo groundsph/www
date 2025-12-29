@@ -8,6 +8,7 @@ import {
     OwnerReviewResponse,
     SUBSCRIPTION_TIERS,
     SubscriptionTier,
+    canAccessFeature,
 } from "@/utils/types/owner"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -22,6 +23,7 @@ import {
     Loader2,
     MessageSquare,
     Plus,
+    QrCode,
     Send,
     Settings,
     Star,
@@ -31,7 +33,10 @@ import {
     X,
     FileText,
     CalendarIcon,
+    Download,
+    Copy,
 } from "lucide-react"
+import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
@@ -46,6 +51,7 @@ import { useNotification } from "@/components/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import BlogEditor from "@/components/blog/BlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"
+import MenuItemModal from "@/components/cafe-editor/MenuItemModal"
 import { EventWithCafe } from "@/utils/types/extra"
 
 interface CafeManagementClientProps {
@@ -252,47 +258,53 @@ export default function CafeManagementClient({
         setShowMenuModal(true)
     }
 
-    const handleSaveMenuItem = async () => {
-        if (!menuForm.name.trim()) {
+    const handleSaveMenuItem = async (
+        formData: MenuItemForm
+    ): Promise<boolean> => {
+        if (!formData.name.trim()) {
             addNotification("Please enter a name", "error")
-            return
+            return false
         }
-        if (menuForm.price <= 0) {
+        if (formData.price <= 0) {
             addNotification("Please enter a valid price", "error")
-            return
+            return false
         }
 
         setIsSubmitting(true)
 
         if (editingMenuItem) {
             // Update existing
-            const result = await updateMenuItem(editingMenuItem.id, menuForm)
+            const result = await updateMenuItem(editingMenuItem.id, formData)
             if (result.success) {
                 setMenuItems((prev) =>
                     prev.map((item) =>
                         item.id === editingMenuItem.id
-                            ? { ...item, ...menuForm }
+                            ? { ...item, ...formData }
                             : item
                     )
                 )
                 addNotification("Menu item updated", "success")
-                setShowMenuModal(false)
+                setIsSubmitting(false)
+                return true
             } else {
                 addNotification(result.error || "Failed to update", "error")
+                setIsSubmitting(false)
+                return false
             }
         } else {
             // Add new
-            const result = await addMenuItem(cafe.id, menuForm)
+            const result = await addMenuItem(cafe.id, formData)
             if (result.success && result.item) {
                 setMenuItems((prev) => [...prev, result.item!])
                 addNotification("Menu item added", "success")
-                setShowMenuModal(false)
+                setIsSubmitting(false)
+                return true
             } else {
                 addNotification(result.error || "Failed to add", "error")
+                setIsSubmitting(false)
+                return false
             }
         }
-
-        setIsSubmitting(false)
     }
 
     const handleDeleteMenuItem = async (itemId: string) => {
@@ -586,6 +598,221 @@ export default function CafeManagementClient({
                                     )}
                                 </div>
                             </div>
+
+                            {/* QR Code to Menu (Pro/Premium only) */}
+                            {canAccessFeature(tier, "qr_menu") &&
+                                menuItems.length > 0 && (
+                                    <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                        <h3 className='font-semibold mb-4 flex items-center gap-2'>
+                                            <QrCode className='w-5 h-5 text-primary' />
+                                            QR Code Menu
+                                        </h3>
+                                        <div className='flex flex-col md:flex-row gap-6 items-center'>
+                                            <div className='bg-white p-4 rounded-xl'>
+                                                <QRCodeSVG
+                                                    value={`https://grounds.ph/cafes/${cafe.slug}/menu`}
+                                                    size={150}
+                                                    level='H'
+                                                    id='qr-code-svg'
+                                                    bgColor='#f8f4e1'
+                                                    imageSettings={{
+                                                        src: "/icon.png",
+                                                        height: 30,
+                                                        width: 30,
+                                                        excavate: true,
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className='flex-1 text-center md:text-left'>
+                                                <p className='text-text/80 mb-3'>
+                                                    Customers can scan this QR
+                                                    code to view your digital
+                                                    menu.
+                                                </p>
+                                                <div className='flex flex-col sm:flex-row gap-2'>
+                                                    <button
+                                                        onClick={() => {
+                                                            const svg =
+                                                                document.getElementById(
+                                                                    "qr-code-svg"
+                                                                )
+                                                            if (svg) {
+                                                                const canvas =
+                                                                    document.createElement(
+                                                                        "canvas"
+                                                                    )
+                                                                const ctx =
+                                                                    canvas.getContext(
+                                                                        "2d"
+                                                                    )
+                                                                const qrImg =
+                                                                    new window.Image()
+                                                                const logoImg =
+                                                                    new window.Image()
+                                                                const svgData =
+                                                                    new XMLSerializer().serializeToString(
+                                                                        svg
+                                                                    )
+                                                                const svgBlob =
+                                                                    new Blob(
+                                                                        [
+                                                                            svgData,
+                                                                        ],
+                                                                        {
+                                                                            type: "image/svg+xml;charset=utf-8",
+                                                                        }
+                                                                    )
+                                                                const url =
+                                                                    URL.createObjectURL(
+                                                                        svgBlob
+                                                                    )
+
+                                                                // Track load states
+                                                                let qrLoaded = false
+                                                                let logoLoaded = false
+
+                                                                const drawAndDownload =
+                                                                    () => {
+                                                                        if (
+                                                                            !qrLoaded ||
+                                                                            !logoLoaded
+                                                                        )
+                                                                            return
+
+                                                                        const padding = 40
+                                                                        const qrSize = 300
+                                                                        const textHeight = 50
+                                                                        canvas.width =
+                                                                            qrSize +
+                                                                            padding *
+                                                                                2
+                                                                        canvas.height =
+                                                                            qrSize +
+                                                                            padding *
+                                                                                2 +
+                                                                            textHeight
+
+                                                                        // Background color (bg-background: #f8f4e1)
+                                                                        if (
+                                                                            ctx
+                                                                        ) {
+                                                                            ctx.fillStyle =
+                                                                                "#f8f4e1"
+                                                                            ctx.fillRect(
+                                                                                0,
+                                                                                0,
+                                                                                canvas.width,
+                                                                                canvas.height
+                                                                            )
+                                                                        }
+
+                                                                        // Draw QR code with padding
+                                                                        ctx?.drawImage(
+                                                                            qrImg,
+                                                                            padding,
+                                                                            padding,
+                                                                            qrSize,
+                                                                            qrSize
+                                                                        )
+
+                                                                        // Draw logo in center of QR
+                                                                        const logoSize = 60
+                                                                        const logoX =
+                                                                            padding +
+                                                                            (qrSize -
+                                                                                logoSize) /
+                                                                                2
+                                                                        const logoY =
+                                                                            padding +
+                                                                            (qrSize -
+                                                                                logoSize) /
+                                                                                2
+                                                                        ctx?.drawImage(
+                                                                            logoImg,
+                                                                            logoX,
+                                                                            logoY,
+                                                                            logoSize,
+                                                                            logoSize
+                                                                        )
+
+                                                                        // Draw cafe name below
+                                                                        if (
+                                                                            ctx
+                                                                        ) {
+                                                                            ctx.fillStyle =
+                                                                                "#1a1a1a"
+                                                                            ctx.font =
+                                                                                "bold 22px 'Playfair Display', Georgia, serif"
+                                                                            ctx.textAlign =
+                                                                                "center"
+                                                                            ctx.fillText(
+                                                                                cafe.name,
+                                                                                canvas.width /
+                                                                                    2,
+                                                                                qrSize +
+                                                                                    padding +
+                                                                                    35
+                                                                            )
+                                                                        }
+
+                                                                        const pngUrl =
+                                                                            canvas.toDataURL(
+                                                                                "image/png"
+                                                                            )
+                                                                        const link =
+                                                                            document.createElement(
+                                                                                "a"
+                                                                            )
+                                                                        link.download = `${cafe.slug}-menu-qr.png`
+                                                                        link.href =
+                                                                            pngUrl
+                                                                        link.click()
+                                                                        URL.revokeObjectURL(
+                                                                            url
+                                                                        )
+                                                                    }
+
+                                                                qrImg.onload =
+                                                                    () => {
+                                                                        qrLoaded = true
+                                                                        drawAndDownload()
+                                                                    }
+                                                                logoImg.onload =
+                                                                    () => {
+                                                                        logoLoaded = true
+                                                                        drawAndDownload()
+                                                                    }
+
+                                                                qrImg.src = url
+                                                                logoImg.src =
+                                                                    "/icon.png"
+                                                            }
+                                                        }}
+                                                        className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                                                    >
+                                                        <Download className='w-4 h-4' />
+                                                        Download PNG
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(
+                                                                `https://grounds.ph/cafes/${cafe.slug}/menu`
+                                                            )
+                                                            addNotification(
+                                                                "Link copied to clipboard!",
+                                                                "success"
+                                                            )
+                                                        }}
+                                                        className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-text/10 rounded-lg font-medium hover:bg-text/20 transition-colors'
+                                                    >
+                                                        <Copy className='w-4 h-4' />
+                                                        Copy Link
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                             {/* Quick Actions */}
                             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
@@ -1421,195 +1648,14 @@ export default function CafeManagementClient({
             </motion.div>
 
             {/* Menu Item Modal */}
-            <AnimatePresence>
-                {showMenuModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
-                        onClick={() => setShowMenuModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className='bg-background rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto'
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className='flex items-center justify-between mb-6'>
-                                <h2 className='text-xl font-semibold'>
-                                    {editingMenuItem
-                                        ? "Edit Menu Item"
-                                        : "Add Menu Item"}
-                                </h2>
-                                <button
-                                    onClick={() => setShowMenuModal(false)}
-                                    className='p-2 hover:bg-text/10 rounded-lg transition-colors'
-                                >
-                                    <X className='w-5 h-5' />
-                                </button>
-                            </div>
-
-                            <div className='space-y-4'>
-                                <div>
-                                    <label className='block text-sm font-medium mb-1'>
-                                        Name *
-                                    </label>
-                                    <input
-                                        type='text'
-                                        value={menuForm.name}
-                                        onChange={(e) =>
-                                            setMenuForm({
-                                                ...menuForm,
-                                                name: e.target.value,
-                                            })
-                                        }
-                                        placeholder='e.g. Flat White'
-                                        className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className='block text-sm font-medium mb-1'>
-                                        Category *
-                                    </label>
-                                    <select
-                                        value={menuForm.category}
-                                        onChange={(e) =>
-                                            setMenuForm({
-                                                ...menuForm,
-                                                category: e.target.value,
-                                            })
-                                        }
-                                        className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                    >
-                                        <option value='Coffee'>Coffee</option>
-                                        <option value='Non-Coffee'>
-                                            Non-Coffee
-                                        </option>
-                                        <option value='Espresso'>
-                                            Espresso
-                                        </option>
-                                        <option value='Tea'>Tea</option>
-                                        <option value='Pastry'>Pastry</option>
-                                        <option value='Food'>Food</option>
-                                        <option value='Dessert'>Dessert</option>
-                                        <option value='Other'>Other</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className='block text-sm font-medium mb-1'>
-                                        Price (₱) *
-                                    </label>
-                                    <input
-                                        type='number'
-                                        min='0'
-                                        step='0.01'
-                                        value={menuForm.price || ""}
-                                        onChange={(e) =>
-                                            setMenuForm({
-                                                ...menuForm,
-                                                price:
-                                                    parseFloat(
-                                                        e.target.value
-                                                    ) || 0,
-                                            })
-                                        }
-                                        placeholder='0.00'
-                                        className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className='block text-sm font-medium mb-1'>
-                                        Description
-                                    </label>
-                                    <textarea
-                                        value={menuForm.description || ""}
-                                        onChange={(e) =>
-                                            setMenuForm({
-                                                ...menuForm,
-                                                description: e.target.value,
-                                            })
-                                        }
-                                        placeholder='Optional description...'
-                                        rows={2}
-                                        className='w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none'
-                                    />
-                                </div>
-
-                                <div className='flex items-center gap-4'>
-                                    <label className='flex items-center gap-2 cursor-pointer'>
-                                        <input
-                                            type='checkbox'
-                                            checked={
-                                                menuForm.is_signature || false
-                                            }
-                                            onChange={(e) =>
-                                                setMenuForm({
-                                                    ...menuForm,
-                                                    is_signature:
-                                                        e.target.checked,
-                                                })
-                                            }
-                                            className='w-4 h-4 rounded border-text/30 text-primary focus:ring-primary/50'
-                                        />
-                                        <span className='text-sm'>
-                                            Signature Item
-                                        </span>
-                                    </label>
-                                    <label className='flex items-center gap-2 cursor-pointer'>
-                                        <input
-                                            type='checkbox'
-                                            checked={
-                                                menuForm.is_available ?? true
-                                            }
-                                            onChange={(e) =>
-                                                setMenuForm({
-                                                    ...menuForm,
-                                                    is_available:
-                                                        e.target.checked,
-                                                })
-                                            }
-                                            className='w-4 h-4 rounded border-text/30 text-primary focus:ring-primary/50'
-                                        />
-                                        <span className='text-sm'>
-                                            Available
-                                        </span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className='flex gap-3 mt-6'>
-                                <button
-                                    onClick={() => setShowMenuModal(false)}
-                                    className='flex-1 px-4 py-2 bg-text/10 rounded-lg font-medium hover:bg-text/20 transition-colors'
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSaveMenuItem}
-                                    disabled={isSubmitting}
-                                    className='flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2'
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className='w-4 h-4 animate-spin' />
-                                            Saving...
-                                        </>
-                                    ) : editingMenuItem ? (
-                                        "Save Changes"
-                                    ) : (
-                                        "Add Item"
-                                    )}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <MenuItemModal
+                open={showMenuModal}
+                onClose={() => setShowMenuModal(false)}
+                onSave={handleSaveMenuItem}
+                editingItem={editingMenuItem}
+                saving={isSubmitting}
+                cafeId={cafe.id}
+            />
 
             {/* Blog Editor Modal */}
             {showBlogEditor && (
