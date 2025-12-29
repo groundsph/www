@@ -107,7 +107,7 @@ export function isOpenNow(operatingHours?: OperatingHours | null): { isOpen: boo
 /**
  * Placeholder URL constant for cafes without uploaded thumbnails
  */
-export const CAFE_PLACEHOLDER_URL = "https://uriwhfpoprbrcehboadj.supabase.co/storage/v1/object/public/cafes/placeholder.jpg";
+export const CAFE_PLACEHOLDER_URL = "https://cdn.grounds.ph/cafes/placeholder.jpg";
 
 /**
  * Resolve cafe thumbnail - returns actual URL or placeholder image URL

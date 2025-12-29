@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "uriwhfpoprbrcehboadj.supabase.co",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.grounds.ph",
+      }
     ]
   },
   async redirects() {
@@ -29,6 +33,11 @@ const nextConfig: NextConfig = {
     ]
   },
   trailingSlash: false,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    }
+  }
 };
 
 export default nextConfig;

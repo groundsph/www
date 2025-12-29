@@ -390,7 +390,7 @@ export default function FeaturedScheduleManager({
 
             {/* Pending Requests Section */}
             {featureRequests.length > 0 && (
-                <div className='bg-gradient-to-r from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl p-4'>
+                <div className='bg-linear-to-r from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl p-4'>
                     <h3 className='text-lg font-semibold text-purple-900 flex items-center gap-2 mb-3'>
                         <Star className='w-5 h-5 text-purple-600 fill-purple-200' />
                         Pending Requests ({featureRequests.length})
