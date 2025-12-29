@@ -891,6 +891,54 @@ export type Database = {
           },
         ]
       }
+      featured_slot_requests: {
+        Row: {
+          admin_notes: string | null
+          cafe_id: string | null
+          created_at: string | null
+          id: string
+          owner_id: string | null
+          processed_at: string | null
+          requested_month: string
+          status: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          cafe_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner_id?: string | null
+          processed_at?: string | null
+          requested_month: string
+          status?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          cafe_id?: string | null
+          created_at?: string | null
+          id?: string
+          owner_id?: string | null
+          processed_at?: string | null
+          requested_month?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_slot_requests_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafe_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "featured_slot_requests_cafe_id_fkey"
+            columns: ["cafe_id"]
+            isOneToOne: false
+            referencedRelation: "cafes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_review_responses: {
         Row: {
           created_at: string | null
@@ -1108,8 +1156,10 @@ export type Database = {
           id: string
           images: string[] | null
           is_edited: boolean | null
+          is_pinned_by_owner: boolean | null
           is_verified_visit: boolean | null
           likes_count: number | null
+          pinned_at: string | null
           rating: number
           status: Database["public"]["Enums"]["review_status"] | null
           updated_at: string | null
@@ -1122,8 +1172,10 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_edited?: boolean | null
+          is_pinned_by_owner?: boolean | null
           is_verified_visit?: boolean | null
           likes_count?: number | null
+          pinned_at?: string | null
           rating: number
           status?: Database["public"]["Enums"]["review_status"] | null
           updated_at?: string | null
@@ -1136,8 +1188,10 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_edited?: boolean | null
+          is_pinned_by_owner?: boolean | null
           is_verified_visit?: boolean | null
           likes_count?: number | null
+          pinned_at?: string | null
           rating?: number
           status?: Database["public"]["Enums"]["review_status"] | null
           updated_at?: string | null

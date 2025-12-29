@@ -86,3 +86,23 @@
 .leaflet-control-attribution a {
     color: var(--color-primary) !important;
 }
+
+/* Premium cafe marker glow animation */
+@keyframes premium-glow {
+    from {
+        box-shadow:
+            0 0 20px rgba(245, 158, 11, 0.6),
+            0 0 40px rgba(245, 158, 11, 0.3),
+            0 4px 12px rgba(180, 83, 9, 0.4);
+    }
+    to {
+        box-shadow:
+            0 0 30px rgba(245, 158, 11, 0.8),
+            0 0 60px rgba(245, 158, 11, 0.5),
+            0 4px 16px rgba(180, 83, 9, 0.5);
+    }
+}
+
+.cafe-marker-premium {
+    z-index: 1000 !important;
+}

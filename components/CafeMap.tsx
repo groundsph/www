@@ -113,7 +113,7 @@ function BoundsHandler({
 }
 
 export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
-    // Custom marker icon matching site theme
+    // Custom marker icon matching site theme (regular cafes)
     const createCafeIcon = useCallback(
         () =>
             new DivIcon({
@@ -145,7 +145,44 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
         []
     )
 
-    const customIcon = useMemo(() => createCafeIcon(), [createCafeIcon])
+    // Premium cafe icon with gold theme and glow effect
+    const createPremiumCafeIcon = useCallback(
+        () =>
+            new DivIcon({
+                className: "cafe-marker cafe-marker-premium",
+                html: `<div style="
+                    width: 40px;
+                    height: 40px;
+                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+                    border: 3px solid #fef3c7;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), 0 0 40px rgba(245, 158, 11, 0.3), 0 4px 12px rgba(180, 83, 9, 0.4);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    animation: premium-glow 2s ease-in-out infinite alternate;
+                ">
+                    <svg style="transform: rotate(45deg); width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="#fef3c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+                        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+                        <line x1="6" y1="2" x2="6" y2="4"/>
+                        <line x1="10" y1="2" x2="10" y2="4"/>
+                        <line x1="14" y1="2" x2="14" y2="4"/>
+                    </svg>
+                </div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40],
+            }),
+        []
+    )
+
+    const regularIcon = useMemo(() => createCafeIcon(), [createCafeIcon])
+    const premiumIcon = useMemo(
+        () => createPremiumCafeIcon(),
+        [createPremiumCafeIcon]
+    )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Cluster type from external react-leaflet-cluster library
     const createClusterCustomIcon = function (cluster: any) {
@@ -238,7 +275,11 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                         <Marker
                             key={cafe.id}
                             position={[cafe.lat, cafe.lng]}
-                            icon={customIcon}
+                            icon={
+                                cafe.membership_tier === "premium"
+                                    ? premiumIcon
+                                    : regularIcon
+                            }
                         >
                             <Popup className='cafe-popup'>
                                 <div className='w-72 max-w-[70svw] flex flex-col rounded-xl overflow-hidden shadow-lg border border-secondary/20 bg-background'>

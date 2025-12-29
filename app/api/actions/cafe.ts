@@ -264,7 +264,11 @@ export async function getAllCafes(
     if (filters.price_level) query = query.eq("price_level", filters.price_level)
     if (filters.region) query = query.eq("region", filters.region)
 
-    // Sorting
+    // Priority ranking: Premium cafes always appear first
+    // membership_tier enum: 'free' < 'basic' < 'premium', so descending puts premium first
+    query = query.order("membership_tier", { ascending: false, nullsFirst: false })
+
+    // Secondary sorting
     switch (filters.sortBy) {
         case "rating":
             query = query.order("average_rating", { referencedTable: 'cafe_rating_stats', ascending: false })
