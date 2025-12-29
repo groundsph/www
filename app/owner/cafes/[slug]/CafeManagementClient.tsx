@@ -407,21 +407,20 @@ export default function CafeManagementClient({
             id: "menu" as Tab,
             label: "Menu",
             icon: UtensilsCrossed,
-            locked: tier === "free",
-            requiredTier: "Pro",
+            locked: !canAccessFeature(tier, "menu"),
         },
         {
             id: "analytics" as Tab,
             label: "Analytics",
             icon: BarChart3,
-            locked: tier === "free",
+            locked: !canAccessFeature(tier, "analytics"),
             requiredTier: "Pro",
         },
         {
             id: "blog" as Tab,
             label: "Blog",
             icon: FileText,
-            locked: tier === "free",
+            locked: !canAccessFeature(tier, "blog"),
             requiredTier: "Pro",
         },
         {
@@ -843,11 +842,12 @@ export default function CafeManagementClient({
                                 </button>
                                 <button
                                     onClick={() =>
-                                        tier !== "free" && setActiveTab("menu")
+                                        canAccessFeature(tier, "menu") &&
+                                        setActiveTab("menu")
                                     }
-                                    disabled={tier === "free"}
+                                    disabled={!canAccessFeature(tier, "menu")}
                                     className={`p-4 bg-text/5 rounded-xl border border-text/10 text-left ${
-                                        tier === "free"
+                                        !canAccessFeature(tier, "menu")
                                             ? "opacity-50 cursor-not-allowed"
                                             : "hover:border-primary/30 transition-colors"
                                     }`}
@@ -855,9 +855,7 @@ export default function CafeManagementClient({
                                     <UtensilsCrossed className='w-6 h-6 text-primary mb-2' />
                                     <p className='font-medium'>Manage Menu</p>
                                     <p className='text-sm text-text/60'>
-                                        {tier === "free"
-                                            ? "Upgrade to Pro"
-                                            : `${menuItems.length} items`}
+                                        {`${menuItems.length} / ${tierConfig.menuLimit === Infinity ? "∞" : tierConfig.menuLimit} items`}
                                     </p>
                                 </button>
                                 <button
@@ -1067,7 +1065,7 @@ export default function CafeManagementClient({
                         </motion.div>
                     )}
 
-                    {activeTab === "menu" && tier !== "free" && (
+                    {activeTab === "menu" && canAccessFeature(tier, "menu") && (
                         <motion.div
                             key='menu'
                             initial={{ opacity: 0, y: 10 }}
@@ -1088,7 +1086,7 @@ export default function CafeManagementClient({
                                 <button
                                     onClick={openAddMenu}
                                     disabled={
-                                        tier === "pro" && menuItems.length >= 5
+                                        menuItems.length >= tierConfig.menuLimit
                                     }
                                     className='inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors'
                                 >
@@ -1747,27 +1745,28 @@ export default function CafeManagementClient({
                         </motion.div>
                     )}
 
-                    {activeTab === "events" && tier !== "free" && (
-                        <motion.div
-                            key='events'
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className='space-y-6'
-                        >
-                            {eventsLoading ? (
-                                <div className='flex items-center justify-center py-12'>
-                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
-                                </div>
-                            ) : (
-                                <EventsManagement
-                                    initialEvents={events}
-                                    cafeId={cafe.id}
-                                    cafeName={cafe.name}
-                                />
-                            )}
-                        </motion.div>
-                    )}
+                    {activeTab === "events" &&
+                        canAccessFeature(tier, "events") && (
+                            <motion.div
+                                key='events'
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className='space-y-6'
+                            >
+                                {eventsLoading ? (
+                                    <div className='flex items-center justify-center py-12'>
+                                        <Loader2 className='w-8 h-8 animate-spin text-primary' />
+                                    </div>
+                                ) : (
+                                    <EventsManagement
+                                        initialEvents={events}
+                                        cafeId={cafe.id}
+                                        cafeName={cafe.name}
+                                    />
+                                )}
+                            </motion.div>
+                        )}
 
                     {activeTab === "settings" && (
                         <motion.div

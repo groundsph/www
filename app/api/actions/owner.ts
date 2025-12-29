@@ -680,14 +680,6 @@ export async function addMenuItem(
         const tier = subscription?.tier || 'free'
         const tierConfig = SUBSCRIPTION_TIERS[tier]
 
-        if (tierConfig.menuLimit === 0) {
-            return {
-                success: false,
-                error: 'Upgrade to Pro to add menu items',
-                remaining_slots: 0,
-            }
-        }
-
         // Count current items
         const { count } = await db
             .from('cafe_menu_items')
@@ -699,7 +691,7 @@ export async function addMenuItem(
         if (tierConfig.menuLimit !== Infinity && currentCount >= tierConfig.menuLimit) {
             return {
                 success: false,
-                error: `You've reached the ${tierConfig.menuLimit} item limit. Upgrade to Premium for unlimited items.`,
+                error: `You've reached the ${tierConfig.menuLimit} item limit. Upgrade to add more items.`,
                 remaining_slots: 0,
             }
         }
