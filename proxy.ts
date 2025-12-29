@@ -7,29 +7,6 @@ const protectedRoutesExact = ["/profile"]
 const protectedRoutesPrefixes = ["/submit"]
 
 export async function proxy(request: NextRequest) {
-    // -----------------------------------------------------------------------------
-    // 1. Initial Redirects (WWW -> non-WWW, HTTP -> HTTPS)
-    // -----------------------------------------------------------------------------
-    const url = request.nextUrl.clone();
-    const hostname = request.headers.get("host") || "";
-    const protocol = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
-
-    // Redirect WWW to non-WWW
-    if (hostname.startsWith("www.")) {
-        url.hostname = hostname.replace("www.", "");
-        url.protocol = "https";
-        return NextResponse.redirect(url, 301);
-    }
-
-    // Redirect HTTP to HTTPS (in production, if x-forwarded-proto check passes)
-    if (protocol === "http" && hostname !== "localhost") {
-        url.protocol = "https";
-        return NextResponse.redirect(url, 301);
-    }
-
-    // -----------------------------------------------------------------------------
-    // 2. Auth & Protected Routes Logic
-    // -----------------------------------------------------------------------------
     let supabaseResponse = NextResponse.next({
         request,
     })
