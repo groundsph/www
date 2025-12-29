@@ -60,6 +60,22 @@ export async function getCafeAnalytics(
         return null // Not an owner
     }
 
+    // Check subscription tier - analytics requires Pro or higher
+    const { data: subscription } = await db
+        .from("cafe_subscriptions")
+        .select("tier")
+        .eq("cafe_id", cafeId)
+        .single()
+
+    // Map database tier to display tier and check feature access
+    const dbTier = subscription?.tier || "free"
+    const displayTier = dbTier === "basic" ? "pro" : dbTier as "free" | "pro" | "premium"
+
+    // Analytics requires Pro+ tier
+    if (displayTier === "free") {
+        return null // Free tier cannot access analytics
+    }
+
     // Calculate date range
     const endDate = new Date()
     const startDate = new Date()
