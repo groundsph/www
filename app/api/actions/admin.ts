@@ -1580,8 +1580,8 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
 
     // Delete review images from storage
     if (review?.images && review.images.length > 0) {
-        const { deleteReviewImages } = await import('@/utils/supabase/storage')
-        await deleteReviewImages(review.images)
+        const { deleteReviewImagesAction } = await import('@/utils/storage/actions')
+        await deleteReviewImagesAction(review.images)
     }
 
     // Delete review interactions
@@ -1800,8 +1800,8 @@ export async function deleteBadgeDefinition(badgeId: string): Promise<AdminActio
 
     // Delete badge image from storage
     if (badge?.image_url) {
-        const { deleteBadgeImage } = await import('@/utils/supabase/storage')
-        await deleteBadgeImage(badge.image_url)
+        const { deleteBadgeImageAction } = await import('@/utils/storage/actions')
+        await deleteBadgeImageAction(badge.image_url)
     }
 
     return { success: true }

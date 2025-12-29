@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { EventWithCafe, EventStatus } from "@/utils/types/extra"
 import { EventInput, createEvent, updateEvent } from "@/app/api/actions/events"
-import { uploadEventImage } from "@/utils/supabase/storage"
+import { uploadEventImageAction } from "@/utils/storage/actions"
 import {
     PHILIPPINES_LOCATIONS,
     getProvincesForRegion,
@@ -96,7 +96,7 @@ export default function EventEditor({
             const formData = new FormData()
             formData.append("image", file)
 
-            const result = await uploadEventImage(formData, cafeId)
+            const result = await uploadEventImageAction(formData, cafeId)
 
             if (result.success && result.url) {
                 setImageUrl(result.url)

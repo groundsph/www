@@ -321,8 +321,8 @@ export async function deleteCafeImageAsOwner(
     }
 
     // Import and call the storage delete function
-    const { deleteSingleCafeImage } = await import('@/utils/supabase/storage')
-    return deleteSingleCafeImage(imageUrl)
+    const { deleteSingleCafeImageAction } = await import('@/utils/storage/actions')
+    return deleteSingleCafeImageAction(imageUrl)
 }
 
 /**

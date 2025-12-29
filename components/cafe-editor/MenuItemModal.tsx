@@ -16,7 +16,7 @@ import {
     type MenuItemForm,
     type CafeMenuItem,
 } from "@/utils/types/owner"
-import { uploadMenuPhoto } from "@/utils/supabase/storage"
+import { uploadMenuPhotoAction } from "@/utils/storage/actions"
 
 interface MenuItemModalProps {
     /** Whether the modal is open */
@@ -182,7 +182,7 @@ export default function MenuItemModal({
                 formData.append("cafeId", cafeId)
 
                 setUploadProgress(50)
-                const result = await uploadMenuPhoto(formData)
+                const result = await uploadMenuPhotoAction(formData, cafeId)
 
                 if (result.success && result.url) {
                     imageUrl = result.url

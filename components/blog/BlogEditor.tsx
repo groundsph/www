@@ -23,7 +23,7 @@ import {
     estimateReadingTime,
 } from "@/utils/types/blog"
 import { createBlogPost, updateBlogPost } from "@/app/api/actions/blog"
-import { uploadBlogImage } from "@/utils/supabase/storage"
+import { uploadBlogImageAction } from "@/utils/storage/actions"
 import MarkdownRender from "@/components/MarkdownRender"
 
 interface BlogEditorProps {
@@ -89,7 +89,7 @@ export default function BlogEditor({
             const formData = new FormData()
             formData.append("image", file)
 
-            const result = await uploadBlogImage(formData)
+            const result = await uploadBlogImageAction(formData)
 
             if (result.success && result.url) {
                 setCoverImage(result.url)
