@@ -1020,6 +1020,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"] | null
           stats: Json | null
           support_since: string | null
+          supporter_expires_at: string | null
           total_contribution: number | null
           updated_at: string | null
           username: string
@@ -1036,6 +1037,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"] | null
           stats?: Json | null
           support_since?: string | null
+          supporter_expires_at?: string | null
           total_contribution?: number | null
           updated_at?: string | null
           username: string
@@ -1052,6 +1054,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"] | null
           stats?: Json | null
           support_since?: string | null
+          supporter_expires_at?: string | null
           total_contribution?: number | null
           updated_at?: string | null
           username?: string
@@ -1157,6 +1160,59 @@ export type Database = {
           },
           {
             foreignKeyName: "reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supporter_subscriptions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          email: string
+          from_name: string
+          id: string
+          is_first_subscription: boolean | null
+          is_subscription: boolean | null
+          kofi_transaction_id: string
+          message: string | null
+          tier_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          email: string
+          from_name: string
+          id?: string
+          is_first_subscription?: boolean | null
+          is_subscription?: boolean | null
+          kofi_transaction_id: string
+          message?: string | null
+          tier_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          email?: string
+          from_name?: string
+          id?: string
+          is_first_subscription?: boolean | null
+          is_subscription?: boolean | null
+          kofi_transaction_id?: string
+          message?: string | null
+          tier_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supporter_subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"

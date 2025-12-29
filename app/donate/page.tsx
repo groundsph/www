@@ -7,8 +7,12 @@ import {
     Code,
     Users,
     Rocket,
+    Coffee,
+    ExternalLink,
+    Award,
 } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 
 export const metadata: Metadata = {
     title: "Support Grounds",
@@ -39,6 +43,64 @@ export default function DonatePage() {
 
                 {/* Donation Options */}
                 <div className='space-y-6'>
+                    {/* Ko-fi - Featured */}
+                    <div className='bg-linear-to-br from-[#FF5E5B]/10 to-[#29ABE0]/10 border-2 border-[#FF5E5B]/30 rounded-xl p-6 relative overflow-hidden'>
+                        {/* Badge highlight */}
+                        <div className='absolute top-3 right-3 flex items-center gap-1.5 bg-primary/90 text-background text-xs font-semibold px-2.5 py-1 rounded-full'>
+                            <Award className='w-3.5 h-3.5' />
+                            Earn Supporter Badge
+                        </div>
+
+                        <div className='flex items-center gap-3 mb-4'>
+                            <div className='w-12 h-12 rounded-lg bg-[#FF5E5B]/20 flex items-center justify-center'>
+                                <Coffee className='w-6 h-6 text-[#FF5E5B]' />
+                            </div>
+                            <div>
+                                <h2 className='font-serif text-xl font-semibold text-text'>
+                                    Ko-fi
+                                </h2>
+                                <p className='text-text/60 text-sm'>
+                                    One-time or monthly support
+                                </p>
+                            </div>
+                        </div>
+
+                        <p className='text-text/70 text-sm mb-4'>
+                            Support on Ko-fi to become a{" "}
+                            <strong>Grounds Supporter</strong>! You&apos;ll
+                            receive a special badge on your profile and help
+                            keep the platform running.
+                        </p>
+
+                        {/* Email matching note */}
+                        <div className='bg-text/5 border border-text/10 rounded-lg p-3 mb-4'>
+                            <p className='text-text/60 text-xs'>
+                                <strong className='text-text/80'>
+                                    💡 Tip:
+                                </strong>{" "}
+                                Use the same email as your Grounds account for
+                                automatic badge linking.{" "}
+                                <Link
+                                    href='/profile/claim-supporter'
+                                    className='text-primary hover:underline'
+                                >
+                                    Already donated? Claim your badge here
+                                </Link>
+                            </p>
+                        </div>
+
+                        <Link
+                            href='https://ko-fi.com/adrianbonpin'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='inline-flex items-center gap-2 bg-[#FF5E5B] hover:bg-[#FF5E5B]/90 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors'
+                        >
+                            <Coffee className='w-4 h-4' />
+                            Support on Ko-fi
+                            <ExternalLink className='w-4 h-4' />
+                        </Link>
+                    </div>
+
                     {/* QRPh */}
                     <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                         <div className='flex items-center gap-3 mb-4'>

@@ -120,11 +120,76 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        // ============================================
+        // Check for expired supporters
+        // ============================================
+
+        let expiredSupportersCount = 0
+
+        // Find supporters whose expiry has passed (null = lifetime, never expires)
+        const { data: expiredSupporters, error: supporterFetchError } = await adminDb
+            .from('profiles')
+            .select('id, display_name, supporter_expires_at')
+            .eq('is_supporter', true)
+            .not('supporter_expires_at', 'is', null)
+            .lt('supporter_expires_at', now)
+
+        if (supporterFetchError) {
+            console.error('Error fetching expired supporters:', supporterFetchError)
+        } else if (expiredSupporters && expiredSupporters.length > 0) {
+            console.log(`Found ${expiredSupporters.length} expired supporter(s)`)
+
+            for (const supporter of expiredSupporters) {
+                try {
+                    // Remove supporter status
+                    const { error: updateError } = await adminDb
+                        .from('profiles')
+                        .update({
+                            is_supporter: false,
+                            // Keep supporter_expires_at for history
+                        })
+                        .eq('id', supporter.id)
+
+                    if (updateError) throw updateError
+
+                    // Remove the supporter badge
+                    // First get the badge ID
+                    const { data: badge } = await adminDb
+                        .from('badge_definitions')
+                        .select('id')
+                        .eq('name', 'Grounds Supporter')
+                        .single()
+
+                    if (badge) {
+                        await adminDb
+                            .from('user_badges')
+                            .delete()
+                            .eq('user_id', supporter.id)
+                            .eq('badge_id', badge.id)
+                    }
+
+                    console.log(`Expired supporter status for: ${supporter.display_name || supporter.id}`)
+                    expiredSupportersCount++
+
+                } catch (err) {
+                    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+                    errors.push(`Supporter ${supporter.id}: ${errorMessage}`)
+                    console.error(`Error expiring supporter ${supporter.id}:`, err)
+                }
+            }
+        }
+
         return NextResponse.json({
             success: true,
-            message: `Processed ${processedCount} expired subscription(s)`,
-            processed: processedCount,
-            total: expiredSubscriptions.length,
+            message: `Processed ${processedCount} expired subscription(s), ${expiredSupportersCount} expired supporter(s)`,
+            cafeSubscriptions: {
+                processed: processedCount,
+                total: expiredSubscriptions.length,
+            },
+            supporters: {
+                expired: expiredSupportersCount,
+                total: expiredSupporters?.length ?? 0,
+            },
             errors: errors.length > 0 ? errors : undefined
         })
 
