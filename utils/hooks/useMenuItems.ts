@@ -39,6 +39,8 @@ export interface UseMenuItemsReturn {
     saveItem: (data: MenuItemForm) => Promise<boolean>
     /** Delete a menu item */
     deleteItem: (item: CafeMenuItem) => Promise<boolean>
+    /** Toggle item availability */
+    toggleAvailability: (item: CafeMenuItem) => Promise<boolean>
 }
 
 /**
@@ -158,6 +160,50 @@ export function useMenuItems(options: UseMenuItemsOptions): UseMenuItemsReturn {
         [onSuccess, onError]
     )
 
+    const toggleAvailability = useCallback(
+        async (item: CafeMenuItem): Promise<boolean> => {
+            const newAvailability = !item.is_available
+
+            // Optimistically update UI
+            setItems((prev) =>
+                prev.map((i) =>
+                    i.id === item.id ? { ...i, is_available: newAvailability } : i
+                )
+            )
+
+            try {
+                const result = await updateMenuItem(item.id, {
+                    name: item.name,
+                    category: item.category,
+                    price: item.price,
+                    is_available: newAvailability,
+                })
+
+                if (!result.success) {
+                    // Revert on failure
+                    setItems((prev) =>
+                        prev.map((i) =>
+                            i.id === item.id ? { ...i, is_available: item.is_available } : i
+                        )
+                    )
+                    onError?.(result.error || "Failed to update availability")
+                    return false
+                }
+                return true
+            } catch {
+                // Revert on error
+                setItems((prev) =>
+                    prev.map((i) =>
+                        i.id === item.id ? { ...i, is_available: item.is_available } : i
+                    )
+                )
+                onError?.("Failed to update availability")
+                return false
+            }
+        },
+        [onError]
+    )
+
     return {
         items,
         loading,
@@ -168,5 +214,6 @@ export function useMenuItems(options: UseMenuItemsOptions): UseMenuItemsReturn {
         closeModal,
         saveItem,
         deleteItem: deleteItemFn,
+        toggleAvailability,
     }
 }

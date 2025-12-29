@@ -230,80 +230,85 @@ export default function CafeDetails({
                         ),
                         menu:
                             menuItems.length > 0 ? (
-                                <div className='space-y-4'>
-                                    {Array.from(
-                                        new Set(
-                                            menuItems.map(
-                                                (item) => item.category
-                                            )
+                                <div className='space-y-3 bg-tertiary/30 p-4 rounded-xl'>
+                                    {menuItems
+                                        .filter(
+                                            (item) =>
+                                                item.is_available &&
+                                                item.category !== "Add-ons"
                                         )
-                                    ).map((category) => (
-                                        <div
-                                            key={category}
-                                            className='space-y-2'
-                                        >
-                                            <h3 className='text-sm font-medium text-text/60 uppercase tracking-wide'>
-                                                {category}
-                                            </h3>
-                                            <div className='grid gap-2'>
-                                                {menuItems
-                                                    .filter(
-                                                        (item) =>
-                                                            item.category ===
-                                                                category &&
-                                                            item.is_available
-                                                    )
-                                                    .map((item) => (
-                                                        <div
-                                                            key={item.id}
-                                                            className='flex justify-between items-start p-3 bg-tertiary/50 rounded-lg gap-3'
-                                                        >
-                                                            {item.image_url && (
-                                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
-                                                                    <Image
-                                                                        src={
-                                                                            item.image_url
-                                                                        }
-                                                                        alt={
-                                                                            item.name
-                                                                        }
-                                                                        fill
-                                                                        className='object-cover'
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                            <div className='flex-1 min-w-0'>
-                                                                <div className='flex items-center gap-2'>
-                                                                    <span className='font-medium'>
-                                                                        {
-                                                                            item.name
-                                                                        }
-                                                                    </span>
-                                                                    {item.is_signature && (
-                                                                        <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
-                                                                            ★
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                {item.description && (
-                                                                    <p className='text-sm text-text/60 mt-0.5'>
-                                                                        {
-                                                                            item.description
-                                                                        }
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            <span className='font-semibold text-primary ml-4'>
-                                                                ₱
-                                                                {item.price.toFixed(
-                                                                    0
-                                                                )}
+                                        .sort((a, b) => {
+                                            const aIsSpecialty = a.category
+                                                .toLowerCase()
+                                                .includes("special")
+                                            const bIsSpecialty = b.category
+                                                .toLowerCase()
+                                                .includes("special")
+                                            if (aIsSpecialty && !bIsSpecialty)
+                                                return -1
+                                            if (!aIsSpecialty && bIsSpecialty)
+                                                return 1
+                                            if (
+                                                a.is_signature &&
+                                                !b.is_signature
+                                            )
+                                                return -1
+                                            if (
+                                                !a.is_signature &&
+                                                b.is_signature
+                                            )
+                                                return 1
+                                            return 0
+                                        })
+                                        .slice(0, 5)
+                                        .map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className='flex justify-between items-start gap-4'
+                                            >
+                                                <div className='flex-1 min-w-0'>
+                                                    <div className='flex items-center gap-2'>
+                                                        <span className='font-semibold'>
+                                                            {item.name}
+                                                        </span>
+                                                        {item.is_signature && (
+                                                            <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
+                                                                ★
                                                             </span>
-                                                        </div>
-                                                    ))}
+                                                        )}
+                                                    </div>
+                                                    {item.description && (
+                                                        <p className='text-sm text-text/60 mt-0.5'>
+                                                            {item.description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <span className='font-medium text-text/80 shrink-0'>
+                                                    ₱{item.price.toFixed(2)}
+                                                </span>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    {menuItems.filter(
+                                        (item) =>
+                                            item.is_available &&
+                                            item.category !== "Add-ons"
+                                    ).length > 5 && (
+                                        <Link
+                                            href={`/cafes/${cafe.slug}/menu`}
+                                            className='block text-center text-sm text-primary hover:text-primary/80 font-medium transition-colors pt-2'
+                                        >
+                                            View Full Menu (
+                                            {
+                                                menuItems.filter(
+                                                    (item) =>
+                                                        item.is_available &&
+                                                        item.category !==
+                                                            "Add-ons"
+                                                ).length
+                                            }{" "}
+                                            items) →
+                                        </Link>
+                                    )}
                                 </div>
                             ) : (
                                 <div className='text-center py-8 text-text/50'>
@@ -424,81 +429,91 @@ export default function CafeDetails({
                         </div>
                     )}
 
-                    {/* Menu Section */}
+                    {/* Menu Section - Preview with specialties priority */}
                     {menuItems.length > 0 && (
                         <section className='w-full mt-6'>
-                            <h2 className='text-xl font-semibold mb-4'>Menu</h2>
-                            <div className='grid gap-4'>
-                                {/* Group by category */}
-                                {Array.from(
-                                    new Set(
-                                        menuItems.map((item) => item.category)
+                            <div className='flex items-center justify-between mb-4'>
+                                <h2 className='text-xl font-semibold'>Menu</h2>
+                                <Link
+                                    href={`/cafes/${cafe.slug}/menu`}
+                                    className='text-sm text-primary hover:text-primary/80 font-medium transition-colors'
+                                >
+                                    View Full Menu →
+                                </Link>
+                            </div>
+                            <div className='space-y-3 bg-tertiary/30 p-4 rounded-xl'>
+                                {/* Sort items: specialties first, then by signature status */}
+                                {menuItems
+                                    .filter(
+                                        (item) =>
+                                            item.is_available &&
+                                            item.category !== "Add-ons"
                                     )
-                                ).map((category) => (
-                                    <div
-                                        key={category}
-                                        className='space-y-2'
-                                    >
-                                        <h3 className='text-sm font-medium text-text/60 uppercase tracking-wide'>
-                                            {category}
-                                        </h3>
-                                        <div className='grid gap-2'>
-                                            {menuItems
-                                                .filter(
-                                                    (item) =>
-                                                        item.category ===
-                                                            category &&
-                                                        item.is_available
-                                                )
-                                                .map((item) => (
-                                                    <div
-                                                        key={item.id}
-                                                        className='flex justify-between items-start p-3 bg-tertiary/50 rounded-lg gap-3'
-                                                    >
-                                                        {item.image_url && (
-                                                            <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
-                                                                <Image
-                                                                    src={
-                                                                        item.image_url
-                                                                    }
-                                                                    alt={
-                                                                        item.name
-                                                                    }
-                                                                    fill
-                                                                    className='object-cover'
-                                                                />
-                                                            </div>
-                                                        )}
-                                                        <div className='flex-1 min-w-0'>
-                                                            <div className='flex items-center gap-2'>
-                                                                <span className='font-medium'>
-                                                                    {item.name}
-                                                                </span>
-                                                                {item.is_signature && (
-                                                                    <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
-                                                                        ★
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {item.description && (
-                                                                <p className='text-sm text-text/60 mt-0.5'>
-                                                                    {
-                                                                        item.description
-                                                                    }
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <span className='font-semibold text-primary ml-4'>
-                                                            ₱
-                                                            {item.price.toFixed(
-                                                                0
-                                                            )}
+                                    .sort((a, b) => {
+                                        const aIsSpecialty = a.category
+                                            .toLowerCase()
+                                            .includes("special")
+                                        const bIsSpecialty = b.category
+                                            .toLowerCase()
+                                            .includes("special")
+                                        if (aIsSpecialty && !bIsSpecialty)
+                                            return -1
+                                        if (!aIsSpecialty && bIsSpecialty)
+                                            return 1
+                                        if (a.is_signature && !b.is_signature)
+                                            return -1
+                                        if (!a.is_signature && b.is_signature)
+                                            return 1
+                                        return 0
+                                    })
+                                    .slice(0, 5)
+                                    .map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className='flex justify-between items-start gap-4'
+                                        >
+                                            <div className='flex-1 min-w-0'>
+                                                <div className='flex items-center gap-2'>
+                                                    <span className='font-semibold'>
+                                                        {item.name}
+                                                    </span>
+                                                    {item.is_signature && (
+                                                        <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
+                                                            ★
                                                         </span>
-                                                    </div>
-                                                ))}
+                                                    )}
+                                                </div>
+                                                {item.description && (
+                                                    <p className='text-sm text-text/60 mt-0.5'>
+                                                        {item.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <span className='font-medium text-text/80 shrink-0'>
+                                                ₱{item.price.toFixed(2)}
+                                            </span>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                {menuItems.filter(
+                                    (item) =>
+                                        item.is_available &&
+                                        item.category !== "Add-ons"
+                                ).length > 5 && (
+                                    <Link
+                                        href={`/cafes/${cafe.slug}/menu`}
+                                        className='block text-center text-sm text-primary hover:text-primary/80 font-medium transition-colors pt-2'
+                                    >
+                                        View Full Menu (
+                                        {
+                                            menuItems.filter(
+                                                (item) =>
+                                                    item.is_available &&
+                                                    item.category !== "Add-ons"
+                                            ).length
+                                        }{" "}
+                                        items) →
+                                    </Link>
+                                )}
                             </div>
                         </section>
                     )}

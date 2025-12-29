@@ -239,14 +239,31 @@ export interface CafeMenuItem {
 
 // Common menu categories
 export const MENU_CATEGORIES = [
+    // Beverages - Coffee
     'Coffee',
     'Espresso Drinks',
+    'Cold Brew',
+    // Beverages - Non-Coffee
     'Non-Coffee',
     'Tea',
+    'Milk Drinks',
+    'Frappes',
+    'Smoothies',
     'Specialty Drinks',
+    'Refreshers',
+    // Food
     'Food',
+    'Rice Meals',
+    'Sandwiches',
+    'Pasta',
+    'Breakfast',
+    'Snacks',
+    // Sweets
     'Pastries',
     'Desserts',
+    'Cakes',
+    // Extras
+    'Add-ons',
     'Other',
 ] as const;
 

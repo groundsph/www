@@ -319,6 +319,39 @@ export default function CafeManagementClient({
         }
     }
 
+    const handleToggleAvailability = async (item: CafeMenuItem) => {
+        const newAvailability = !item.is_available
+
+        // Optimistically update UI
+        setMenuItems((prev) =>
+            prev.map((i) =>
+                i.id === item.id ? { ...i, is_available: newAvailability } : i
+            )
+        )
+
+        const result = await updateMenuItem(item.id, {
+            name: item.name,
+            category: item.category,
+            price: item.price,
+            is_available: newAvailability,
+        })
+
+        if (!result.success) {
+            // Revert on failure
+            setMenuItems((prev) =>
+                prev.map((i) =>
+                    i.id === item.id
+                        ? { ...i, is_available: item.is_available }
+                        : i
+                )
+            )
+            addNotification(
+                result.error || "Failed to update availability",
+                "error"
+            )
+        }
+    }
+
     // Blog handlers
     const loadBlogPosts = async () => {
         setBlogLoading(true)
@@ -1099,69 +1132,228 @@ export default function CafeManagementClient({
                                     </p>
                                 </div>
                             ) : (
-                                <div className='grid gap-3'>
-                                    {menuItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className='flex items-center gap-4 p-4 bg-text/5 rounded-xl border border-text/10'
-                                        >
-                                            {item.image_url ? (
-                                                <div className='relative w-16 h-16 rounded-lg overflow-hidden bg-text/10 shrink-0'>
-                                                    <Image
-                                                        src={item.image_url}
-                                                        alt={item.name}
-                                                        fill
-                                                        className='object-cover'
-                                                    />
+                                <div className='space-y-6'>
+                                    {/* Group by category */}
+                                    {[
+                                        ...new Set(
+                                            menuItems.map(
+                                                (item) => item.category
+                                            )
+                                        ),
+                                    ].map((category) => (
+                                        <div key={category}>
+                                            <h3 className='text-sm font-semibold text-text/70 uppercase tracking-wide mb-3'>
+                                                {category}
+                                            </h3>
+
+                                            {/* Add-ons: render as simple list */}
+                                            {category === "Add-ons" ? (
+                                                <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
+                                                    {menuItems
+                                                        .filter(
+                                                            (item) =>
+                                                                item.category ===
+                                                                category
+                                                        )
+                                                        .map((item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                className={`flex items-center justify-between py-2 px-3 rounded-lg border transition-all ${
+                                                                    item.is_available
+                                                                        ? "bg-text/5 border-text/10"
+                                                                        : "bg-red-50 border-red-200 opacity-60"
+                                                                }`}
+                                                            >
+                                                                <div className='flex-1 min-w-0'>
+                                                                    <span className='font-medium text-sm'>
+                                                                        {
+                                                                            item.name
+                                                                        }
+                                                                    </span>
+                                                                    {item.description && (
+                                                                        <span className='text-xs text-text/60 ml-2 truncate'>
+                                                                            {
+                                                                                item.description
+                                                                            }
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <span className='text-sm font-semibold text-primary mx-2'>
+                                                                    +₱
+                                                                    {item.price.toFixed(
+                                                                        0
+                                                                    )}
+                                                                </span>
+                                                                {/* Toggle + Actions */}
+                                                                <div className='flex items-center gap-2'>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            handleToggleAvailability(
+                                                                                item
+                                                                            )
+                                                                        }
+                                                                        className={`relative w-8 h-4 rounded-full transition-colors ${
+                                                                            item.is_available
+                                                                                ? "bg-green-500"
+                                                                                : "bg-gray-300"
+                                                                        }`}
+                                                                        title={
+                                                                            item.is_available
+                                                                                ? "Mark as unavailable"
+                                                                                : "Mark as available"
+                                                                        }
+                                                                    >
+                                                                        <span
+                                                                            className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${
+                                                                                item.is_available
+                                                                                    ? "translate-x-4"
+                                                                                    : "translate-x-0"
+                                                                            }`}
+                                                                        />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            openEditMenu(
+                                                                                item
+                                                                            )
+                                                                        }
+                                                                        className='p-1 text-text/40 hover:text-text transition-colors'
+                                                                        title='Edit'
+                                                                    >
+                                                                        <Edit2 className='w-3 h-3' />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            handleDeleteMenuItem(
+                                                                                item.id
+                                                                            )
+                                                                        }
+                                                                        className='p-1 text-text/40 hover:text-red-500 transition-colors'
+                                                                        title='Delete'
+                                                                    >
+                                                                        <Trash2 className='w-3 h-3' />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                 </div>
                                             ) : (
-                                                <div className='w-16 h-16 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
-                                                    <UtensilsCrossed className='w-6 h-6 text-text opacity-30' />
+                                                /* Regular grid for other categories */
+                                                <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
+                                                    {menuItems
+                                                        .filter(
+                                                            (item) =>
+                                                                item.category ===
+                                                                category
+                                                        )
+                                                        .map((item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                className={`relative p-3 rounded-xl border transition-all ${
+                                                                    item.is_available
+                                                                        ? "bg-text/5 border-text/10"
+                                                                        : "bg-red-50 border-red-200 opacity-60"
+                                                                }`}
+                                                            >
+                                                                {/* Image */}
+                                                                {item.image_url ? (
+                                                                    <div className='relative w-full aspect-square rounded-lg overflow-hidden mb-2'>
+                                                                        <Image
+                                                                            src={
+                                                                                item.image_url
+                                                                            }
+                                                                            alt={
+                                                                                item.name
+                                                                            }
+                                                                            fill
+                                                                            className='object-cover'
+                                                                        />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className='w-full aspect-square rounded-lg bg-text/10 flex items-center justify-center mb-2'>
+                                                                        <UtensilsCrossed className='w-8 h-8 text-text opacity-30' />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Item Info */}
+                                                                <div className='space-y-1'>
+                                                                    <h4 className='font-medium text-sm leading-tight'>
+                                                                        {
+                                                                            item.name
+                                                                        }
+                                                                        {item.is_signature && (
+                                                                            <span className='ml-1 text-amber-500'>
+                                                                                ★
+                                                                            </span>
+                                                                        )}
+                                                                    </h4>
+                                                                    <p className='text-sm font-semibold text-primary'>
+                                                                        ₱
+                                                                        {item.price.toFixed(
+                                                                            0
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Actions Row */}
+                                                                <div className='flex items-center justify-between mt-3 pt-2 border-t border-text/10'>
+                                                                    {/* Availability Toggle */}
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            handleToggleAvailability(
+                                                                                item
+                                                                            )
+                                                                        }
+                                                                        className={`relative w-10 h-5 rounded-full transition-colors ${
+                                                                            item.is_available
+                                                                                ? "bg-green-500"
+                                                                                : "bg-gray-300"
+                                                                        }`}
+                                                                        title={
+                                                                            item.is_available
+                                                                                ? "Mark as unavailable"
+                                                                                : "Mark as available"
+                                                                        }
+                                                                    >
+                                                                        <span
+                                                                            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                                                                                item.is_available
+                                                                                    ? "translate-x-5"
+                                                                                    : "translate-x-0"
+                                                                            }`}
+                                                                        />
+                                                                    </button>
+
+                                                                    {/* Edit/Delete Buttons */}
+                                                                    <div className='flex flex-1 items-center gap-1 pl-2'>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                openEditMenu(
+                                                                                    item
+                                                                                )
+                                                                            }
+                                                                            className='p-1.5 flex-1 items-center flex justify-center bg-accent/10 hover:bg-accent/20 text-text/40 hover:text-text transition-colors rounded'
+                                                                            title='Edit item'
+                                                                        >
+                                                                            <Edit2 className='w-3.5 h-3.5' />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                handleDeleteMenuItem(
+                                                                                    item.id
+                                                                                )
+                                                                            }
+                                                                            className='p-1.5 flex-1 text-text/40 hover:text-red-500 transition-colors rounded bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center'
+                                                                            title='Delete item'
+                                                                        >
+                                                                            <Trash2 className='w-3.5 h-3.5' />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                 </div>
                                             )}
-                                            <div className='flex-1 min-w-0'>
-                                                <div className='flex items-center gap-2'>
-                                                    <p className='font-medium truncate'>
-                                                        {item.name}
-                                                    </p>
-                                                    {item.is_signature && (
-                                                        <span className='px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded'>
-                                                            Signature
-                                                        </span>
-                                                    )}
-                                                    {!item.is_available && (
-                                                        <span className='px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded'>
-                                                            Unavailable
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className='text-sm text-text/60 truncate'>
-                                                    {item.category}
-                                                </p>
-                                                <p className='text-sm font-medium text-primary'>
-                                                    ₱{item.price.toFixed(2)}
-                                                </p>
-                                            </div>
-                                            <div className='flex items-center gap-1'>
-                                                <button
-                                                    onClick={() =>
-                                                        openEditMenu(item)
-                                                    }
-                                                    className='p-2 text-text/40 hover:text-text transition-colors'
-                                                >
-                                                    <Edit2 className='w-4 h-4' />
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        handleDeleteMenuItem(
-                                                            item.id
-                                                        )
-                                                    }
-                                                    className='p-2 text-text/40 hover:text-red-500 transition-colors'
-                                                >
-                                                    <Trash2 className='w-4 h-4' />
-                                                </button>
-                                            </div>
                                         </div>
                                     ))}
                                 </div>

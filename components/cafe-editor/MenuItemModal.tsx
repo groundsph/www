@@ -227,8 +227,8 @@ export default function MenuItemModal({
                     </h2>
 
                     <div className='space-y-4'>
-                        {/* Image Upload */}
-                        {cafeId && (
+                        {/* Image Upload - hidden for Add-ons */}
+                        {cafeId && form.category !== "Add-ons" && (
                             <div>
                                 <label className='block text-sm font-medium mb-2'>
                                     Photo
