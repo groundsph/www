@@ -45,7 +45,12 @@ import {
     approveSuggestion,
     rejectSuggestion,
 } from "@/app/api/actions/suggestions"
-import { approveClaim, rejectClaim, CafeClaim } from "@/app/api/actions/claim"
+import {
+    approveClaim,
+    rejectClaim,
+    CafeClaim,
+    getOwnershipProofSignedUrl,
+} from "@/app/api/actions/claim"
 import { EditSuggestion } from "@/utils/types/suggestions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -869,6 +874,66 @@ export default function CafesManagement({
                                                         </div>
                                                     )}
 
+                                                {/* Ownership Claim Proof - show if pending cafe has a claim */}
+                                                {activeTab === "pending" &&
+                                                    (() => {
+                                                        const pendingClaim =
+                                                            claims.find(
+                                                                (c) =>
+                                                                    c.cafe_id ===
+                                                                    cafe.id
+                                                            )
+                                                        if (!pendingClaim)
+                                                            return null
+                                                        return (
+                                                            <div className='p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg'>
+                                                                <h4 className='text-xs font-medium text-purple-600 uppercase mb-2 flex items-center gap-1'>
+                                                                    <Store className='w-3.5 h-3.5' />
+                                                                    Ownership
+                                                                    Claim
+                                                                    Submitted
+                                                                </h4>
+                                                                {pendingClaim.proof_text && (
+                                                                    <p className='text-sm text-text/80 mb-2'>
+                                                                        {
+                                                                            pendingClaim.proof_text
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                                {pendingClaim.proof_document_url && (
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const result =
+                                                                                await getOwnershipProofSignedUrl(
+                                                                                    pendingClaim.proof_document_url!
+                                                                                )
+                                                                            if (
+                                                                                result.success &&
+                                                                                result.url
+                                                                            ) {
+                                                                                window.open(
+                                                                                    result.url,
+                                                                                    "_blank"
+                                                                                )
+                                                                            } else {
+                                                                                alert(
+                                                                                    "Failed to load proof document"
+                                                                                )
+                                                                            }
+                                                                        }}
+                                                                        className='inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700 hover:underline cursor-pointer'
+                                                                    >
+                                                                        <FileText className='w-4 h-4' />
+                                                                        View
+                                                                        Proof
+                                                                        Document
+                                                                        <ExternalLink className='w-3 h-3' />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })()}
+
                                                 {/* View on site link for published cafes */}
                                                 {activeTab === "published" &&
                                                     cafe.slug && (
@@ -1266,17 +1331,31 @@ export default function CafesManagement({
                                                             Proof Document
                                                         </h4>
                                                         <div className='flex gap-2 flex-wrap'>
-                                                            <a
-                                                                href={
-                                                                    claim.proof_document_url
-                                                                }
-                                                                target='_blank'
-                                                                rel='noopener noreferrer'
-                                                                className='px-3 py-1.5 bg-background text-sm text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition inline-flex items-center gap-1'
+                                                            <button
+                                                                onClick={async () => {
+                                                                    const result =
+                                                                        await getOwnershipProofSignedUrl(
+                                                                            claim.proof_document_url!
+                                                                        )
+                                                                    if (
+                                                                        result.success &&
+                                                                        result.url
+                                                                    ) {
+                                                                        window.open(
+                                                                            result.url,
+                                                                            "_blank"
+                                                                        )
+                                                                    } else {
+                                                                        alert(
+                                                                            "Failed to load proof document"
+                                                                        )
+                                                                    }
+                                                                }}
+                                                                className='px-3 py-1.5 bg-background text-sm text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition inline-flex items-center gap-1 cursor-pointer'
                                                             >
                                                                 View Document
                                                                 <ExternalLink className='w-3 h-3' />
-                                                            </a>
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 )}

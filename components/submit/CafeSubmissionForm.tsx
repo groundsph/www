@@ -27,6 +27,7 @@ import {
     Trash2,
     Search,
     AlertCircle,
+    ImageIcon,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
@@ -1077,32 +1078,7 @@ export default function CafeSubmissionForm({
                                         ) : (
                                             <label className='flex flex-col items-center justify-center w-full aspect-video rounded-xl border-2 border-dashed border-text/20 bg-text/5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer'>
                                                 <div className='flex flex-col items-center gap-2 text-text/50'>
-                                                    <svg
-                                                        xmlns='http://www.w3.org/2000/svg'
-                                                        width='40'
-                                                        height='40'
-                                                        viewBox='0 0 24 24'
-                                                        fill='none'
-                                                        stroke='currentColor'
-                                                        strokeWidth='1.5'
-                                                        strokeLinecap='round'
-                                                        strokeLinejoin='round'
-                                                    >
-                                                        <rect
-                                                            width='18'
-                                                            height='18'
-                                                            x='3'
-                                                            y='3'
-                                                            rx='2'
-                                                            ry='2'
-                                                        />
-                                                        <circle
-                                                            cx='9'
-                                                            cy='9'
-                                                            r='2'
-                                                        />
-                                                        <path d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21' />
-                                                    </svg>
+                                                    <ImageIcon className='w-12 h-12 text-text opacity-30' />
                                                     <span className='font-medium'>
                                                         Click to upload
                                                         thumbnail
@@ -2130,7 +2106,7 @@ export default function CafeSubmissionForm({
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className='px-8 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
+                        className='px-8 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer'
                     >
                         {isSubmitting ? (
                             <>

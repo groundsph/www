@@ -9,6 +9,48 @@ import ClaimRejectedEmail from "@/emails/ClaimRejectedEmail"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+const OWNERSHIP_PROOF_BUCKET = "ownership-proofs"
+
+/**
+ * Get a signed URL for an ownership proof document (admin only)
+ * Returns a temporary URL that expires in 1 hour
+ */
+export async function getOwnershipProofSignedUrl(
+    proofPath: string
+): Promise<{ success: boolean; url?: string; error?: string }> {
+    const db = await createClient()
+
+    // Check admin
+    const { data: { user } } = await db.auth.getUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    const { data: profile } = await db
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    if (!profile || !["admin", "moderator"].includes(profile.role || "")) {
+        return { success: false, error: "Not authorized" }
+    }
+
+    const adminDb = await createAdminClient()
+
+    // Generate signed URL (valid for 1 hour)
+    const { data, error } = await adminDb.storage
+        .from(OWNERSHIP_PROOF_BUCKET)
+        .createSignedUrl(proofPath, 3600)
+
+    if (error || !data) {
+        console.error("[getOwnershipProofSignedUrl] Error:", error)
+        return { success: false, error: "Failed to generate signed URL" }
+    }
+
+    return { success: true, url: data.signedUrl }
+}
+
 export interface CafeClaim {
     id: string
     cafe_id: string

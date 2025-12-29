@@ -36,6 +36,7 @@ export default function AuthPageClient() {
     const [usernameStatus, setUsernameStatus] = useState<
         "idle" | "checking" | "available" | "taken" | "current"
     >("idle")
+    const [acceptedTerms, setAcceptedTerms] = useState(false)
     const [currentProfile, setCurrentProfile] = useState<{
         id: string
         username: string
@@ -162,6 +163,14 @@ export default function AuthPageClient() {
 
         if (!isPasswordValid) {
             setError("Please fulfill all password requirements")
+            setIsLoading(false)
+            return
+        }
+
+        if (!acceptedTerms) {
+            setError(
+                "You must accept the Terms and Conditions to create an account"
+            )
             setIsLoading(false)
             return
         }
@@ -550,25 +559,65 @@ export default function AuthPageClient() {
                                     )}
                                 </div>
                                 {mode === "signup" && (
-                                    <div>
-                                        <input
-                                            type='password'
-                                            placeholder='Confirm Password'
-                                            value={confirmPassword}
-                                            onChange={(e) =>
-                                                setConfirmPassword(
-                                                    e.target.value
-                                                )
-                                            }
-                                            className='w-full px-4 py-3 rounded-xl border border-secondary/30 bg-tertiary/50 text-text placeholder:text-text/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all'
-                                            disabled={isLoading}
-                                            required
-                                        />
-                                    </div>
+                                    <>
+                                        <div>
+                                            <input
+                                                type='password'
+                                                placeholder='Confirm Password'
+                                                value={confirmPassword}
+                                                onChange={(e) =>
+                                                    setConfirmPassword(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                className='w-full px-4 py-3 rounded-xl border border-secondary/30 bg-tertiary/50 text-text placeholder:text-text/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all'
+                                                disabled={isLoading}
+                                                required
+                                            />
+                                        </div>
+                                        <div className='flex items-start gap-3'>
+                                            <input
+                                                type='checkbox'
+                                                id='accept-terms'
+                                                checked={acceptedTerms}
+                                                onChange={(e) =>
+                                                    setAcceptedTerms(
+                                                        e.target.checked
+                                                    )
+                                                }
+                                                className='mt-1 w-4 h-4 rounded border-secondary/30 text-primary focus:ring-primary/50 cursor-pointer'
+                                                disabled={isLoading}
+                                            />
+                                            <label
+                                                htmlFor='accept-terms'
+                                                className='text-sm text-text/70 cursor-pointer'
+                                            >
+                                                I agree to the{" "}
+                                                <Link
+                                                    href='/legal/terms/accounts'
+                                                    target='_blank'
+                                                    className='text-primary hover:underline'
+                                                >
+                                                    Terms and Conditions
+                                                </Link>{" "}
+                                                and{" "}
+                                                <Link
+                                                    href='/legal/privacy'
+                                                    target='_blank'
+                                                    className='text-primary hover:underline'
+                                                >
+                                                    Privacy Policy
+                                                </Link>
+                                            </label>
+                                        </div>
+                                    </>
                                 )}
                                 <button
                                     type='submit'
-                                    disabled={isLoading}
+                                    disabled={
+                                        isLoading ||
+                                        (mode === "signup" && !acceptedTerms)
+                                    }
                                     className='w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer'
                                 >
                                     {isLoading

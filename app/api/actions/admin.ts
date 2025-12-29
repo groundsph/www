@@ -213,6 +213,41 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
         return { success: false, error: "Failed to approve cafe" }
     }
 
+    // Auto-approve any pending ownership claim from the contributor
+    if (cafe?.contributor_id) {
+        const { data: pendingClaim } = await adminDb
+            .from('cafe_claims')
+            .select('id')
+            .eq('cafe_id', cafeId)
+            .eq('user_id', cafe.contributor_id)
+            .eq('status', 'pending')
+            .single()
+
+        if (pendingClaim) {
+            // Approve the claim - set is_claimed and add to owner_ids
+            await adminDb
+                .from('cafe_claims')
+                .update({
+                    status: 'approved',
+                    reviewed_at: new Date().toISOString(),
+                    reviewed_by: user.id,
+                    admin_notes: 'Auto-approved with cafe approval',
+                })
+                .eq('id', pendingClaim.id)
+
+            // Update cafe ownership
+            await adminDb
+                .from('cafes')
+                .update({
+                    is_claimed: true,
+                    owner_ids: [cafe.contributor_id],
+                })
+                .eq('id', cafeId)
+
+            console.log(`[approveCafe] Auto-approved ownership claim for cafe ${cafeId}`)
+        }
+    }
+
     // Update contributor's scout stats and send notification email
     if (cafe?.contributor_id) {
         await updateContributorScoutStats(cafe.contributor_id)
