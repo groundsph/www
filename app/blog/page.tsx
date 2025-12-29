@@ -2,7 +2,7 @@ import { getPublishedBlogPosts, getFeaturedPosts } from "@/app/api/actions/blog"
 import { BLOG_CATEGORIES, estimateReadingTime } from "@/utils/types/blog"
 import Image from "next/image"
 import Link from "next/link"
-import { Calendar, Clock, ArrowRight, Coffee, User } from "lucide-react"
+import { ArrowRight, Coffee } from "lucide-react"
 
 export const metadata = {
     title: "Blog | Grounds PH",
@@ -175,114 +175,111 @@ export default async function BlogPage({
                             </p>
                         </div>
                     ) : (
-                        <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                        <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10'>
                             {posts.map((post) => (
                                 <article
                                     key={post.id}
-                                    className='group bg-background rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-text/5'
+                                    className='group flex flex-col border border-text/10 p-4 hover:border-text/20 transition-all shadow-none hover:shadow-md'
                                 >
-                                    <Link href={`/blog/${post.slug}`}>
-                                        <div className='relative aspect-video overflow-hidden'>
+                                    <Link
+                                        href={`/blog/${post.slug}`}
+                                        className='flex flex-col h-full'
+                                    >
+                                        {/* Header - Date and Category */}
+                                        <div className='flex items-center justify-between mb-3'>
+                                            {post.published_at && (
+                                                <span className='text-sm text-text/50'>
+                                                    {new Date(
+                                                        post.published_at
+                                                    ).toLocaleDateString(
+                                                        "en-US",
+                                                        {
+                                                            day: "numeric",
+                                                            month: "long",
+                                                            year: "numeric",
+                                                        }
+                                                    )}
+                                                </span>
+                                            )}
+                                            <span className='px-3 py-1 border border-text/20 text-text/70 text-xs font-medium rounded-full uppercase tracking-wide'>
+                                                {
+                                                    BLOG_CATEGORIES.find(
+                                                        (c) =>
+                                                            c.value ===
+                                                            post.category
+                                                    )?.label
+                                                }
+                                            </span>
+                                        </div>
+
+                                        {/* Image - Portrait aspect ratio */}
+                                        <div className='relative aspect-video overflow-hidden mb-5'>
                                             {post.cover_image ? (
                                                 <Image
                                                     src={post.cover_image}
                                                     alt={post.title}
                                                     fill
-                                                    className='object-cover'
+                                                    className='object-cover grayscale group-hover:grayscale-0 transition-all duration-500'
                                                 />
                                             ) : (
-                                                <div className='w-full h-full bg-linear-to-br from-secondary/20 to-tertiary/20 flex items-center justify-center'>
-                                                    <Coffee className='w-10 h-10 text-primary/30' />
+                                                <div className='w-full h-full bg-text/5 flex items-center justify-center'>
+                                                    <Coffee className='w-12 h-12 text-text/20' />
                                                 </div>
                                             )}
                                             {post.cafe && (
-                                                <div className='absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg flex items-center gap-1.5'>
-                                                    <Coffee className='w-3 h-3 text-white' />
-                                                    <span className='text-xs text-white font-medium'>
+                                                <div className='absolute bottom-3 left-3 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-lg flex items-center gap-1.5'>
+                                                    <Coffee className='w-3 h-3 text-primary' />
+                                                    <span className='text-xs text-text font-medium'>
                                                         {post.cafe.name}
                                                     </span>
                                                 </div>
                                             )}
                                         </div>
-                                        <div className='p-5'>
-                                            <div className='flex items-center gap-2 mb-3'>
-                                                <span className='px-2.5 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full'>
-                                                    {
-                                                        BLOG_CATEGORIES.find(
-                                                            (c) =>
-                                                                c.value ===
-                                                                post.category
-                                                        )?.label
-                                                    }
-                                                </span>
-                                            </div>
-                                            <h3 className='font-bold font-serif text-text text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors'>
-                                                {post.title}
-                                            </h3>
-                                            {post.excerpt && (
-                                                <p className='text-text/60 text-sm line-clamp-2 mb-4'>
-                                                    {post.excerpt}
-                                                </p>
-                                            )}
-                                            <div className='flex items-center justify-between text-xs text-text/50'>
-                                                <div className='flex items-center gap-3'>
-                                                    {post.author && (
-                                                        <div className='flex items-center gap-1.5'>
-                                                            {post.author
-                                                                .avatar_url ? (
-                                                                <Image
-                                                                    src={
-                                                                        post
-                                                                            .author
-                                                                            .avatar_url
-                                                                    }
-                                                                    alt={
-                                                                        post
-                                                                            .author
-                                                                            .display_name
-                                                                    }
-                                                                    width={20}
-                                                                    height={20}
-                                                                    className='rounded-full object-cover'
-                                                                />
-                                                            ) : (
-                                                                <User className='w-4 h-4' />
-                                                            )}
-                                                            <span>
-                                                                {
-                                                                    post.author
-                                                                        .display_name
-                                                                }
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {post.published_at && (
-                                                        <div className='flex items-center gap-1'>
-                                                            <Calendar className='w-3.5 h-3.5' />
-                                                            <span>
-                                                                {new Date(
-                                                                    post.published_at
-                                                                ).toLocaleDateString(
-                                                                    "en-US",
-                                                                    {
-                                                                        month: "short",
-                                                                        day: "numeric",
-                                                                    }
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
+
+                                        {/* Title */}
+                                        <h3 className='font-bold font-serif text-text text-xl mb-3 line-clamp-2 group-hover:text-primary transition-colors'>
+                                            {post.title}
+                                        </h3>
+
+                                        {/* Excerpt */}
+                                        {post.excerpt && (
+                                            <p className='text-text/60 text-sm line-clamp-4 mb-6 leading-relaxed'>
+                                                {post.excerpt}
+                                            </p>
+                                        )}
+
+                                        {/* Footer - Author and Duration */}
+                                        <div className='mt-auto pt-4 border-t border-text/10 flex items-center justify-between text-xs text-text/50'>
+                                            {post.author && (
                                                 <div className='flex items-center gap-1'>
-                                                    <Clock className='w-3.5 h-3.5' />
-                                                    <span>
-                                                        {estimateReadingTime(
-                                                            post.content
-                                                        )}{" "}
-                                                        min
+                                                    <span className='text-text/40'>
+                                                        Text
+                                                    </span>
+                                                    <span className='text-text font-medium'>
+                                                        {
+                                                            post.author
+                                                                .display_name
+                                                        }
                                                     </span>
                                                 </div>
+                                            )}
+                                            <div className='flex items-center gap-1'>
+                                                <span className='text-text/40'>
+                                                    Duration
+                                                </span>
+                                                <span className='text-text font-medium'>
+                                                    {estimateReadingTime(
+                                                        post.content
+                                                    )}{" "}
+                                                    Min
+                                                </span>
                                             </div>
+                                        </div>
+
+                                        {/* Read More CTA */}
+                                        <div className='mt-4 flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all'>
+                                            Read More
+                                            <ArrowRight className='w-4 h-4' />
                                         </div>
                                     </Link>
                                 </article>
