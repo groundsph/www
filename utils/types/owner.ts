@@ -31,9 +31,10 @@ export const SUBSCRIPTION_TIERS = {
         priceDisplay: '₱0',
         features: [
             'Direct Cafe Editing',
+            'Cafe Menu (5 Item Limit)',
         ],
-        menuLimit: 0,
-        enabledFeatures: [] as TierFeature[],
+        menuLimit: 5,
+        enabledFeatures: ['menu'] as TierFeature[],
     },
     pro: {
         name: 'Pro',
