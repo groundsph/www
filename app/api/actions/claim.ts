@@ -6,10 +6,9 @@ import { notifyDiscordCafeClaim } from "@/app/api/actions/notify"
 import { Resend } from "resend"
 import ClaimApprovedEmail from "@/emails/ClaimApprovedEmail"
 import ClaimRejectedEmail from "@/emails/ClaimRejectedEmail"
+import { getStorageProvider, STORAGE_BUCKETS } from "@/utils/storage"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-
-const OWNERSHIP_PROOF_BUCKET = "ownership-proofs"
 
 /**
  * Get a signed URL for an ownership proof document (admin only)
@@ -36,19 +35,20 @@ export async function getOwnershipProofSignedUrl(
         return { success: false, error: "Not authorized" }
     }
 
-    const adminDb = await createAdminClient()
+    // Use provider-agnostic storage to generate signed URL
+    const storage = await getStorageProvider()
+    const result = await storage.createSignedUrl(
+        STORAGE_BUCKETS.OWNERSHIP_PROOFS,
+        proofPath,
+        3600 // 1 hour
+    )
 
-    // Generate signed URL (valid for 1 hour)
-    const { data, error } = await adminDb.storage
-        .from(OWNERSHIP_PROOF_BUCKET)
-        .createSignedUrl(proofPath, 3600)
-
-    if (error || !data) {
-        console.error("[getOwnershipProofSignedUrl] Error:", error)
+    if (!result.success || !result.signedUrl) {
+        console.error("[getOwnershipProofSignedUrl] Error:", result.error)
         return { success: false, error: "Failed to generate signed URL" }
     }
 
-    return { success: true, url: data.signedUrl }
+    return { success: true, url: result.signedUrl }
 }
 
 export interface CafeClaim {
