@@ -8,7 +8,7 @@
 import { useState, useCallback } from "react"
 import { checkAspectRatio } from "./cafe-form"
 import { resizeImage } from "@/utils/image-processing"
-import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
+import { uploadCafeImage } from "@/utils/storage/client"
 
 interface UseCoverImageUploadOptions {
     /** Current thumbnail URL (for replacement/deletion) */
@@ -84,7 +84,7 @@ export function useCoverImageUpload(
             if (is16by9) {
                 // Image is already 16:9, upload directly
                 setUploading(true)
-                const result = await uploadCafeImageClient(file)
+                const result = await uploadCafeImage(file)
                 setUploading(false)
 
                 if (result.success && result.url) {
@@ -128,7 +128,7 @@ export function useCoverImageUpload(
             })
 
             setUploading(true)
-            const result = await uploadCafeImageClient(finalFile)
+            const result = await uploadCafeImage(finalFile)
             setUploading(false)
 
             if (result.success && result.url) {

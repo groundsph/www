@@ -15,7 +15,7 @@ export default function RecentlyAddedSection({
 
     return (
         <section
-            className='w-full min-h-max flex flex-col'
+            className='w-full min-h-max flex flex-col mt-4'
             ref={ref}
         >
             <h2 className='font-semibold font-serif text-2xl px-6'>

@@ -7,7 +7,7 @@ import StarRating from "./StarRating"
 import { createReview, updateReview } from "@/app/api/actions/review"
 import { useRouter } from "next/navigation"
 import ImageUpload from "./ImageUpload"
-import { uploadReviewImageClient } from "@/utils/supabase/storage-client"
+import { uploadReviewImage } from "@/utils/storage/client"
 
 interface ReviewModalProps {
     isOpen: boolean
@@ -66,7 +66,7 @@ export default function ReviewModal({
             // Upload new files (client-side, direct to Supabase)
             if (newFiles.length > 0) {
                 for (const file of newFiles) {
-                    const result = await uploadReviewImageClient(file)
+                    const result = await uploadReviewImage(file)
 
                     if (result.success && result.url) {
                         uploadedUrls.push(result.url)

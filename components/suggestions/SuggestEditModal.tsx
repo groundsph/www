@@ -35,7 +35,7 @@ import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { useRouter } from "next/navigation"
 import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
-import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
+import { uploadCafeImage } from "@/utils/storage/client"
 import { resizeImage } from "@/utils/image-processing"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import ImageCropper from "@/components/ui/ImageCropper"
@@ -357,7 +357,7 @@ export default function SuggestEditModal({
                         quality: 0.9,
                         format: "image/webp",
                     })
-                    const result = await uploadCafeImageClient(resized)
+                    const result = await uploadCafeImage(resized)
                     if (result.success && result.url) {
                         imageChanges.new_thumbnail = result.url
                     } else {
@@ -375,7 +375,7 @@ export default function SuggestEditModal({
                             quality: 0.85,
                             format: "image/webp",
                         })
-                        const result = await uploadCafeImageClient(resized)
+                        const result = await uploadCafeImage(resized)
                         if (result.success && result.url) {
                             uploadedUrls.push(result.url)
                         }

@@ -24,7 +24,7 @@ import {
 } from "@/utils/hooks/cafe-form"
 import { useCoverImageUpload } from "@/utils/hooks/useCoverImageUpload"
 import { resizeImage } from "@/utils/image-processing"
-import { uploadCafeImageClient } from "@/utils/supabase/storage-client"
+import { uploadCafeImage } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import ImageCropper from "@/components/ui/ImageCropper"
 
@@ -90,7 +90,7 @@ export default function ImageSection({
                 quality: 0.85,
                 format: "image/webp",
             })
-            const result = await uploadCafeImageClient(processedFile)
+            const result = await uploadCafeImage(processedFile)
             if (result.success && result.url) {
                 newUrls.push(result.url)
             }

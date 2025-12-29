@@ -39,7 +39,7 @@ import {
 import {
     uploadCafeImageWithProgress,
     uploadOwnershipProofWithProgress,
-} from "@/utils/supabase/storage-client"
+} from "@/utils/storage/client"
 import { submitCafe } from "@/app/api/actions/submit"
 import { submitCafeClaim } from "@/app/api/actions/claim"
 import { searchCafesSimple } from "@/app/api/actions/cafe"

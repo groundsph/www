@@ -10,7 +10,7 @@ import {
     updateProfile,
 } from "@/app/api/actions/profile"
 import { getOwnedCafes } from "@/app/api/actions/owner"
-import { uploadAvatarClient } from "@/utils/supabase/storage-client"
+import { uploadAvatar } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
@@ -261,7 +261,7 @@ export default function ProfileClient() {
             const processedFile = new File([blob], "avatar.jpg", {
                 type: "image/jpeg",
             })
-            const result = await uploadAvatarClient(processedFile)
+            const result = await uploadAvatar(processedFile)
 
             if (result.success && result.url) {
                 setUploadStatus("Done!")

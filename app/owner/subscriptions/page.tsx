@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { SUBSCRIPTION_TIERS, OwnedCafe } from "@/utils/types/owner"
 import { submitManualPayment } from "@/app/api/actions/subscription"
-import { uploadCafeImageWithProgress } from "@/utils/supabase/storage-client"
+import { uploadCafeImageWithProgress } from "@/utils/storage/client"
 import { useNotification } from "@/components/NotificationProvider"
 import Image from "next/image"
 import Link from "next/link"
@@ -104,9 +104,7 @@ function SubscriptionsContent() {
             // 1. Upload proof to public cafes bucket
             const uploadResult = await uploadCafeImageWithProgress(
                 paymentProof,
-                (progress) => setUploadProgress(progress),
-                "cafes",
-                `payment-proofs/${selectedCafe.id}/${Date.now()}_${paymentProof.name}`
+                (progress) => setUploadProgress(progress)
             )
 
             if (!uploadResult.success || !uploadResult.url) {

@@ -13,7 +13,7 @@ import {
     Trash2,
 } from "lucide-react"
 import { submitCafeClaim } from "@/app/api/actions/claim"
-import { uploadOwnershipProofWithProgress } from "@/utils/supabase/storage-client"
+import { uploadOwnershipProofWithProgress } from "@/utils/storage/client"
 
 interface ClaimCafeModalProps {
     isOpen: boolean

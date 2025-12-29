@@ -3,7 +3,8 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
-import { deleteCafeImages, cleanupOrphanedImages, processAvatarDeletionQueue, deleteSingleCafeImage } from "@/utils/supabase/storage"
+import { deleteCafeImagesAction, deleteSingleCafeImageAction } from "@/utils/storage/actions"
+import { cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/supabase/storage"
 import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedEmail, sendSubscriptionRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { Database } from "@/utils/types/database.types"
@@ -322,7 +323,7 @@ export async function rejectCafe(cafeId: string, reason?: string): Promise<Admin
 
     // Delete images from storage
     if (cafe) {
-        await deleteCafeImages(cafe.thumbnail, cafe.gallery)
+        await deleteCafeImagesAction(cafe.thumbnail, cafe.gallery)
     }
 
     // Delete the cafe record
@@ -526,9 +527,8 @@ export async function adminDeleteCafeImage(imageUrl: string): Promise<AdminActio
         return { success: false, error: "Unauthorized" }
     }
 
-    // Import and call the storage delete function
-    const { deleteSingleCafeImage } = await import('@/utils/supabase/storage')
-    return deleteSingleCafeImage(imageUrl)
+    // Use the storage action to delete the image
+    return deleteSingleCafeImageAction(imageUrl)
 }
 
 /**
@@ -885,7 +885,7 @@ export async function deleteSubscriptionProof(proofUrl: string): Promise<AdminAc
     }
 
     // Delete the proof file from storage
-    await deleteSingleCafeImage(proofUrl)
+    await deleteSingleCafeImageAction(proofUrl)
 
     return { success: true }
 }
@@ -944,7 +944,7 @@ export async function rejectManualPayment(cafeId: string, subscriptionId: string
 
     // 3. Delete the proof file from storage
     if (proofUrl) {
-        await deleteSingleCafeImage(proofUrl)
+        await deleteSingleCafeImageAction(proofUrl)
     }
 
     // 4. Downgrade cafe to free tier and remove verification

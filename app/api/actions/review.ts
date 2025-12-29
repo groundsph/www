@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
-import { deleteReviewImages } from "@/utils/supabase/storage"
+import { deleteReviewImagesAction } from "@/utils/storage/actions"
 import { notifyDiscordReviewReport } from "./notify"
 import { revalidatePath } from "next/cache"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
@@ -155,7 +155,7 @@ export async function deleteReview(reviewId: string) {
 
     // Delete review images from storage
     if (existing.images && existing.images.length > 0) {
-        await deleteReviewImages(existing.images)
+        await deleteReviewImagesAction(existing.images)
     }
 
     const { error } = await db.from("reviews").delete().eq("id", reviewId)
