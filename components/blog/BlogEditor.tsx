@@ -163,9 +163,9 @@ export default function BlogEditor({
     const readingTime = estimateReadingTime(content)
 
     return (
-        <div className='bg-background rounded-2xl shadow-lg overflow-hidden [&_button]:cursor-pointer'>
+        <div className='h-full flex flex-col [&_button]:cursor-pointer'>
             {/* Header */}
-            <div className='flex items-center justify-between px-6 py-4 border-b border-text/10'>
+            <div className='flex items-center justify-between px-6 py-4 border-b border-text/10 bg-background backdrop-blur-sm sticky top-0 z-10'>
                 <div>
                     <h2 className='text-xl font-bold font-serif text-text'>
                         {post ? "Edit Post" : "Create New Post"}
@@ -179,9 +179,9 @@ export default function BlogEditor({
                 <div className='flex items-center gap-2'>
                     <button
                         onClick={() => setShowPreview(!showPreview)}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                             showPreview
-                                ? "bg-primary text-white"
+                                ? "bg-primary text-white shadow-md shadow-primary/20"
                                 : "bg-text/5 text-text hover:bg-text/10"
                         }`}
                     >
@@ -208,30 +208,34 @@ export default function BlogEditor({
                         exit={{ opacity: 0, height: 0 }}
                         className='bg-red-50 border-b border-red-100 px-6 py-3'
                     >
-                        <p className='text-red-600 text-sm'>{error}</p>
+                        <p className='text-red-600 text-sm flex items-center gap-2'>
+                            <span className='w-1.5 h-1.5 rounded-full bg-red-500' />
+                            {error}
+                        </p>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <div className='grid lg:grid-cols-3'>
+            <div className='grid lg:grid-cols-3 flex-1 overflow-visible'>
                 {/* Main Editor */}
-                <div className='lg:col-span-2 p-6 space-y-6 border-r border-text/10'>
+                <div className='lg:col-span-2 p-6 space-y-6 lg:border-r border-text/10 overflow-y-auto custom-scrollbar'>
                     {/* Cover Image */}
-                    <div>
-                        <label className='block text-sm font-medium text-text mb-2'>
+                    <div className='space-y-2'>
+                        <label className='block text-sm font-medium text-text'>
                             Cover Image
                         </label>
                         {coverImage ? (
-                            <div className='relative aspect-video rounded-xl overflow-hidden bg-text/5'>
+                            <div className='relative aspect-video rounded-xl overflow-hidden bg-text/5 ring-1 ring-black/5 group'>
                                 <Image
                                     src={coverImage}
                                     alt='Cover'
                                     fill
-                                    className='object-cover'
+                                    className='object-cover transition-transform duration-700 group-hover:scale-105'
                                 />
+                                <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
                                 <button
                                     onClick={() => setCoverImage(null)}
-                                    className='absolute top-3 right-3 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'
+                                    className='absolute top-3 right-3 p-2 bg-white/90 text-red-500 rounded-lg hover:bg-white hover:scale-110 shadow-sm transition-all opacity-0 group-hover:opacity-100'
                                 >
                                     <Trash2 className='w-4 h-4' />
                                 </button>
@@ -240,19 +244,23 @@ export default function BlogEditor({
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading}
-                                className='w-full aspect-video rounded-xl border-2 border-dashed border-text/20 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-3 text-text/50 hover:text-primary'
+                                className='w-full aspect-video rounded-xl border-2 border-dashed border-text/10 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 flex flex-col items-center justify-center gap-3 text-text/40 hover:text-primary group'
                             >
                                 {isUploading ? (
-                                    <Loader2 className='w-8 h-8 animate-spin' />
+                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
                                 ) : (
                                     <>
-                                        <ImageIcon className='w-10 h-10' />
-                                        <span className='text-sm font-medium'>
-                                            Click to upload cover image
-                                        </span>
-                                        <span className='text-xs'>
-                                            Recommended: 16:9 ratio, max 5MB
-                                        </span>
+                                        <div className='p-3 bg-text/5 rounded-full group-hover:bg-primary/10 transition-colors'>
+                                            <ImageIcon className='w-6 h-6' />
+                                        </div>
+                                        <div className='text-center'>
+                                            <span className='text-sm font-medium block'>
+                                                Click to upload cover image
+                                            </span>
+                                            <span className='text-xs opacity-70'>
+                                                Recommended: 16:9 ratio, max 5MB
+                                            </span>
+                                        </div>
                                     </>
                                 )}
                             </button>
@@ -267,38 +275,40 @@ export default function BlogEditor({
                     </div>
 
                     {/* Title */}
-                    <div>
-                        <label className='block text-sm font-medium text-text mb-2'>
-                            Title *
+                    <div className='space-y-2'>
+                        <label className='block text-sm font-medium text-text'>
+                            Title <span className='text-red-500'>*</span>
                         </label>
                         <input
                             type='text'
                             value={title}
                             onChange={(e) => handleTitleChange(e.target.value)}
                             placeholder='Enter a compelling title...'
-                            className='w-full px-4 py-3 rounded-xl border border-text/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-lg font-medium'
+                            className='w-full px-4 py-3 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-lg font-medium transition-all placeholder:text-text/30'
                         />
                     </div>
 
                     {/* Slug */}
-                    <div>
-                        <div className='flex items-center gap-2 mb-2'>
+                    <div className='space-y-2'>
+                        <div className='flex items-center justify-between'>
                             <label className='text-sm font-medium text-text'>
                                 URL Slug
                             </label>
                             <button
                                 onClick={() => setAutoSlug(!autoSlug)}
-                                className={`text-xs px-2 py-0.5 rounded-full ${
+                                className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
                                     autoSlug
-                                        ? "bg-primary/10 text-primary"
-                                        : "bg-text/10 text-text/60"
+                                        ? "bg-primary/10 text-primary border border-primary/20"
+                                        : "bg-text/5 text-text/60 border border-text/10"
                                 }`}
                             >
-                                {autoSlug ? "Auto" : "Manual"}
+                                {autoSlug ? "Auto-generate" : "Manual Edit"}
                             </button>
                         </div>
-                        <div className='flex items-center gap-2'>
-                            <span className='text-text/50 text-sm'>/blog/</span>
+                        <div className='flex items-center'>
+                            <div className='bg-text/5 border border-r-0 border-text/15 rounded-l-xl px-3 py-2.5 text-text/50 text-sm font-mono'>
+                                /blog/
+                            </div>
                             <input
                                 type='text'
                                 value={slug}
@@ -307,42 +317,49 @@ export default function BlogEditor({
                                     setAutoSlug(false)
                                 }}
                                 placeholder='your-post-slug'
-                                className='flex-1 px-3 py-2 rounded-lg border border-text/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm'
+                                className='flex-1 px-4 py-2.5 rounded-r-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm font-mono transition-all'
                             />
                         </div>
                     </div>
 
                     {/* Excerpt */}
-                    <div>
-                        <label className='block text-sm font-medium text-text mb-2'>
-                            Excerpt (optional)
-                        </label>
+                    <div className='space-y-2'>
+                        <div className='flex justify-between'>
+                            <label className='block text-sm font-medium text-text'>
+                                Excerpt{" "}
+                                <span className='text-text/40 font-normal'>
+                                    (optional)
+                                </span>
+                            </label>
+                            <span
+                                className={`text-xs ${excerpt.length > 280 ? "text-amber-500 font-medium" : "text-text/40"}`}
+                            >
+                                {excerpt.length}/300
+                            </span>
+                        </div>
                         <textarea
                             value={excerpt}
                             onChange={(e) => setExcerpt(e.target.value)}
-                            placeholder='A brief summary of your post...'
-                            rows={2}
+                            placeholder='A brief summary of your post that will appear in cards and search results...'
+                            rows={3}
                             maxLength={300}
-                            className='w-full px-4 py-3 rounded-xl border border-text/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none'
+                            className='w-full px-4 py-3 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none resize-none transition-all placeholder:text-text/30 leading-relaxed'
                         />
-                        <p className='text-xs text-text/50 mt-1'>
-                            {excerpt.length}/300 characters
-                        </p>
                     </div>
 
                     {/* Content */}
-                    <div className='flex-1'>
-                        <div className='flex items-center justify-between mb-2'>
+                    <div className='flex-1 space-y-2'>
+                        <div className='flex items-center justify-between'>
                             <label className='text-sm font-medium text-text'>
-                                Content * (Markdown)
+                                Content <span className='text-red-500'>*</span>
                             </label>
-                            <div className='flex items-center gap-2 text-xs text-text/50'>
+                            <div className='flex items-center gap-2 text-xs text-text/50 bg-text/5 px-2 py-1 rounded-md'>
                                 <HelpCircle className='w-3.5 h-3.5' />
-                                <span>Supports Markdown formatting</span>
+                                <span>Markdown supported</span>
                             </div>
                         </div>
                         {showPreview ? (
-                            <div className='prose prose-stone max-w-none p-4 rounded-xl border border-text/20 min-h-[300px] bg-text/5 overflow-auto'>
+                            <div className='prose prose-stone max-w-none p-6 rounded-xl border border-text/15 min-h-[400px] bg-background shadow-inner overflow-auto'>
                                 <MarkdownRender content={content} />
                             </div>
                         ) : (
@@ -351,58 +368,117 @@ export default function BlogEditor({
                                 onChange={(e) => setContent(e.target.value)}
                                 placeholder='Write your blog post content here...
 
-Use Markdown for formatting:
-- **bold text**
-- *italic text*
-- [links](url)
-- # Headings
-- - Lists'
-                                className='w-full px-4 py-3 rounded-xl border border-text/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none font-mono text-sm min-h-[300px]'
+# Tips for a great post:
+- Use clear headings
+- Break up text with bullet points
+- Add links to relevant resources'
+                                className='w-full px-4 py-4 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none resize-none font-mono text-sm min-h-[400px] leading-relaxed transition-all placeholder:text-text/30'
                             />
                         )}
-                        <p className='text-xs text-text/50 mt-1'>
-                            ~{readingTime} min read
+                        <p className='text-xs text-text/50 flex items-center gap-1.5 justify-end mt-2'>
+                            <span className='w-1.5 h-1.5 rounded-full bg-primary/40'></span>
+                            Estimated read time:{" "}
+                            <span className='font-medium text-text'>
+                                {readingTime} min
+                            </span>
                         </p>
                     </div>
                 </div>
 
                 {/* Sidebar */}
-                <div className='p-6 space-y-6 bg-primary/5'>
-                    {/* Category */}
-                    <div>
-                        <label className='block text-sm font-medium text-text mb-2'>
-                            Category
+                <div className='p-6 space-y-8 bg-tertiary/20 overflow-y-auto custom-scrollbar h-full border-t lg:border-t-0 border-text/10'>
+                    {/* Publishing Actions */}
+                    <div className='bg-background p-4 rounded-xl shadow-sm border border-text/5 space-y-3'>
+                        <label className='text-xs font-bold text-text/40 uppercase tracking-wider block mb-1'>
+                            Publishing
                         </label>
-                        <select
-                            value={category}
-                            onChange={(e) =>
-                                setCategory(e.target.value as BlogCategory)
-                            }
-                            className='w-full px-4 py-2.5 rounded-xl border border-text/20 focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white'
+                        <button
+                            onClick={() => handleSubmit("published")}
+                            disabled={isSubmitting}
+                            className='w-full px-4 py-2.5 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95'
                         >
-                            {categories.map((cat) => (
-                                <option
-                                    key={cat.value}
-                                    value={cat.value}
+                            {isSubmitting ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                                <Send className='w-4 h-4' />
+                            )}
+                            Publish Post
+                        </button>
+                        <button
+                            onClick={() => handleSubmit("draft")}
+                            disabled={isSubmitting}
+                            className='w-full px-4 py-2.5 rounded-lg border border-text/10 bg-white text-text/70 font-medium hover:bg-text/5 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95'
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                                <Save className='w-4 h-4' />
+                            )}
+                            Save to Drafts
+                        </button>
+                    </div>
+
+                    {/* Category */}
+                    <div className='space-y-3'>
+                        <label className='text-xs font-bold text-text/40 uppercase tracking-wider block'>
+                            Classification
+                        </label>
+                        <div className='space-y-2'>
+                            <label className='block text-sm font-medium text-text'>
+                                Category
+                            </label>
+                            <div className='relative'>
+                                <select
+                                    value={category}
+                                    onChange={(e) =>
+                                        setCategory(
+                                            e.target.value as BlogCategory
+                                        )
+                                    }
+                                    className='w-full pl-4 pr-10 py-2.5 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all'
                                 >
-                                    {cat.label}
-                                </option>
-                            ))}
-                        </select>
-                        <p className='text-xs text-text/50 mt-1'>
-                            {
-                                categories.find((c) => c.value === category)
-                                    ?.description
-                            }
-                        </p>
+                                    {categories.map((cat) => (
+                                        <option
+                                            key={cat.value}
+                                            value={cat.value}
+                                        >
+                                            {cat.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className='absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text/40'>
+                                    <svg
+                                        width='12'
+                                        height='12'
+                                        viewBox='0 0 12 12'
+                                        fill='none'
+                                        xmlns='http://www.w3.org/2000/svg'
+                                    >
+                                        <path
+                                            d='M2.5 4.5L6 8L9.5 4.5'
+                                            stroke='currentColor'
+                                            strokeWidth='1.5'
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+                            <p className='text-xs text-text/50 px-1'>
+                                {
+                                    categories.find((c) => c.value === category)
+                                        ?.description
+                                }
+                            </p>
+                        </div>
                     </div>
 
                     {/* Tags */}
-                    <div>
-                        <label className='block text-sm font-medium text-text mb-2'>
-                            Tags (max 10)
+                    <div className='space-y-2'>
+                        <label className='block text-sm font-medium text-text'>
+                            Tags
                         </label>
-                        <div className='flex gap-2 mb-2'>
+                        <div className='flex gap-2'>
                             <input
                                 type='text'
                                 value={tagInput}
@@ -413,83 +489,68 @@ Use Markdown for formatting:
                                         handleAddTag()
                                     }
                                 }}
-                                placeholder='Add tag...'
-                                className='flex-1 px-3 py-2 rounded-lg border border-text/20 focus:border-primary outline-none text-sm'
+                                placeholder='Add a tag...'
+                                className='flex-1 px-3 py-2 rounded-lg border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all'
                             />
                             <button
                                 onClick={handleAddTag}
                                 disabled={!tagInput.trim() || tags.length >= 10}
-                                className='px-3 py-2 bg-primary text-background rounded-lg hover:bg-primary/60 transition-colors disabled:opacity-50 font-semibold'
+                                className='px-3 bg-text/5 text-text border border-text/10 rounded-lg hover:bg-text/10 transition-colors disabled:opacity-50 font-medium text-sm'
                             >
                                 Add
                             </button>
                         </div>
-                        <div className='flex flex-wrap gap-2'>
+                        <div className='flex flex-wrap gap-2 pt-1'>
+                            {tags.length === 0 && (
+                                <span className='text-xs text-text/40 italic px-1'>
+                                    No tags added yet
+                                </span>
+                            )}
                             {tags.map((tag) => (
                                 <span
                                     key={tag}
-                                    className='flex items-center gap-1 px-2 py-1 bg-text/10 text-text/70 text-sm rounded-full'
+                                    className='flex items-center gap-1.5 pl-2 pr-1 py-1 bg-white border border-text/10 text-text/70 text-xs font-medium rounded-full shadow-sm'
                                 >
                                     #{tag}
                                     <button
                                         onClick={() => handleRemoveTag(tag)}
-                                        className='hover:text-red-500'
+                                        className='p-0.5 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors'
                                     >
                                         <X className='w-3 h-3' />
                                     </button>
                                 </span>
                             ))}
                         </div>
+                        <p className='text-xs text-text/40 text-right'>
+                            {tags.length}/10 tags
+                        </p>
                     </div>
 
                     {/* Featured Toggle (Admin only) */}
                     {!cafeId && (
-                        <div className='flex items-center justify-between py-3 border-y border-text/10'>
-                            <label className='text-sm font-medium text-text'>
-                                Featured Post
-                            </label>
+                        <div className='bg-background p-4 rounded-xl border border-text/5 flex items-center justify-between'>
+                            <div>
+                                <label className='text-sm font-medium text-text block'>
+                                    Featured Post
+                                </label>
+                                <span className='text-xs text-text/50'>
+                                    Pin to top of blog
+                                </span>
+                            </div>
                             <button
                                 onClick={() => setFeatured(!featured)}
-                                className={`relative w-12 h-6 rounded-full transition-colors ${
+                                className={`relative w-11 h-6 rounded-full transition-colors ${
                                     featured ? "bg-primary" : "bg-text/20"
                                 }`}
                             >
                                 <span
-                                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                                        featured ? "translate-x-6" : ""
+                                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
+                                        featured ? "translate-x-5" : ""
                                     }`}
                                 />
                             </button>
                         </div>
                     )}
-
-                    {/* Actions */}
-                    <div className='space-y-3 pt-4'>
-                        <button
-                            onClick={() => handleSubmit("draft")}
-                            disabled={isSubmitting}
-                            className='w-full px-4 py-3 rounded-xl border-2 border-text/20 text-text font-medium hover:bg-text/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2'
-                        >
-                            {isSubmitting ? (
-                                <Loader2 className='w-5 h-5 animate-spin' />
-                            ) : (
-                                <Save className='w-5 h-5' />
-                            )}
-                            Save as Draft
-                        </button>
-                        <button
-                            onClick={() => handleSubmit("published")}
-                            disabled={isSubmitting}
-                            className='w-full px-4 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2'
-                        >
-                            {isSubmitting ? (
-                                <Loader2 className='w-5 h-5 animate-spin' />
-                            ) : (
-                                <Send className='w-5 h-5' />
-                            )}
-                            Publish
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>

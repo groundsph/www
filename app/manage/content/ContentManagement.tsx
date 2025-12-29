@@ -251,13 +251,23 @@ export default function ContentManagement({
 
             {/* Blog Editor Modal */}
             {showBlogEditor && (
-                <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'>
-                    <div className='bg-background rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto'>
-                        <BlogEditor
-                            post={editingBlogPost ?? undefined}
-                            onSuccess={handleBlogSuccess}
-                            onCancel={closeBlogEditor}
-                        />
+                <div className='fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6'>
+                    {/* Backdrop */}
+                    <div
+                        className='absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200'
+                        onClick={closeBlogEditor}
+                    />
+
+                    {/* Modal Container */}
+                    <div className='relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-text/10 animate-in zoom-in-95 fade-in duration-200'>
+                        {/* Scrollable content */}
+                        <div className='max-h-[90vh] overflow-y-auto'>
+                            <BlogEditor
+                                post={editingBlogPost ?? undefined}
+                                onSuccess={handleBlogSuccess}
+                                onCancel={closeBlogEditor}
+                            />
+                        </div>
                     </div>
                 </div>
             )}

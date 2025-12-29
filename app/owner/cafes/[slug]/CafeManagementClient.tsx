@@ -2087,19 +2087,32 @@ export default function CafeManagementClient({
 
             {/* Blog Editor Modal */}
             {showBlogEditor && (
-                <div className='fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-10 overflow-y-auto'>
-                    <div className='w-full max-w-5xl pb-8'>
-                        <BlogEditor
-                            cafeId={cafe.id}
-                            cafeName={cafe.name}
-                            onSuccess={handleBlogSuccess}
-                            onCancel={() => setShowBlogEditor(false)}
-                            allowedCategories={[
-                                "cafe_update",
-                                "promotions",
-                                "events",
-                            ]}
-                        />
+                <div className='fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6'>
+                    {/* Backdrop */}
+                    <div
+                        className='absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200'
+                        onClick={() => setShowBlogEditor(false)}
+                    />
+
+                    {/* Modal Container */}
+                    <div className='relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-text/10 animate-in zoom-in-95 fade-in duration-200'>
+                        {/* Decorative gradient accent */}
+                        <div className='absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary via-secondary to-primary' />
+
+                        {/* Scrollable content */}
+                        <div className='max-h-[90vh] overflow-y-auto'>
+                            <BlogEditor
+                                cafeId={cafe.id}
+                                cafeName={cafe.name}
+                                onSuccess={handleBlogSuccess}
+                                onCancel={() => setShowBlogEditor(false)}
+                                allowedCategories={[
+                                    "cafe_update",
+                                    "promotions",
+                                    "events",
+                                ]}
+                            />
+                        </div>
                     </div>
                 </div>
             )}
