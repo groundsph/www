@@ -13,6 +13,10 @@
     --default-transition-duration: 300ms;
     /* Animations */
     --animate-shimmer: shimmer 1.5s infinite;
+
+    /* Fonts */
+    --font-sans: var(--font-dm-sans);
+    /* --font-serif: var(--font-playfair-display); */
 }
 
 @keyframes shimmer {
