@@ -10,7 +10,7 @@ import { useRef } from "react"
 // LOGO DATA - Edit these arrays to add/remove logos
 // =============================================================================
 
-import devgoLogo from "@/assets/logos/devgo-logo.png"
+// import devgoLogo from "@/assets/logos/devgo-logo.png"
 
 // =============================================================================
 // SUPPORTER DATA - Edit these arrays to add/remove supporters

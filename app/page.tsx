@@ -10,13 +10,7 @@ import LandingHero from "@/components/LandingHero"
 import RecentlyAddedSection from "@/components/RecentlyAddedSection"
 import { CafeWithRatings } from "@/utils/types/extra"
 import Link from "next/link"
-import {
-    SearchIcon,
-    CalendarIcon,
-    MapPinIcon,
-    ArrowRightIcon,
-    Coffee,
-} from "lucide-react"
+import { CalendarIcon, MapPinIcon, ArrowRightIcon, Coffee } from "lucide-react"
 import Image from "next/image"
 import { format } from "date-fns"
 import { BLOG_CATEGORIES } from "@/utils/types/blog"
