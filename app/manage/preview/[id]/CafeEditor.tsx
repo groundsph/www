@@ -18,7 +18,6 @@ import {
     Settings,
     EyeOff,
     FileText,
-    Trash2,
     BadgeCheck,
     Users,
     Search,
@@ -38,7 +37,6 @@ import {
 import { CafeMenuItem } from "@/utils/types/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
-import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import { Database } from "@/utils/types/database.types"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import {
@@ -59,10 +57,6 @@ interface CafeEditorProps {
     cafe: CafeWithRatings
     menuItems?: CafeMenuItem[]
 }
-
-// Helper to convert snake_case to Title Case
-const formatLabel = (s: string) =>
-    s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
 export default function CafeEditor({
     cafe: initialCafe,
@@ -260,22 +254,6 @@ export default function CafeEditor({
             owner_ids: newOwners.length > 0 ? newOwners.map((o) => o.id) : null,
         }))
         setHasChanges(true)
-    }
-
-    const moveGalleryImage = (index: number, direction: "left" | "right") => {
-        const currentGallery = cafe.gallery || []
-        if (
-            (direction === "left" && index === 0) ||
-            (direction === "right" && index === currentGallery.length - 1)
-        ) {
-            return
-        }
-
-        const newIndex = direction === "left" ? index - 1 : index + 1
-        const newGallery = [...currentGallery]
-        const [movedItem] = newGallery.splice(index, 1)
-        newGallery.splice(newIndex, 0, movedItem)
-        updateField("gallery", newGallery)
     }
 
     const SECTIONS = [

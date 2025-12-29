@@ -42,7 +42,6 @@ export default function SubscriptionApprovedEmail({
     ownerName,
     tier,
 }: SubscriptionApprovedEmailProps) {
-    const cafeUrl = `${baseUrl}/cafes/${cafeSlug}`
     const dashboardUrl = `${baseUrl}/owner/cafes/${cafeSlug}`
 
     return (

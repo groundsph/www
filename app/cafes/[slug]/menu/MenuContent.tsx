@@ -65,8 +65,8 @@ export default function MenuContent({
                 const remainingItems = categoryItems.slice(3) // Rest go in 2-col grid
 
                 // For mobile, we only show first 2 in the "3-col" grid, third item moves to remaining
-                const mobileFirstRowCount = Math.min(totalItems, 2)
-                const lgFirstRowCount = Math.min(totalItems, 3)
+                // const mobileFirstRowCount = Math.min(totalItems, 2)
+                // const lgFirstRowCount = Math.min(totalItems, 3)
 
                 // Placeholders needed
                 const needsMobilePlaceholder = totalItems === 1

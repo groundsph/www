@@ -15,11 +15,7 @@ import {
     Building2,
     ChevronDown,
 } from "lucide-react"
-import {
-    SUBSCRIPTION_TIERS,
-    SubscriptionTier,
-    OwnedCafe,
-} from "@/utils/types/owner"
+import { SUBSCRIPTION_TIERS, OwnedCafe } from "@/utils/types/owner"
 import { submitManualPayment } from "@/app/api/actions/subscription"
 import { uploadCafeImageWithProgress } from "@/utils/supabase/storage-client"
 import { useNotification } from "@/components/NotificationProvider"

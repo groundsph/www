@@ -34,10 +34,6 @@ import {
     PHILIPPINES_LOCATIONS,
     getProvincesForRegion,
     getCitiesForProvince,
-    CAFE_VIBE_TAGS,
-    CAFE_SPECIALTIES,
-    BREW_METHODS,
-    PAYMENT_METHODS,
 } from "@/utils/data/philippines"
 import {
     uploadCafeImageWithProgress,
@@ -47,8 +43,6 @@ import { submitCafe } from "@/app/api/actions/submit"
 import { submitCafeClaim } from "@/app/api/actions/claim"
 import { searchCafesSimple } from "@/app/api/actions/cafe"
 import ImageUpload from "@/components/reviews/ImageUpload"
-import AmenityToggles from "./AmenityToggles"
-import OperatingHoursEditor from "./OperatingHoursEditor"
 import SocialLinksEditor from "./SocialLinksEditor"
 import LocationPicker from "./LocationPicker"
 import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"

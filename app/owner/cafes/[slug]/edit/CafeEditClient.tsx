@@ -41,9 +41,7 @@ interface CafeEditClientProps {
     cafe: CafeWithRatings
 }
 
-// Helper to convert snake_case to Title Case
-const formatLabel = (s: string) =>
-    s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+// Helper to convert snake_case to Title Case (deleted)
 
 export default function CafeEditClient({
     cafe: initialCafe,
@@ -67,7 +65,6 @@ export default function CafeEditClient({
     const [storyContent, setStoryContent] = useState(
         initialCafe.story?.content || ""
     )
-    const [storyPreview, setStoryPreview] = useState(false)
     const [savingStory, setSavingStory] = useState(false)
     const [storyHasChanges, setStoryHasChanges] = useState(false)
 
@@ -78,22 +75,6 @@ export default function CafeEditClient({
         },
         []
     )
-
-    const moveGalleryImage = (index: number, direction: "left" | "right") => {
-        const currentGallery = cafe.gallery || []
-        if (
-            (direction === "left" && index === 0) ||
-            (direction === "right" && index === currentGallery.length - 1)
-        ) {
-            return
-        }
-
-        const newIndex = direction === "left" ? index - 1 : index + 1
-        const newGallery = [...currentGallery]
-        const [movedItem] = newGallery.splice(index, 1)
-        newGallery.splice(newIndex, 0, movedItem)
-        updateField("gallery", newGallery)
-    }
 
     const handleSave = async () => {
         setSaving(true)

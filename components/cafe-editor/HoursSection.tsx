@@ -7,11 +7,7 @@ interface HoursSectionProps {
     colorScheme?: "primary" | "accent"
 }
 
-export default function HoursSection({
-    hours,
-    onChange,
-    colorScheme = "primary",
-}: HoursSectionProps) {
+export default function HoursSection({ hours, onChange }: HoursSectionProps) {
     return (
         <div>
             <label className='block text-sm font-medium text-text/60 mb-4'>

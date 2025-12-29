@@ -30,7 +30,6 @@ import {
     Trash2,
     UtensilsCrossed,
     Verified,
-    X,
     FileText,
     CalendarIcon,
     Download,
@@ -125,14 +124,6 @@ export default function CafeManagementClient({
     const [editingMenuItem, setEditingMenuItem] = useState<CafeMenuItem | null>(
         null
     )
-    const [menuForm, setMenuForm] = useState<MenuItemForm>({
-        name: "",
-        category: "Coffee",
-        price: 0,
-        description: "",
-        is_signature: false,
-        is_available: true,
-    })
 
     // Blog management state
     const [showBlogEditor, setShowBlogEditor] = useState(false)
@@ -234,27 +225,11 @@ export default function CafeManagementClient({
     // Menu handlers
     const openAddMenu = () => {
         setEditingMenuItem(null)
-        setMenuForm({
-            name: "",
-            category: "Coffee",
-            price: 0,
-            description: "",
-            is_signature: false,
-            is_available: true,
-        })
         setShowMenuModal(true)
     }
 
     const openEditMenu = (item: CafeMenuItem) => {
         setEditingMenuItem(item)
-        setMenuForm({
-            name: item.name,
-            category: item.category,
-            price: item.price,
-            description: item.description || "",
-            is_signature: item.is_signature,
-            is_available: item.is_available,
-        })
         setShowMenuModal(true)
     }
 
@@ -1460,7 +1435,7 @@ export default function CafeManagementClient({
                                                         30
                                                     )
                                                 )
-                                                .map((day, i) => {
+                                                .map((day) => {
                                                     const maxViews = Math.max(
                                                         ...analytics.viewsByDay.map(
                                                             (d) => d.views
@@ -1589,7 +1564,7 @@ export default function CafeManagementClient({
                                             ) : (
                                                 <div className='space-y-2'>
                                                     {analytics.topReferrers.map(
-                                                        (ref, i) => (
+                                                        (ref) => (
                                                             <div
                                                                 key={
                                                                     ref.referrer

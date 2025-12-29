@@ -25,6 +25,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 referrer.includes(window.location.host) ||
                 (window.history.length > 1 &&
                     sessionStorage.getItem("__next_scroll") !== null)
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsInternalNavigation(isInternal)
         }
     }, [isMenuPage])

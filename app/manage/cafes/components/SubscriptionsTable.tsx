@@ -10,7 +10,7 @@ import {
     Calendar,
     CalendarRange,
     Clock,
-    Image,
+    Image as ImageIcon,
 } from "lucide-react"
 import {
     CafeSubscription,
@@ -311,7 +311,7 @@ export default function SubscriptionsTable({
                                                 }
                                                 className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors'
                                             >
-                                                <Image className='w-3.5 h-3.5' />
+                                                <ImageIcon className='w-3.5 h-3.5' />
                                                 View
                                             </button>
                                         ) : (

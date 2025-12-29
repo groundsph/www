@@ -32,6 +32,7 @@ export default function MenuHeader({
                 // Additional check: sessionStorage flag set by Next.js navigation
                 sessionStorage.getItem("__next_scroll") !== null)
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowHeader(isInternalNavigation)
     }, [])
 
