@@ -332,6 +332,123 @@ export async function getAdminBlogPosts(
     }
 }
 
+export async function getWriterBlogPosts(
+    params: AdminBlogParams = {}
+): Promise<PaginatedBlogResult> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
+    }
+
+    // Check if user is writer or admin
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'writer' && profile?.role !== 'admin') {
+        return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
+    }
+
+    const { page = 1, pageSize = 20, status, category, search } = params
+    const offset = (page - 1) * pageSize
+
+    let query = supabase
+        .from("blog_posts")
+        .select(
+            `
+            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
+            category, status, tags, featured, views_count, published_at, created_at, updated_at,
+            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
+            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
+        `,
+            { count: "exact" }
+        )
+        .eq('author_id', user.id)
+        .order("created_at", { ascending: false })
+
+    if (status) {
+        query = query.eq("status", status)
+    }
+    if (category) {
+        query = query.eq("category", category)
+    }
+    if (search) {
+        query = query.textSearch("search_vector", search)
+    }
+
+    const { data, count, error } = await query.range(
+        offset,
+        offset + pageSize - 1
+    )
+
+    if (error) {
+        console.error("Error fetching writer blog posts:", error)
+        return { posts: [], total: 0, page, pageSize, hasMore: false }
+    }
+
+    const posts: BlogPost[] = ((data || []) as unknown as BlogPostQueryResult[]).map((post) => ({
+        ...post,
+        author: Array.isArray(post.author) ? post.author[0] : post.author,
+        cafe: Array.isArray(post.cafe) ? post.cafe[0] : post.cafe,
+    }))
+
+    return {
+        posts,
+        total: count || 0,
+        page,
+        pageSize,
+        hasMore: offset + pageSize < (count || 0),
+    }
+}
+
+export async function getWriterBlogPostById(id: string): Promise<BlogPost | null> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    // Check if user is writer or admin via profile
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'writer' && profile?.role !== 'admin') {
+        return null
+    }
+
+    const { data, error } = await supabase
+        .from("blog_posts")
+        .select(
+            `
+            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
+            category, status, tags, featured, views_count, published_at, created_at, updated_at,
+            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
+            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
+        `
+        )
+        .eq("id", id)
+        .eq("author_id", user.id)
+        .single()
+
+    if (error || !data) {
+        return null
+    }
+
+    const typedData = data as unknown as BlogPostQueryResult
+
+    return {
+        ...typedData,
+        author: Array.isArray(typedData.author) ? typedData.author[0] : typedData.author,
+        cafe: Array.isArray(typedData.cafe) ? typedData.cafe[0] : typedData.cafe,
+    }
+}
+
 // ============================================
 // Cafe Owner Operations
 // ============================================

@@ -15,7 +15,7 @@ import { useContext } from "react"
 
 export default function Navbar() {
     // Context
-    const { user } = useContext(AuthContext)
+    const { user, isWriter, isAdmin } = useContext(AuthContext)
 
     // Constants
     const curPath = usePathname()
@@ -57,6 +57,36 @@ export default function Navbar() {
                             } font-semibold transition-colors relative group`}
                         >
                             profile
+                            <div className='absolute bottom-0 left-0 w-full h-0.5 bg-transparent group-hover:bg-text/60 transition-colors' />
+                        </Link>
+                    </li>
+                )}
+                {isAdmin && (
+                    <li>
+                        <Link
+                            href='/manage'
+                            className={`${
+                                curPath === "/manage"
+                                    ? "text-text/80"
+                                    : "hover:text-text/60"
+                            } font-semibold transition-colors relative group`}
+                        >
+                            dashboard
+                            <div className='absolute bottom-0 left-0 w-full h-0.5 bg-transparent group-hover:bg-text/60 transition-colors' />
+                        </Link>
+                    </li>
+                )}
+                {isWriter && (
+                    <li>
+                        <Link
+                            href='/writer'
+                            className={`${
+                                curPath === "/writer"
+                                    ? "text-text/80"
+                                    : "hover:text-text/60"
+                            } font-semibold transition-colors relative group`}
+                        >
+                            write
                             <div className='absolute bottom-0 left-0 w-full h-0.5 bg-transparent group-hover:bg-text/60 transition-colors' />
                         </Link>
                     </li>
