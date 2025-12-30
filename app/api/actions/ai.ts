@@ -1,6 +1,9 @@
 "use server";
 
 import { generateExcerpt } from "@/utils/ai/google-ai";
+import { generateExcerptGroq } from "@/utils/ai/groq";
+
+export type AIProvider = "google" | "groq";
 
 interface ActionResponse {
     success: boolean;
@@ -8,7 +11,10 @@ interface ActionResponse {
     error?: string;
 }
 
-export async function generateExcerptAction(content: string): Promise<ActionResponse> {
+export async function generateExcerptAction(
+    content: string,
+    provider: AIProvider = "google"
+): Promise<ActionResponse> {
     try {
         if (!content || content.length < 50) {
             return {
@@ -17,7 +23,14 @@ export async function generateExcerptAction(content: string): Promise<ActionResp
             };
         }
 
-        const excerpt = await generateExcerpt(content);
+        let excerpt: string;
+
+        if (provider === "groq") {
+            excerpt = await generateExcerptGroq(content);
+        } else {
+            excerpt = await generateExcerpt(content);
+        }
+
         return { success: true, excerpt };
     } catch (error) {
         console.error("Generate excerpt action error:", error);

@@ -197,68 +197,70 @@ export default async function BlogPage({
                                         href={`/blog/${post.slug}`}
                                         className='flex flex-col h-full'
                                     >
-                                        {/* Header - Date and Category */}
-                                        <div className='flex items-center justify-between mb-3'>
-                                            {post.published_at && (
-                                                <span className='text-sm text-text/50'>
-                                                    {new Date(
-                                                        post.published_at
-                                                    ).toLocaleDateString(
-                                                        "en-US",
-                                                        {
-                                                            day: "numeric",
-                                                            month: "long",
-                                                            year: "numeric",
-                                                        }
-                                                    )}
-                                                </span>
-                                            )}
-                                            <span className='px-3 py-1 border border-text/20 text-text/70 text-xs font-medium rounded-full uppercase tracking-wide'>
-                                                {
-                                                    BLOG_CATEGORIES.find(
-                                                        (c) =>
-                                                            c.value ===
-                                                            post.category
-                                                    )?.label
-                                                }
-                                            </span>
-                                        </div>
-
-                                        {/* Image - Portrait aspect ratio */}
-                                        <div className='relative aspect-video overflow-hidden mb-5'>
-                                            {post.cover_image ? (
-                                                <Image
-                                                    src={post.cover_image}
-                                                    alt={post.title}
-                                                    fill
-                                                    className='object-cover grayscale group-hover:grayscale-0 transition-all duration-500'
-                                                />
-                                            ) : (
-                                                <div className='w-full h-full bg-text/5 flex items-center justify-center'>
-                                                    <Coffee className='w-12 h-12 text-text/20' />
-                                                </div>
-                                            )}
-                                            {post.cafe && (
-                                                <div className='absolute bottom-3 left-3 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-lg flex items-center gap-1.5'>
-                                                    <Coffee className='w-3 h-3 text-primary' />
-                                                    <span className='text-xs text-text font-medium'>
-                                                        {post.cafe.name}
+                                        <div className='flex-1 flex flex-col'>
+                                            {/* Header - Date and Category */}
+                                            <div className='flex items-center justify-between mb-3'>
+                                                {post.published_at && (
+                                                    <span className='text-sm text-text/50'>
+                                                        {new Date(
+                                                            post.published_at
+                                                        ).toLocaleDateString(
+                                                            "en-US",
+                                                            {
+                                                                day: "numeric",
+                                                                month: "long",
+                                                                year: "numeric",
+                                                            }
+                                                        )}
                                                     </span>
-                                                </div>
+                                                )}
+                                                <span className='px-3 py-1 border border-text/20 text-text/70 text-xs font-medium rounded-full uppercase tracking-wide'>
+                                                    {
+                                                        BLOG_CATEGORIES.find(
+                                                            (c) =>
+                                                                c.value ===
+                                                                post.category
+                                                        )?.label
+                                                    }
+                                                </span>
+                                            </div>
+
+                                            {/* Image - Portrait aspect ratio */}
+                                            <div className='relative aspect-video overflow-hidden mb-5'>
+                                                {post.cover_image ? (
+                                                    <Image
+                                                        src={post.cover_image}
+                                                        alt={post.title}
+                                                        fill
+                                                        className='object-cover grayscale group-hover:grayscale-0 transition-all duration-500'
+                                                    />
+                                                ) : (
+                                                    <div className='w-full h-full bg-text/5 flex items-center justify-center'>
+                                                        <Coffee className='w-12 h-12 text-text/20' />
+                                                    </div>
+                                                )}
+                                                {post.cafe && (
+                                                    <div className='absolute bottom-3 left-3 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-lg flex items-center gap-1.5'>
+                                                        <Coffee className='w-3 h-3 text-primary' />
+                                                        <span className='text-xs text-text font-medium'>
+                                                            {post.cafe.name}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Title */}
+                                            <h3 className='font-bold font-serif text-text text-xl mb-3 line-clamp-2 group-hover:text-primary transition-colors'>
+                                                {post.title}
+                                            </h3>
+
+                                            {/* Excerpt */}
+                                            {post.excerpt && (
+                                                <p className='text-text/60 text-sm line-clamp-4 mb-6 leading-relaxed'>
+                                                    {post.excerpt}
+                                                </p>
                                             )}
                                         </div>
-
-                                        {/* Title */}
-                                        <h3 className='font-bold font-serif text-text text-xl mb-3 line-clamp-2 group-hover:text-primary transition-colors'>
-                                            {post.title}
-                                        </h3>
-
-                                        {/* Excerpt */}
-                                        {post.excerpt && (
-                                            <p className='text-text/60 text-sm line-clamp-4 mb-6 leading-relaxed'>
-                                                {post.excerpt}
-                                            </p>
-                                        )}
 
                                         {/* Footer - Author and Duration */}
                                         <div className='mt-auto pt-4 border-t border-text/10 flex items-center justify-between text-xs text-text/50'>

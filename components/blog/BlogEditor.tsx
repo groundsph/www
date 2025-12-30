@@ -24,7 +24,7 @@ import {
 } from "@/utils/types/blog"
 import { createBlogPost, updateBlogPost } from "@/app/api/actions/blog"
 import { uploadBlogImageAction } from "@/utils/storage/actions"
-import { generateExcerptAction } from "@/app/api/actions/ai"
+import { generateExcerptAction, AIProvider } from "@/app/api/actions/ai"
 import MarkdownRender from "@/components/MarkdownRender"
 
 interface BlogEditorProps {
@@ -64,6 +64,7 @@ export default function BlogEditor({
     const [error, setError] = useState<string | null>(null)
     const [autoSlug, setAutoSlug] = useState(!post?.slug)
     const [isGeneratingExcerpt, setIsGeneratingExcerpt] = useState(false)
+    const [aiProvider, setAiProvider] = useState<AIProvider>("google")
 
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -347,7 +348,20 @@ export default function BlogEditor({
                             maxLength={300}
                             className='w-full px-4 py-3 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none resize-none transition-all placeholder:text-text/30 leading-relaxed'
                         />
-                        <div className='flex justify-end'>
+                        <div className='flex items-center justify-end gap-2 mt-2'>
+                            <select
+                                value={aiProvider}
+                                onChange={(e) =>
+                                    setAiProvider(e.target.value as AIProvider)
+                                }
+                                className='px-2 py-1 rounded-lg border border-text/15 bg-background text-xs font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer hover:bg-text/5 transition-all'
+                                disabled={isGeneratingExcerpt}
+                            >
+                                <option value='google'>
+                                    Google (Gemini 2.5)
+                                </option>
+                                <option value='groq'>Groq (Llama 3.3)</option>
+                            </select>
                             <button
                                 onClick={async () => {
                                     if (!content.trim()) {
@@ -359,8 +373,10 @@ export default function BlogEditor({
                                     setIsGeneratingExcerpt(true)
                                     setError(null)
                                     try {
-                                        const res =
-                                            await generateExcerptAction(content)
+                                        const res = await generateExcerptAction(
+                                            content,
+                                            aiProvider
+                                        )
                                         if (res.success && res.excerpt) {
                                             setExcerpt(res.excerpt)
                                         } else {
