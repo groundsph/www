@@ -1402,9 +1402,340 @@ export async function adminProcessAvatarQueue(): Promise<{
 }
 
 // ============================================
-// END OF PHASE 2 - Subscriptions, Stories, Cleanup
+// Review Moderation Functions
+// ============================================
+
+import { reviews, reviewInteractions } from "@/db/schema"
+import { deleteReviewImagesAction } from '@/utils/storage/actions'
+
+export interface ReviewForModeration {
+    id: string
+    rating: number
+    comment: string
+    images: string[] | null
+    status: 'published' | 'hidden' | 'flagged' | null
+    created_at: string | null
+    updated_at: string | null
+    report_count: number
+    author: {
+        id: string
+        username: string
+        display_name: string
+        avatar_url: string | null
+    } | null
+    cafe: {
+        id: string
+        name: string
+        slug: string
+        thumbnail: string
+    } | null
+}
+
+/**
+ * Get all reviews that have been reported
+ */
+export async function getReportedReviews(): Promise<ReviewForModeration[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    // Get all review IDs that have report interactions
+    const reportedReviewIdsResult = await db
+        .select({ reviewId: reviewInteractions.reviewId })
+        .from(reviewInteractions)
+        .where(eq(reviewInteractions.interactionType, 'report'))
+
+    if (!reportedReviewIdsResult.length) {
+        return []
+    }
+
+    const uniqueReviewIds = [...new Set(reportedReviewIdsResult.map(r => r.reviewId))]
+
+    // Fetch the reviews with those IDs
+    const reviewsResult = await db
+        .select({
+            id: reviews.id,
+            rating: reviews.rating,
+            comment: reviews.comment,
+            images: reviews.images,
+            status: reviews.status,
+            createdAt: reviews.createdAt,
+            updatedAt: reviews.updatedAt,
+            userId: reviews.userId,
+            cafeId: reviews.cafeId,
+        })
+        .from(reviews)
+        .where(sql`${reviews.id} = ANY(${uniqueReviewIds})`)
+        .orderBy(desc(reviews.updatedAt))
+
+    if (!reviewsResult.length) return []
+
+    // Get author and cafe info
+    const userIds = [...new Set(reviewsResult.map(r => r.userId).filter(Boolean))] as string[]
+    const cafeIds = [...new Set(reviewsResult.map(r => r.cafeId).filter(Boolean))] as string[]
+
+    const [authorsResult, cafesInfoResult] = await Promise.all([
+        userIds.length > 0 ? db.select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+        }).from(profiles).where(sql`${profiles.id} = ANY(${userIds})`) : [],
+        cafeIds.length > 0 ? db.select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+        }).from(cafes).where(sql`${cafes.id} = ANY(${cafeIds})`) : []
+    ])
+
+    const authorMap = new Map(authorsResult.map(a => [a.id, a]))
+    const cafeInfoMap = new Map(cafesInfoResult.map(c => [c.id, c]))
+
+    // Count reports per review
+    const reportMap = new Map<string, number>()
+    reportedReviewIdsResult.forEach(r => {
+        const current = reportMap.get(r.reviewId) || 0
+        reportMap.set(r.reviewId, current + 1)
+    })
+
+    return reviewsResult.map(r => {
+        const author = r.userId ? authorMap.get(r.userId) : null
+        const cafe = r.cafeId ? cafeInfoMap.get(r.cafeId) : null
+        return {
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment ?? '',
+            images: r.images,
+            status: r.status as ReviewForModeration['status'],
+            created_at: r.createdAt?.toISOString() ?? null,
+            updated_at: r.updatedAt?.toISOString() ?? null,
+            report_count: reportMap.get(r.id) || 0,
+            author: author ? {
+                id: author.id,
+                username: author.username ?? '',
+                display_name: author.displayName ?? '',
+                avatar_url: author.avatarUrl,
+            } : null,
+            cafe: cafe ? {
+                id: cafe.id,
+                name: cafe.name,
+                slug: cafe.slug,
+                thumbnail: cafe.thumbnail ?? '',
+            } : null,
+        }
+    }).sort((a, b) => b.report_count - a.report_count)
+}
+
+/**
+ * Get all flagged reviews for moderation
+ */
+export async function getFlaggedReviews(): Promise<ReviewForModeration[]> {
+    return getReviewsForModeration('flagged')
+}
+
+/**
+ * Get reviews for moderation by status
+ */
+export async function getReviewsForModeration(
+    status?: 'published' | 'hidden' | 'flagged'
+): Promise<ReviewForModeration[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    // Fetch reviews
+    const conditions = status ? [eq(reviews.status, status)] : []
+    const reviewsResult = await db
+        .select({
+            id: reviews.id,
+            rating: reviews.rating,
+            comment: reviews.comment,
+            images: reviews.images,
+            status: reviews.status,
+            createdAt: reviews.createdAt,
+            updatedAt: reviews.updatedAt,
+            userId: reviews.userId,
+            cafeId: reviews.cafeId,
+        })
+        .from(reviews)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(reviews.updatedAt))
+
+    if (!reviewsResult.length) return []
+
+    // Get author and cafe info
+    const userIds = [...new Set(reviewsResult.map(r => r.userId).filter(Boolean))] as string[]
+    const cafeIds = [...new Set(reviewsResult.map(r => r.cafeId).filter(Boolean))] as string[]
+    const reviewIds = reviewsResult.map(r => r.id)
+
+    const [authorsResult, cafesInfoResult, reportCountsResult] = await Promise.all([
+        userIds.length > 0 ? db.select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+        }).from(profiles).where(sql`${profiles.id} = ANY(${userIds})`) : [],
+        cafeIds.length > 0 ? db.select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+        }).from(cafes).where(sql`${cafes.id} = ANY(${cafeIds})`) : [],
+        reviewIds.length > 0 ? db.select({ reviewId: reviewInteractions.reviewId })
+            .from(reviewInteractions)
+            .where(and(
+                sql`${reviewInteractions.reviewId} = ANY(${reviewIds})`,
+                eq(reviewInteractions.interactionType, 'report')
+            )) : []
+    ])
+
+    const authorMap = new Map(authorsResult.map(a => [a.id, a]))
+    const cafeInfoMap = new Map(cafesInfoResult.map(c => [c.id, c]))
+
+    const reportMap = new Map<string, number>()
+    reportCountsResult.forEach(r => {
+        const current = reportMap.get(r.reviewId) || 0
+        reportMap.set(r.reviewId, current + 1)
+    })
+
+    return reviewsResult.map(r => {
+        const author = r.userId ? authorMap.get(r.userId) : null
+        const cafe = r.cafeId ? cafeInfoMap.get(r.cafeId) : null
+        return {
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment ?? '',
+            images: r.images,
+            status: r.status as ReviewForModeration['status'],
+            created_at: r.createdAt?.toISOString() ?? null,
+            updated_at: r.updatedAt?.toISOString() ?? null,
+            report_count: reportMap.get(r.id) || 0,
+            author: author ? {
+                id: author.id,
+                username: author.username ?? '',
+                display_name: author.displayName ?? '',
+                avatar_url: author.avatarUrl,
+            } : null,
+            cafe: cafe ? {
+                id: cafe.id,
+                name: cafe.name,
+                slug: cafe.slug,
+                thumbnail: cafe.thumbnail ?? '',
+            } : null,
+        }
+    })
+}
+
+/**
+ * Moderate a review (change its status)
+ */
+export async function moderateReview(
+    reviewId: string,
+    newStatus: 'published' | 'hidden' | 'flagged'
+): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    try {
+        await db.update(reviews)
+            .set({ status: newStatus, updatedAt: new Date() })
+            .where(eq(reviews.id, reviewId))
+    } catch (error) {
+        console.error("Error moderating review:", error)
+        return { success: false, error: "Failed to moderate review" }
+    }
+
+    // If approving (publishing), clear all report interactions
+    if (newStatus === 'published') {
+        await db.delete(reviewInteractions)
+            .where(and(
+                eq(reviewInteractions.reviewId, reviewId),
+                eq(reviewInteractions.interactionType, 'report')
+            ))
+    }
+
+    return { success: true }
+}
+
+/**
+ * Delete a review as admin (permanently removes it)
+ */
+export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Get review images first
+    const reviewResult = await db
+        .select({ images: reviews.images })
+        .from(reviews)
+        .where(eq(reviews.id, reviewId))
+        .limit(1)
+
+    const review = reviewResult[0]
+
+    // Delete review images from storage
+    if (review?.images && review.images.length > 0) {
+        await deleteReviewImagesAction(review.images)
+    }
+
+    // Delete review interactions
+    await db.delete(reviewInteractions)
+        .where(eq(reviewInteractions.reviewId, reviewId))
+
+    // Delete the review
+    try {
+        await db.delete(reviews)
+            .where(eq(reviews.id, reviewId))
+    } catch (error) {
+        console.error("Error deleting review:", error)
+        return { success: false, error: "Failed to delete review" }
+    }
+
+    return { success: true }
+}
+
+// ============================================
+// END OF PHASE 3 - Review Moderation
 // ============================================
 // The remaining phases will be added incrementally:
-// Phase 3: Review Moderation
 // Phase 4: Badges & Featured Schedules
 // Phase 5: Verification & User Roles
