@@ -110,7 +110,8 @@ export async function getUserRole(): Promise<'admin' | 'moderator' | 'writer' | 
 
     if (!user) return null
 
-    const { data: profile } = await db
+    const adminDb = await createAdminClient()
+    const { data: profile } = await adminDb
         .from('profiles')
         .select('role')
         .eq('id', user.id)

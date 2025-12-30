@@ -336,27 +336,31 @@ export async function getWriterBlogPosts(
     params: AdminBlogParams = {}
 ): Promise<PaginatedBlogResult> {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
         return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
     }
 
+    const adminClient = await createAdminClient()
+
     // Check if user is writer or admin
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
+    const { data: profile } = await adminClient
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
         .single()
 
-    if (profile?.role !== 'writer' && profile?.role !== 'admin') {
+    if (profile?.role !== "writer" && profile?.role !== "admin") {
         return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
     }
 
     const { page = 1, pageSize = 20, status, category, search } = params
     const offset = (page - 1) * pageSize
 
-    let query = supabase
+    let query = adminClient
         .from("blog_posts")
         .select(
             `
@@ -367,7 +371,7 @@ export async function getWriterBlogPosts(
         `,
             { count: "exact" }
         )
-        .eq('author_id', user.id)
+        .eq("author_id", user.id)
         .order("created_at", { ascending: false })
 
     if (status) {
@@ -390,11 +394,13 @@ export async function getWriterBlogPosts(
         return { posts: [], total: 0, page, pageSize, hasMore: false }
     }
 
-    const posts: BlogPost[] = ((data || []) as unknown as BlogPostQueryResult[]).map((post) => ({
-        ...post,
-        author: Array.isArray(post.author) ? post.author[0] : post.author,
-        cafe: Array.isArray(post.cafe) ? post.cafe[0] : post.cafe,
-    }))
+    const posts: BlogPost[] = ((data || []) as unknown as BlogPostQueryResult[]).map(
+        (post) => ({
+            ...post,
+            author: Array.isArray(post.author) ? post.author[0] : post.author,
+            cafe: Array.isArray(post.cafe) ? post.cafe[0] : post.cafe,
+        })
+    )
 
     return {
         posts,
@@ -407,22 +413,26 @@ export async function getWriterBlogPosts(
 
 export async function getWriterBlogPostById(id: string): Promise<BlogPost | null> {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) return null
 
+    const adminClient = await createAdminClient()
+
     // Check if user is writer or admin via profile
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
+    const { data: profile } = await adminClient
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
         .single()
 
-    if (profile?.role !== 'writer' && profile?.role !== 'admin') {
+    if (profile?.role !== "writer" && profile?.role !== "admin") {
         return null
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await adminClient
         .from("blog_posts")
         .select(
             `
