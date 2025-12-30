@@ -2,6 +2,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
 
 /**
@@ -86,16 +87,16 @@ export async function getAllBadges(): Promise<Tables<'badge_definitions'>[]> {
 /**
  * Update user's profile
  */
-export async function updateProfile(data: {
+export async function updateProfile(userId: string, data: {
     display_name?: string
     bio?: string
     avatar_url?: string
+    username?: string
+    profile_completed?: boolean
 }): Promise<{ success: boolean; error?: string }> {
-    const db = await createClient()
+    if (!userId) return { success: false, error: "User ID required" }
 
-    // Get current user
-    const { data: { user } } = await db.auth.getUser()
-    if (!user) return { success: false, error: "Not authenticated" }
+    const db = await createClient()
 
     // Build update payload
     const updatePayload: Record<string, unknown> = {
@@ -104,11 +105,13 @@ export async function updateProfile(data: {
     if (data.display_name !== undefined) updatePayload.display_name = data.display_name
     if (data.bio !== undefined) updatePayload.bio = data.bio
     if (data.avatar_url !== undefined) updatePayload.avatar_url = data.avatar_url
+    if (data.username !== undefined) updatePayload.username = data.username
+    if (data.profile_completed !== undefined) updatePayload.profile_completed = data.profile_completed
 
     const { error } = await (db
         .from("profiles") as any)
         .update(updatePayload)
-        .eq("id", user.id)
+        .eq("id", userId)
 
     if (error) return { success: false, error: error.message }
 
@@ -230,12 +233,13 @@ export async function getUserReviews(userId: string, viewerId?: string): Promise
  * Toggle a cafe in the user's wishlist
  */
 export async function toggleWishlist(cafeId: string): Promise<{ added: boolean; error?: string }> {
-    const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { added: false, error: "Unauthorized" }
     }
+
+    const db = await createClient()
 
     try {
         const { data: profile } = await db
@@ -281,12 +285,13 @@ export async function toggleWishlist(cafeId: string): Promise<{ added: boolean; 
  * Toggle a cafe in the user's visited list
  */
 export async function toggleVisited(cafeId: string): Promise<{ visited: boolean; error?: string }> {
-    const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { visited: false, error: "Unauthorized" }
     }
+
+    const db = await createClient()
 
     try {
         const { data: profile } = await db
@@ -332,12 +337,13 @@ export async function toggleVisited(cafeId: string): Promise<{ visited: boolean;
  * Toggle a cafe in the user's favorites
  */
 export async function toggleFavorite(cafeId: string): Promise<{ favorited: boolean; error?: string }> {
-    const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { favorited: false, error: "Unauthorized" }
     }
+
+    const db = await createClient()
 
     try {
         const { data: profile } = await db

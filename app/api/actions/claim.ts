@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { notifyDiscordCafeClaim } from "@/app/api/actions/notify"
 import { Resend } from "resend"
@@ -20,7 +21,7 @@ export async function getOwnershipProofSignedUrl(
     const db = await createClient()
 
     // Check admin
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }
@@ -88,7 +89,7 @@ export async function submitCafeClaim(
     const db = await createClient()
 
     // Check auth
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "You must be logged in to claim a cafe" }
     }
@@ -170,7 +171,7 @@ export async function submitCafeClaim(
 export async function getUserClaims(): Promise<CafeClaim[]> {
     const db = await createClient()
 
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: claims, error } = await db
@@ -196,7 +197,7 @@ export async function getUserClaims(): Promise<CafeClaim[]> {
 export async function getUserClaimForCafe(cafeId: string): Promise<CafeClaim | null> {
     const db = await createClient()
 
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return null
 
     const { data: claim } = await db
@@ -218,7 +219,7 @@ export async function getPendingClaims(): Promise<CafeClaim[]> {
     const db = await createClient()
 
     // Check admin
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -260,7 +261,7 @@ export async function approveClaim(
     const adminDb = await createAdminClient()
 
     // Check admin
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }
@@ -373,7 +374,7 @@ export async function rejectClaim(
     const db = await createClient()
 
     // Check admin
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }

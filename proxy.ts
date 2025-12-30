@@ -1,5 +1,7 @@
-import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { db } from "@/db"
+import { session, user, profiles } from "@/db/schema"
+import { eq } from "drizzle-orm"
 
 // Routes that require authentication (exact match)
 const protectedRoutesExact = ["/profile"]
@@ -7,54 +9,43 @@ const protectedRoutesExact = ["/profile"]
 const protectedRoutesPrefixes = ["/submit"]
 
 export async function proxy(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
-    })
+    const token = request.cookies.get("better-auth.session_token")?.value || request.cookies.get("__Secure-better-auth.session_token")?.value
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return request.cookies.getAll()
-                },
-                setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value }) =>
-                        request.cookies.set(name, value)
-                    )
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    })
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    )
-                },
-            },
-        }
-    )
-
-    // Refresh session if exists - with error handling
-    let user = null
+    let authUser = null
     let profileCompleted = false
-    try {
-        const {
-            data: { user: authUser },
-        } = await supabase.auth.getUser()
-        user = authUser
 
-        // Check if user has completed their profile setup
-        if (user) {
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("profile_completed")
-                .eq("id", user.id)
-                .single()
-            profileCompleted = !!profile?.profile_completed
+    if (token) {
+        try {
+            // Split token to handle signed/prefixed cookies (token.signature)
+            // The DB stores the raw token, but the cookie may contain a signature suffix
+            const tokenValue = token.split(".")[0]
+
+            // Query session and user
+            const sessionResult = await db.select({
+                user: user,
+                session: session
+            })
+                .from(session)
+                .innerJoin(user, eq(session.userId, user.id))
+                .where(eq(session.token, tokenValue))
+                .limit(1)
+
+            const validSession = sessionResult[0]
+            if (validSession && new Date(validSession.session.expiresAt) > new Date()) {
+                authUser = validSession.user
+
+                // Check if user has completed their profile setup
+                // profiles.id is UUID, authUser.id is string (containing UUID). Drizzle handles string->uuid
+                const profileResult = await db.select({ profileCompleted: profiles.profileCompleted })
+                    .from(profiles)
+                    .where(eq(profiles.id, authUser.id))
+                    .limit(1)
+
+                profileCompleted = !!profileResult[0]?.profileCompleted
+            }
+        } catch (error) {
+            console.error("Middleware auth check failed:", error)
         }
-    } catch {
-        // Error fetching user - treat as not logged in
-        user = null
     }
 
     const { pathname } = request.nextUrl
@@ -65,7 +56,7 @@ export async function proxy(request: NextRequest) {
         protectedRoutesPrefixes.some((route) => pathname.startsWith(route))
 
     // Redirect to auth if accessing protected route without being logged in
-    if (isProtectedRoute && !user) {
+    if (isProtectedRoute && !authUser) {
         const authUrl = request.nextUrl.clone()
         authUrl.pathname = "/auth"
         authUrl.searchParams.set("redirect", pathname)
@@ -74,7 +65,7 @@ export async function proxy(request: NextRequest) {
 
     // If user is logged in but hasn't completed profile setup, redirect to profile setup
     // (except if already on auth page or callback)
-    if (isProtectedRoute && user && !profileCompleted && !pathname.startsWith("/auth")) {
+    if (isProtectedRoute && authUser && !profileCompleted && !pathname.startsWith("/auth")) {
         const authUrl = request.nextUrl.clone()
         authUrl.pathname = "/auth"
         authUrl.searchParams.set("setup", "username")
@@ -84,11 +75,11 @@ export async function proxy(request: NextRequest) {
 
     // Redirect away from auth if already logged in AND has completed profile setup
     const isSettingUpUsername = request.nextUrl.searchParams.get("setup") === "username"
-    if (pathname.startsWith("/auth") && user && !pathname.includes("/callback")) {
+    if (pathname.startsWith("/auth") && authUser && !pathname.includes("/callback")) {
         // Don't redirect if user still needs to complete profile setup
         if (!profileCompleted || isSettingUpUsername) {
             // Stay on auth page for profile setup
-            return supabaseResponse
+            return NextResponse.next()
         }
         // User is fully set up, redirect them away from auth
         const redirect = request.nextUrl.searchParams.get("redirect") || "/"
@@ -99,7 +90,7 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
     }
 
-    return supabaseResponse
+    return NextResponse.next()
 }
 
 export const config = {

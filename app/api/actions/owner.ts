@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/utils/supabase/admin"
 import {
     OwnedCafe,
@@ -28,7 +29,7 @@ import { logContribution, getChangedFields, generateChangeSummary } from "@/util
  */
 export async function isOwnerOfCafe(cafeId: string): Promise<boolean> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) return false
 
@@ -68,7 +69,7 @@ export async function getCafeIdBySlug(slug: string): Promise<string | null> {
  */
 async function getCurrentUserId(): Promise<string | null> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     return user?.id || null
 }
 
@@ -268,7 +269,7 @@ export async function updateCafeAsOwner(
     }
 
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     // Fetch current cafe data for change detection
     const { data: currentCafe } = await db
@@ -761,7 +762,7 @@ export async function addMenuItem(
     item: MenuItemForm
 ): Promise<MenuItemResult> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { success: false, error: 'Not authenticated' }
@@ -854,7 +855,7 @@ export async function updateMenuItem(
     updates: Partial<MenuItemForm>
 ): Promise<OwnerActionResult> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { success: false, error: 'Not authenticated' }
@@ -909,7 +910,7 @@ export async function updateMenuItem(
  */
 export async function deleteMenuItem(itemId: string): Promise<OwnerActionResult> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { success: false, error: 'Not authenticated' }

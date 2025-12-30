@@ -180,9 +180,10 @@ export default function ProfileClient() {
 
     // Handle save
     const handleSave = async () => {
+        if (!user) return
         setIsSaving(true)
         try {
-            const result = await updateProfile({
+            const result = await updateProfile(user.id, {
                 display_name: editDisplayName,
                 bio: editBio,
             })

@@ -1,8 +1,11 @@
 "use client"
 
 import { AuthContext } from "@/components/AuthProvider"
-import { checkUsernameAvailability } from "@/app/api/actions/profile"
-import { createLocalClient } from "@/utils/supabase/client"
+import {
+    checkUsernameAvailability,
+    updateProfile,
+} from "@/app/api/actions/profile"
+import { signIn, signUp } from "@/lib/auth-client"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -16,10 +19,9 @@ export default function AuthPageClient() {
     if (!authContext) {
         throw new Error("AuthContext not found")
     }
-    const { refreshProfile } = authContext
+    const { refreshProfile, user } = authContext
 
     // Constants
-    const supabase = createLocalClient()
     const searchParams = useSearchParams()
     const router = useRouter()
 
@@ -48,25 +50,22 @@ export default function AuthPageClient() {
         const setup = searchParams.get("setup")
         const authError = searchParams.get("error")
 
-        if (setup === "username") {
+        if (setup === "username" && user) {
             setMode("username")
             // Fetch current profile to pre-fill and show current username
             const fetchCurrentProfile = async () => {
-                const {
-                    data: { user },
-                } = await supabase.auth.getUser()
-                if (user) {
-                    const { data: profile } = await supabase
-                        .from("profiles")
-                        .select("id, username, display_name")
-                        .eq("id", user.id)
-                        .single()
-                    if (profile) {
-                        setCurrentProfile(profile)
-                        // Pre-fill with current values
-                        setUsername(profile.username || "")
-                        setDisplayName(profile.display_name || "")
+                try {
+                    const response = await fetch(`/api/profile/${user.id}`)
+                    if (response.ok) {
+                        const profile = await response.json()
+                        if (profile) {
+                            setCurrentProfile(profile)
+                            setUsername(profile.username || "")
+                            setDisplayName(profile.display_name || "")
+                        }
                     }
+                } catch (err) {
+                    console.error("Error fetching profile:", err)
                 }
             }
             fetchCurrentProfile()
@@ -74,7 +73,7 @@ export default function AuthPageClient() {
         if (authError === "auth_failed") {
             setError("Authentication failed. Please try again.")
         }
-    }, [searchParams, supabase])
+    }, [searchParams, user])
 
     // Debounced username availability check
     useEffect(() => {
@@ -135,11 +134,11 @@ export default function AuthPageClient() {
         setIsLoading(true)
         setError(null)
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            const { error } = await signIn.email({
                 email,
                 password,
             })
-            if (error) throw error
+            if (error) throw new Error(error.message)
             // Redirect on success
             const redirect = searchParams.get("redirect") || "/"
             window.location.href = redirect
@@ -176,14 +175,12 @@ export default function AuthPageClient() {
         }
 
         try {
-            const { error } = await supabase.auth.signUp({
+            const { error } = await signUp.email({
                 email,
                 password,
-                options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
-                },
+                name: email.split("@")[0], // Use email prefix as initial name
             })
-            if (error) throw error
+            if (error) throw new Error(error.message)
             // Move to username step and update URL to stay in sync
             const redirectParam = searchParams.get("redirect")
             const newUrl = redirectParam
@@ -216,23 +213,16 @@ export default function AuthPageClient() {
         }
 
         try {
-            // Get current user
-            const {
-                data: { user },
-            } = await supabase.auth.getUser()
             if (!user) throw new Error("Not authenticated")
 
-            // Update profiles table
-            const { error: profileError } = await supabase
-                .from("profiles")
-                .update({
-                    username: username.trim(),
-                    display_name: displayName.trim(),
-                    profile_completed: true,
-                })
-                .eq("id", user.id)
+            // Update profile via server action
+            const result = await updateProfile(user.id, {
+                username: username.trim(),
+                display_name: displayName.trim(),
+                profile_completed: true,
+            })
 
-            if (profileError) throw profileError
+            if (!result.success) throw new Error(result.error)
 
             refreshProfile()
             // Redirect on success
@@ -254,19 +244,22 @@ export default function AuthPageClient() {
         setSuccess(null)
 
         try {
-            const response = await fetch("/api/auth/reset-password", {
+            // Call the forgot password endpoint
+            const response = await fetch("/api/auth/forgot-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
+                body: JSON.stringify({
+                    email,
+                    redirectTo: `${window.location.origin}/auth/reset-password`,
+                }),
             })
 
-            const data = await response.json()
-
             if (!response.ok) {
-                throw new Error(data.error || "Failed to send reset email")
+                const data = await response.json()
+                throw new Error(data.message || "Failed to send reset email")
             }
 
-            setSuccess(data.message)
+            setSuccess("Password reset link sent! Check your email.")
             setEmail("")
         } catch (err: unknown) {
             setError(

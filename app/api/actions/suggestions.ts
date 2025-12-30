@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/utils/email"
 import { notifyDiscordEditSuggestion } from "./notify"
@@ -40,7 +41,7 @@ export async function submitEditSuggestion(
     const db = await createClient()
 
     // Verify user is authenticated
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }
@@ -153,7 +154,7 @@ export async function getUserSuggestions(userId: string): Promise<EditSuggestion
  */
 async function isAdmin(): Promise<boolean> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) return false
 
@@ -254,7 +255,7 @@ export async function approveSuggestion(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -408,7 +409,7 @@ export async function rejectSuggestion(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db

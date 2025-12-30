@@ -1,7 +1,6 @@
 "use client"
 
 import { Review } from "@/app/cafes/[slug]/CafeDetails"
-import { User as AuthUser } from "@supabase/supabase-js"
 import { formatDistanceToNow } from "date-fns"
 import {
     Heart,
@@ -25,9 +24,12 @@ import { cn } from "@/utils/cn"
 import MarkdownRender from "@/components/MarkdownRender"
 import ImageLightbox from "@/components/ImageLightbox"
 
+// Simple user type - only needs id for this component
+type SimpleUser = { id: string } | null
+
 interface ReviewItemProps {
     review: Review
-    currentUser: AuthUser | null
+    currentUser: SimpleUser
     onEdit?: (review: Review) => void
 }
 

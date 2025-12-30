@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { deleteReviewImagesAction } from "@/utils/storage/actions"
 import { notifyDiscordReviewReport } from "./notify"
 import { revalidatePath } from "next/cache"
@@ -12,12 +13,13 @@ export async function createReview(
     comment: string,
     images: string[] = []
 ) {
-    const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { error: "Unauthorized" }
     }
+
+    const db = await createClient()
 
     // Check if user already reviewed this cafe
     const { data: existing } = await db
@@ -95,7 +97,7 @@ export async function updateReview(
     images: string[] = []
 ) {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { error: "Unauthorized" }
@@ -136,7 +138,7 @@ export async function updateReview(
 
 export async function deleteReview(reviewId: string) {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { error: "Unauthorized" }
@@ -171,7 +173,7 @@ export async function deleteReview(reviewId: string) {
 
 export async function getUserReviewForCafe(cafeId: string) {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return null
     const { data } = await db
         .from("reviews")
@@ -185,7 +187,7 @@ export async function getUserReviewForCafe(cafeId: string) {
 
 export async function toggleReviewLike(reviewId: string) {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { error: "Unauthorized" }
@@ -258,7 +260,7 @@ const REPORT_THRESHOLD = 3 // Number of reports before auto-flagging
  */
 export async function reportReview(reviewId: string) {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { error: "Unauthorized" }

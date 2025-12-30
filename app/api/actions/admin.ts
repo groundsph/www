@@ -2,6 +2,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
 import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedEmail, sendSubscriptionRejectedEmail } from "@/utils/email"
@@ -87,7 +88,7 @@ async function updateContributorScoutStats(contributorId: string): Promise<void>
  */
 export async function isAdmin(): Promise<boolean> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) return false
 
@@ -106,7 +107,7 @@ export async function isAdmin(): Promise<boolean> {
  */
 export async function getUserRole(): Promise<'admin' | 'moderator' | 'writer' | 'user' | null> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) return null
 
@@ -128,7 +129,7 @@ export async function getPendingCafes(): Promise<CafeWithRatings[]> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -179,7 +180,7 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -293,7 +294,7 @@ export async function rejectCafe(cafeId: string, reason?: string): Promise<Admin
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -376,7 +377,7 @@ export async function getCafeById(cafeId: string): Promise<CafeWithRatings | nul
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return null
 
     const { data: profile } = await db
@@ -459,7 +460,7 @@ export async function updateCafe(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -514,7 +515,7 @@ export async function adminDeleteCafeImage(imageUrl: string): Promise<AdminActio
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -538,7 +539,7 @@ export async function getPublishedCafes(): Promise<CafeWithRatings[]> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -616,7 +617,7 @@ export async function getPaginatedCafes(params: CafePaginationParams): Promise<P
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { cafes: [], total: 0, page, pageSize, hasMore: false }
 
     const { data: profile } = await db
@@ -713,7 +714,7 @@ export async function getManualSubscriptions(): Promise<any[]> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } = {} } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -763,7 +764,7 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } = {} } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -871,7 +872,7 @@ export async function deleteSubscriptionProof(proofUrl: string): Promise<AdminAc
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } = {} } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -898,7 +899,7 @@ export async function rejectManualPayment(cafeId: string, subscriptionId: string
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } = {} } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -999,7 +1000,7 @@ export async function getCafeFilterOptions(): Promise<CafeFilterOptions> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { provinces: [], cities: [], totalPublished: 0, totalPending: 0 }
 
     const { data: profile } = await db
@@ -1063,7 +1064,7 @@ export async function unpublishCafe(cafeId: string): Promise<AdminActionResult> 
     const db = await createClient()
 
     // Verify admin access using regular client
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1113,7 +1114,7 @@ export async function getCafeStory(cafeId: string): Promise<{ id: string; conten
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return null
 
     const { data: profile } = await db
@@ -1150,7 +1151,7 @@ export async function upsertCafeStory(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1203,7 +1204,7 @@ export async function deleteCafeStory(cafeId: string): Promise<AdminActionResult
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1249,7 +1250,7 @@ export async function adminCleanupOrphanedImages(): Promise<{
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1277,7 +1278,7 @@ export async function adminProcessAvatarQueue(): Promise<{
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1329,7 +1330,7 @@ export async function getReportedReviews(): Promise<ReviewForModeration[]> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -1421,7 +1422,7 @@ export async function getReviewsForModeration(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -1508,7 +1509,7 @@ export async function moderateReview(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1556,7 +1557,7 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1627,7 +1628,7 @@ export async function getAllBadgeDefinitions(): Promise<BadgeDefinition[]> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -1668,7 +1669,7 @@ export async function createBadgeDefinition(badge: {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1731,7 +1732,7 @@ export async function updateBadgeDefinition(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1766,7 +1767,7 @@ export async function deleteBadgeDefinition(badgeId: string): Promise<AdminActio
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1819,7 +1820,7 @@ export async function awardBadgeToUser(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1874,7 +1875,7 @@ export async function revokeBadgeFromUser(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -1914,7 +1915,7 @@ export async function searchUsersForBadge(query: string): Promise<{
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -1958,7 +1959,7 @@ export async function searchUsersForOwner(query: string): Promise<{
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -2004,7 +2005,7 @@ export async function getOwnerProfiles(ownerIds: string[]): Promise<{
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -2051,7 +2052,7 @@ export async function getUsersWithBadge(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { users: [], total: 0, hasMore: false }
 
     const { data: profile } = await db
@@ -2116,7 +2117,7 @@ export async function awardBadgeToAllUsers(badgeId: string): Promise<{ success: 
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2201,7 +2202,7 @@ export async function getFeaturedSchedules(): Promise<FeaturedSchedule[]> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -2250,7 +2251,7 @@ export async function checkFeaturedConflict(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { hasConflict: false }
 
     const { data: profile } = await db
@@ -2318,7 +2319,7 @@ export async function createFeaturedSchedule(schedule: {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2398,7 +2399,7 @@ export async function updateFeaturedSchedule(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2457,7 +2458,7 @@ export async function deleteFeaturedSchedule(scheduleId: string): Promise<AdminA
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2499,7 +2500,7 @@ export async function searchCafesForFeatured(query: string): Promise<{
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -2565,7 +2566,7 @@ export async function getPendingVerifications(): Promise<OwnerVerificationForAdm
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -2603,7 +2604,7 @@ export async function getAllVerifications(status?: 'pending' | 'approved' | 'rej
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -2647,7 +2648,7 @@ export async function approveVerification(requestId: string): Promise<AdminActio
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2749,7 +2750,7 @@ export async function rejectVerification(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2810,7 +2811,7 @@ export async function sendVerificationEmail(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2878,7 +2879,7 @@ export async function searchUsersForRoleAssignment(
     const db = await createClient()
 
     // Verify admin access (only full admin can manage roles)
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db
@@ -2922,7 +2923,7 @@ export async function updateUserRole(
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return { success: false, error: "Not authenticated" }
 
     const { data: profile } = await db
@@ -2965,7 +2966,7 @@ export async function getAdminsAndModerators(): Promise<TeamMember[]> {
     const db = await createClient()
 
     // Verify admin access
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return []
 
     const { data: profile } = await db

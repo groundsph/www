@@ -17,11 +17,13 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { getCafeThumbnailUrl, isOpenNow } from "@/utils/extras"
-import { User } from "@supabase/supabase-js"
+
+// Simple user type - only used for truthiness check
+type SimpleUser = { id: string } | null
 
 interface CafeHeroProps {
     cafe: CafeWithRatings
-    user: User | null
+    user: SimpleUser
     isVisited: boolean
     isFavorite: boolean
     isInWishlist: boolean

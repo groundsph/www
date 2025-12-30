@@ -1,10 +1,11 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 
 async function getCurrentUserId(): Promise<string | null> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     return user?.id ?? null
 }
 

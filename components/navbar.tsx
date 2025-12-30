@@ -2,7 +2,6 @@
 
 import { AuthContext } from "@/components/AuthProvider"
 import { routes } from "@/utils/routes"
-import { createLocalClient } from "@/utils/supabase/client"
 import {
     ChevronRightIcon,
     LogOutIcon,
@@ -176,10 +175,11 @@ export default function Navbar() {
 
 function Auth() {
     const { user, profile, isLoading } = useContext(AuthContext)
-    const supabase = createLocalClient()
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut()
+        const { signOut } = await import("@/lib/auth-client")
+        await signOut()
+        window.location.href = "/"
     }
 
     // Show nothing while loading to prevent flashing

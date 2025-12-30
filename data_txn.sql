@@ -1,0 +1,2 @@
+BEGIN; TRUNCATE public.profiles CASCADE;
+COMMIT;

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { notifyDiscord } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
@@ -59,7 +60,7 @@ export async function submitCafe(
     const db = await createClient()
 
     // Get current user
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }

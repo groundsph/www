@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/utils/supabase/admin"
 
 export interface SiteAnalytics {
@@ -55,7 +56,7 @@ export interface CafeAnalyticsSummary {
 
 async function isAdmin(): Promise<boolean> {
     const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return false
 
     const { data: profile } = await db

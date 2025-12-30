@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { createAdminClient } from "@/utils/supabase/admin"
 import {
     OwnerActionResult,
@@ -39,7 +40,7 @@ export async function createSubscriptionCheckout(
     }
 
     // Get user email for checkout
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user?.email) {
         return { success: false, error: 'User email not found' }
     }

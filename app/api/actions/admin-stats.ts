@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { getStorageProvider, STORAGE_BUCKETS, type StorageBucket } from "@/utils/storage"
 
 export interface SystemStats {
@@ -133,7 +134,7 @@ export async function getSystemStats(): Promise<StatsResult> {
     const db = await createClient()
 
     // 1. Verify Authentication
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }
