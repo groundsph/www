@@ -1,7 +1,9 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
-import { createAdminClient } from "@/utils/supabase/admin"
+import { db } from "@/db"
+import { blogPosts, profiles, cafes, cafeSubscriptions } from "@/db/schema"
+import { eq, and, desc, count, sql, ne, inArray } from "drizzle-orm"
+import { getCurrentUser } from "@/lib/auth"
 import {
     BlogPost,
     BlogPostInput,
@@ -9,69 +11,101 @@ import {
     BlogStatus,
     generateSlug,
 } from "@/utils/types/blog"
-import { BlogPostRow } from "@/utils/types/blog"
 
 // ============================================
 // Helper Functions
 // ============================================
 
 async function isAdminOrModerator(): Promise<boolean> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return false
 
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    const result = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    return profile?.role === "admin" || profile?.role === "moderator"
+    const role = result[0]?.role
+    return role === "admin" || role === "moderator"
 }
 
 async function isWriter(): Promise<boolean> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return false
 
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    const result = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    return profile?.role === "writer"
+    return result[0]?.role === "writer"
 }
 
-// Categories writers are allowed to use (editorial content)
 const WRITER_ALLOWED_CATEGORIES: BlogCategory[] = ["news", "guides", "community"]
 
 async function isCafeOwner(cafeId: string): Promise<boolean> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return false
 
-    const { data: cafe } = await supabase
-        .from("cafes")
-        .select("owner_ids")
-        .eq("id", cafeId)
-        .single()
+    const result = await db
+        .select({ ownerIds: cafes.ownerIds })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
 
-    return cafe?.owner_ids?.includes(user.id) ?? false
+    return result[0]?.ownerIds?.includes(user.id) ?? false
 }
 
 async function getCurrentUserId(): Promise<string | null> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     return user?.id ?? null
+}
+
+// Helper to map blog post
+function mapBlogPost(
+    b: {
+        id: string
+        title: string
+        slug: string
+        excerpt: string | null
+        content: string
+        coverImage: string | null
+        authorId: string | null
+        cafeId: string | null
+        category: string | null
+        status: string | null
+        tags: string[] | null
+        featured: boolean | null
+        viewsCount: number | null
+        publishedAt: Date | null
+        createdAt: Date | null
+        updatedAt: Date | null
+    },
+    author?: { id: string; displayName: string; avatarUrl: string | null; username: string } | null,
+    cafe?: { id: string; name: string; slug: string; thumbnail: string } | null
+): BlogPost {
+    return {
+        id: b.id,
+        title: b.title,
+        slug: b.slug,
+        excerpt: b.excerpt,
+        content: b.content,
+        cover_image: b.coverImage,
+        author_id: b.authorId,
+        cafe_id: b.cafeId,
+        category: b.category as BlogCategory,
+        status: b.status as BlogStatus,
+        tags: b.tags,
+        featured: b.featured ?? false,
+        views_count: b.viewsCount ?? 0,
+        published_at: b.publishedAt?.toISOString() ?? null,
+        created_at: b.createdAt?.toISOString() ?? null,
+        updated_at: b.updatedAt?.toISOString() ?? null,
+        author: author ? { id: author.id, display_name: author.displayName, avatar_url: author.avatarUrl, username: author.username } : null,
+        cafe: cafe ? { id: cafe.id, name: cafe.name, slug: cafe.slug, thumbnail: cafe.thumbnail } : null,
+    } as BlogPost
 }
 
 // ============================================
@@ -95,170 +129,156 @@ export interface PaginatedBlogResult {
     hasMore: boolean
 }
 
-// Type for the raw query result with joined tables
-type BlogPostQueryResult = BlogPostRow & {
-    author: { id: string; display_name: string; avatar_url: string | null; username: string } | { id: string; display_name: string; avatar_url: string | null; username: string }[] | null
-    cafe: { id: string; name: string; slug: string; thumbnail: string } | { id: string; name: string; slug: string; thumbnail: string }[] | null
-}
-
 export async function getPublishedBlogPosts(
     params: BlogPaginationParams = {}
 ): Promise<PaginatedBlogResult> {
-    const supabase = await createClient()
-    const {
-        page = 1,
-        pageSize = 12,
-        category,
-        cafeId,
-        search,
-        featured,
-    } = params
+    const { page = 1, pageSize = 12, category, cafeId, search, featured } = params
     const offset = (page - 1) * pageSize
 
-    let query = supabase
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
-            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
-        `,
-            { count: "exact" }
-        )
-        .eq("status", "published")
-        .order("published_at", { ascending: false })
+    const conditions = [eq(blogPosts.status, "published")]
+    if (category) conditions.push(eq(blogPosts.category, category))
+    if (cafeId) conditions.push(eq(blogPosts.cafeId, cafeId))
+    if (featured !== undefined) conditions.push(eq(blogPosts.featured, featured))
 
-    if (category) {
-        query = query.eq("category", category)
-    }
-    if (cafeId) {
-        query = query.eq("cafe_id", cafeId)
-    }
-    if (featured !== undefined) {
-        query = query.eq("featured", featured)
-    }
+    // Handle search with tsquery
+    let postsResult
+    let countResult
     if (search) {
-        query = query.textSearch("search_vector", search)
+        const searchCondition = sql`${blogPosts.searchVector} @@ plainto_tsquery('english', ${search})`
+        postsResult = await db
+            .select({
+                id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+                content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+                cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+                tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+                publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+            })
+            .from(blogPosts)
+            .where(and(...conditions, searchCondition))
+            .orderBy(desc(blogPosts.publishedAt))
+            .limit(pageSize)
+            .offset(offset)
+        countResult = await db.select({ count: count() }).from(blogPosts).where(and(...conditions, searchCondition))
+    } else {
+        [postsResult, countResult] = await Promise.all([
+            db.select({
+                id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+                content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+                cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+                tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+                publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+            })
+                .from(blogPosts)
+                .where(and(...conditions))
+                .orderBy(desc(blogPosts.publishedAt))
+                .limit(pageSize)
+                .offset(offset),
+            db.select({ count: count() }).from(blogPosts).where(and(...conditions)),
+        ])
     }
 
-    const { data, count, error } = await query.range(
-        offset,
-        offset + pageSize - 1
-    )
-
-    if (error) {
-        console.error("Error fetching blog posts:", error)
-        return { posts: [], total: 0, page, pageSize, hasMore: false }
+    if (postsResult.length === 0) {
+        return { posts: [], total: countResult[0]?.count ?? 0, page, pageSize, hasMore: false }
     }
 
-    const posts: BlogPost[] = ((data || []) as unknown as BlogPostQueryResult[]).map((post) => ({
-        ...post,
-        author: Array.isArray(post.author) ? post.author[0] : post.author,
-        cafe: Array.isArray(post.cafe) ? post.cafe[0] : post.cafe,
-    }))
+    // Fetch authors and cafes
+    const authorIds = [...new Set(postsResult.map(p => p.authorId).filter(Boolean))] as string[]
+    const cafeIds = [...new Set(postsResult.map(p => p.cafeId).filter(Boolean))] as string[]
 
+    const [authorsResult, cafesResult] = await Promise.all([
+        authorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+            .from(profiles).where(inArray(profiles.id, authorIds)) : Promise.resolve([]),
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+    ])
+
+    const authorMap = new Map(authorsResult.map(a => [a.id, a]))
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+
+    const total = countResult[0]?.count ?? 0
     return {
-        posts,
-        total: count || 0,
+        posts: postsResult.map(p => mapBlogPost(p, p.authorId ? authorMap.get(p.authorId) : null, p.cafeId ? cafeMap.get(p.cafeId) : null)),
+        total,
         page,
         pageSize,
-        hasMore: offset + pageSize < (count || 0),
+        hasMore: offset + pageSize < total,
     }
 }
 
-export async function getBlogPostBySlug(
-    slug: string
-): Promise<BlogPost | null> {
-    const supabase = await createClient()
+export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+    const result = await db.select({
+        id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+    })
+        .from(blogPosts)
+        .where(eq(blogPosts.slug, slug))
+        .limit(1)
 
-    const { data, error } = await supabase
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
-            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
-        `
-        )
-        .eq("slug", slug)
-        .single()
+    const post = result[0]
+    if (!post) return null
 
-    if (error || !data) {
-        return null
-    }
-
-    const typedData = data as unknown as BlogPostQueryResult
-
-    // Check access: published posts are public, drafts need author/admin access
-    if (typedData.status !== "published") {
+    // Draft access check
+    if (post.status !== "published") {
         const userId = await getCurrentUserId()
         const isAdmin = await isAdminOrModerator()
-        const isOwner = typedData.cafe_id
-            ? await isCafeOwner(typedData.cafe_id)
-            : false
+        const isOwner = post.cafeId ? await isCafeOwner(post.cafeId) : false
 
-        if (typedData.author_id !== userId && !isAdmin && !isOwner) {
-            return null
-        }
+        if (post.authorId !== userId && !isAdmin && !isOwner) return null
     }
 
-    return {
-        ...typedData,
-        author: Array.isArray(typedData.author) ? typedData.author[0] : typedData.author,
-        cafe: Array.isArray(typedData.cafe) ? typedData.cafe[0] : typedData.cafe,
-    }
+    // Fetch author and cafe
+    const [authorResult, cafeResult] = await Promise.all([
+        post.authorId ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+            .from(profiles).where(eq(profiles.id, post.authorId)).limit(1) : Promise.resolve([]),
+        post.cafeId ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(eq(cafes.id, post.cafeId)).limit(1) : Promise.resolve([]),
+    ])
+
+    return mapBlogPost(post, authorResult[0], cafeResult[0])
 }
 
 export async function getFeaturedPosts(limit: number = 5): Promise<BlogPost[]> {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
-            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
-        `
-        )
-        .eq("status", "published")
-        .eq("featured", true)
-        .order("published_at", { ascending: false })
+    const postsResult = await db.select({
+        id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+    })
+        .from(blogPosts)
+        .where(and(eq(blogPosts.status, "published"), eq(blogPosts.featured, true)))
+        .orderBy(desc(blogPosts.publishedAt))
         .limit(limit)
 
-    if (error) {
-        console.error("Error fetching featured posts:", error)
-        return []
-    }
+    if (postsResult.length === 0) return []
 
-    return ((data || []) as unknown as BlogPostQueryResult[]).map((post) => ({
-        ...post,
-        content: "", // Don't load full content for list views
-        author: Array.isArray(post.author) ? post.author[0] : post.author,
-        cafe: Array.isArray(post.cafe) ? post.cafe[0] : post.cafe,
-    }))
+    const authorIds = [...new Set(postsResult.map(p => p.authorId).filter(Boolean))] as string[]
+    const cafeIds = [...new Set(postsResult.map(p => p.cafeId).filter(Boolean))] as string[]
+
+    const [authorsResult, cafesResult] = await Promise.all([
+        authorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+            .from(profiles).where(inArray(profiles.id, authorIds)) : Promise.resolve([]),
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+    ])
+
+    const authorMap = new Map(authorsResult.map(a => [a.id, a]))
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+
+    return postsResult.map(p => {
+        const mapped = mapBlogPost(p, p.authorId ? authorMap.get(p.authorId) : null, p.cafeId ? cafeMap.get(p.cafeId) : null)
+        mapped.content = "" // Don't load content for list views
+        return mapped
+    })
 }
 
 export async function incrementViewCount(postId: string): Promise<void> {
-    // Use admin client to bypass RLS for incrementing view count
-    const adminClient = await createAdminClient()
-
-    // Get current view count and increment it
-    const { data: current } = await adminClient
-        .from("blog_posts")
-        .select("views_count")
-        .eq("id", postId)
-        .single()
-
-    if (current) {
-        await adminClient
-            .from("blog_posts")
-            .update({ views_count: (current.views_count || 0) + 1 })
-            .eq("id", postId)
-    }
+    await db.update(blogPosts)
+        .set({ viewsCount: sql`COALESCE(${blogPosts.viewsCount}, 0) + 1` })
+        .where(eq(blogPosts.id, postId))
 }
 
 // ============================================
@@ -273,230 +293,174 @@ export interface AdminBlogParams {
     search?: string
 }
 
-export async function getAdminBlogPosts(
-    params: AdminBlogParams = {}
-): Promise<PaginatedBlogResult> {
+export async function getAdminBlogPosts(params: AdminBlogParams = {}): Promise<PaginatedBlogResult> {
     if (!(await isAdminOrModerator())) {
         return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
     }
 
-    const adminClient = await createAdminClient()
     const { page = 1, pageSize = 20, status, category, search } = params
     const offset = (page - 1) * pageSize
 
-    let query = adminClient
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
-            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
-        `,
-            { count: "exact" }
-        )
-        .order("created_at", { ascending: false })
+    const conditions: ReturnType<typeof eq>[] = []
+    if (status) conditions.push(eq(blogPosts.status, status))
+    if (category) conditions.push(eq(blogPosts.category, category))
 
-    if (status) {
-        query = query.eq("status", status)
-    }
-    if (category) {
-        query = query.eq("category", category)
-    }
-    if (search) {
-        query = query.textSearch("search_vector", search)
-    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+    const searchCondition = search ? sql`${blogPosts.searchVector} @@ plainto_tsquery('english', ${search})` : undefined
+    const finalWhere = whereClause && searchCondition ? and(whereClause, searchCondition) : (whereClause || searchCondition)
 
-    const { data, count, error } = await query.range(
-        offset,
-        offset + pageSize - 1
-    )
+    const [postsResult, countResult] = await Promise.all([
+        db.select({
+            id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+            content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+            cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+            tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+            publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+        })
+            .from(blogPosts)
+            .where(finalWhere)
+            .orderBy(desc(blogPosts.createdAt))
+            .limit(pageSize)
+            .offset(offset),
+        db.select({ count: count() }).from(blogPosts).where(finalWhere),
+    ])
 
-    if (error) {
-        console.error("Error fetching admin blog posts:", error)
-        return { posts: [], total: 0, page, pageSize, hasMore: false }
+    if (postsResult.length === 0) {
+        return { posts: [], total: countResult[0]?.count ?? 0, page, pageSize, hasMore: false }
     }
 
-    const posts: BlogPost[] = ((data || []) as unknown as BlogPostQueryResult[]).map((post) => ({
-        ...post,
-        author: Array.isArray(post.author) ? post.author[0] : post.author,
-        cafe: Array.isArray(post.cafe) ? post.cafe[0] : post.cafe,
-    }))
+    const authorIds = [...new Set(postsResult.map(p => p.authorId).filter(Boolean))] as string[]
+    const cafeIds = [...new Set(postsResult.map(p => p.cafeId).filter(Boolean))] as string[]
 
+    const [authorsResult, cafesResult] = await Promise.all([
+        authorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+            .from(profiles).where(inArray(profiles.id, authorIds)) : Promise.resolve([]),
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+    ])
+
+    const authorMap = new Map(authorsResult.map(a => [a.id, a]))
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+
+    const total = countResult[0]?.count ?? 0
     return {
-        posts,
-        total: count || 0,
+        posts: postsResult.map(p => mapBlogPost(p, p.authorId ? authorMap.get(p.authorId) : null, p.cafeId ? cafeMap.get(p.cafeId) : null)),
+        total,
         page,
         pageSize,
-        hasMore: offset + pageSize < (count || 0),
+        hasMore: offset + pageSize < total,
     }
 }
 
-export async function getWriterBlogPosts(
-    params: AdminBlogParams = {}
-): Promise<PaginatedBlogResult> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+export async function getWriterBlogPosts(params: AdminBlogParams = {}): Promise<PaginatedBlogResult> {
+    const user = await getCurrentUser()
+    if (!user) return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
 
-    if (!user) {
-        return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
-    }
-
-    const adminClient = await createAdminClient()
-
-    // Check if user is writer or admin
-    const { data: profile } = await adminClient
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
-
-    if (profile?.role !== "writer" && profile?.role !== "admin") {
+    const profileResult = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, user.id)).limit(1)
+    const role = profileResult[0]?.role
+    if (role !== "writer" && role !== "admin") {
         return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
     }
 
     const { page = 1, pageSize = 20, status, category, search } = params
     const offset = (page - 1) * pageSize
 
-    let query = adminClient
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
-            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
-        `,
-            { count: "exact" }
-        )
-        .eq("author_id", user.id)
-        .order("created_at", { ascending: false })
+    const conditions = [eq(blogPosts.authorId, user.id)]
+    if (status) conditions.push(eq(blogPosts.status, status))
+    if (category) conditions.push(eq(blogPosts.category, category))
 
-    if (status) {
-        query = query.eq("status", status)
-    }
-    if (category) {
-        query = query.eq("category", category)
-    }
-    if (search) {
-        query = query.textSearch("search_vector", search)
-    }
+    const whereClause = and(...conditions)
+    const searchCondition = search ? sql`${blogPosts.searchVector} @@ plainto_tsquery('english', ${search})` : undefined
+    const finalWhere = searchCondition ? and(whereClause, searchCondition) : whereClause
 
-    const { data, count, error } = await query.range(
-        offset,
-        offset + pageSize - 1
-    )
-
-    if (error) {
-        console.error("Error fetching writer blog posts:", error)
-        return { posts: [], total: 0, page, pageSize, hasMore: false }
-    }
-
-    const posts: BlogPost[] = ((data || []) as unknown as BlogPostQueryResult[]).map(
-        (post) => ({
-            ...post,
-            author: Array.isArray(post.author) ? post.author[0] : post.author,
-            cafe: Array.isArray(post.cafe) ? post.cafe[0] : post.cafe,
+    const [postsResult, countResult] = await Promise.all([
+        db.select({
+            id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+            content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+            cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+            tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+            publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
         })
-    )
+            .from(blogPosts)
+            .where(finalWhere)
+            .orderBy(desc(blogPosts.createdAt))
+            .limit(pageSize)
+            .offset(offset),
+        db.select({ count: count() }).from(blogPosts).where(finalWhere),
+    ])
 
+    if (postsResult.length === 0) {
+        return { posts: [], total: countResult[0]?.count ?? 0, page, pageSize, hasMore: false }
+    }
+
+    const authorResult = await db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+        .from(profiles).where(eq(profiles.id, user.id)).limit(1)
+
+    const total = countResult[0]?.count ?? 0
     return {
-        posts,
-        total: count || 0,
+        posts: postsResult.map(p => mapBlogPost(p, authorResult[0], null)),
+        total,
         page,
         pageSize,
-        hasMore: offset + pageSize < (count || 0),
+        hasMore: offset + pageSize < total,
     }
 }
 
 export async function getWriterBlogPostById(id: string): Promise<BlogPost | null> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
+    const user = await getCurrentUser()
     if (!user) return null
 
-    const adminClient = await createAdminClient()
+    const profileResult = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, user.id)).limit(1)
+    const role = profileResult[0]?.role
+    if (role !== "writer" && role !== "admin") return null
 
-    // Check if user is writer or admin via profile
-    const { data: profile } = await adminClient
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    const postResult = await db.select({
+        id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+    })
+        .from(blogPosts)
+        .where(and(eq(blogPosts.id, id), eq(blogPosts.authorId, user.id)))
+        .limit(1)
 
-    if (profile?.role !== "writer" && profile?.role !== "admin") {
-        return null
-    }
+    if (!postResult[0]) return null
 
-    const { data, error } = await adminClient
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
-            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
-        `
-        )
-        .eq("id", id)
-        .eq("author_id", user.id)
-        .single()
+    const authorResult = await db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+        .from(profiles).where(eq(profiles.id, user.id)).limit(1)
 
-    if (error || !data) {
-        return null
-    }
-
-    const typedData = data as unknown as BlogPostQueryResult
-
-    return {
-        ...typedData,
-        author: Array.isArray(typedData.author) ? typedData.author[0] : typedData.author,
-        cafe: Array.isArray(typedData.cafe) ? typedData.cafe[0] : typedData.cafe,
-    }
+    return mapBlogPost(postResult[0], authorResult[0], null)
 }
 
 // ============================================
 // Cafe Owner Operations
 // ============================================
 
-export async function getOwnerBlogPosts(
-    cafeId: string
-): Promise<BlogPost[]> {
-    if (!(await isCafeOwner(cafeId)) && !(await isAdminOrModerator())) {
-        return []
-    }
+export async function getOwnerBlogPosts(cafeId: string): Promise<BlogPost[]> {
+    if (!(await isCafeOwner(cafeId)) && !(await isAdminOrModerator())) return []
 
-    const supabase = await createClient()
+    const postsResult = await db.select({
+        id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+    })
+        .from(blogPosts)
+        .where(eq(blogPosts.cafeId, cafeId))
+        .orderBy(desc(blogPosts.createdAt))
 
-    const { data, error } = await supabase
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username)
-        `
-        )
-        .eq("cafe_id", cafeId)
-        .order("created_at", { ascending: false })
+    if (postsResult.length === 0) return []
 
-    if (error) {
-        console.error("Error fetching owner blog posts:", error)
-        return []
-    }
+    const authorIds = [...new Set(postsResult.map(p => p.authorId).filter(Boolean))] as string[]
+    const authorsResult = authorIds.length > 0
+        ? await db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+            .from(profiles).where(inArray(profiles.id, authorIds))
+        : []
+    const authorMap = new Map(authorsResult.map(a => [a.id, a]))
 
-    type OwnerBlogQueryResult = BlogPostRow & {
-        author: { id: string; display_name: string; avatar_url: string | null; username: string } | { id: string; display_name: string; avatar_url: string | null; username: string }[] | null
-    }
-
-    return ((data || []) as unknown as OwnerBlogQueryResult[]).map((post) => ({
-        ...post,
-        author: Array.isArray(post.author) ? post.author[0] : post.author,
-    }))
+    return postsResult.map(p => mapBlogPost(p, p.authorId ? authorMap.get(p.authorId) : null, null))
 }
 
 // ============================================
@@ -510,15 +474,10 @@ export interface BlogActionResult {
     slug?: string
 }
 
-export async function createBlogPost(
-    input: BlogPostInput
-): Promise<BlogActionResult> {
+export async function createBlogPost(input: BlogPostInput): Promise<BlogActionResult> {
     const userId = await getCurrentUserId()
-    if (!userId) {
-        return { success: false, error: "Not authenticated" }
-    }
+    if (!userId) return { success: false, error: "Not authenticated" }
 
-    // Check permissions
     const isAdmin = await isAdminOrModerator()
     const hasWriterRole = await isWriter()
     const isOwner = input.cafe_id ? await isCafeOwner(input.cafe_id) : false
@@ -527,114 +486,69 @@ export async function createBlogPost(
         return { success: false, error: "Not authorized to create blog posts" }
     }
 
-    // Writers can only use certain categories
     if (hasWriterRole && !isAdmin) {
         if (!WRITER_ALLOWED_CATEGORIES.includes(input.category)) {
-            return {
-                success: false,
-                error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}`,
-            }
+            return { success: false, error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}` }
         }
     }
 
-    // If cafe owner (not admin or writer), require cafe_id
     if (!isAdmin && !hasWriterRole && !input.cafe_id) {
         return { success: false, error: "Cafe owners must link posts to a cafe" }
     }
 
-    // Tier check for cafe owners - only Pro+ can create blog posts
+    // Tier check for cafe owners
     if (!isAdmin && input.cafe_id) {
-        const adminClient = await createAdminClient()
-        const { data: subscription } = await adminClient
-            .from("cafe_subscriptions")
-            .select("tier")
-            .eq("cafe_id", input.cafe_id)
-            .single()
-
-        const tier = subscription?.tier || "free"
+        const subResult = await db.select({ tier: cafeSubscriptions.tier })
+            .from(cafeSubscriptions).where(eq(cafeSubscriptions.cafeId, input.cafe_id)).limit(1)
+        const tier = subResult[0]?.tier || "free"
         if (tier === "free") {
-            return {
-                success: false,
-                error: "Blog posting requires a Pro subscription or higher. Upgrade to start sharing your cafe's story.",
-            }
+            return { success: false, error: "Blog posting requires a Pro subscription or higher. Upgrade to start sharing your cafe's story." }
         }
     }
 
-    // Generate slug if not provided
+    // Generate unique slug
     const baseSlug = input.slug || generateSlug(input.title)
     let slug = baseSlug
     let counter = 1
 
-    const adminClient = await createAdminClient()
-
-    // Ensure unique slug
     while (true) {
-        const { data: existing } = await adminClient
-            .from("blog_posts")
-            .select("id")
-            .eq("slug", slug)
-            .single()
-
-        if (!existing) break
+        const existing = await db.select({ id: blogPosts.id }).from(blogPosts).where(eq(blogPosts.slug, slug)).limit(1)
+        if (!existing[0]) break
         slug = `${baseSlug}-${counter++}`
     }
 
-    const { data, error } = await adminClient
-        .from("blog_posts")
-        .insert({
-            title: input.title,
-            slug,
-            excerpt: input.excerpt || null,
-            content: input.content,
-            cover_image: input.cover_image || null,
-            author_id: userId,
-            cafe_id: input.cafe_id || null,
-            category: input.category,
-            status: input.status,
-            tags: input.tags || [],
-            featured: input.featured || false,
-            published_at:
-                input.status === "published" ? new Date().toISOString() : null,
-        })
-        .select()
-        .single()
+    const [inserted] = await db.insert(blogPosts).values({
+        title: input.title,
+        slug,
+        excerpt: input.excerpt || null,
+        content: input.content,
+        coverImage: input.cover_image || null,
+        authorId: userId,
+        cafeId: input.cafe_id || null,
+        category: input.category,
+        status: input.status,
+        tags: input.tags || [],
+        featured: input.featured || false,
+        publishedAt: input.status === "published" ? new Date() : null,
+    }).returning()
 
-    if (error) {
-        console.error("Error creating blog post:", error)
-        return { success: false, error: error.message }
-    }
+    if (!inserted) return { success: false, error: "Failed to create blog post" }
 
-    return { success: true, slug: data.slug }
+    return { success: true, slug: inserted.slug }
 }
 
-export async function updateBlogPost(
-    postId: string,
-    input: Partial<BlogPostInput>
-): Promise<BlogActionResult> {
+export async function updateBlogPost(postId: string, input: Partial<BlogPostInput>): Promise<BlogActionResult> {
     const userId = await getCurrentUserId()
-    if (!userId) {
-        return { success: false, error: "Not authenticated" }
-    }
+    if (!userId) return { success: false, error: "Not authenticated" }
 
-    const adminClient = await createAdminClient()
+    const existing = await db.select({ authorId: blogPosts.authorId, cafeId: blogPosts.cafeId, status: blogPosts.status })
+        .from(blogPosts).where(eq(blogPosts.id, postId)).limit(1)
 
-    // Get existing post
-    const { data: existing } = await adminClient
-        .from("blog_posts")
-        .select("author_id, cafe_id, status")
-        .eq("id", postId)
-        .single()
+    if (!existing[0]) return { success: false, error: "Post not found" }
 
-    if (!existing) {
-        return { success: false, error: "Post not found" }
-    }
-
-    // Check permissions
     const isAdmin = await isAdminOrModerator()
-    const isOwner = existing.cafe_id
-        ? await isCafeOwner(existing.cafe_id)
-        : false
-    const isAuthor = existing.author_id === userId
+    const isOwner = existing[0].cafeId ? await isCafeOwner(existing[0].cafeId) : false
+    const isAuthor = existing[0].authorId === userId
 
     if (!isAdmin && !isOwner && !isAuthor) {
         return { success: false, error: "Not authorized to edit this post" }
@@ -648,164 +562,97 @@ export async function updateBlogPost(
         const baseSlug = slug
 
         while (true) {
-            const { data: existingSlug } = await adminClient
-                .from("blog_posts")
-                .select("id")
-                .eq("slug", slug)
-                .neq("id", postId)
-                .single()
-
-            if (!existingSlug) break
+            const existingSlug = await db.select({ id: blogPosts.id })
+                .from(blogPosts).where(and(eq(blogPosts.slug, slug), ne(blogPosts.id, postId))).limit(1)
+            if (!existingSlug[0]) break
             slug = `${baseSlug}-${counter++}`
         }
     }
 
-    // Set published_at if publishing for first time
-    const isPublishing =
-        input.status === "published" && existing.status !== "published"
+    const isPublishing = input.status === "published" && existing[0].status !== "published"
 
-    const updateData: Record<string, unknown> = {
-        ...input,
-        updated_at: new Date().toISOString(),
-    }
+    const updateData: Partial<typeof blogPosts.$inferInsert> = { updatedAt: new Date() }
+    if (input.title !== undefined) updateData.title = input.title
+    if (slug) updateData.slug = slug
+    if (input.excerpt !== undefined) updateData.excerpt = input.excerpt
+    if (input.content !== undefined) updateData.content = input.content
+    if (input.cover_image !== undefined) updateData.coverImage = input.cover_image
+    if (input.cafe_id !== undefined) updateData.cafeId = input.cafe_id
+    if (input.category !== undefined) updateData.category = input.category
+    if (input.status !== undefined) updateData.status = input.status
+    if (input.tags !== undefined) updateData.tags = input.tags
+    if (input.featured !== undefined) updateData.featured = input.featured
+    if (isPublishing) updateData.publishedAt = new Date()
 
-    if (slug) {
-        updateData.slug = slug
-    }
-
-    if (isPublishing) {
-        updateData.published_at = new Date().toISOString()
-    }
-
-    const { error } = await adminClient
-        .from("blog_posts")
-        .update(updateData)
-        .eq("id", postId)
-
-    if (error) {
-        console.error("Error updating blog post:", error)
-        return { success: false, error: error.message }
-    }
+    await db.update(blogPosts).set(updateData).where(eq(blogPosts.id, postId))
 
     return { success: true, slug: slug || undefined }
 }
 
 export async function deleteBlogPost(postId: string): Promise<BlogActionResult> {
     const userId = await getCurrentUserId()
-    if (!userId) {
-        return { success: false, error: "Not authenticated" }
-    }
+    if (!userId) return { success: false, error: "Not authenticated" }
 
-    const adminClient = await createAdminClient()
+    const existing = await db.select({ authorId: blogPosts.authorId, cafeId: blogPosts.cafeId })
+        .from(blogPosts).where(eq(blogPosts.id, postId)).limit(1)
 
-    // Get existing post
-    const { data: existing } = await adminClient
-        .from("blog_posts")
-        .select("author_id, cafe_id, cover_image")
-        .eq("id", postId)
-        .single()
+    if (!existing[0]) return { success: false, error: "Post not found" }
 
-    if (!existing) {
-        return { success: false, error: "Post not found" }
-    }
-
-    // Check permissions
     const isAdmin = await isAdminOrModerator()
-    const isAuthor = existing.author_id === userId
+    const isAuthor = existing[0].authorId === userId
 
     if (!isAdmin && !isAuthor) {
         return { success: false, error: "Not authorized to delete this post" }
     }
 
-    // Delete the post (images will be cleaned up by storage cleanup job)
-    const { error } = await adminClient
-        .from("blog_posts")
-        .delete()
-        .eq("id", postId)
-
-    if (error) {
-        console.error("Error deleting blog post:", error)
-        return { success: false, error: error.message }
-    }
-
+    await db.delete(blogPosts).where(eq(blogPosts.id, postId))
     return { success: true }
 }
 
-export async function publishBlogPost(
-    postId: string
-): Promise<BlogActionResult> {
+export async function publishBlogPost(postId: string): Promise<BlogActionResult> {
     return updateBlogPost(postId, { status: "published" })
 }
 
-export async function archiveBlogPost(
-    postId: string
-): Promise<BlogActionResult> {
+export async function archiveBlogPost(postId: string): Promise<BlogActionResult> {
     return updateBlogPost(postId, { status: "archived" })
 }
 
-export async function toggleFeatured(
-    postId: string,
-    featured: boolean
-): Promise<BlogActionResult> {
-    if (!(await isAdminOrModerator())) {
-        return { success: false, error: "Not authorized" }
-    }
+export async function toggleFeatured(postId: string, featured: boolean): Promise<BlogActionResult> {
+    if (!(await isAdminOrModerator())) return { success: false, error: "Not authorized" }
 
-    const adminClient = await createAdminClient()
-
-    const { error } = await adminClient
-        .from("blog_posts")
-        .update({ featured })
-        .eq("id", postId)
-
-    if (error) {
-        console.error("Error toggling featured:", error)
-        return { success: false, error: error.message }
-    }
-
+    await db.update(blogPosts).set({ featured }).where(eq(blogPosts.id, postId))
     return { success: true }
 }
-
-// ============================================
-// Get single blog post by ID (for editing)
-// ============================================
 
 export async function getBlogPostById(postId: string): Promise<BlogPost | null> {
     const userId = await getCurrentUserId()
 
-    const adminClient = await createAdminClient()
+    const postResult = await db.select({
+        id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+    })
+        .from(blogPosts)
+        .where(eq(blogPosts.id, postId))
+        .limit(1)
 
-    const { data, error } = await adminClient
-        .from("blog_posts")
-        .select(
-            `
-            id, title, slug, excerpt, content, cover_image, author_id, cafe_id,
-            category, status, tags, featured, views_count, published_at, created_at, updated_at,
-            author:profiles!blog_posts_author_id_fkey(id, display_name, avatar_url, username),
-            cafe:cafes!blog_posts_cafe_id_fkey(id, name, slug, thumbnail)
-        `
-        )
-        .eq("id", postId)
-        .single()
+    const post = postResult[0]
+    if (!post) return null
 
-    if (error || !data) {
-        return null
-    }
-
-    const typedData = data as unknown as BlogPostQueryResult
-
-    // Check access
     const isAdmin = await isAdminOrModerator()
-    const isOwner = typedData.cafe_id ? await isCafeOwner(typedData.cafe_id) : false
-    const isAuthor = typedData.author_id === userId
+    const isOwner = post.cafeId ? await isCafeOwner(post.cafeId) : false
+    const isAuthor = post.authorId === userId
 
-    if (!isAdmin && !isOwner && !isAuthor) {
-        return null
-    }
+    if (!isAdmin && !isOwner && !isAuthor) return null
 
-    return {
-        ...typedData,
-        author: Array.isArray(typedData.author) ? typedData.author[0] : typedData.author,
-        cafe: Array.isArray(typedData.cafe) ? typedData.cafe[0] : typedData.cafe,
-    }
+    const [authorResult, cafeResult] = await Promise.all([
+        post.authorId ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+            .from(profiles).where(eq(profiles.id, post.authorId)).limit(1) : Promise.resolve([]),
+        post.cafeId ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(eq(cafes.id, post.cafeId)).limit(1) : Promise.resolve([]),
+    ])
+
+    return mapBlogPost(post, authorResult[0], cafeResult[0])
 }

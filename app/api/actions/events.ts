@@ -1,7 +1,9 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
-import { createAdminClient } from "@/utils/supabase/admin"
+import { db } from "@/db"
+import { events, cafes, profiles, cafeSubscriptions } from "@/db/schema"
+import { eq, and, gte, lt, lte, desc, asc, count, sql, inArray } from "drizzle-orm"
+import { getCurrentUser } from "@/lib/auth"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
 
 // Event input type for create/update operations
@@ -33,42 +35,34 @@ export interface EventActionResult {
 // ============================================
 
 async function isAdminOrModerator(): Promise<boolean> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return false
 
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    const result = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    return profile?.role === "admin" || profile?.role === "moderator"
+    const role = result[0]?.role
+    return role === "admin" || role === "moderator"
 }
 
 async function isCafeOwner(cafeId: string): Promise<boolean> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return false
 
-    const { data: cafe } = await supabase
-        .from("cafes")
-        .select("owner_ids")
-        .eq("id", cafeId)
-        .single()
+    const result = await db
+        .select({ ownerIds: cafes.ownerIds })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
 
-    return cafe?.owner_ids?.includes(user.id) || false
+    return result[0]?.ownerIds?.includes(user.id) || false
 }
 
 async function getCurrentUserId(): Promise<string | null> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     return user?.id || null
 }
 
@@ -76,16 +70,85 @@ async function canManageEvent(event: Event): Promise<boolean> {
     const userId = await getCurrentUserId()
     if (!userId) return false
 
-    // Admin/mod can manage any event
     if (await isAdminOrModerator()) return true
-
-    // Creator can manage their own event
     if (event.created_by === userId) return true
-
-    // Cafe owner can manage cafe events
     if (event.cafe_id && (await isCafeOwner(event.cafe_id))) return true
 
     return false
+}
+
+// Helper to map event result to snake_case
+function mapEventToSnakeCase(e: {
+    id: string
+    title: string
+    description: string | null
+    startDate: Date
+    endDate: Date | null
+    locationName: string | null
+    address: string | null
+    city: string | null
+    province: string | null
+    region: string | null
+    cafeId: string | null
+    imageUrl: string | null
+    ticketLink: string | null
+    isNational: boolean | null
+    status: string | null
+    createdBy: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+}, cafe?: { id: string; name: string; slug: string; thumbnail: string } | null, creator?: { id: string; displayName: string; avatarUrl: string | null } | null): EventWithCafe {
+    return {
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        start_date: e.startDate.toISOString(),
+        end_date: e.endDate?.toISOString() ?? null,
+        location_name: e.locationName,
+        address: e.address,
+        city: e.city,
+        province: e.province,
+        region: e.region,
+        cafe_id: e.cafeId,
+        image_url: e.imageUrl,
+        ticket_link: e.ticketLink,
+        is_national: e.isNational ?? false,
+        status: e.status as EventStatus,
+        created_by: e.createdBy,
+        created_at: e.createdAt?.toISOString() ?? null,
+        updated_at: e.updatedAt?.toISOString() ?? null,
+        cafe: cafe ? { id: cafe.id, name: cafe.name, slug: cafe.slug, thumbnail: cafe.thumbnail } : null,
+        creator: creator ? { id: creator.id, display_name: creator.displayName, avatar_url: creator.avatarUrl } : null,
+    } as EventWithCafe
+}
+
+// Fetch event with cafe and creator info
+async function fetchEventWithRelations(eventId: string): Promise<EventWithCafe | null> {
+    const eventResult = await db
+        .select({
+            id: events.id, title: events.title, description: events.description,
+            startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+            address: events.address, city: events.city, province: events.province, region: events.region,
+            cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+            isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+            createdAt: events.createdAt, updatedAt: events.updatedAt,
+        })
+        .from(events)
+        .where(eq(events.id, eventId))
+        .limit(1)
+
+    const e = eventResult[0]
+    if (!e) return null
+
+    // Fetch cafe and creator in parallel
+    const [cafeResult, creatorResult] = await Promise.all([
+        e.cafeId ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(eq(cafes.id, e.cafeId)).limit(1) : Promise.resolve([]),
+        e.createdBy ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(eq(profiles.id, e.createdBy)).limit(1) : Promise.resolve([]),
+    ])
+
+    return mapEventToSnakeCase(e, cafeResult[0], creatorResult[0])
 }
 
 /**
@@ -96,62 +159,52 @@ export async function getEvents(
     page: number = 1,
     pageSize: number = 20
 ): Promise<{ events: EventWithCafe[]; total: number }> {
-    const supabase = await createClient()
+    const offset = (page - 1) * pageSize
+    const conditions = [eq(events.status, filters.status ?? "published")]
 
-    let query = supabase
-        .from("events")
-        .select(
-            `
-            *,
-            cafe:cafes!cafe_id (
-                id,
-                name,
-                slug,
-                thumbnail
-            ),
-            creator:profiles!created_by (
-                id,
-                display_name,
-                avatar_url
-            )
-        `,
-            { count: "exact" }
-        )
-        .eq("status", filters.status ?? "published")
-        .order("start_date", { ascending: true })
+    if (filters.city) conditions.push(eq(events.city, filters.city))
+    if (filters.region) conditions.push(eq(events.region, filters.region))
+    if (filters.is_national !== undefined) conditions.push(eq(events.isNational, filters.is_national))
+    if (filters.start_after) conditions.push(gte(events.startDate, new Date(filters.start_after)))
+    if (filters.start_before) conditions.push(lte(events.startDate, new Date(filters.start_before)))
 
-    // Apply filters
-    if (filters.city) {
-        query = query.eq("city", filters.city)
-    }
-    if (filters.region) {
-        query = query.eq("region", filters.region)
-    }
-    if (filters.is_national !== undefined) {
-        query = query.eq("is_national", filters.is_national)
-    }
-    if (filters.start_after) {
-        query = query.gte("start_date", filters.start_after)
-    }
-    if (filters.start_before) {
-        query = query.lte("start_date", filters.start_before)
-    }
+    const [eventsResult, countResult] = await Promise.all([
+        db.select({
+            id: events.id, title: events.title, description: events.description,
+            startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+            address: events.address, city: events.city, province: events.province, region: events.region,
+            cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+            isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+            createdAt: events.createdAt, updatedAt: events.updatedAt,
+        })
+            .from(events)
+            .where(and(...conditions))
+            .orderBy(asc(events.startDate))
+            .limit(pageSize)
+            .offset(offset),
+        db.select({ count: count() }).from(events).where(and(...conditions)),
+    ])
 
-    // Pagination
-    const from = (page - 1) * pageSize
-    const to = from + pageSize - 1
-    query = query.range(from, to)
+    // Fetch cafe and creator for each event
+    const eventIds = eventsResult.map(e => e.id)
+    if (eventIds.length === 0) return { events: [], total: countResult[0]?.count ?? 0 }
 
-    const { data, error, count } = await query
+    const cafeIds = [...new Set(eventsResult.map(e => e.cafeId).filter(Boolean))] as string[]
+    const creatorIds = [...new Set(eventsResult.map(e => e.createdBy).filter(Boolean))] as string[]
 
-    if (error) {
-        console.error("Error fetching events:", error)
-        return { events: [], total: 0 }
-    }
+    const [cafesResult, creatorsResult] = await Promise.all([
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+        creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
+    ])
+
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+    const creatorMap = new Map(creatorsResult.map(c => [c.id, c]))
 
     return {
-        events: (data as unknown as EventWithCafe[]) || [],
-        total: count || 0,
+        events: eventsResult.map(e => mapEventToSnakeCase(e, e.cafeId ? cafeMap.get(e.cafeId) : null, e.createdBy ? creatorMap.get(e.createdBy) : null)),
+        total: countResult[0]?.count ?? 0,
     }
 }
 
@@ -159,211 +212,186 @@ export async function getEvents(
  * Get a single event by ID
  */
 export async function getEvent(id: string): Promise<EventWithCafe | null> {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-        .from("events")
-        .select(
-            `
-            *,
-            cafe:cafes!cafe_id (
-                id,
-                name,
-                slug,
-                thumbnail
-            ),
-            creator:profiles!created_by (
-                id,
-                display_name,
-                avatar_url
-            )
-        `
-        )
-        .eq("id", id)
-        .single()
-
-    if (error) {
-        console.error("Error fetching event:", error)
-        return null
-    }
-
-    return data as unknown as EventWithCafe
+    return fetchEventWithRelations(id)
 }
 
 /**
- * Get upcoming events (next 30 days by default)
+ * Get upcoming events
  */
-export async function getUpcomingEvents(
-    limit: number = 10
-): Promise<EventWithCafe[]> {
-    const supabase = await createClient()
-    const now = new Date().toISOString()
+export async function getUpcomingEvents(limit: number = 10): Promise<EventWithCafe[]> {
+    const now = new Date()
 
-    const { data, error } = await supabase
-        .from("events")
-        .select(
-            `
-            *,
-            cafe:cafes!cafe_id (
-                id,
-                name,
-                slug,
-                thumbnail
-            ),
-            creator:profiles!created_by (
-                id,
-                display_name,
-                avatar_url
-            )
-        `
-        )
-        .eq("status", "published")
-        .gte("start_date", now)
-        .order("start_date", { ascending: true })
+    const eventsResult = await db.select({
+        id: events.id, title: events.title, description: events.description,
+        startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+        address: events.address, city: events.city, province: events.province, region: events.region,
+        cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+        isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+        createdAt: events.createdAt, updatedAt: events.updatedAt,
+    })
+        .from(events)
+        .where(and(eq(events.status, "published"), gte(events.startDate, now)))
+        .orderBy(asc(events.startDate))
         .limit(limit)
 
-    if (error) {
-        console.error("Error fetching upcoming events:", error)
-        return []
-    }
+    if (eventsResult.length === 0) return []
 
-    return (data as unknown as EventWithCafe[]) || []
+    // Fetch related data
+    const cafeIds = [...new Set(eventsResult.map(e => e.cafeId).filter(Boolean))] as string[]
+    const creatorIds = [...new Set(eventsResult.map(e => e.createdBy).filter(Boolean))] as string[]
+
+    const [cafesResult, creatorsResult] = await Promise.all([
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+        creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
+    ])
+
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+    const creatorMap = new Map(creatorsResult.map(c => [c.id, c]))
+
+    return eventsResult.map(e => mapEventToSnakeCase(e, e.cafeId ? cafeMap.get(e.cafeId) : null, e.createdBy ? creatorMap.get(e.createdBy) : null))
 }
 
 /**
- * Get events for a specific month (for calendar view)
+ * Get events for a specific month
  */
 export async function getEventsForMonth(
     year: number,
-    month: number, // 0-indexed (0 = January)
+    month: number,
     filters: Pick<EventFilters, "city" | "region" | "is_national"> = {}
 ): Promise<Event[]> {
-    const supabase = await createClient()
+    const startDate = new Date(year, month, 1)
+    const endDate = new Date(year, month + 1, 1)
 
-    // First day of month
-    const startDate = new Date(year, month, 1).toISOString()
-    // First day of next month
-    const endDate = new Date(year, month + 1, 1).toISOString()
+    const conditions = [
+        eq(events.status, "published"),
+        gte(events.startDate, startDate),
+        lt(events.startDate, endDate),
+    ]
 
-    let query = supabase
-        .from("events")
-        .select("*")
-        .eq("status", "published")
-        .gte("start_date", startDate)
-        .lt("start_date", endDate)
-        .order("start_date", { ascending: true })
+    if (filters.city) conditions.push(eq(events.city, filters.city))
+    if (filters.region) conditions.push(eq(events.region, filters.region))
+    if (filters.is_national !== undefined) conditions.push(eq(events.isNational, filters.is_national))
 
-    if (filters.city) {
-        query = query.eq("city", filters.city)
-    }
-    if (filters.region) {
-        query = query.eq("region", filters.region)
-    }
-    if (filters.is_national !== undefined) {
-        query = query.eq("is_national", filters.is_national)
-    }
+    const result = await db.select({
+        id: events.id, title: events.title, description: events.description,
+        startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+        address: events.address, city: events.city, province: events.province, region: events.region,
+        cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+        isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+        createdAt: events.createdAt, updatedAt: events.updatedAt,
+    })
+        .from(events)
+        .where(and(...conditions))
+        .orderBy(asc(events.startDate))
 
-    const { data, error } = await query
-
-    if (error) {
-        console.error("Error fetching events for month:", error)
-        return []
-    }
-
-    return (data as Event[]) || []
+    return result.map(e => ({
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        start_date: e.startDate.toISOString(),
+        end_date: e.endDate?.toISOString() ?? null,
+        location_name: e.locationName,
+        address: e.address,
+        city: e.city,
+        province: e.province,
+        region: e.region,
+        cafe_id: e.cafeId,
+        image_url: e.imageUrl,
+        ticket_link: e.ticketLink,
+        is_national: e.isNational ?? false,
+        status: e.status as EventStatus,
+        created_by: e.createdBy,
+        created_at: e.createdAt?.toISOString() ?? null,
+        updated_at: e.updatedAt?.toISOString() ?? null,
+    })) as Event[]
 }
 
 /**
- * Get local events based on user's city/region
+ * Get local events
  */
-export async function getLocalEvents(
-    city?: string,
-    region?: string,
-    limit: number = 10
-): Promise<EventWithCafe[]> {
-    const supabase = await createClient()
-    const now = new Date().toISOString()
+export async function getLocalEvents(city?: string, region?: string, limit: number = 10): Promise<EventWithCafe[]> {
+    const now = new Date()
 
-    let query = supabase
-        .from("events")
-        .select(
-            `
-            *,
-            cafe:cafes!cafe_id (
-                id,
-                name,
-                slug,
-                thumbnail
-            ),
-            creator:profiles!created_by (
-                id,
-                display_name,
-                avatar_url
-            )
-        `
-        )
-        .eq("status", "published")
-        .eq("is_national", false)
-        .gte("start_date", now)
-        .order("start_date", { ascending: true })
+    const conditions = [
+        eq(events.status, "published"),
+        eq(events.isNational, false),
+        gte(events.startDate, now),
+    ]
+
+    if (city) {
+        conditions.push(eq(events.city, city))
+    } else if (region) {
+        conditions.push(eq(events.region, region))
+    }
+
+    const eventsResult = await db.select({
+        id: events.id, title: events.title, description: events.description,
+        startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+        address: events.address, city: events.city, province: events.province, region: events.region,
+        cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+        isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+        createdAt: events.createdAt, updatedAt: events.updatedAt,
+    })
+        .from(events)
+        .where(and(...conditions))
+        .orderBy(asc(events.startDate))
         .limit(limit)
 
-    // Prioritize city match, fallback to region
-    if (city) {
-        query = query.eq("city", city)
-    } else if (region) {
-        query = query.eq("region", region)
-    }
+    if (eventsResult.length === 0) return []
 
-    const { data, error } = await query
+    const cafeIds = [...new Set(eventsResult.map(e => e.cafeId).filter(Boolean))] as string[]
+    const creatorIds = [...new Set(eventsResult.map(e => e.createdBy).filter(Boolean))] as string[]
 
-    if (error) {
-        console.error("Error fetching local events:", error)
-        return []
-    }
+    const [cafesResult, creatorsResult] = await Promise.all([
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+        creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
+    ])
 
-    return (data as unknown as EventWithCafe[]) || []
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+    const creatorMap = new Map(creatorsResult.map(c => [c.id, c]))
+
+    return eventsResult.map(e => mapEventToSnakeCase(e, e.cafeId ? cafeMap.get(e.cafeId) : null, e.createdBy ? creatorMap.get(e.createdBy) : null))
 }
 
 /**
  * Get national events
  */
-export async function getNationalEvents(
-    limit: number = 10
-): Promise<EventWithCafe[]> {
-    const supabase = await createClient()
-    const now = new Date().toISOString()
+export async function getNationalEvents(limit: number = 10): Promise<EventWithCafe[]> {
+    const now = new Date()
 
-    const { data, error } = await supabase
-        .from("events")
-        .select(
-            `
-            *,
-            cafe:cafes!cafe_id (
-                id,
-                name,
-                slug,
-                thumbnail
-            ),
-            creator:profiles!created_by (
-                id,
-                display_name,
-                avatar_url
-            )
-        `
-        )
-        .eq("status", "published")
-        .eq("is_national", true)
-        .gte("start_date", now)
-        .order("start_date", { ascending: true })
+    const eventsResult = await db.select({
+        id: events.id, title: events.title, description: events.description,
+        startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+        address: events.address, city: events.city, province: events.province, region: events.region,
+        cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+        isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+        createdAt: events.createdAt, updatedAt: events.updatedAt,
+    })
+        .from(events)
+        .where(and(eq(events.status, "published"), eq(events.isNational, true), gte(events.startDate, now)))
+        .orderBy(asc(events.startDate))
         .limit(limit)
 
-    if (error) {
-        console.error("Error fetching national events:", error)
-        return []
-    }
+    if (eventsResult.length === 0) return []
 
-    return (data as unknown as EventWithCafe[]) || []
+    const cafeIds = [...new Set(eventsResult.map(e => e.cafeId).filter(Boolean))] as string[]
+    const creatorIds = [...new Set(eventsResult.map(e => e.createdBy).filter(Boolean))] as string[]
+
+    const [cafesResult, creatorsResult] = await Promise.all([
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+        creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
+    ])
+
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+    const creatorMap = new Map(creatorsResult.map(c => [c.id, c]))
+
+    return eventsResult.map(e => mapEventToSnakeCase(e, e.cafeId ? cafeMap.get(e.cafeId) : null, e.createdBy ? creatorMap.get(e.createdBy) : null))
 }
 
 // ============================================
@@ -373,148 +401,111 @@ export async function getNationalEvents(
 /**
  * Create a new event
  */
-export async function createEvent(
-    input: EventInput
-): Promise<EventActionResult> {
-    const supabase = await createClient()
+export async function createEvent(input: EventInput): Promise<EventActionResult> {
     const userId = await getCurrentUserId()
+    if (!userId) return { success: false, error: "Not authenticated" }
 
-    if (!userId) {
-        return { success: false, error: "Not authenticated" }
-    }
-
-    // Check permissions
     const isAdmin = await isAdminOrModerator()
-    const canCreate =
-        isAdmin || (input.cafe_id && (await isCafeOwner(input.cafe_id)))
+    const canCreate = isAdmin || (input.cafe_id && (await isCafeOwner(input.cafe_id)))
 
     if (!canCreate) {
-        return {
-            success: false,
-            error: "You don't have permission to create events",
-        }
+        return { success: false, error: "You don't have permission to create events" }
     }
 
-    // Cafe owners can only create events for their own cafes
+    // Cafe owners need Premium tier
     if (!isAdmin && input.cafe_id) {
         const isOwner = await isCafeOwner(input.cafe_id)
         if (!isOwner) {
-            return {
-                success: false,
-                error: "You can only create events for cafes you own",
-            }
+            return { success: false, error: "You can only create events for cafes you own" }
         }
 
-        // Tier check - only Premium can create events
-        const adminClient = await createAdminClient()
-        const { data: subscription } = await adminClient
-            .from("cafe_subscriptions")
-            .select("tier")
-            .eq("cafe_id", input.cafe_id)
-            .single()
+        const subResult = await db.select({ tier: cafeSubscriptions.tier })
+            .from(cafeSubscriptions)
+            .where(eq(cafeSubscriptions.cafeId, input.cafe_id))
+            .limit(1)
 
-        const tier = subscription?.tier || "free"
+        const tier = subResult[0]?.tier || "free"
         if (tier !== "premium") {
-            return {
-                success: false,
-                error: "Event creation is an exclusive Feature for Premium subscribers. Upgrade to host events!",
-            }
+            return { success: false, error: "Event creation is an exclusive Feature for Premium subscribers. Upgrade to host events!" }
         }
     }
 
-    const { data, error } = await supabase
-        .from("events")
-        .insert({
-            title: input.title,
-            description: input.description || null,
-            start_date: input.start_date,
-            end_date: input.end_date || null,
-            location_name: input.location_name || null,
-            address: input.address || null,
-            city: input.city || null,
-            province: input.province || null,
-            region: input.region || null,
-            cafe_id: input.cafe_id || null,
-            image_url: input.image_url || null,
-            ticket_link: input.ticket_link || null,
-            is_national: input.is_national ?? false,
-            status: input.status || "draft",
-            created_by: userId,
-        })
-        .select()
-        .single()
+    const [inserted] = await db.insert(events).values({
+        title: input.title,
+        description: input.description || null,
+        startDate: new Date(input.start_date),
+        endDate: input.end_date ? new Date(input.end_date) : null,
+        locationName: input.location_name || null,
+        address: input.address || null,
+        city: input.city || null,
+        province: input.province || null,
+        region: input.region || null,
+        cafeId: input.cafe_id || null,
+        imageUrl: input.image_url || null,
+        ticketLink: input.ticket_link || null,
+        isNational: input.is_national ?? false,
+        status: input.status || "draft",
+        createdBy: userId,
+    }).returning()
 
-    if (error) {
-        console.error("Error creating event:", error)
-        return { success: false, error: error.message }
-    }
+    if (!inserted) return { success: false, error: "Failed to create event" }
 
-    // Fetch full event with relations
-    const fullEvent = await getEvent(data.id)
-
+    const fullEvent = await getEvent(inserted.id)
     return { success: true, event: fullEvent || undefined }
 }
 
 /**
  * Update an existing event
  */
-export async function updateEvent(
-    eventId: string,
-    input: Partial<EventInput>
-): Promise<EventActionResult> {
-    const supabase = await createClient()
+export async function updateEvent(eventId: string, input: Partial<EventInput>): Promise<EventActionResult> {
+    const eventResult = await db.select().from(events).where(eq(events.id, eventId)).limit(1)
+    const existingEvent = eventResult[0]
 
-    // Fetch existing event to check permissions
-    const { data: existingEvent } = await supabase
-        .from("events")
-        .select("*")
-        .eq("id", eventId)
-        .single()
+    if (!existingEvent) return { success: false, error: "Event not found" }
 
-    if (!existingEvent) {
-        return { success: false, error: "Event not found" }
+    // Convert to snake_case for permission check
+    const eventForCheck: Event = {
+        id: existingEvent.id,
+        title: existingEvent.title,
+        description: existingEvent.description,
+        start_date: existingEvent.startDate.toISOString(),
+        end_date: existingEvent.endDate?.toISOString() ?? null,
+        location_name: existingEvent.locationName,
+        address: existingEvent.address,
+        city: existingEvent.city,
+        province: existingEvent.province,
+        region: existingEvent.region,
+        cafe_id: existingEvent.cafeId,
+        image_url: existingEvent.imageUrl,
+        ticket_link: existingEvent.ticketLink,
+        is_national: existingEvent.isNational ?? false,
+        status: existingEvent.status as EventStatus,
+        created_by: existingEvent.createdBy,
+        created_at: existingEvent.createdAt?.toISOString() ?? null,
+        updated_at: existingEvent.updatedAt?.toISOString() ?? null,
     }
 
-    if (!(await canManageEvent(existingEvent as Event))) {
-        return {
-            success: false,
-            error: "You don't have permission to update this event",
-        }
+    if (!(await canManageEvent(eventForCheck))) {
+        return { success: false, error: "You don't have permission to update this event" }
     }
 
-    const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-    }
-
-    // Only include fields that are provided
+    const updateData: Partial<typeof events.$inferInsert> = { updatedAt: new Date() }
     if (input.title !== undefined) updateData.title = input.title
-    if (input.description !== undefined)
-        updateData.description = input.description
-    if (input.start_date !== undefined) updateData.start_date = input.start_date
-    if (input.end_date !== undefined) updateData.end_date = input.end_date
-    if (input.location_name !== undefined)
-        updateData.location_name = input.location_name
+    if (input.description !== undefined) updateData.description = input.description
+    if (input.start_date !== undefined) updateData.startDate = new Date(input.start_date)
+    if (input.end_date !== undefined) updateData.endDate = input.end_date ? new Date(input.end_date) : null
+    if (input.location_name !== undefined) updateData.locationName = input.location_name
     if (input.address !== undefined) updateData.address = input.address
     if (input.city !== undefined) updateData.city = input.city
     if (input.province !== undefined) updateData.province = input.province
     if (input.region !== undefined) updateData.region = input.region
-    if (input.cafe_id !== undefined) updateData.cafe_id = input.cafe_id
-    if (input.image_url !== undefined) updateData.image_url = input.image_url
-    if (input.ticket_link !== undefined)
-        updateData.ticket_link = input.ticket_link
-    if (input.is_national !== undefined)
-        updateData.is_national = input.is_national
+    if (input.cafe_id !== undefined) updateData.cafeId = input.cafe_id
+    if (input.image_url !== undefined) updateData.imageUrl = input.image_url
+    if (input.ticket_link !== undefined) updateData.ticketLink = input.ticket_link
+    if (input.is_national !== undefined) updateData.isNational = input.is_national
     if (input.status !== undefined) updateData.status = input.status
 
-    const { error } = await supabase
-        .from("events")
-        .update(updateData)
-        .eq("id", eventId)
-
-    if (error) {
-        console.error("Error updating event:", error)
-        return { success: false, error: error.message }
-    }
+    await db.update(events).set(updateData).where(eq(events.id, eventId))
 
     const fullEvent = await getEvent(eventId)
     return { success: true, event: fullEvent || undefined }
@@ -524,139 +515,123 @@ export async function updateEvent(
  * Delete an event
  */
 export async function deleteEvent(eventId: string): Promise<EventActionResult> {
-    const supabase = await createClient()
+    const eventResult = await db.select().from(events).where(eq(events.id, eventId)).limit(1)
+    const existingEvent = eventResult[0]
 
-    // Fetch existing event to check permissions
-    const { data: existingEvent } = await supabase
-        .from("events")
-        .select("*")
-        .eq("id", eventId)
-        .single()
+    if (!existingEvent) return { success: false, error: "Event not found" }
 
-    if (!existingEvent) {
-        return { success: false, error: "Event not found" }
+    const eventForCheck: Event = {
+        id: existingEvent.id,
+        title: existingEvent.title,
+        description: existingEvent.description,
+        start_date: existingEvent.startDate.toISOString(),
+        end_date: existingEvent.endDate?.toISOString() ?? null,
+        location_name: existingEvent.locationName,
+        address: existingEvent.address,
+        city: existingEvent.city,
+        province: existingEvent.province,
+        region: existingEvent.region,
+        cafe_id: existingEvent.cafeId,
+        image_url: existingEvent.imageUrl,
+        ticket_link: existingEvent.ticketLink,
+        is_national: existingEvent.isNational ?? false,
+        status: existingEvent.status as EventStatus,
+        created_by: existingEvent.createdBy,
+        created_at: existingEvent.createdAt?.toISOString() ?? null,
+        updated_at: existingEvent.updatedAt?.toISOString() ?? null,
     }
 
-    if (!(await canManageEvent(existingEvent as Event))) {
-        return {
-            success: false,
-            error: "You don't have permission to delete this event",
-        }
+    if (!(await canManageEvent(eventForCheck))) {
+        return { success: false, error: "You don't have permission to delete this event" }
     }
 
-    const { error } = await supabase.from("events").delete().eq("id", eventId)
-
-    if (error) {
-        console.error("Error deleting event:", error)
-        return { success: false, error: error.message }
-    }
-
+    await db.delete(events).where(eq(events.id, eventId))
     return { success: true }
 }
 
-/**
- * Publish an event (change status to published)
- */
-export async function publishEvent(
-    eventId: string
-): Promise<EventActionResult> {
+export async function publishEvent(eventId: string): Promise<EventActionResult> {
     return updateEvent(eventId, { status: "published" })
 }
 
-/**
- * Cancel an event
- */
 export async function cancelEvent(eventId: string): Promise<EventActionResult> {
     return updateEvent(eventId, { status: "cancelled" })
 }
 
 /**
- * Get all events for admin/moderator view (including drafts)
+ * Get all events for admin view
  */
-export async function getAdminEvents(
-    page: number = 1,
-    pageSize: number = 20
-): Promise<{ events: EventWithCafe[]; total: number }> {
-    const supabase = await createClient()
+export async function getAdminEvents(page: number = 1, pageSize: number = 20): Promise<{ events: EventWithCafe[]; total: number }> {
+    if (!(await isAdminOrModerator())) return { events: [], total: 0 }
 
-    if (!(await isAdminOrModerator())) {
-        return { events: [], total: 0 }
-    }
+    const offset = (page - 1) * pageSize
 
-    const from = (page - 1) * pageSize
-    const to = from + pageSize - 1
+    const [eventsResult, countResult] = await Promise.all([
+        db.select({
+            id: events.id, title: events.title, description: events.description,
+            startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+            address: events.address, city: events.city, province: events.province, region: events.region,
+            cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+            isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+            createdAt: events.createdAt, updatedAt: events.updatedAt,
+        })
+            .from(events)
+            .orderBy(desc(events.createdAt))
+            .limit(pageSize)
+            .offset(offset),
+        db.select({ count: count() }).from(events),
+    ])
 
-    const { data, error, count } = await supabase
-        .from("events")
-        .select(
-            `
-            *,
-            cafe:cafes!cafe_id (
-                id,
-                name,
-                slug,
-                thumbnail
-            ),
-            creator:profiles!created_by (
-                id,
-                display_name,
-                avatar_url
-            )
-        `,
-            { count: "exact" }
-        )
-        .order("created_at", { ascending: false })
-        .range(from, to)
+    if (eventsResult.length === 0) return { events: [], total: countResult[0]?.count ?? 0 }
 
-    if (error) {
-        console.error("Error fetching admin events:", error)
-        return { events: [], total: 0 }
-    }
+    const cafeIds = [...new Set(eventsResult.map(e => e.cafeId).filter(Boolean))] as string[]
+    const creatorIds = [...new Set(eventsResult.map(e => e.createdBy).filter(Boolean))] as string[]
+
+    const [cafesResult, creatorsResult] = await Promise.all([
+        cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+        creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
+    ])
+
+    const cafeMap = new Map(cafesResult.map(c => [c.id, c]))
+    const creatorMap = new Map(creatorsResult.map(c => [c.id, c]))
 
     return {
-        events: (data as unknown as EventWithCafe[]) || [],
-        total: count || 0,
+        events: eventsResult.map(e => mapEventToSnakeCase(e, e.cafeId ? cafeMap.get(e.cafeId) : null, e.createdBy ? creatorMap.get(e.createdBy) : null)),
+        total: countResult[0]?.count ?? 0,
     }
 }
 
 /**
- * Get events for a specific cafe (for owner dashboard)
+ * Get events for a specific cafe
  */
-export async function getCafeEvents(
-    cafeId: string
-): Promise<EventWithCafe[]> {
-    const supabase = await createClient()
+export async function getCafeEvents(cafeId: string): Promise<EventWithCafe[]> {
+    if (!(await isCafeOwner(cafeId)) && !(await isAdminOrModerator())) return []
 
-    // Check if user is owner of this cafe
-    if (!(await isCafeOwner(cafeId)) && !(await isAdminOrModerator())) {
-        return []
-    }
+    const eventsResult = await db.select({
+        id: events.id, title: events.title, description: events.description,
+        startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+        address: events.address, city: events.city, province: events.province, region: events.region,
+        cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+        isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+        createdAt: events.createdAt, updatedAt: events.updatedAt,
+    })
+        .from(events)
+        .where(eq(events.cafeId, cafeId))
+        .orderBy(desc(events.startDate))
 
-    const { data, error } = await supabase
-        .from("events")
-        .select(
-            `
-            *,
-            cafe:cafes!cafe_id (
-                id,
-                name,
-                slug,
-                thumbnail
-            ),
-            creator:profiles!created_by (
-                id,
-                display_name,
-                avatar_url
-            )
-        `
-        )
-        .eq("cafe_id", cafeId)
-        .order("start_date", { ascending: false })
+    if (eventsResult.length === 0) return []
 
-    if (error) {
-        console.error("Error fetching cafe events:", error)
-        return []
-    }
+    const cafeResult = await db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+        .from(cafes).where(eq(cafes.id, cafeId)).limit(1)
+    const cafe = cafeResult[0]
 
-    return (data as unknown as EventWithCafe[]) || []
+    const creatorIds = [...new Set(eventsResult.map(e => e.createdBy).filter(Boolean))] as string[]
+    const creatorsResult = creatorIds.length > 0
+        ? await db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(inArray(profiles.id, creatorIds))
+        : []
+    const creatorMap = new Map(creatorsResult.map(c => [c.id, c]))
+
+    return eventsResult.map(e => mapEventToSnakeCase(e, cafe, e.createdBy ? creatorMap.get(e.createdBy) : null))
 }

@@ -1,10 +1,6 @@
 "use client"
 
-import {
-    getAllBadges,
-    getCafesByIds,
-    getUserReviews,
-} from "@/app/api/actions/profile"
+import { getPublicProfileData } from "@/app/api/actions/profile"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
@@ -22,8 +18,8 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useContext, useEffect, useState } from "react"
-import { AuthContext } from "@/components/AuthProvider"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/components/AuthProvider"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import { getLucideIcon } from "@/components/badges/iconUtils"
@@ -49,7 +45,7 @@ interface PublicProfileClientProps {
 export default function PublicProfileClient({
     profile,
 }: PublicProfileClientProps) {
-    const { user } = useContext(AuthContext)
+    const { user } = useAuth()
     // States
     const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])
     const [loading, setLoading] = useState(true)
@@ -70,33 +66,16 @@ export default function PublicProfileClient({
     // Badge display
     const [showAllBadges, setShowAllBadges] = useState(false)
 
-    // Fetch extra data
+    // Fetch all data in one call
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [badges, userReviews, visited, favorites, wishlist] =
-                    await Promise.all([
-                        getAllBadges(),
-                        getUserReviews(profile.id, user?.id),
-                        getCafesByIds(profile.passport?.visited_ids || []),
-                        getCafesByIds(profile.passport?.favorite_ids || []),
-                        getCafesByIds(profile.passport?.wishlist_ids || []),
-                    ])
-
-                setAllBadges(badges)
-                setReviews(userReviews)
-                setVisitedCafes(
-                    visited.map((c) => ({ name: c.name, slug: c.slug }))
-                )
-                setFavoriteCafes(
-                    favorites.map((c) => ({ name: c.name, slug: c.slug }))
-                )
-                setWishlistCafes(
-                    wishlist.map((c) => ({
-                        name: c.name,
-                        slug: c.slug,
-                    }))
-                )
+                const data = await getPublicProfileData(profile, user?.id)
+                setAllBadges(data.allBadges)
+                setReviews(data.reviews)
+                setVisitedCafes(data.passportCafes.visited)
+                setFavoriteCafes(data.passportCafes.favorites)
+                setWishlistCafes(data.passportCafes.wishlist)
             } catch (error) {
                 console.error("Error fetching public profile details:", error)
             } finally {

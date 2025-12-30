@@ -242,6 +242,126 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
     }
 }
 
+// Types for public profile data
+export interface PublicProfileData {
+    allBadges: Tables<"badge_definitions">[]
+    reviews: {
+        id: string
+        rating: number
+        comment: string
+        created_at: string | null
+        cafe: { name: string; slug: string; thumbnail: string } | null
+        images: string[] | null
+        likes_count: number
+        is_liked: boolean
+        user_id: string
+    }[]
+    passportCafes: {
+        visited: { name: string; slug: string }[]
+        favorites: { name: string; slug: string }[]
+        wishlist: { name: string; slug: string }[]
+    }
+}
+
+/**
+ * Get public profile page data in a single call
+ * Reduces 5 separate API calls to 1
+ */
+export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?: string): Promise<PublicProfileData> {
+    const passport = profile.passport as ProfilePassport | null
+
+    // Fetch all data in parallel
+    const [
+        allBadgesResult,
+        reviewsResult,
+        visitedCafes,
+        favoriteCafes,
+        wishlistCafes,
+    ] = await Promise.all([
+        // All badge definitions
+        db.select().from(badgeDefinitions),
+
+        // User reviews with cafe info and like status
+        (async () => {
+            const result = await db.select({
+                id: reviews.id,
+                rating: reviews.rating,
+                comment: reviews.comment,
+                createdAt: reviews.createdAt,
+                images: reviews.images,
+                likesCount: reviews.likesCount,
+                userId: reviews.userId,
+                cafeName: cafes.name,
+                cafeSlug: cafes.slug,
+                cafeThumbnail: cafes.thumbnail,
+            })
+                .from(reviews)
+                .leftJoin(cafes, eq(reviews.cafeId, cafes.id))
+                .where(and(eq(reviews.userId, profile.id), eq(reviews.status, "published")))
+                .orderBy(desc(reviews.createdAt))
+
+            // Check if viewer liked each review
+            if (viewerId && result.length > 0) {
+                const reviewIds = result.map(r => r.id)
+                const likes = await db.select({ reviewId: reviewInteractions.reviewId })
+                    .from(reviewInteractions)
+                    .where(and(
+                        inArray(reviewInteractions.reviewId, reviewIds),
+                        eq(reviewInteractions.userId, viewerId),
+                        eq(reviewInteractions.interactionType, "like")
+                    ))
+                const likedSet = new Set(likes.map(l => l.reviewId))
+                return result.map(r => ({ ...r, isLiked: likedSet.has(r.id) }))
+            }
+            return result.map(r => ({ ...r, isLiked: false }))
+        })(),
+
+        // Passport - visited cafes
+        passport?.visited_ids?.length
+            ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(inArray(cafes.id, passport.visited_ids))
+            : Promise.resolve([]),
+
+        // Passport - favorite cafes
+        passport?.favorite_ids?.length
+            ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(inArray(cafes.id, passport.favorite_ids))
+            : Promise.resolve([]),
+
+        // Passport - wishlist cafes
+        passport?.wishlist_ids?.length
+            ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(inArray(cafes.id, passport.wishlist_ids))
+            : Promise.resolve([]),
+    ])
+
+    return {
+        allBadges: allBadgesResult.map((b) => ({
+            id: b.id,
+            name: b.name,
+            description: b.description,
+            image_url: b.imageUrl,
+            category: b.category,
+            rarity: b.rarity,
+            metadata: b.metadata,
+            created_at: b.createdAt?.toISOString() ?? null,
+        })) as Tables<"badge_definitions">[],
+        reviews: reviewsResult.map((r) => ({
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment,
+            created_at: r.createdAt?.toISOString() ?? null,
+            cafe: r.cafeName ? { name: r.cafeName, slug: r.cafeSlug!, thumbnail: r.cafeThumbnail! } : null,
+            images: r.images,
+            likes_count: r.likesCount ?? 0,
+            is_liked: r.isLiked,
+            user_id: r.userId,
+        })),
+        passportCafes: {
+            visited: visitedCafes,
+            favorites: favoriteCafes,
+            wishlist: wishlistCafes,
+        },
+    }
+}
+
 
 /**
  * Check if a username is already taken
