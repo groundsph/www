@@ -6,6 +6,7 @@ import {
     cafes,
     cafeRatingStats,
     cafeClaims,
+    contributionLogs,
     profiles,
     user,
 } from "@/db/schema"
@@ -222,7 +223,7 @@ export async function getPendingCafes(): Promise<CafeWithRatings[]> {
                 avatarUrl: profiles.avatarUrl,
             })
             .from(profiles)
-            .where(sql`${profiles.id} = ANY(${contributorIds})`)
+            .where(inArray(profiles.id, contributorIds))
         : []
 
     const contributorMap = new Map(contributorsResult.map(c => [c.id, c]))
@@ -396,6 +397,22 @@ export async function rejectCafe(cafeId: string, reason?: string): Promise<Admin
     // Delete images from storage
     if (cafe) {
         await deleteCafeImagesAction(cafe.thumbnail, cafe.gallery)
+    }
+
+    // Delete related cafe_claims first (foreign key constraint)
+    try {
+        await db.delete(cafeClaims)
+            .where(eq(cafeClaims.cafeId, cafeId))
+    } catch (error) {
+        console.error("Error deleting cafe claims:", error)
+    }
+
+    // Delete related contribution_logs (foreign key constraint)
+    try {
+        await db.delete(contributionLogs)
+            .where(eq(contributionLogs.cafeId, cafeId))
+    } catch (error) {
+        console.error("Error deleting contribution logs:", error)
     }
 
     // Delete the cafe record
@@ -676,7 +693,7 @@ export async function getPublishedCafes(): Promise<CafeWithRatings[]> {
                 avatarUrl: profiles.avatarUrl,
             })
             .from(profiles)
-            .where(sql`${profiles.id} = ANY(${contributorIds})`)
+            .where(inArray(profiles.id, contributorIds))
         : []
 
     const contributorMap = new Map(contributorsResult.map(c => [c.id, c]))
@@ -821,7 +838,7 @@ export async function getPaginatedCafes(params: CafePaginationParams): Promise<P
                 avatarUrl: profiles.avatarUrl,
             })
             .from(profiles)
-            .where(sql`${profiles.id} = ANY(${contributorIds})`)
+            .where(inArray(profiles.id, contributorIds))
         : []
 
     const contributorMap = new Map(contributorsResult.map(c => [c.id, c]))
@@ -1474,7 +1491,7 @@ export async function getReportedReviews(): Promise<ReviewForModeration[]> {
             cafeId: reviews.cafeId,
         })
         .from(reviews)
-        .where(sql`${reviews.id} = ANY(${uniqueReviewIds})`)
+        .where(inArray(reviews.id, uniqueReviewIds))
         .orderBy(desc(reviews.updatedAt))
 
     if (!reviewsResult.length) return []
@@ -1489,13 +1506,13 @@ export async function getReportedReviews(): Promise<ReviewForModeration[]> {
             username: profiles.username,
             displayName: profiles.displayName,
             avatarUrl: profiles.avatarUrl,
-        }).from(profiles).where(sql`${profiles.id} = ANY(${userIds})`) : [],
+        }).from(profiles).where(inArray(profiles.id, userIds)) : [],
         cafeIds.length > 0 ? db.select({
             id: cafes.id,
             name: cafes.name,
             slug: cafes.slug,
             thumbnail: cafes.thumbnail,
-        }).from(cafes).where(sql`${cafes.id} = ANY(${cafeIds})`) : []
+        }).from(cafes).where(inArray(cafes.id, cafeIds)) : []
     ])
 
     const authorMap = new Map(authorsResult.map(a => [a.id, a]))
@@ -1593,17 +1610,17 @@ export async function getReviewsForModeration(
             username: profiles.username,
             displayName: profiles.displayName,
             avatarUrl: profiles.avatarUrl,
-        }).from(profiles).where(sql`${profiles.id} = ANY(${userIds})`) : [],
+        }).from(profiles).where(inArray(profiles.id, userIds)) : [],
         cafeIds.length > 0 ? db.select({
             id: cafes.id,
             name: cafes.name,
             slug: cafes.slug,
             thumbnail: cafes.thumbnail,
-        }).from(cafes).where(sql`${cafes.id} = ANY(${cafeIds})`) : [],
+        }).from(cafes).where(inArray(cafes.id, cafeIds)) : [],
         reviewIds.length > 0 ? db.select({ reviewId: reviewInteractions.reviewId })
             .from(reviewInteractions)
             .where(and(
-                sql`${reviewInteractions.reviewId} = ANY(${reviewIds})`,
+                inArray(reviewInteractions.reviewId, reviewIds),
                 eq(reviewInteractions.interactionType, 'report')
             )) : []
     ])

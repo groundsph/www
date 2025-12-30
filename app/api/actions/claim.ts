@@ -16,7 +16,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
  * Get a signed URL for an ownership proof document (admin only)
  */
 export async function getOwnershipProofSignedUrl(
-    proofPath: string
+    proofUrl: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
     const currentUser = await getCurrentUser()
     if (!currentUser) {
@@ -37,6 +37,20 @@ export async function getOwnershipProofSignedUrl(
 
     // Use provider-agnostic storage to generate signed URL
     const storage = await getStorageProvider()
+
+    // If proofUrl is a full URL, extract the path from it
+    // Otherwise use it directly as a path
+    let proofPath = proofUrl
+    if (proofUrl.startsWith('http')) {
+        const extractedPath = storage.extractPathFromUrl(proofUrl, STORAGE_BUCKETS.OWNERSHIP_PROOFS)
+        if (extractedPath) {
+            proofPath = extractedPath
+        } else {
+            console.error("[getOwnershipProofSignedUrl] Could not extract path from URL:", proofUrl)
+            return { success: false, error: "Invalid proof URL format" }
+        }
+    }
+
     const result = await storage.createSignedUrl(
         STORAGE_BUCKETS.OWNERSHIP_PROOFS,
         proofPath,

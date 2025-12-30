@@ -69,10 +69,10 @@ export const userBadges = pgTable("user_badges", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     badgeId: uuid("badge_id")
         .notNull()
-        .references(() => badgeDefinitions.id),
+        .references(() => badgeDefinitions.id, { onDelete: "cascade" }),
     awardedAt: timestamp("awarded_at", { withTimezone: true }).defaultNow(),
     evidenceUrl: text("evidence_url"),
 })
@@ -128,7 +128,7 @@ export const cafes = pgTable(
         isVerified: boolean("is_verified").default(false),
         isClaimed: boolean("is_claimed").default(false),
         ownerIds: uuid("owner_ids").array(),
-        contributorId: uuid("contributor_id").references(() => profiles.id),
+        contributorId: uuid("contributor_id").references(() => profiles.id, { onDelete: "set null" }),
         featuredUntil: timestamp("featured_until", { withTimezone: true }),
         searchVector: tsvector("search_vector"),
         createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -142,7 +142,7 @@ export const cafes = pgTable(
 export const cafeRatingStats = pgTable("cafe_rating_stats", {
     cafeId: uuid("cafe_id")
         .primaryKey()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     averageRating: real("average_rating"),
     totalReviews: integer("total_reviews").default(0),
     ratingDistribution: jsonb("rating_distribution"),
@@ -153,7 +153,7 @@ export const cafeMenuItems = pgTable("cafe_menu_items", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
     category: text("category").notNull(),
@@ -170,7 +170,7 @@ export const cafeStories = pgTable("cafe_stories", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -181,7 +181,7 @@ export const cafeSubscriptions = pgTable("cafe_subscriptions", {
     cafeId: uuid("cafe_id")
         .notNull()
         .unique()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     tier: enums.membershipTierEnum("tier").default("free"),
     status: enums.subscriptionStatusEnum("status").default("active"),
     helixSubscriptionId: text("helix_subscription_id"),
@@ -198,7 +198,7 @@ export const cafePageViews = pgTable("cafe_page_views", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     visitorId: text("visitor_id"),
     viewedAt: timestamp("viewed_at", { withTimezone: true }).defaultNow(),
     referrer: text("referrer"),
@@ -210,10 +210,10 @@ export const cafeClaims = pgTable("cafe_claims", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     proofText: text("proof_text").notNull(),
     proofDocumentUrl: text("proof_document_url"),
     status: text("status").default("pending"),
@@ -227,10 +227,10 @@ export const cafeEditSuggestions = pgTable("cafe_edit_suggestions", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     suggestedChanges: jsonb("suggested_changes").notNull(),
     suggestedImages: jsonb("suggested_images"),
     status: text("status").default("pending"),
@@ -249,10 +249,10 @@ export const reviews = pgTable("reviews", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     rating: integer("rating").notNull(),
     comment: text("comment").notNull(),
     images: text("images").array(),
@@ -270,10 +270,10 @@ export const reviewInteractions = pgTable("review_interactions", {
     id: uuid("id").primaryKey().defaultRandom(),
     reviewId: uuid("review_id")
         .notNull()
-        .references(() => reviews.id),
+        .references(() => reviews.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     interactionType: enums.interactionTypeEnum("interaction_type").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
@@ -283,10 +283,10 @@ export const ownerReviewResponses = pgTable("owner_review_responses", {
     reviewId: uuid("review_id")
         .notNull()
         .unique()
-        .references(() => reviews.id),
+        .references(() => reviews.id, { onDelete: "cascade" }),
     ownerId: uuid("owner_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     response: text("response").notNull(),
     isEdited: boolean("is_edited").default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -329,10 +329,10 @@ export const blogReports = pgTable("blog_reports", {
     id: uuid("id").primaryKey().defaultRandom(),
     blogPostId: uuid("blog_post_id")
         .notNull()
-        .references(() => blogPosts.id),
+        .references(() => blogPosts.id, { onDelete: "cascade" }),
     reporterId: uuid("reporter_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     reason: text("reason").notNull(),
     details: text("details"),
     status: text("status").default("pending"),
@@ -361,8 +361,8 @@ export const events = pgTable("events", {
     isNational: boolean("is_national").default(false),
     ticketLink: text("ticket_link"),
     status: enums.eventStatusEnum("status").default("draft"),
-    cafeId: uuid("cafe_id").references(() => cafes.id),
-    createdBy: uuid("created_by").references(() => profiles.id),
+    cafeId: uuid("cafe_id").references(() => cafes.id, { onDelete: "set null" }),
+    createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 })
@@ -375,7 +375,7 @@ export const featuredSchedules = pgTable("featured_schedules", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     slotType: enums.slotTypeEnum("slot_type").notNull(),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     endDate: timestamp("end_date", { withTimezone: true }).notNull(),
@@ -390,7 +390,7 @@ export const featuredSchedules = pgTable("featured_schedules", {
 
 export const featuredSlotRequests = pgTable("featured_slot_requests", {
     id: uuid("id").primaryKey().defaultRandom(),
-    cafeId: uuid("cafe_id").references(() => cafes.id),
+    cafeId: uuid("cafe_id").references(() => cafes.id, { onDelete: "cascade" }),
     ownerId: uuid("owner_id").references(() => profiles.id),
     requestedMonth: text("requested_month").notNull(),
     status: text("status").default("pending"),
@@ -407,10 +407,10 @@ export const contributionLogs = pgTable("contribution_logs", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     actionType: enums.contributionActionTypeEnum("action_type").notNull(),
     details: jsonb("details"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -424,10 +424,10 @@ export const ownerVerificationRequests = pgTable("owner_verification_requests", 
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
         .notNull()
-        .references(() => profiles.id),
+        .references(() => profiles.id, { onDelete: "cascade" }),
     cafeId: uuid("cafe_id")
         .notNull()
-        .references(() => cafes.id),
+        .references(() => cafes.id, { onDelete: "cascade" }),
     verificationType: text("verification_type").notNull(),
     proofUrls: text("proof_urls").array(),
     notes: text("notes"),
@@ -444,7 +444,7 @@ export const ownerVerificationRequests = pgTable("owner_verification_requests", 
 
 export const supporterSubscriptions = pgTable("supporter_subscriptions", {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => profiles.id),
+    userId: uuid("user_id").references(() => profiles.id, { onDelete: "set null" }),
     kofiTransactionId: text("kofi_transaction_id").notNull().unique(),
     email: text("email").notNull(),
     fromName: text("from_name").notNull(),
