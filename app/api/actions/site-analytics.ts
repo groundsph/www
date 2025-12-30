@@ -1,8 +1,9 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { cafePageViews, cafes, profiles } from "@/db/schema"
+import { eq, gte, lte, and, inArray, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
-import { createAdminClient } from "@/utils/supabase/admin"
 
 export interface SiteAnalytics {
     // Overview stats
@@ -55,17 +56,16 @@ export interface CafeAnalyticsSummary {
 }
 
 async function isAdmin(): Promise<boolean> {
-    const db = await createClient()
     const user = await getCurrentUser()
     if (!user) return false
 
-    const { data: profile } = await db
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    const result = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    return profile?.role === "admin"
+    return result[0]?.role === "admin"
 }
 
 /**
@@ -76,9 +76,6 @@ export async function getSiteAnalytics(days: number = 30): Promise<SiteAnalytics
     const hasAccess = await isAdmin()
     if (!hasAccess) return null
 
-    // Use admin client to bypass RLS
-    const db = await createAdminClient()
-
     // Calculate date range
     const endDate = new Date()
     const startDate = new Date()
@@ -88,16 +85,13 @@ export async function getSiteAnalytics(days: number = 30): Promise<SiteAnalytics
     const endStr = endDate.toISOString()
 
     // Get all page views in the period
-    const { data: pageViews, error } = await db
-        .from("cafe_page_views")
-        .select("*")
-        .gte("viewed_at", startStr)
-        .lte("viewed_at", endStr)
-
-    if (error) {
-        console.error("Error fetching site analytics:", error)
-        return null
-    }
+    const pageViews = await db
+        .select()
+        .from(cafePageViews)
+        .where(and(
+            gte(cafePageViews.viewedAt, startDate),
+            lte(cafePageViews.viewedAt, endDate)
+        ))
 
     // Return empty data if no views
     if (!pageViews || pageViews.length === 0) {
@@ -115,7 +109,7 @@ export async function getSiteAnalytics(days: number = 30): Promise<SiteAnalytics
     }
 
     // Calculate unique visitors
-    const uniqueVisitorIds = new Set(pageViews.map(v => v.visitor_id).filter(Boolean))
+    const uniqueVisitorIds = new Set(pageViews.map(v => v.visitorId).filter(Boolean))
 
     // Group views by day
     const viewsByDayMap = new Map<string, { views: number; visitors: Set<string> }>()
@@ -131,24 +125,24 @@ export async function getSiteAnalytics(days: number = 30): Promise<SiteAnalytics
 
     // Populate with actual data
     for (const view of pageViews) {
-        const dateKey = view.viewed_at.split("T")[0]
+        const dateKey = view.viewedAt!.toISOString().split("T")[0]
         const dayData = viewsByDayMap.get(dateKey)
         if (dayData) {
             dayData.views++
-            if (view.visitor_id) {
-                dayData.visitors.add(view.visitor_id)
+            if (view.visitorId) {
+                dayData.visitors.add(view.visitorId)
             }
         }
 
         // Track cafe views
-        const cafeId = view.cafe_id
+        const cafeId = view.cafeId
         if (!cafeViewsMap.has(cafeId)) {
             cafeViewsMap.set(cafeId, { views: 0, visitors: new Set() })
         }
         const cafeData = cafeViewsMap.get(cafeId)!
         cafeData.views++
-        if (view.visitor_id) {
-            cafeData.visitors.add(view.visitor_id)
+        if (view.visitorId) {
+            cafeData.visitors.add(view.visitorId)
         }
     }
 
@@ -163,7 +157,7 @@ export async function getSiteAnalytics(days: number = 30): Promise<SiteAnalytics
     // Device breakdown
     const deviceBreakdown = { mobile: 0, desktop: 0, tablet: 0 }
     for (const view of pageViews) {
-        const device = view.device_type as keyof typeof deviceBreakdown
+        const device = view.deviceType as keyof typeof deviceBreakdown
         if (device && deviceBreakdown[device] !== undefined) {
             deviceBreakdown[device]++
         }
@@ -194,12 +188,12 @@ export async function getSiteAnalytics(days: number = 30): Promise<SiteAnalytics
         .slice(0, 10)
         .map(([id]) => id)
 
-    const { data: cafes } = await db
-        .from("cafes")
-        .select("id, name, slug")
-        .in("id", topCafeIds)
+    const cafeResult = await db
+        .select({ id: cafes.id, name: cafes.name, slug: cafes.slug })
+        .from(cafes)
+        .where(inArray(cafes.id, topCafeIds))
 
-    const cafeMap = new Map(cafes?.map(c => [c.id, c]) || [])
+    const cafeMap = new Map(cafeResult.map(c => [c.id, c]))
 
     const topCafes = topCafeIds
         .filter(id => cafeMap.has(id))
@@ -238,9 +232,6 @@ export async function getCafeAnalyticsSummary(): Promise<CafeAnalyticsSummary[]>
     const hasAccess = await isAdmin()
     if (!hasAccess) return []
 
-    // Use admin client to bypass RLS
-    const db = await createAdminClient()
-
     // Calculate date ranges
     const lastWeekStart = new Date()
     lastWeekStart.setDate(lastWeekStart.getDate() - 7)
@@ -248,24 +239,29 @@ export async function getCafeAnalyticsSummary(): Promise<CafeAnalyticsSummary[]>
     twoWeeksAgoStart.setDate(twoWeeksAgoStart.getDate() - 14)
 
     // Get all page views for the last 2 weeks
-    const { data: pageViews, error } = await db
-        .from("cafe_page_views")
-        .select("cafe_id, visitor_id, viewed_at")
-        .gte("viewed_at", twoWeeksAgoStart.toISOString())
-
-    if (error || !pageViews) {
-        console.error("Error fetching cafe analytics summary:", error)
-        return []
-    }
+    const pageViews = await db
+        .select({
+            cafeId: cafePageViews.cafeId,
+            visitorId: cafePageViews.visitorId,
+            viewedAt: cafePageViews.viewedAt,
+        })
+        .from(cafePageViews)
+        .where(gte(cafePageViews.viewedAt, twoWeeksAgoStart))
 
     // Get all published cafes
-    const { data: cafes } = await db
-        .from("cafes")
-        .select("id, name, slug, thumbnail, region")
-        .eq("is_published", true)
-        .order("name")
+    const cafesResult = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            region: cafes.region,
+        })
+        .from(cafes)
+        .where(eq(cafes.isPublished, true))
+        .orderBy(cafes.name)
 
-    if (!cafes) return []
+    if (!cafesResult.length) return []
 
     // Aggregate views by cafe
     const cafeStats = new Map<string, {
@@ -276,7 +272,7 @@ export async function getCafeAnalyticsSummary(): Promise<CafeAnalyticsSummary[]>
     }>()
 
     // Initialize all cafes
-    for (const cafe of cafes) {
+    for (const cafe of cafesResult) {
         cafeStats.set(cafe.id, {
             totalViews: 0,
             visitors: new Set(),
@@ -287,13 +283,13 @@ export async function getCafeAnalyticsSummary(): Promise<CafeAnalyticsSummary[]>
 
     // Process views
     for (const view of pageViews) {
-        const stats = cafeStats.get(view.cafe_id)
+        const stats = cafeStats.get(view.cafeId)
         if (!stats) continue
 
-        const viewDate = new Date(view.viewed_at)
+        const viewDate = view.viewedAt!
         stats.totalViews++
-        if (view.visitor_id) {
-            stats.visitors.add(view.visitor_id)
+        if (view.visitorId) {
+            stats.visitors.add(view.visitorId)
         }
 
         if (viewDate >= lastWeekStart) {
@@ -304,7 +300,7 @@ export async function getCafeAnalyticsSummary(): Promise<CafeAnalyticsSummary[]>
     }
 
     // Build result
-    return cafes.map(cafe => {
+    return cafesResult.map(cafe => {
         const stats = cafeStats.get(cafe.id)!
         let trend: "up" | "down" | "stable" = "stable"
         if (stats.viewsLastWeek > stats.viewsPreviousWeek) {

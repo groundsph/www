@@ -1,8 +1,10 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
-import { createAdminClient } from "@/utils/supabase/admin"
-import { BlogReport, BlogReportInput, BlogReportReason, BLOG_REPORT_REASONS } from "@/utils/types/blog-report"
+import { db } from "@/db"
+import { blogReports, blogPosts, profiles } from "@/db/schema"
+import { eq, desc, and, count as drizzleCount, sql } from "drizzle-orm"
+import { getCurrentUser } from "@/lib/auth"
+import { BlogReport, BlogReportInput, BLOG_REPORT_REASONS } from "@/utils/types/blog-report"
 import { notifyDiscordBlogReport } from "@/app/api/actions/notify"
 
 // ============================================
@@ -10,26 +12,21 @@ import { notifyDiscordBlogReport } from "@/app/api/actions/notify"
 // ============================================
 
 async function isAdminOrModerator(): Promise<boolean> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) return false
 
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    const result = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    return profile?.role === "admin" || profile?.role === "moderator"
+    const role = result[0]?.role
+    return role === "admin" || role === "moderator"
 }
 
 async function getCurrentUserId(): Promise<string | null> {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     return user?.id ?? null
 }
 
@@ -51,62 +48,67 @@ export async function reportBlogPost(input: BlogReportInput): Promise<BlogReport
         return { success: false, error: "You must be logged in to report content" }
     }
 
-    const supabase = await createClient()
-    const adminClient = await createAdminClient()
-
     // Verify the blog post exists and is published
-    const { data: post } = await supabase
-        .from("blog_posts")
-        .select("id, author_id, status, title, slug")
-        .eq("id", input.blog_post_id)
-        .single()
+    const postResult = await db
+        .select({
+            id: blogPosts.id,
+            authorId: blogPosts.authorId,
+            status: blogPosts.status,
+            title: blogPosts.title,
+            slug: blogPosts.slug,
+        })
+        .from(blogPosts)
+        .where(eq(blogPosts.id, input.blog_post_id))
+        .limit(1)
 
+    const post = postResult[0]
     if (!post) {
         return { success: false, error: "Blog post not found" }
     }
 
     // Prevent self-reporting
-    if (post.author_id === userId) {
+    if (post.authorId === userId) {
         return { success: false, error: "You cannot report your own post" }
     }
 
     // Check if user already reported this post
-    const { data: existingReport } = await adminClient
-        .from("blog_reports")
-        .select("id")
-        .eq("blog_post_id", input.blog_post_id)
-        .eq("reporter_id", userId)
-        .single()
+    const existingResult = await db
+        .select({ id: blogReports.id })
+        .from(blogReports)
+        .where(and(
+            eq(blogReports.blogPostId, input.blog_post_id),
+            eq(blogReports.reporterId, userId)
+        ))
+        .limit(1)
 
-    if (existingReport) {
+    if (existingResult[0]) {
         return { success: false, error: "You have already reported this post" }
     }
 
-    // Insert the report using admin client (to bypass RLS for insert)
-    const { error } = await adminClient
-        .from("blog_reports")
-        .insert({
-            blog_post_id: input.blog_post_id,
-            reporter_id: userId,
+    // Insert the report
+    try {
+        await db.insert(blogReports).values({
+            blogPostId: input.blog_post_id,
+            reporterId: userId,
             reason: input.reason,
             details: input.details || null,
             status: "pending",
         })
-
-    if (error) {
+    } catch (error) {
         console.error("Error creating blog report:", error)
         return { success: false, error: "Failed to submit report" }
     }
 
     // Notify Discord (fire and forget to not block response)
-    const { data: reporter } = await supabase
-        .from('profiles')
-        .select('display_name, username')
-        .eq('id', userId)
-        .single()
+    const reporterResult = await db
+        .select({ displayName: profiles.displayName, username: profiles.username })
+        .from(profiles)
+        .where(eq(profiles.id, userId))
+        .limit(1)
 
-    const reporterName = reporter?.display_name
-        ? `${reporter.display_name} (@${reporter.username})`
+    const reporter = reporterResult[0]
+    const reporterName = reporter?.displayName
+        ? `${reporter.displayName} (@${reporter.username})`
         : 'Anonymous User'
 
     const reasonLabel = BLOG_REPORT_REASONS.find(r => r.value === input.reason)?.label || input.reason
@@ -152,54 +154,78 @@ export async function getBlogReports(
     const { status, page = 1, pageSize = 20 } = filters
     const offset = (page - 1) * pageSize
 
-    const adminClient = await createAdminClient()
+    // Build query
+    const conditions = status ? [eq(blogReports.status, status)] : []
 
-    let query = adminClient
-        .from("blog_reports")
-        .select(
-            `
-            id, blog_post_id, reporter_id, reason, details, status, 
-            reviewed_by, reviewed_at, admin_notes, created_at,
-            blog_post:blog_posts(id, title, slug, author_id, status),
-            reporter:profiles!blog_reports_reporter_id_fkey(id, display_name, username)
-        `,
-            { count: "exact" }
-        )
-        .order("created_at", { ascending: false })
+    // Get total count
+    const countResult = await db
+        .select({ count: drizzleCount() })
+        .from(blogReports)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
 
-    if (status) {
-        query = query.eq("status", status)
-    }
+    const total = countResult[0]?.count ?? 0
 
-    const { data, count, error } = await query.range(offset, offset + pageSize - 1)
-
-    if (error) {
-        console.error("Error fetching blog reports:", error)
-        return { reports: [], total: 0, page, pageSize, hasMore: false }
-    }
+    // Get reports with joins
+    const result = await db
+        .select({
+            id: blogReports.id,
+            blogPostId: blogReports.blogPostId,
+            reporterId: blogReports.reporterId,
+            reason: blogReports.reason,
+            details: blogReports.details,
+            status: blogReports.status,
+            reviewedBy: blogReports.reviewedBy,
+            reviewedAt: blogReports.reviewedAt,
+            adminNotes: blogReports.adminNotes,
+            createdAt: blogReports.createdAt,
+            postId: blogPosts.id,
+            postTitle: blogPosts.title,
+            postSlug: blogPosts.slug,
+            postAuthorId: blogPosts.authorId,
+            postStatus: blogPosts.status,
+            reporterDisplayName: profiles.displayName,
+            reporterUsername: profiles.username,
+        })
+        .from(blogReports)
+        .leftJoin(blogPosts, eq(blogReports.blogPostId, blogPosts.id))
+        .leftJoin(profiles, eq(blogReports.reporterId, profiles.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(blogReports.createdAt))
+        .limit(pageSize)
+        .offset(offset)
 
     // Transform the data to match BlogReport type
-    const reports: BlogReport[] = (data || []).map((report) => ({
+    const reports: BlogReport[] = result.map(report => ({
         id: report.id,
-        blog_post_id: report.blog_post_id,
-        reporter_id: report.reporter_id,
+        blog_post_id: report.blogPostId,
+        reporter_id: report.reporterId,
         reason: report.reason,
         details: report.details,
         status: report.status as "pending" | "reviewed" | "dismissed",
-        reviewed_by: report.reviewed_by,
-        reviewed_at: report.reviewed_at,
-        admin_notes: report.admin_notes,
-        created_at: report.created_at,
-        blog_post: Array.isArray(report.blog_post) ? report.blog_post[0] : report.blog_post,
-        reporter: Array.isArray(report.reporter) ? report.reporter[0] : report.reporter,
+        reviewed_by: report.reviewedBy,
+        reviewed_at: report.reviewedAt?.toISOString() ?? null,
+        admin_notes: report.adminNotes,
+        created_at: report.createdAt?.toISOString() ?? null,
+        blog_post: report.postId ? {
+            id: report.postId,
+            title: report.postTitle!,
+            slug: report.postSlug!,
+            author_id: report.postAuthorId!,
+            status: report.postStatus ?? "draft",
+        } : undefined,
+        reporter: report.reporterDisplayName ? {
+            id: report.reporterId,
+            display_name: report.reporterDisplayName,
+            username: report.reporterUsername!,
+        } : undefined,
     }))
 
     return {
         reports,
-        total: count || 0,
+        total,
         page,
         pageSize,
-        hasMore: offset + pageSize < (count || 0),
+        hasMore: offset + pageSize < total,
     }
 }
 
@@ -211,19 +237,12 @@ export async function getPendingBlogReportsCount(): Promise<number> {
         return 0
     }
 
-    const adminClient = await createAdminClient()
+    const result = await db
+        .select({ count: drizzleCount() })
+        .from(blogReports)
+        .where(eq(blogReports.status, "pending"))
 
-    const { count, error } = await adminClient
-        .from("blog_reports")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending")
-
-    if (error) {
-        console.error("Error counting pending blog reports:", error)
-        return 0
-    }
-
-    return count || 0
+    return result[0]?.count ?? 0
 }
 
 export type ReportResolution = "review" | "dismiss"
@@ -245,15 +264,14 @@ export async function resolveBlogReport(
         return { success: false, error: "Not authenticated" }
     }
 
-    const adminClient = await createAdminClient()
-
     // Get the report
-    const { data: report } = await adminClient
-        .from("blog_reports")
-        .select("id, blog_post_id, status")
-        .eq("id", reportId)
-        .single()
+    const reportResult = await db
+        .select({ id: blogReports.id, blogPostId: blogReports.blogPostId, status: blogReports.status })
+        .from(blogReports)
+        .where(eq(blogReports.id, reportId))
+        .limit(1)
 
+    const report = reportResult[0]
     if (!report) {
         return { success: false, error: "Report not found" }
     }
@@ -265,33 +283,31 @@ export async function resolveBlogReport(
     const newStatus = resolution === "review" ? "reviewed" : "dismissed"
 
     // Update the report
-    const { error: updateError } = await adminClient
-        .from("blog_reports")
-        .update({
-            status: newStatus,
-            reviewed_by: userId,
-            reviewed_at: new Date().toISOString(),
-            admin_notes: adminNotes || null,
-        })
-        .eq("id", reportId)
-
-    if (updateError) {
-        console.error("Error resolving blog report:", updateError)
+    try {
+        await db.update(blogReports)
+            .set({
+                status: newStatus,
+                reviewedBy: userId,
+                reviewedAt: new Date(),
+                adminNotes: adminNotes || null,
+            })
+            .where(eq(blogReports.id, reportId))
+    } catch (error) {
+        console.error("Error resolving blog report:", error)
         return { success: false, error: "Failed to resolve report" }
     }
 
     // If marking as reviewed, also archive the blog post
     if (resolution === "review") {
-        const { error: archiveError } = await adminClient
-            .from("blog_posts")
-            .update({
-                status: "archived",
-                updated_at: new Date().toISOString()
-            })
-            .eq("id", report.blog_post_id)
-
-        if (archiveError) {
-            console.error("Error archiving blog post:", archiveError)
+        try {
+            await db.update(blogPosts)
+                .set({
+                    status: "archived",
+                    updatedAt: new Date(),
+                })
+                .where(eq(blogPosts.id, report.blogPostId))
+        } catch (error) {
+            console.error("Error archiving blog post:", error)
             // Don't fail the whole operation, report was still resolved
         }
     }
@@ -307,17 +323,14 @@ export async function archiveBlogPostForModeration(postId: string): Promise<Blog
         return { success: false, error: "Not authorized" }
     }
 
-    const adminClient = await createAdminClient()
-
-    const { error } = await adminClient
-        .from("blog_posts")
-        .update({
-            status: "archived",
-            updated_at: new Date().toISOString()
-        })
-        .eq("id", postId)
-
-    if (error) {
+    try {
+        await db.update(blogPosts)
+            .set({
+                status: "archived",
+                updatedAt: new Date(),
+            })
+            .where(eq(blogPosts.id, postId))
+    } catch (error) {
         console.error("Error archiving blog post:", error)
         return { success: false, error: "Failed to archive post" }
     }

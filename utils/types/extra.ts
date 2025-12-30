@@ -58,11 +58,13 @@ export interface EventFilters {
 
 // 2. Define your CafeWithRatings manually to ensure all fields are present
 // Override operating_hours and socials from Json to their proper types
-export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials'> & {
+// Exclude search_vector as it's a database-internal field for full-text search
+export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials' | 'search_vector'> & {
     operating_hours: OperatingHours | null;
     socials: CafeSocial[] | null;
     average_rating: number | null;
     total_reviews: number | null;
+    rating_distribution?: { [key: string]: number } | null;
     story?: Tables<'cafe_stories'> | null;
     // Contributor (who submitted the cafe)
     contributor?: {
