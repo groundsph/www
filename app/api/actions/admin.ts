@@ -1734,8 +1734,895 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
 }
 
 // ============================================
-// END OF PHASE 3 - Review Moderation
+// Badge Management Functions
 // ============================================
-// The remaining phases will be added incrementally:
-// Phase 4: Badges & Featured Schedules
+
+import { badgeDefinitions, userBadges, featuredSchedules } from "@/db/schema"
+import { deleteBadgeImageAction } from '@/utils/storage/actions'
+import { inArray } from "drizzle-orm"
+
+export interface BadgeDefinition {
+    id: string
+    name: string
+    description: string
+    image_url: string
+    category: 'achievement' | 'monetary' | 'social'
+    rarity: 'common' | 'rare' | 'legendary'
+    metadata: Record<string, unknown> | null
+    created_at: string | null
+}
+
+/**
+ * Get all badge definitions
+ */
+export async function getAllBadgeDefinitions(): Promise<BadgeDefinition[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    const result = await db
+        .select()
+        .from(badgeDefinitions)
+        .orderBy(asc(badgeDefinitions.rarity), asc(badgeDefinitions.name))
+
+    return result.map(b => ({
+        id: b.id,
+        name: b.name,
+        description: b.description,
+        image_url: b.imageUrl,
+        category: b.category as BadgeDefinition['category'],
+        rarity: b.rarity as BadgeDefinition['rarity'],
+        metadata: b.metadata as Record<string, unknown> | null,
+        created_at: b.createdAt?.toISOString() ?? null,
+    }))
+}
+
+/**
+ * Create a new badge definition
+ */
+export async function createBadgeDefinition(badge: {
+    name: string
+    description: string
+    image_url: string
+    category: 'achievement' | 'monetary' | 'social'
+    rarity: 'common' | 'rare' | 'legendary'
+    metadata?: Record<string, unknown>
+}): Promise<AdminActionResult & { badge?: BadgeDefinition }> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    if (!badge.name?.trim()) return { success: false, error: "Badge name is required" }
+    if (!badge.description?.trim()) return { success: false, error: "Badge description is required" }
+    if (!badge.image_url?.trim()) return { success: false, error: "Badge image is required" }
+
+    try {
+        const result = await db.insert(badgeDefinitions)
+            .values({
+                name: badge.name.trim(),
+                description: badge.description.trim(),
+                imageUrl: badge.image_url,
+                category: badge.category,
+                rarity: badge.rarity,
+                metadata: badge.metadata || null,
+            })
+            .returning()
+
+        const newBadge = result[0]
+        return {
+            success: true,
+            badge: {
+                id: newBadge.id,
+                name: newBadge.name,
+                description: newBadge.description,
+                image_url: newBadge.imageUrl,
+                category: newBadge.category as BadgeDefinition['category'],
+                rarity: newBadge.rarity as BadgeDefinition['rarity'],
+                metadata: newBadge.metadata as Record<string, unknown> | null,
+                created_at: newBadge.createdAt?.toISOString() ?? null,
+            }
+        }
+    } catch (error) {
+        console.error("Error creating badge:", error)
+        return { success: false, error: "Failed to create badge" }
+    }
+}
+
+/**
+ * Update an existing badge definition
+ */
+export async function updateBadgeDefinition(
+    badgeId: string,
+    updates: Partial<{
+        name: string
+        description: string
+        image_url: string
+        category: 'achievement' | 'monetary' | 'social'
+        rarity: 'common' | 'rare' | 'legendary'
+        metadata: Record<string, unknown> | null
+    }>
+): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Map snake_case to camelCase
+    const drizzleUpdates: Record<string, unknown> = {}
+    if (updates.name !== undefined) drizzleUpdates.name = updates.name
+    if (updates.description !== undefined) drizzleUpdates.description = updates.description
+    if (updates.image_url !== undefined) drizzleUpdates.imageUrl = updates.image_url
+    if (updates.category !== undefined) drizzleUpdates.category = updates.category
+    if (updates.rarity !== undefined) drizzleUpdates.rarity = updates.rarity
+    if (updates.metadata !== undefined) drizzleUpdates.metadata = updates.metadata
+
+    try {
+        await db.update(badgeDefinitions)
+            .set(drizzleUpdates)
+            .where(eq(badgeDefinitions.id, badgeId))
+    } catch (error) {
+        console.error("Error updating badge:", error)
+        return { success: false, error: "Failed to update badge" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Delete a badge definition (cascades to user_badges)
+ */
+export async function deleteBadgeDefinition(badgeId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Get badge image URL
+    const badgeResult = await db
+        .select({ imageUrl: badgeDefinitions.imageUrl })
+        .from(badgeDefinitions)
+        .where(eq(badgeDefinitions.id, badgeId))
+        .limit(1)
+
+    try {
+        await db.delete(badgeDefinitions)
+            .where(eq(badgeDefinitions.id, badgeId))
+    } catch (error) {
+        console.error("Error deleting badge:", error)
+        return { success: false, error: "Failed to delete badge" }
+    }
+
+    // Delete badge image from storage
+    if (badgeResult[0]?.imageUrl) {
+        await deleteBadgeImageAction(badgeResult[0].imageUrl)
+    }
+
+    return { success: true }
+}
+
+/**
+ * Award a badge to a user
+ */
+export async function awardBadgeToUser(
+    userId: string,
+    badgeId: string,
+    evidenceUrl?: string
+): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Check if user already has this badge
+    const existingResult = await db
+        .select({ id: userBadges.id })
+        .from(userBadges)
+        .where(and(
+            eq(userBadges.userId, userId),
+            eq(userBadges.badgeId, badgeId)
+        ))
+        .limit(1)
+
+    if (existingResult[0]) {
+        return { success: false, error: "User already has this badge" }
+    }
+
+    try {
+        await db.insert(userBadges).values({
+            userId,
+            badgeId,
+            evidenceUrl: evidenceUrl || null,
+            awardedAt: new Date(),
+        })
+    } catch (error) {
+        console.error("Error awarding badge:", error)
+        return { success: false, error: "Failed to award badge" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Revoke a badge from a user
+ */
+export async function revokeBadgeFromUser(userId: string, badgeId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    try {
+        await db.delete(userBadges)
+            .where(and(
+                eq(userBadges.userId, userId),
+                eq(userBadges.badgeId, badgeId)
+            ))
+    } catch (error) {
+        console.error("Error revoking badge:", error)
+        return { success: false, error: "Failed to revoke badge" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Search users for badge awarding
+ */
+export async function searchUsersForBadge(query: string): Promise<{
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+}[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    if (!query || query.length < 2) return []
+
+    const searchTerm = `%${query}%`
+    const result = await db
+        .select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+        })
+        .from(profiles)
+        .where(or(
+            ilike(profiles.username, searchTerm),
+            ilike(profiles.displayName, searchTerm)
+        ))
+        .limit(10)
+
+    return result.map(u => ({
+        id: u.id,
+        username: u.username ?? '',
+        display_name: u.displayName ?? '',
+        avatar_url: u.avatarUrl,
+    }))
+}
+
+/**
+ * Search users for cafe owner assignment
+ */
+export async function searchUsersForOwner(query: string): Promise<{
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+}[]> {
+    return searchUsersForBadge(query)
+}
+
+/**
+ * Get owner profiles by IDs
+ */
+export async function getOwnerProfiles(ownerIds: string[]): Promise<{
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+}[]> {
+    if (!ownerIds || ownerIds.length === 0) return []
+
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    const result = await db
+        .select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+        })
+        .from(profiles)
+        .where(inArray(profiles.id, ownerIds))
+
+    return result.map(u => ({
+        id: u.id,
+        username: u.username ?? '',
+        display_name: u.displayName ?? '',
+        avatar_url: u.avatarUrl,
+    }))
+}
+
+/**
+ * Get users who have a specific badge with pagination
+ */
+export async function getUsersWithBadge(
+    badgeId: string,
+    limit: number = 20,
+    offset: number = 0
+): Promise<{
+    users: {
+        user_id: string
+        username: string
+        display_name: string
+        avatar_url: string | null
+        awarded_at: string | null
+    }[]
+    total: number
+    hasMore: boolean
+}> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { users: [], total: 0, hasMore: false }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { users: [], total: 0, hasMore: false }
+    }
+
+    // Get total count
+    const countResult = await db
+        .select({ count: drizzleCount() })
+        .from(userBadges)
+        .where(eq(userBadges.badgeId, badgeId))
+
+    const total = countResult[0]?.count ?? 0
+
+    // Get paginated users with badge
+    const result = await db
+        .select({
+            userId: userBadges.userId,
+            awardedAt: userBadges.awardedAt,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+        })
+        .from(userBadges)
+        .leftJoin(profiles, eq(userBadges.userId, profiles.id))
+        .where(eq(userBadges.badgeId, badgeId))
+        .orderBy(desc(userBadges.awardedAt))
+        .limit(limit)
+        .offset(offset)
+
+    return {
+        users: result.map(u => ({
+            user_id: u.userId,
+            username: u.username ?? '',
+            display_name: u.displayName ?? '',
+            avatar_url: u.avatarUrl ?? null,
+            awarded_at: u.awardedAt?.toISOString() ?? null,
+        })),
+        total,
+        hasMore: offset + limit < total,
+    }
+}
+
+/**
+ * Award a badge to ALL users (chunked for performance)
+ */
+export async function awardBadgeToAllUsers(badgeId: string): Promise<{ success: boolean; error?: string }> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Fetch all user IDs
+    const allProfiles = await db.select({ id: profiles.id }).from(profiles)
+
+    if (!allProfiles.length) return { success: true }
+
+    const CHUNK_SIZE = 1000
+    for (let i = 0; i < allProfiles.length; i += CHUNK_SIZE) {
+        const chunk = allProfiles.slice(i, i + CHUNK_SIZE)
+        try {
+            await db.insert(userBadges)
+                .values(chunk.map(p => ({ userId: p.id, badgeId, awardedAt: new Date() })))
+                .onConflictDoNothing()
+        } catch (error) {
+            console.error(`Error awarding badge chunk ${i}:`, error)
+            return { success: false, error: `Partial failure at chunk ${i}` }
+        }
+    }
+
+    return { success: true }
+}
+
+// ============================================
+// Featured Schedule Management Functions
+// ============================================
+
+export interface FeaturedSchedule {
+    id: string
+    cafe_id: string
+    start_date: string
+    end_date: string
+    slot_type: 'hero' | 'sidebar' | 'collection' | 'regional_spotlight'
+    region_context: string | null
+    is_active: boolean | null
+    priority: number | null
+    custom_title: string | null
+    custom_description: string | null
+    custom_image: string | null
+    created_at: string | null
+    cafe: {
+        id: string
+        name: string
+        slug: string
+        thumbnail: string
+        city_municipality: string
+        region: string
+    } | null
+}
+
+/**
+ * Get all featured schedules with cafe info
+ */
+export async function getFeaturedSchedules(): Promise<FeaturedSchedule[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    const result = await db
+        .select({
+            id: featuredSchedules.id,
+            cafeId: featuredSchedules.cafeId,
+            startDate: featuredSchedules.startDate,
+            endDate: featuredSchedules.endDate,
+            slotType: featuredSchedules.slotType,
+            regionContext: featuredSchedules.regionContext,
+            isActive: featuredSchedules.isActive,
+            priority: featuredSchedules.priority,
+            customTitle: featuredSchedules.customTitle,
+            customDescription: featuredSchedules.customDescription,
+            customImage: featuredSchedules.customImage,
+            createdAt: featuredSchedules.createdAt,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            cafeCity: cafes.cityMunicipality,
+            cafeRegion: cafes.region,
+        })
+        .from(featuredSchedules)
+        .leftJoin(cafes, eq(featuredSchedules.cafeId, cafes.id))
+        .orderBy(desc(featuredSchedules.startDate))
+
+    return result.map(r => ({
+        id: r.id,
+        cafe_id: r.cafeId,
+        start_date: r.startDate instanceof Date ? r.startDate.toISOString().split('T')[0] : r.startDate,
+        end_date: r.endDate instanceof Date ? r.endDate.toISOString().split('T')[0] : r.endDate,
+        slot_type: r.slotType as FeaturedSchedule['slot_type'],
+        region_context: r.regionContext,
+        is_active: r.isActive,
+        priority: r.priority,
+        custom_title: r.customTitle,
+        custom_description: r.customDescription,
+        custom_image: r.customImage,
+        created_at: r.createdAt?.toISOString() ?? null,
+        cafe: r.cafeName ? {
+            id: r.cafeId,
+            name: r.cafeName,
+            slug: r.cafeSlug!,
+            thumbnail: r.cafeThumbnail ?? '',
+            city_municipality: r.cafeCity ?? '',
+            region: r.cafeRegion ?? '',
+        } : null,
+    }))
+}
+
+/**
+ * Check for conflicting featured schedules
+ */
+export async function checkFeaturedConflict(
+    startDate: string,
+    endDate: string,
+    regionContext: string | null,
+    excludeId?: string
+): Promise<{ hasConflict: boolean; conflictingCafe?: string }> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { hasConflict: false }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { hasConflict: false }
+    }
+
+    // Check for overlapping schedules with same region_context
+    const conditions = [
+        eq(featuredSchedules.slotType, 'hero'),
+        eq(featuredSchedules.isActive, true),
+        sql`${featuredSchedules.startDate} <= ${endDate}`,
+        sql`${featuredSchedules.endDate} >= ${startDate}`,
+    ]
+
+    if (regionContext) {
+        conditions.push(eq(featuredSchedules.regionContext, regionContext))
+    } else {
+        conditions.push(sql`${featuredSchedules.regionContext} IS NULL`)
+    }
+
+    if (excludeId) {
+        conditions.push(sql`${featuredSchedules.id} != ${excludeId}`)
+    }
+
+    const conflicts = await db
+        .select({
+            id: featuredSchedules.id,
+            cafeName: cafes.name,
+        })
+        .from(featuredSchedules)
+        .leftJoin(cafes, eq(featuredSchedules.cafeId, cafes.id))
+        .where(and(...conditions))
+        .limit(1)
+
+    if (conflicts.length > 0) {
+        return { hasConflict: true, conflictingCafe: conflicts[0].cafeName || 'Another cafe' }
+    }
+
+    return { hasConflict: false }
+}
+
+/**
+ * Create a new featured schedule
+ */
+export async function createFeaturedSchedule(schedule: {
+    cafe_id: string
+    start_date: string
+    end_date: string
+    region_context: string | null
+    priority?: number
+    custom_title?: string
+    custom_description?: string
+}): Promise<AdminActionResult & { schedule?: FeaturedSchedule }> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    const conflict = await checkFeaturedConflict(schedule.start_date, schedule.end_date, schedule.region_context)
+    if (conflict.hasConflict) {
+        return { success: false, error: `Conflict: ${conflict.conflictingCafe} is already featured` }
+    }
+
+    try {
+        const result = await db.insert(featuredSchedules)
+            .values({
+                cafeId: schedule.cafe_id,
+                startDate: new Date(schedule.start_date),
+                endDate: new Date(schedule.end_date),
+                regionContext: schedule.region_context,
+                slotType: 'hero',
+                isActive: true,
+                priority: schedule.priority ?? 1,
+                customTitle: schedule.custom_title ?? null,
+                customDescription: schedule.custom_description ?? null,
+            })
+            .returning()
+
+        const newSchedule = result[0]
+
+        // Get cafe info
+        const cafeResult = await db
+            .select({
+                name: cafes.name,
+                slug: cafes.slug,
+                thumbnail: cafes.thumbnail,
+                city: cafes.cityMunicipality,
+                region: cafes.region,
+            })
+            .from(cafes)
+            .where(eq(cafes.id, schedule.cafe_id))
+            .limit(1)
+
+        const cafe = cafeResult[0]
+
+        return {
+            success: true,
+            schedule: {
+                id: newSchedule.id,
+                cafe_id: newSchedule.cafeId,
+                start_date: typeof newSchedule.startDate === 'string' ? newSchedule.startDate : (newSchedule.startDate instanceof Date ? newSchedule.startDate.toISOString().split('T')[0] : ''),
+                end_date: typeof newSchedule.endDate === 'string' ? newSchedule.endDate : (newSchedule.endDate instanceof Date ? newSchedule.endDate.toISOString().split('T')[0] : ''),
+                slot_type: newSchedule.slotType as FeaturedSchedule['slot_type'],
+                region_context: newSchedule.regionContext,
+                is_active: newSchedule.isActive,
+                priority: newSchedule.priority,
+                custom_title: newSchedule.customTitle,
+                custom_description: newSchedule.customDescription,
+                custom_image: newSchedule.customImage,
+                created_at: newSchedule.createdAt?.toISOString() ?? null,
+                cafe: cafe ? {
+                    id: schedule.cafe_id,
+                    name: cafe.name,
+                    slug: cafe.slug,
+                    thumbnail: cafe.thumbnail ?? '',
+                    city_municipality: cafe.city ?? '',
+                    region: cafe.region ?? '',
+                } : null,
+            }
+        }
+    } catch (error) {
+        console.error("Error creating featured schedule:", error)
+        return { success: false, error: "Failed to create featured schedule" }
+    }
+}
+
+/**
+ * Update an existing featured schedule
+ */
+export async function updateFeaturedSchedule(
+    scheduleId: string,
+    updates: Partial<{
+        cafe_id: string
+        start_date: string
+        end_date: string
+        region_context: string | null
+        is_active: boolean
+        priority: number
+        custom_title: string | null
+        custom_description: string | null
+    }>
+): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Check for conflicts if dates/region are being updated
+    if (updates.start_date || updates.end_date || updates.region_context !== undefined) {
+        const currentResult = await db
+            .select({ startDate: featuredSchedules.startDate, endDate: featuredSchedules.endDate, regionContext: featuredSchedules.regionContext })
+            .from(featuredSchedules)
+            .where(eq(featuredSchedules.id, scheduleId))
+            .limit(1)
+
+        const current = currentResult[0]
+        if (current) {
+            const conflict = await checkFeaturedConflict(
+                (updates.start_date ?? (current.startDate instanceof Date ? current.startDate.toISOString().split('T')[0] : current.startDate)),
+                (updates.end_date ?? (current.endDate instanceof Date ? current.endDate.toISOString().split('T')[0] : current.endDate)),
+                updates.region_context !== undefined ? updates.region_context : current.regionContext,
+                scheduleId
+            )
+
+            if (conflict.hasConflict) {
+                return { success: false, error: `Conflict: ${conflict.conflictingCafe} is already featured` }
+            }
+        }
+    }
+
+    // Map snake_case to camelCase
+    const drizzleUpdates: Record<string, unknown> = {}
+    if (updates.cafe_id !== undefined) drizzleUpdates.cafeId = updates.cafe_id
+    if (updates.start_date !== undefined) drizzleUpdates.startDate = updates.start_date
+    if (updates.end_date !== undefined) drizzleUpdates.endDate = updates.end_date
+    if (updates.region_context !== undefined) drizzleUpdates.regionContext = updates.region_context
+    if (updates.is_active !== undefined) drizzleUpdates.isActive = updates.is_active
+    if (updates.priority !== undefined) drizzleUpdates.priority = updates.priority
+    if (updates.custom_title !== undefined) drizzleUpdates.customTitle = updates.custom_title
+    if (updates.custom_description !== undefined) drizzleUpdates.customDescription = updates.custom_description
+
+    try {
+        await db.update(featuredSchedules)
+            .set(drizzleUpdates)
+            .where(eq(featuredSchedules.id, scheduleId))
+    } catch (error) {
+        console.error("Error updating featured schedule:", error)
+        return { success: false, error: "Failed to update featured schedule" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Delete a featured schedule
+ */
+export async function deleteFeaturedSchedule(scheduleId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    try {
+        await db.delete(featuredSchedules)
+            .where(eq(featuredSchedules.id, scheduleId))
+    } catch (error) {
+        console.error("Error deleting featured schedule:", error)
+        return { success: false, error: "Failed to delete featured schedule" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Search published cafes for featured selection
+ */
+export async function searchCafesForFeatured(query: string): Promise<{
+    id: string
+    name: string
+    slug: string
+    thumbnail: string
+    city_municipality: string
+    region: string
+}[]> {
+    if (!query || query.length < 2) return []
+
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    const result = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            city: cafes.cityMunicipality,
+            region: cafes.region,
+        })
+        .from(cafes)
+        .where(and(
+            eq(cafes.isPublished, true),
+            sql`${cafes.thumbnail} != 'placeholder'`,
+            ilike(cafes.name, `%${query}%`)
+        ))
+        .orderBy(asc(cafes.name))
+        .limit(10)
+
+    return result.map(c => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        thumbnail: c.thumbnail ?? '',
+        city_municipality: c.city ?? '',
+        region: c.region,
+    }))
+}
+
+// ============================================
+// END OF PHASE 4 - Badges & Featured Schedules
+// ============================================
+// The remaining phase will be added incrementally:
 // Phase 5: Verification & User Roles
