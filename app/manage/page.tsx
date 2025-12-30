@@ -6,7 +6,14 @@ import {
 } from "@/app/api/actions/admin"
 import StatsCards from "./StatsCards"
 import Link from "next/link"
-import { Store, Users, FileText, Settings, ArrowRight } from "lucide-react"
+import {
+    Store,
+    Users,
+    FileText,
+    Settings,
+    ArrowRight,
+    BarChart3,
+} from "lucide-react"
 
 export default async function ManageOverviewPage() {
     // The layout already handles access control, but we need the role
@@ -50,6 +57,15 @@ export default async function ManageOverviewPage() {
             href: "/manage/content",
             icon: <FileText className='w-6 h-6' />,
             color: "bg-green-500/10 text-green-700",
+            adminOnly: true,
+        },
+        {
+            name: "Analytics",
+            description:
+                "View site-wide traffic insights and cafe performance metrics.",
+            href: "/manage/analytics",
+            icon: <BarChart3 className='w-6 h-6' />,
+            color: "bg-indigo-500/10 text-indigo-700",
             adminOnly: true,
         },
         {

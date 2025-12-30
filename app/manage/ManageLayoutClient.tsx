@@ -2,7 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Store, Users, FileText, Settings, LayoutDashboard } from "lucide-react"
+import {
+    Store,
+    Users,
+    FileText,
+    Settings,
+    LayoutDashboard,
+    BarChart3,
+} from "lucide-react"
 
 interface NavItem {
     name: string
@@ -31,6 +38,12 @@ const navItems: NavItem[] = [
         name: "Content",
         href: "/manage/content",
         icon: <FileText className='w-5 h-5' />,
+        adminOnly: true,
+    },
+    {
+        name: "Analytics",
+        href: "/manage/analytics",
+        icon: <BarChart3 className='w-5 h-5' />,
         adminOnly: true,
     },
     {
