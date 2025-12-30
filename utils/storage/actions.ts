@@ -20,6 +20,7 @@ import {
     generateRootFilePath,
     type StorageBucket,
 } from "@/utils/storage"
+import { CAFE_PLACEHOLDER_URL } from "@/utils/extras"
 
 // ============================================
 // Response Types
@@ -655,6 +656,9 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of cafeFiles.files) {
                 if (file.isDirectory) continue
                 const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.CAFES, file.path)
+
+                // Skip placeholder
+                if (publicUrl === CAFE_PLACEHOLDER_URL) continue
 
                 // Check thumbnail
                 const { data: thumbRef } = await adminDb
