@@ -9,9 +9,17 @@ import {
     jsonb,
     index,
     uniqueIndex,
+    customType,
 } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import * as enums from "./enums"
+
+// Custom tsvector type for full-text search columns
+const tsvector = customType<{ data: string }>({
+    dataType() {
+        return "tsvector"
+    },
+})
 
 // ============================================================================
 // USER RELATED TABLES
@@ -122,7 +130,7 @@ export const cafes = pgTable(
         ownerIds: uuid("owner_ids").array(),
         contributorId: uuid("contributor_id").references(() => profiles.id),
         featuredUntil: timestamp("featured_until", { withTimezone: true }),
-        searchVector: text("search_vector"),
+        searchVector: tsvector("search_vector"),
         createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
     },
@@ -307,7 +315,7 @@ export const blogPosts = pgTable(
         tags: text("tags").array(),
         featured: boolean("featured").default(false),
         viewsCount: integer("views_count").default(0),
-        searchVector: text("search_vector"),
+        searchVector: tsvector("search_vector"),
         publishedAt: timestamp("published_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
