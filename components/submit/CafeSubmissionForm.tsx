@@ -35,6 +35,7 @@ import {
     PHILIPPINES_LOCATIONS,
     getProvincesForRegion,
     getCitiesForProvince,
+    COFFEE_STYLES,
 } from "@/utils/data/philippines"
 import {
     uploadCafeImageWithProgress,
@@ -1375,6 +1376,74 @@ export default function CafeSubmissionForm({
                                                 {level === "high" && "₱₱₱"}
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* Coffee Style */}
+                                <div>
+                                    <label className='block text-sm font-medium mb-2'>
+                                        Coffee Style{" "}
+                                        <span className='text-text/40 font-normal'>
+                                            (optional)
+                                        </span>
+                                    </label>
+                                    <p className='text-xs text-text/50 mb-3'>
+                                        Classic = traditional espresso bar •
+                                        Artisan = craft/specialty focus
+                                    </p>
+                                    <div className='flex gap-3'>
+                                        {COFFEE_STYLES.map(
+                                            ({ value, label, description }) => (
+                                                <button
+                                                    key={value}
+                                                    type='button'
+                                                    onClick={() =>
+                                                        updateFormData(
+                                                            "coffee_style",
+                                                            value as
+                                                                | "classic"
+                                                                | "artisan"
+                                                        )
+                                                    }
+                                                    className={cn(
+                                                        "flex-1 py-3 px-4 rounded-xl border-2 transition-all cursor-pointer text-left",
+                                                        formData.coffee_style ===
+                                                            value
+                                                            ? "border-primary bg-primary/10 text-primary"
+                                                            : "border-text/10 text-text/60 hover:border-text/30"
+                                                    )}
+                                                >
+                                                    <div className='font-medium'>
+                                                        {label}
+                                                    </div>
+                                                    <div className='text-xs opacity-70 mt-0.5'>
+                                                        {description}
+                                                    </div>
+                                                </button>
+                                            )
+                                        )}
+                                        <button
+                                            type='button'
+                                            onClick={() =>
+                                                updateFormData(
+                                                    "coffee_style",
+                                                    null
+                                                )
+                                            }
+                                            className={cn(
+                                                "px-4 py-3 rounded-xl border-2 transition-all cursor-pointer",
+                                                formData.coffee_style === null
+                                                    ? "border-primary bg-primary/10 text-primary"
+                                                    : "border-text/10 text-text/60 hover:border-text/30"
+                                            )}
+                                        >
+                                            <div className='font-medium'>
+                                                None
+                                            </div>
+                                            <div className='text-xs opacity-70 mt-0.5'>
+                                                Skip
+                                            </div>
+                                        </button>
                                     </div>
                                 </div>
 

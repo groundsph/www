@@ -336,6 +336,18 @@ export function DetailsTabContent({
                             : "-"}
                     </div>
                 </div>
+                {cafe.coffee_style && (
+                    <div className='flex-1 bg-amber-500/10 rounded-xl p-4 text-center'>
+                        <p className='text-xs text-text/60 mb-1'>
+                            Coffee Style
+                        </p>
+                        <p className='text-lg font-bold text-amber-700'>
+                            {cafe.coffee_style === "classic"
+                                ? "Classic"
+                                : "Artisan"}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Rating Distribution */}

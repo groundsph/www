@@ -24,7 +24,7 @@ import {
 
 import { getAllCafes } from "@/app/api/actions/cafe"
 import { CafeWithRatings } from "@/utils/types/extra"
-import { PHILIPPINES_LOCATIONS } from "@/utils/data/philippines"
+import { PHILIPPINES_LOCATIONS, COFFEE_STYLES } from "@/utils/data/philippines"
 import { useEffect, useState, useTransition } from "react"
 
 export default function CafesPageClient() {
@@ -57,6 +57,7 @@ export default function CafesPageClient() {
         is_work_friendly: false,
         open_now: false,
         price_level: "" as "" | "low" | "medium" | "high",
+        coffee_style: "" as "" | "classic" | "artisan",
         region: "",
         near_me: false,
     })
@@ -109,6 +110,7 @@ export default function CafesPageClient() {
                     has_non_dairy: filters.has_non_dairy,
                     is_work_friendly: filters.is_work_friendly,
                     price_level: filters.price_level || undefined,
+                    coffee_style: filters.coffee_style || undefined,
                     region: filters.region || undefined,
                     sortBy: sortBy as "recommended" | "rating" | "reviews",
                 })
@@ -161,6 +163,7 @@ export default function CafesPageClient() {
         ([key, value]) =>
             value === true ||
             (key === "price_level" && value !== "") ||
+            (key === "coffee_style" && value !== "") ||
             (key === "region" && value !== "")
     ).length
 
@@ -319,6 +322,7 @@ export default function CafesPageClient() {
                                                     is_work_friendly: false,
                                                     open_now: false,
                                                     price_level: "",
+                                                    coffee_style: "",
                                                     region: "",
                                                     near_me: false,
                                                 })
@@ -356,6 +360,43 @@ export default function CafesPageClient() {
                                                 }
                                                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${
                                                     filters.price_level ===
+                                                    value
+                                                        ? "bg-text text-background border-text"
+                                                        : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Coffee Style Filter */}
+                                <div className='mb-3'>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>
+                                        Coffee Style
+                                    </span>
+                                    <div className='flex flex-row gap-2'>
+                                        {[
+                                            { value: "", label: "All" },
+                                            ...COFFEE_STYLES.map((s) => ({
+                                                value: s.value,
+                                                label: s.label,
+                                            })),
+                                        ].map(({ value, label }) => (
+                                            <button
+                                                key={value}
+                                                onClick={() =>
+                                                    setFilters((prev) => ({
+                                                        ...prev,
+                                                        coffee_style: value as
+                                                            | ""
+                                                            | "classic"
+                                                            | "artisan",
+                                                    }))
+                                                }
+                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                                    filters.coffee_style ===
                                                     value
                                                         ? "bg-text text-background border-text"
                                                         : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
@@ -700,6 +741,7 @@ export default function CafesPageClient() {
                                         is_work_friendly: false,
                                         open_now: false,
                                         price_level: "",
+                                        coffee_style: "",
                                         region: "",
                                         near_me: false,
                                     })

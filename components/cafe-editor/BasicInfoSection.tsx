@@ -19,16 +19,19 @@ import {
     CAFE_VIBE_TAGS,
     BREW_METHODS,
     PAYMENT_METHODS,
+    COFFEE_STYLES,
 } from "@/utils/data/philippines"
 import { Database } from "@/utils/types/database.types"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
+type CoffeeStyle = Database["public"]["Enums"]["coffee_style"]
 
 export interface BasicInfoData {
     name: string
     slug?: string
     description: string | null
     price_level: PriceLevel | null
+    coffee_style?: CoffeeStyle | null
     roaster: string | null
     specialty: string[] | null
     tags: string[] | null
@@ -203,6 +206,53 @@ export default function BasicInfoSection({
                                 ))}
                         </button>
                     ))}
+                </div>
+            </div>
+
+            {/* Coffee Style */}
+            <div>
+                <label className='block text-sm font-medium text-text/60 mb-2'>
+                    Coffee Style
+                </label>
+                <p className='text-xs text-text/40 mb-3'>
+                    Classic = traditional espresso bar • Artisan =
+                    craft/specialty focus
+                </p>
+                <div className='flex gap-2'>
+                    {COFFEE_STYLES.map(({ value, label, description }) => (
+                        <button
+                            key={value}
+                            type='button'
+                            onClick={() =>
+                                onChange("coffee_style", value as CoffeeStyle)
+                            }
+                            className={`flex-1 p-3 rounded-lg border-2 transition text-left ${
+                                data.coffee_style === value
+                                    ? `${colors.bgLight} ${colors.border} ${colors.text}`
+                                    : "bg-background border-text/10 hover:bg-text/5"
+                            }`}
+                        >
+                            <div className='font-medium'>{label}</div>
+                            <div className='text-xs opacity-70 mt-0.5'>
+                                {description}
+                            </div>
+                        </button>
+                    ))}
+                    <button
+                        type='button'
+                        onClick={() => onChange("coffee_style", null)}
+                        className={`px-4 py-3 rounded-lg border-2 transition ${
+                            data.coffee_style === null ||
+                            data.coffee_style === undefined
+                                ? `${colors.bgLight} ${colors.border} ${colors.text}`
+                                : "bg-background border-text/10 hover:bg-text/5"
+                        }`}
+                    >
+                        <div className='font-medium'>None</div>
+                        <div className='text-xs opacity-70 mt-0.5'>
+                            Unclassified
+                        </div>
+                    </button>
                 </div>
             </div>
 

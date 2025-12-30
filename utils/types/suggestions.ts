@@ -26,6 +26,7 @@ export interface SuggestableFields {
     serves_food?: boolean;
     is_work_friendly?: boolean;
     price_level?: Database['public']['Enums']['price_level'];
+    coffee_style?: Database['public']['Enums']['coffee_style'];
     payment_methods?: string;
     specialty?: string[];
     tags?: string[];

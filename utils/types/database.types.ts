@@ -538,6 +538,7 @@ export type Database = {
           area: string | null
           brew_methods: string[] | null
           city_municipality: string
+          coffee_style: Database["public"]["Enums"]["coffee_style"] | null
           contributor_id: string | null
           created_at: string | null
           description: string | null
@@ -588,6 +589,7 @@ export type Database = {
           area?: string | null
           brew_methods?: string[] | null
           city_municipality: string
+          coffee_style?: Database["public"]["Enums"]["coffee_style"] | null
           contributor_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -640,6 +642,7 @@ export type Database = {
           area?: string | null
           brew_methods?: string[] | null
           city_municipality?: string
+          coffee_style?: Database["public"]["Enums"]["coffee_style"] | null
           contributor_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -1385,6 +1388,7 @@ export type Database = {
           area: string | null
           brew_methods: string[] | null
           city_municipality: string
+          coffee_style: Database["public"]["Enums"]["coffee_style"] | null
           contributor_id: string | null
           created_at: string | null
           description: string | null
@@ -1448,6 +1452,7 @@ export type Database = {
           area: string | null
           brew_methods: string[] | null
           city_municipality: string
+          coffee_style: Database["public"]["Enums"]["coffee_style"] | null
           contributor_id: string | null
           created_at: string | null
           description: string | null
@@ -1512,6 +1517,7 @@ export type Database = {
         | "community"
         | "cafe_update"
       blog_status: "draft" | "published" | "archived"
+      coffee_style: "classic" | "artisan"
       contribution_action_type:
         | "CREATE"
         | "UPDATE"
@@ -1666,6 +1672,7 @@ export const Constants = {
         "cafe_update",
       ],
       blog_status: ["draft", "published", "archived"],
+      coffee_style: ["classic", "artisan"],
       contribution_action_type: [
         "CREATE",
         "UPDATE",

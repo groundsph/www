@@ -40,6 +40,12 @@ import { resizeImage } from "@/utils/image-processing"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import ImageCropper from "@/components/ui/ImageCropper"
 import ImageUpload from "@/components/reviews/ImageUpload"
+import {
+    CAFE_SPECIALTIES,
+    CAFE_VIBE_TAGS,
+    BREW_METHODS,
+    COFFEE_STYLES,
+} from "@/utils/data/philippines"
 
 interface SuggestEditModalProps {
     isOpen: boolean
@@ -64,45 +70,6 @@ const AMENITY_FIELDS = [
 ] as const
 
 type AmenityKey = (typeof AMENITY_FIELDS)[number]["key"]
-
-// Options for multi-select fields
-const BREW_METHOD_OPTIONS = [
-    "espresso",
-    "pour_over",
-    "french_press",
-    "cold_brew",
-    "drip",
-    "aeropress",
-    "moka_pot",
-    "siphon",
-    "chemex",
-    "v60",
-]
-
-const SPECIALTY_OPTIONS = [
-    "single_origin",
-    "latte_art",
-    "specialty_coffee",
-    "matcha",
-    "pastries",
-    "brunch",
-    "desserts",
-    "vegan_options",
-]
-
-const TAG_OPTIONS = [
-    "cozy",
-    "minimalist",
-    "aesthetic",
-    "spacious",
-    "quiet",
-    "lively",
-    "scenic",
-    "instagram_worthy",
-    "hidden_gem",
-    "study_spot",
-    "date_spot",
-]
 
 const PRICE_LEVELS = [
     { value: "low", label: "₱", description: "Budget-friendly" },
@@ -446,6 +413,7 @@ export default function SuggestEditModal({
             {isOpen && (
                 <>
                     <motion.div
+                        key='suggest-edit-backdrop'
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -453,6 +421,7 @@ export default function SuggestEditModal({
                         className='fixed inset-0 bg-black/40 z-50 backdrop-blur-sm'
                     />
                     <motion.div
+                        key='suggest-edit-modal'
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -741,6 +710,66 @@ export default function SuggestEditModal({
                                                     </div>
                                                 </div>
 
+                                                {/* Coffee Style */}
+                                                <div className='space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Coffee Style
+                                                    </label>
+                                                    <p className='text-xs text-text/40'>
+                                                        Classic = traditional
+                                                        espresso bar • Artisan =
+                                                        craft/specialty focus
+                                                    </p>
+                                                    <div className='flex gap-2'>
+                                                        {COFFEE_STYLES.map(
+                                                            (style) => {
+                                                                const currentValue =
+                                                                    changes.coffee_style ??
+                                                                    cafe.coffee_style
+                                                                const isSelected =
+                                                                    currentValue ===
+                                                                    style.value
+
+                                                                return (
+                                                                    <button
+                                                                        key={
+                                                                            style.value
+                                                                        }
+                                                                        onClick={() =>
+                                                                            updateChange(
+                                                                                "coffee_style",
+                                                                                style.value as
+                                                                                    | "classic"
+                                                                                    | "artisan"
+                                                                            )
+                                                                        }
+                                                                        className={`flex-1 p-3 rounded-lg border-2 transition-all cursor-pointer text-left ${
+                                                                            isSelected
+                                                                                ? hasChange(
+                                                                                      "coffee_style"
+                                                                                  )
+                                                                                    ? "border-primary bg-primary/20 text-primary"
+                                                                                    : "border-text/30 bg-text/10 text-text"
+                                                                                : "border-text/10 bg-text/5 text-text/50 hover:border-text/20"
+                                                                        }`}
+                                                                    >
+                                                                        <div className='font-medium'>
+                                                                            {
+                                                                                style.label
+                                                                            }
+                                                                        </div>
+                                                                        <div className='text-xs opacity-70'>
+                                                                            {
+                                                                                style.description
+                                                                            }
+                                                                        </div>
+                                                                    </button>
+                                                                )
+                                                            }
+                                                        )}
+                                                    </div>
+                                                </div>
+
                                                 {/* Payment Methods */}
                                                 <div className='space-y-2'>
                                                     <label className='text-sm font-medium text-text/60'>
@@ -978,7 +1007,7 @@ export default function SuggestEditModal({
                                                         Brew Methods
                                                     </label>
                                                     <div className='flex flex-wrap gap-2'>
-                                                        {BREW_METHOD_OPTIONS.map(
+                                                        {BREW_METHODS.map(
                                                             (method) => {
                                                                 const isSelected =
                                                                     getEffectiveArray(
@@ -1042,7 +1071,7 @@ export default function SuggestEditModal({
                                                         Specialties
                                                     </label>
                                                     <div className='flex flex-wrap gap-2'>
-                                                        {SPECIALTY_OPTIONS.map(
+                                                        {CAFE_SPECIALTIES.map(
                                                             (item) => {
                                                                 const isSelected =
                                                                     getEffectiveArray(
@@ -1222,7 +1251,7 @@ export default function SuggestEditModal({
                                                         "specialty"
                                                     ).filter(
                                                         (s) =>
-                                                            !SPECIALTY_OPTIONS.includes(
+                                                            !CAFE_SPECIALTIES.includes(
                                                                 s
                                                             )
                                                     ).length > 0 && (
@@ -1232,7 +1261,7 @@ export default function SuggestEditModal({
                                                             )
                                                                 .filter(
                                                                     (s) =>
-                                                                        !SPECIALTY_OPTIONS.includes(
+                                                                        !CAFE_SPECIALTIES.includes(
                                                                             s
                                                                         )
                                                                 )
@@ -1266,7 +1295,7 @@ export default function SuggestEditModal({
                                                         Vibe / Tags
                                                     </label>
                                                     <div className='flex flex-wrap gap-2'>
-                                                        {TAG_OPTIONS.map(
+                                                        {CAFE_VIBE_TAGS.map(
                                                             (tag) => {
                                                                 const isSelected =
                                                                     getEffectiveArray(
@@ -1446,7 +1475,7 @@ export default function SuggestEditModal({
                                                         "tags"
                                                     ).filter(
                                                         (t) =>
-                                                            !TAG_OPTIONS.includes(
+                                                            !CAFE_VIBE_TAGS.includes(
                                                                 t
                                                             )
                                                     ).length > 0 && (
@@ -1456,7 +1485,7 @@ export default function SuggestEditModal({
                                                             )
                                                                 .filter(
                                                                     (t) =>
-                                                                        !TAG_OPTIONS.includes(
+                                                                        !CAFE_VIBE_TAGS.includes(
                                                                             t
                                                                         )
                                                                 )

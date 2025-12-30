@@ -315,6 +315,7 @@ export async function getAllCafes(
     if (filters.has_non_dairy) query = query.eq("has_non_dairy", true)
     if (filters.is_work_friendly) query = query.eq("is_work_friendly", true)
     if (filters.price_level) query = query.eq("price_level", filters.price_level)
+    if (filters.coffee_style) query = query.eq("coffee_style", filters.coffee_style)
     if (filters.region) query = query.eq("region", filters.region)
 
     // Priority ranking: Premium cafes appear first (Premium exclusive feature)

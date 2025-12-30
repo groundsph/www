@@ -160,6 +160,15 @@ export default function CafeHero({
                             {cafe.price_level === "high" && "₱₱₱"}
                         </div>
 
+                        {/* Coffee Style */}
+                        {cafe.coffee_style && (
+                            <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-amber-500/20 text-amber-300 backdrop-blur-sm'>
+                                {cafe.coffee_style === "classic"
+                                    ? "Classic"
+                                    : "Artisan"}
+                            </div>
+                        )}
+
                         {/* WiFi Indicator */}
                         {cafe.has_wifi && (
                             <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-blue-500/20 text-blue-300 backdrop-blur-sm'>

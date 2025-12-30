@@ -904,6 +904,14 @@ export const CAFE_SPECIALTIES = [
     "specialty_coffee", "pastries", "brunch", "matcha", "vegan_options"
 ];
 
+// Coffee style options (2nd-wave vs 3rd-wave classification)
+export const COFFEE_STYLES = [
+    { value: "classic", label: "Classic", description: "Traditional espresso bar style (2nd-wave)" },
+    { value: "artisan", label: "Artisan", description: "Craft/specialty focus (3rd-wave)" },
+] as const;
+
+export type CoffeeStyle = typeof COFFEE_STYLES[number]["value"];
+
 // Common brew methods
 export const BREW_METHODS = [
     "Espresso", "Pour Over", "French Press", "Aeropress", "Cold Brew",

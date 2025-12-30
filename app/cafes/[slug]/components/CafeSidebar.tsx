@@ -201,6 +201,20 @@ export default function CafeSidebar({
                 </span>
             </div>
 
+            {/* Coffee Style */}
+            {cafe.coffee_style && (
+                <div className='flex flex-row items-center gap-2'>
+                    <p className='text-sm font-semibold text-text/60'>
+                        Coffee Style
+                    </p>
+                    <span className='text-sm font-bold capitalize bg-amber-500/20 text-amber-700 px-2 py-0.5 rounded-full'>
+                        {cafe.coffee_style === "classic"
+                            ? "Classic"
+                            : "Artisan"}
+                    </span>
+                </div>
+            )}
+
             {/* Payment Methods */}
             {cafe.payment_methods && (
                 <>

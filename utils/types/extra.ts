@@ -94,6 +94,7 @@ export interface CafeFilters {
     has_non_dairy?: boolean;
     is_work_friendly?: boolean;
     price_level?: Database['public']['Enums']['price_level']; // Uses the actual DB Enum type
+    coffee_style?: Database['public']['Enums']['coffee_style']; // Classic (2nd-wave) or Artisan (3rd-wave)
     region?: string;
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";
@@ -155,6 +156,7 @@ export interface CafeSubmission {
     serves_food: boolean;
     is_work_friendly: boolean;
     price_level: Database['public']['Enums']['price_level'];
+    coffee_style: Database['public']['Enums']['coffee_style'] | null;
     payment_methods: string;
     specialty: string[];
     tags: string[];
@@ -203,6 +205,7 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     serves_food: false,
     is_work_friendly: false,
     price_level: 'medium',
+    coffee_style: null,
     payment_methods: '',
     specialty: [],
     tags: [],
