@@ -1,6 +1,9 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { profiles, cafes, reviews, blogPosts, cafeClaims } from "@/db/schema"
+import { eq, count } from "drizzle-orm"
+import { sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { getStorageProvider, STORAGE_BUCKETS, type StorageBucket } from "@/utils/storage"
 
@@ -42,7 +45,7 @@ export interface StatsResult {
 }
 
 /**
- * Get storage stats from the configured provider (R2 or Supabase)
+ * Get storage stats from the configured provider (R2)
  */
 async function getStorageStats(): Promise<{
     total_bytes: number
@@ -82,19 +85,17 @@ async function getStorageStats(): Promise<{
         ownership_proofs: 0,
     }
 
-    // Map bucket names to stats keys
     const bucketKeyMap: Record<StorageBucket, keyof typeof bucketSizes> = {
-        "cafes": "cafes",
-        "reviews": "reviews",
-        "avatars": "avatars",
-        "blogs": "blogs",
-        "badges": "badges",
+        cafes: "cafes",
+        reviews: "reviews",
+        avatars: "avatars",
+        blogs: "blogs",
+        badges: "badges",
         "menu-photos": "menu_photos",
-        "events": "events",
+        events: "events",
         "ownership-proofs": "ownership_proofs",
     }
 
-    // Fetch sizes for each bucket
     for (const bucket of buckets) {
         try {
             const listResult = await storage.list(bucket, { limit: 10000 })
@@ -127,12 +128,10 @@ async function getStorageStats(): Promise<{
 }
 
 /**
- * Fetch system stats using the admin RPC function and provider storage stats
+ * Fetch system stats using Drizzle queries
  * Only accessible by admins and moderators
  */
 export async function getSystemStats(): Promise<StatsResult> {
-    const db = await createClient()
-
     // 1. Verify Authentication
     const user = await getCurrentUser()
     if (!user) {
@@ -140,51 +139,80 @@ export async function getSystemStats(): Promise<StatsResult> {
     }
 
     // 2. Verify Role
-    const { data: profile } = await db
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+    const role = profileResult[0]?.role
+    if (role !== "admin" && role !== "moderator") {
         return { success: false, error: "Unauthorized access" }
     }
 
-    // 3. Call RPC function for system & business stats
-    const { data, error } = await db.rpc('get_admin_stats')
+    try {
+        // 3. Fetch all stats with parallel Drizzle queries
+        const [
+            usersCountResult,
+            dbSizeResult,
+            cafesTotalResult,
+            cafesVerifiedResult,
+            cafesPublishedResult,
+            reviewsTotalResult,
+            blogPostsTotalResult,
+            pendingClaimsResult,
+        ] = await Promise.all([
+            // User count
+            db.select({ count: count() }).from(profiles),
+            // DB size (approximate via pg_database_size)
+            db.execute(sql`SELECT pg_database_size(current_database()) as size`),
+            // Total cafes
+            db.select({ count: count() }).from(cafes),
+            // Verified cafes
+            db.select({ count: count() }).from(cafes).where(eq(cafes.isVerified, true)),
+            // Published cafes
+            db.select({ count: count() }).from(cafes).where(eq(cafes.isPublished, true)),
+            // Total reviews
+            db.select({ count: count() }).from(reviews),
+            // Total blog posts
+            db.select({ count: count() }).from(blogPosts),
+            // Pending claims
+            db.select({ count: count() }).from(cafeClaims).where(eq(cafeClaims.status, "pending")),
+        ])
 
-    if (error) {
+        // 4. Get storage stats from R2
+        const storageStats = await getStorageStats()
+
+        // 5. Calculate storage limits (R2 has 10GB free tier)
+        const isR2 = storageStats.provider === "cloudflare-r2"
+        const STORAGE_LIMIT_GB = isR2 ? 10 : 1
+        const STORAGE_LIMIT_BYTES = STORAGE_LIMIT_GB * 1024 * 1024 * 1024
+
+        const stats: SystemStats = {
+            system: {
+                users_count: usersCountResult[0]?.count ?? 0,
+                db_size_bytes: Number((dbSizeResult.rows[0] as { size: string })?.size ?? 0),
+            },
+            storage: {
+                total_bytes: storageStats.total_bytes,
+                buckets: storageStats.buckets,
+                provider: storageStats.provider,
+                storage_limit_bytes: STORAGE_LIMIT_BYTES,
+                storage_left_bytes: Math.max(0, STORAGE_LIMIT_BYTES - storageStats.total_bytes),
+            },
+            business: {
+                cafes_total: cafesTotalResult[0]?.count ?? 0,
+                cafes_verified: cafesVerifiedResult[0]?.count ?? 0,
+                cafes_published: cafesPublishedResult[0]?.count ?? 0,
+                reviews_total: reviewsTotalResult[0]?.count ?? 0,
+                blog_posts_total: blogPostsTotalResult[0]?.count ?? 0,
+                pending_claims: pendingClaimsResult[0]?.count ?? 0,
+            },
+        }
+
+        return { success: true, data: stats }
+    } catch (error) {
         console.error("Error fetching admin stats:", error)
         return { success: false, error: "Failed to fetch stats" }
     }
-
-    const stats = data as unknown as SystemStats
-
-    // 4. Get storage stats from provider (R2 or Supabase)
-    try {
-        const storageStats = await getStorageStats()
-
-        // Replace SQL-based storage stats with provider-based stats
-        stats.storage = {
-            total_bytes: storageStats.total_bytes,
-            buckets: storageStats.buckets,
-            provider: storageStats.provider,
-        }
-    } catch (error) {
-        console.warn("Failed to get storage stats from provider, using DB stats:", error)
-        // Fall back to stats from DB if provider fails
-    }
-
-    // 5. Calculate storage limits (R2 has 10GB free tier)
-    const isR2 = stats.storage?.provider === "cloudflare-r2"
-    const STORAGE_LIMIT_GB = isR2 ? 10 : 1 // R2 = 10GB free, Supabase = 1GB free
-    const STORAGE_LIMIT_BYTES = STORAGE_LIMIT_GB * 1024 * 1024 * 1024
-
-    if (stats && stats.storage) {
-        stats.storage.storage_limit_bytes = STORAGE_LIMIT_BYTES
-        stats.storage.storage_left_bytes = Math.max(0, STORAGE_LIMIT_BYTES - stats.storage.total_bytes)
-    }
-
-    return { success: true, data: stats }
 }
-

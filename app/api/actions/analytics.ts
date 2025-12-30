@@ -1,36 +1,25 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { cafes, cafeSubscriptions, cafePageViews } from "@/db/schema"
+import { eq, and, gte, lte } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 
-async function getCurrentUserId(): Promise<string | null> {
-    const db = await createClient()
-    const user = await getCurrentUser()
-    return user?.id ?? null
-}
-
 export interface CafeAnalytics {
-    // Overview stats
     totalViews: number
     uniqueVisitors: number
     periodStart: string
     periodEnd: string
-
-    // Time series data (views per day)
     viewsByDay: {
         date: string
         views: number
         uniqueVisitors: number
     }[]
-
-    // Device breakdown
     deviceBreakdown: {
         mobile: number
         desktop: number
         tablet: number
     }
-
-    // Top referrers
     topReferrers: {
         referrer: string
         count: number
@@ -45,36 +34,34 @@ export async function getCafeAnalytics(
     cafeId: string,
     days: number = 30
 ): Promise<CafeAnalytics | null> {
-    const db = await createClient()
-    const userId = await getCurrentUserId()
-
-    if (!userId) return null
+    const user = await getCurrentUser()
+    if (!user) return null
 
     // Check ownership
-    const { data: cafe } = await db
-        .from("cafes")
-        .select("owner_ids")
-        .eq("id", cafeId)
-        .single()
+    const cafeResult = await db
+        .select({ ownerIds: cafes.ownerIds })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
 
-    if (!cafe?.owner_ids?.includes(userId)) {
+    const cafe = cafeResult[0]
+    if (!cafe?.ownerIds?.includes(user.id)) {
         return null // Not an owner
     }
 
     // Check subscription tier - analytics requires Pro or higher
-    const { data: subscription } = await db
-        .from("cafe_subscriptions")
-        .select("tier")
-        .eq("cafe_id", cafeId)
-        .single()
+    const subscriptionResult = await db
+        .select({ tier: cafeSubscriptions.tier })
+        .from(cafeSubscriptions)
+        .where(eq(cafeSubscriptions.cafeId, cafeId))
+        .limit(1)
 
-    // Map database tier to display tier and check feature access
-    const dbTier = subscription?.tier || "free"
-    const displayTier = dbTier === "basic" ? "pro" : dbTier as "free" | "pro" | "premium"
+    const dbTier = subscriptionResult[0]?.tier || "free"
+    const displayTier = dbTier === "basic" ? "pro" : (dbTier as "free" | "pro" | "premium")
 
     // Analytics requires Pro+ tier
     if (displayTier === "free") {
-        return null // Free tier cannot access analytics
+        return null
     }
 
     // Calculate date range
@@ -86,20 +73,21 @@ export async function getCafeAnalytics(
     const endStr = endDate.toISOString()
 
     // Get all page views in the period
-    const { data: pageViews, error } = await db
-        .from("cafe_page_views")
-        .select("*")
-        .eq("cafe_id", cafeId)
-        .gte("viewed_at", startStr)
-        .lte("viewed_at", endStr)
-
-    if (error || !pageViews) {
-        console.error("Error fetching analytics:", error)
-        return null
-    }
+    const pageViews = await db
+        .select()
+        .from(cafePageViews)
+        .where(
+            and(
+                eq(cafePageViews.cafeId, cafeId),
+                gte(cafePageViews.viewedAt, startDate),
+                lte(cafePageViews.viewedAt, endDate)
+            )
+        )
 
     // Calculate unique visitors
-    const uniqueVisitorIds = new Set(pageViews.map(v => v.visitor_id).filter(Boolean))
+    const uniqueVisitorIds = new Set(
+        pageViews.map((v) => v.visitorId).filter(Boolean)
+    )
 
     // Group views by day
     const viewsByDayMap = new Map<string, { views: number; visitors: Set<string> }>()
@@ -112,12 +100,14 @@ export async function getCafeAnalytics(
 
     // Populate with actual data
     for (const view of pageViews) {
-        const dateKey = view.viewed_at.split("T")[0]
+        const dateKey = view.viewedAt?.toISOString().split("T")[0]
+        if (!dateKey) continue
+
         const dayData = viewsByDayMap.get(dateKey)
         if (dayData) {
             dayData.views++
-            if (view.visitor_id) {
-                dayData.visitors.add(view.visitor_id)
+            if (view.visitorId) {
+                dayData.visitors.add(view.visitorId)
             }
         }
     }
@@ -133,7 +123,7 @@ export async function getCafeAnalytics(
     // Device breakdown
     const deviceBreakdown = { mobile: 0, desktop: 0, tablet: 0 }
     for (const view of pageViews) {
-        const device = view.device_type as keyof typeof deviceBreakdown
+        const device = view.deviceType as keyof typeof deviceBreakdown
         if (device && deviceBreakdown[device] !== undefined) {
             deviceBreakdown[device]++
         }
@@ -144,12 +134,10 @@ export async function getCafeAnalytics(
     for (const view of pageViews) {
         if (view.referrer) {
             try {
-                // Extract domain from referrer URL
                 const url = new URL(view.referrer)
                 const domain = url.hostname
                 referrerCounts.set(domain, (referrerCounts.get(domain) || 0) + 1)
             } catch {
-                // Invalid URL, use as-is
                 referrerCounts.set(view.referrer, (referrerCounts.get(view.referrer) || 0) + 1)
             }
         }

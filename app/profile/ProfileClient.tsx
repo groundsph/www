@@ -1,15 +1,8 @@
 "use client"
 
-import { AuthContext } from "@/components/AuthProvider"
+import { useAuth } from "@/components/AuthProvider"
 import { useNotification } from "@/components/NotificationProvider"
-import {
-    getAllBadges,
-    getCafesByIds,
-    getProfileWithBadges,
-    getUserReviews,
-    updateProfile,
-} from "@/app/api/actions/profile"
-import { getOwnedCafes } from "@/app/api/actions/owner"
+import { getFullProfileData, updateProfile } from "@/app/api/actions/profile"
 import { uploadAvatar } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
@@ -34,7 +27,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useContext, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import { getLucideIcon } from "@/components/badges/iconUtils"
@@ -55,8 +48,7 @@ const rankConfig = {
 
 export default function ProfileClient() {
     const router = useRouter()
-    const authContext = useContext(AuthContext)
-    const { user, refreshProfile } = authContext
+    const { user, refreshProfile } = useAuth()
     const { addNotification } = useNotification()
 
     // States
@@ -114,60 +106,29 @@ export default function ProfileClient() {
         }
     }, [user, loading, router])
 
-    // Fetch profile data
+    // Fetch profile data - single consolidated call
     useEffect(() => {
         const fetchData = async () => {
             if (!user) return
 
             try {
-                const [profile, badges, userReviews, cafesOwned] =
-                    await Promise.all([
-                        getProfileWithBadges(user.id),
-                        getAllBadges(),
-                        getUserReviews(user.id, user.id),
-                        getOwnedCafes(),
-                    ])
+                // Single API call instead of 7 separate calls
+                const data = await getFullProfileData(user.id)
 
-                setProfileData(profile)
-                setAllBadges(badges)
-                setReviews(userReviews)
-                setOwnedCafes(cafesOwned)
+                setProfileData(data.profile)
+                setAllBadges(data.allBadges)
+                setReviews(data.reviews)
+                setOwnedCafes(data.ownedCafes)
 
-                if (profile) {
-                    setEditDisplayName(profile.display_name)
-                    setEditBio(profile.bio || "")
-
-                    // Fetch passport cafes
-                    if (profile.passport) {
-                        const [visited, favorites, wishlist] =
-                            await Promise.all([
-                                getCafesByIds(
-                                    profile.passport.visited_ids || []
-                                ),
-                                getCafesByIds(
-                                    profile.passport.favorite_ids || []
-                                ),
-                                getCafesByIds(
-                                    profile.passport.wishlist_ids || []
-                                ),
-                            ])
-                        setVisitedCafes(
-                            visited.map((c) => ({ name: c.name, slug: c.slug }))
-                        )
-                        setFavoriteCafes(
-                            favorites.map((c) => ({
-                                name: c.name,
-                                slug: c.slug,
-                            }))
-                        )
-                        setWishlistCafes(
-                            wishlist.map((c) => ({
-                                name: c.name,
-                                slug: c.slug,
-                            }))
-                        )
-                    }
+                if (data.profile) {
+                    setEditDisplayName(data.profile.display_name)
+                    setEditBio(data.profile.bio || "")
                 }
+
+                // Set passport cafes
+                setVisitedCafes(data.passportCafes.visited)
+                setFavoriteCafes(data.passportCafes.favorites)
+                setWishlistCafes(data.passportCafes.wishlist)
             } catch (error) {
                 console.error("Error fetching profile:", error)
             } finally {

@@ -213,7 +213,7 @@ export default async function Home() {
             )}
 
             {/* Supporters Section */}
-            <SupportersSection />
+            {/* <SupportersSection /> */}
         </>
     )
 }

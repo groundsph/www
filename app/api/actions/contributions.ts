@@ -1,9 +1,11 @@
-'use server'
+"use server"
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { contributionLogs, profiles, cafes } from "@/db/schema"
+import { eq, desc } from "drizzle-orm"
 import { Database } from "@/utils/types/database.types"
 
-type ContributionLog = Database['public']['Tables']['contribution_logs']['Row']
+type ContributionLog = Database["public"]["Tables"]["contribution_logs"]["Row"]
 
 export interface ContributionLogWithAuthor extends ContributionLog {
     author: {
@@ -31,26 +33,40 @@ export async function getCafeContributions(
     cafeId: string,
     limit: number = 20
 ): Promise<ContributionLogWithAuthor[]> {
-    const db = await createClient()
-
-    const { data, error } = await db
-        .from('contribution_logs')
-        .select(`
-            *,
-            author:profiles!contribution_logs_user_id_fkey(
-                id, username, display_name, avatar_url
-            )
-        `)
-        .eq('cafe_id', cafeId)
-        .order('created_at', { ascending: false })
+    const results = await db
+        .select({
+            id: contributionLogs.id,
+            userId: contributionLogs.userId,
+            cafeId: contributionLogs.cafeId,
+            actionType: contributionLogs.actionType,
+            details: contributionLogs.details,
+            createdAt: contributionLogs.createdAt,
+            // Author fields
+            authorId: profiles.id,
+            authorUsername: profiles.username,
+            authorDisplayName: profiles.displayName,
+            authorAvatarUrl: profiles.avatarUrl,
+        })
+        .from(contributionLogs)
+        .leftJoin(profiles, eq(contributionLogs.userId, profiles.id))
+        .where(eq(contributionLogs.cafeId, cafeId))
+        .orderBy(desc(contributionLogs.createdAt))
         .limit(limit)
 
-    if (error) {
-        console.error('[getCafeContributions] Error:', error)
-        return []
-    }
-
-    return data as unknown as ContributionLogWithAuthor[]
+    return results.map((r) => ({
+        id: r.id,
+        user_id: r.userId,
+        cafe_id: r.cafeId,
+        action_type: r.actionType,
+        details: r.details,
+        created_at: r.createdAt?.toISOString() ?? null,
+        author: {
+            id: r.authorId ?? "",
+            username: r.authorUsername ?? "",
+            display_name: r.authorDisplayName ?? "",
+            avatar_url: r.authorAvatarUrl,
+        },
+    })) as ContributionLogWithAuthor[]
 }
 
 /**
@@ -61,24 +77,38 @@ export async function getUserContributions(
     userId: string,
     limit: number = 50
 ): Promise<ContributionLogWithCafe[]> {
-    const db = await createClient()
-
-    const { data, error } = await db
-        .from('contribution_logs')
-        .select(`
-            *,
-            cafe:cafes!contribution_logs_cafe_id_fkey(
-                id, name, slug, thumbnail
-            )
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+    const results = await db
+        .select({
+            id: contributionLogs.id,
+            logUserId: contributionLogs.userId,
+            cafeId: contributionLogs.cafeId,
+            actionType: contributionLogs.actionType,
+            details: contributionLogs.details,
+            createdAt: contributionLogs.createdAt,
+            // Cafe fields
+            cafeTableId: cafes.id,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+        })
+        .from(contributionLogs)
+        .leftJoin(cafes, eq(contributionLogs.cafeId, cafes.id))
+        .where(eq(contributionLogs.userId, userId))
+        .orderBy(desc(contributionLogs.createdAt))
         .limit(limit)
 
-    if (error) {
-        console.error('[getUserContributions] Error:', error)
-        return []
-    }
-
-    return data as unknown as ContributionLogWithCafe[]
+    return results.map((r) => ({
+        id: r.id,
+        user_id: r.logUserId,
+        cafe_id: r.cafeId,
+        action_type: r.actionType,
+        details: r.details,
+        created_at: r.createdAt?.toISOString() ?? null,
+        cafe: {
+            id: r.cafeTableId ?? "",
+            name: r.cafeName ?? "",
+            slug: r.cafeSlug ?? "",
+            thumbnail: r.cafeThumbnail ?? "",
+        },
+    })) as ContributionLogWithCafe[]
 }
