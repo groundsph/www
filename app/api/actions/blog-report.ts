@@ -2,7 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
-import { BlogReport, BlogReportInput, BlogReportReason } from "@/utils/types/blog-report"
+import { BlogReport, BlogReportInput, BlogReportReason, BLOG_REPORT_REASONS } from "@/utils/types/blog-report"
+import { notifyDiscordBlogReport } from "@/app/api/actions/notify"
 
 // ============================================
 // Helper Functions
@@ -56,7 +57,7 @@ export async function reportBlogPost(input: BlogReportInput): Promise<BlogReport
     // Verify the blog post exists and is published
     const { data: post } = await supabase
         .from("blog_posts")
-        .select("id, author_id, status")
+        .select("id, author_id, status, title, slug")
         .eq("id", input.blog_post_id)
         .single()
 
@@ -97,7 +98,25 @@ export async function reportBlogPost(input: BlogReportInput): Promise<BlogReport
         return { success: false, error: "Failed to submit report" }
     }
 
-    // TODO: Add Discord notification for blog reports
+    // Notify Discord (fire and forget to not block response)
+    const { data: reporter } = await supabase
+        .from('profiles')
+        .select('display_name, username')
+        .eq('id', userId)
+        .single()
+
+    const reporterName = reporter?.display_name
+        ? `${reporter.display_name} (@${reporter.username})`
+        : 'Anonymous User'
+
+    const reasonLabel = BLOG_REPORT_REASONS.find(r => r.value === input.reason)?.label || input.reason
+
+    // Don't await this to keep UI responsive
+    notifyDiscordBlogReport(
+        { title: post.title, slug: post.slug },
+        reasonLabel,
+        reporterName
+    ).catch(err => console.error("Error sending Discord notification:", err))
 
     return { success: true }
 }

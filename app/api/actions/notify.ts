@@ -377,3 +377,80 @@ export async function notifyDiscordSubscription(
         }
     }
 }
+
+/**
+ * Notify Discord about a reported blog post
+ */
+export async function notifyDiscordBlogReport(
+    blogInfo: { title: string; slug: string },
+    reason: string,
+    reporterName?: string
+): Promise<NotifyResult> {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn('Discord webhook URL not configured')
+        return { success: false, message: 'Webhook not configured' }
+    }
+
+    try {
+        const blogUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/blog/${blogInfo.slug}`
+        const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/manage/content`
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: "🚩 Blog Post Reported",
+                    description: "A blog post has been flagged for moderation.",
+                    color: 0xef4444, // Red warning color
+                    fields: [
+                        {
+                            name: "Blog Post",
+                            value: `[${blogInfo.title}](${blogUrl})`,
+                            inline: false
+                        },
+                        {
+                            name: "Reason",
+                            value: reason,
+                            inline: true
+                        },
+                        {
+                            name: "Reported By",
+                            value: reporterName || "Anonymous User",
+                            inline: true
+                        },
+                        {
+                            name: "Action Required",
+                            value: `[Process in Admin Dashboard](${adminUrl})`,
+                            inline: false
+                        },
+                    ],
+                    footer: {
+                        text: "Grounds • Blog Report"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            }),
+        })
+
+        if (!response.ok) {
+            console.error('Discord webhook failed:', response.status)
+            return {
+                success: false,
+                message: 'Failed to notify Discord',
+            }
+        }
+
+        return {
+            success: true,
+            message: 'Blog Report Notified',
+        }
+    } catch (error) {
+        console.error('Discord notification error:', error)
+        return {
+            success: false,
+            message: 'Error sending notification',
+        }
+    }
+}

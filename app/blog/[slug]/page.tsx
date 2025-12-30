@@ -10,6 +10,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Calendar, Clock, ArrowLeft, Eye, Coffee, User } from "lucide-react"
 import ShareButton from "@/components/blog/ShareButton"
+import ReportButton from "@/components/blog/ReportButton"
 
 export const revalidate = 60 // Revalidate every minute
 
@@ -177,6 +178,12 @@ export default async function BlogPostPage({
                             <div className='flex items-center gap-1.5'>
                                 <Eye className='w-4 h-4' />
                                 <span>{post.views_count || 0} views</span>
+                            </div>
+                            <div className='border-l border-text/10 pl-4 ml-2'>
+                                <ReportButton
+                                    postId={post.id}
+                                    className='text-xs px-2 py-1'
+                                />
                             </div>
                         </div>
                     </div>
