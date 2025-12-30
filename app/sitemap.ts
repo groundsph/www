@@ -1,5 +1,7 @@
 import { MetadataRoute } from 'next'
-import { createAdminClient } from '@/utils/supabase/admin'
+import { db } from '@/db'
+import { cafes, blogPosts, cafeMenuItems } from '@/db/schema'
+import { eq, and } from 'drizzle-orm'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = 'https://grounds.ph'
@@ -23,59 +25,57 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { url: `${baseUrl}/legal/content-policy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
     ]
 
-    const db = await createAdminClient()
-
     // Dynamic cafe pages from database
-    const { data: cafes } = await db
-        .from('cafes')
-        .select('slug, updated_at, created_at')
-        .eq('is_published', true)
+    const cafeResults = await db
+        .select({ slug: cafes.slug, updatedAt: cafes.updatedAt, createdAt: cafes.createdAt })
+        .from(cafes)
+        .where(eq(cafes.isPublished, true))
 
-    const cafePages: MetadataRoute.Sitemap = (cafes || []).map((cafe) => ({
+    const cafePages: MetadataRoute.Sitemap = cafeResults.map((cafe) => ({
         url: `${baseUrl}/cafes/${cafe.slug}`,
-        lastModified: cafe.updated_at || cafe.created_at || new Date(),
+        lastModified: cafe.updatedAt || cafe.createdAt || new Date(),
         changeFrequency: 'weekly',
         priority: 0.8,
     }))
 
     // Dynamic blog posts from database
-    const { data: blogPosts } = await db
-        .from('blog_posts')
-        .select('slug, updated_at, published_at')
-        .eq('status', 'published')
+    const blogResults = await db
+        .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, publishedAt: blogPosts.publishedAt })
+        .from(blogPosts)
+        .where(eq(blogPosts.status, 'published'))
 
-    const blogPages: MetadataRoute.Sitemap = (blogPosts || []).map((post) => ({
+    const blogPages: MetadataRoute.Sitemap = blogResults.map((post) => ({
         url: `${baseUrl}/blog/${post.slug}`,
-        lastModified: post.updated_at || post.published_at || new Date(),
+        lastModified: post.updatedAt || post.publishedAt || new Date(),
         changeFrequency: 'weekly',
         priority: 0.7,
     }))
 
     // Menu pages for cafes that have menu items
-    const { data: cafesWithMenus } = await db
-        .from('cafe_menu_items')
-        .select('cafe_id, cafes!inner(slug, updated_at)')
-        .eq('is_available', true)
+    const menuCafeResults = await db
+        .select({
+            slug: cafes.slug,
+            updatedAt: cafes.updatedAt,
+        })
+        .from(cafeMenuItems)
+        .innerJoin(cafes, eq(cafeMenuItems.cafeId, cafes.id))
+        .where(eq(cafeMenuItems.isAvailable, true))
 
     // Get unique cafe slugs that have menu items
     const menuCafeSlugs = new Set<string>()
     const menuPages: MetadataRoute.Sitemap = []
 
-    if (cafesWithMenus) {
-        for (const item of cafesWithMenus) {
-            const cafeData = item.cafes as unknown as { slug: string; updated_at: string | null }
-            if (cafeData?.slug && !menuCafeSlugs.has(cafeData.slug)) {
-                menuCafeSlugs.add(cafeData.slug)
-                menuPages.push({
-                    url: `${baseUrl}/cafes/${cafeData.slug}/menu`,
-                    lastModified: cafeData.updated_at || new Date(),
-                    changeFrequency: 'weekly',
-                    priority: 0.7,
-                })
-            }
+    for (const item of menuCafeResults) {
+        if (item.slug && !menuCafeSlugs.has(item.slug)) {
+            menuCafeSlugs.add(item.slug)
+            menuPages.push({
+                url: `${baseUrl}/cafes/${item.slug}/menu`,
+                lastModified: item.updatedAt || new Date(),
+                changeFrequency: 'weekly',
+                priority: 0.7,
+            })
         }
     }
 
     return [...staticPages, ...cafePages, ...blogPages, ...menuPages]
 }
-

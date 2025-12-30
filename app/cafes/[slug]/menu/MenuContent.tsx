@@ -10,9 +10,9 @@ interface MenuItem {
     description: string | null
     price: number
     category: string
-    image_url: string | null
-    is_signature: boolean | null
-    is_available: boolean | null
+    imageUrl: string | null
+    isSignature: boolean | null
+    isAvailable: boolean | null
 }
 
 interface MenuContentProps {
@@ -51,8 +51,8 @@ export default function MenuContent({
                     .filter((item) => item.category === category)
                     .sort((a, b) => {
                         // Signatures first
-                        if (a.is_signature && !b.is_signature) return -1
-                        if (!a.is_signature && b.is_signature) return 1
+                        if (a.isSignature && !b.isSignature) return -1
+                        if (!a.isSignature && b.isSignature) return 1
                         return 0
                     })
                 const totalItems = categoryItems.length
@@ -83,7 +83,7 @@ export default function MenuContent({
                             <div className='flex-1 flex flex-col'>
                                 <h3 className='font-bold text-base uppercase leading-tight'>
                                     {item.name}
-                                    {item.is_signature && (
+                                    {item.isSignature && (
                                         <span className='ml-1 text-amber-600'>
                                             ★
                                         </span>
@@ -99,18 +99,18 @@ export default function MenuContent({
                                     </p>
                                 )}
                             </div>
-                            {item.image_url && (
+                            {item.imageUrl && (
                                 <button
                                     onClick={() =>
                                         setLightboxImage({
-                                            url: item.image_url!,
+                                            url: item.imageUrl!,
                                             alt: item.name,
                                         })
                                     }
                                     className='relative w-full h-auto md:h-full md:w-auto aspect-square rounded-sm shadow-sm overflow-clip shrink-0 self-center cursor-pointer hover:opacity-90 transition-opacity'
                                 >
                                     <Image
-                                        src={item.image_url}
+                                        src={item.imageUrl}
                                         alt={item.name}
                                         fill
                                         className='object-contain'

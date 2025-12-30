@@ -1,4 +1,6 @@
-import { createAdminClient } from "@/utils/supabase/admin"
+import { db } from "@/db"
+import { cafes, cafeMenuItems } from "@/db/schema"
+import { eq, and, asc } from "drizzle-orm"
 import { notFound } from "next/navigation"
 import { Metadata } from "next"
 import Link from "next/link"
@@ -16,14 +18,18 @@ export async function generateMetadata({
     params,
 }: MenuPageProps): Promise<Metadata> {
     const { slug } = await params
-    const db = await createAdminClient()
 
-    const { data: cafe } = await db
-        .from("cafes")
-        .select("name, description, thumbnail")
-        .eq("slug", slug)
-        .eq("is_published", true)
-        .single()
+    const cafeResult = await db
+        .select({
+            name: cafes.name,
+            description: cafes.description,
+            thumbnail: cafes.thumbnail,
+        })
+        .from(cafes)
+        .where(and(eq(cafes.slug, slug), eq(cafes.isPublished, true)))
+        .limit(1)
+
+    const cafe = cafeResult[0]
 
     if (!cafe) {
         return { title: "Menu Not Found | Grounds" }
@@ -55,32 +61,40 @@ export async function generateMetadata({
 
 export default async function MenuPage({ params }: MenuPageProps) {
     const { slug } = await params
-    const db = await createAdminClient()
 
     // Fetch cafe
-    const { data: cafe } = await db
-        .from("cafes")
-        .select("id, name, slug, thumbnail, address_display")
-        .eq("slug", slug)
-        .eq("is_published", true)
-        .single()
+    const cafeResult = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            addressDisplay: cafes.addressDisplay,
+        })
+        .from(cafes)
+        .where(and(eq(cafes.slug, slug), eq(cafes.isPublished, true)))
+        .limit(1)
+
+    const cafe = cafeResult[0]
 
     if (!cafe) {
         notFound()
     }
 
     // Fetch menu items
-    const { data: menuItems } = await db
-        .from("cafe_menu_items")
-        .select("*")
-        .eq("cafe_id", cafe.id)
-        .eq("is_available", true)
-        .order("sort_order", { ascending: true })
+    const menuItems = await db
+        .select()
+        .from(cafeMenuItems)
+        .where(
+            and(
+                eq(cafeMenuItems.cafeId, cafe.id),
+                eq(cafeMenuItems.isAvailable, true)
+            )
+        )
+        .orderBy(asc(cafeMenuItems.sortOrder))
 
     // Group items by category
-    const categories = [
-        ...new Set((menuItems || []).map((item) => item.category)),
-    ]
+    const categories = [...new Set(menuItems.map((item) => item.category))]
 
     return (
         <div className='min-h-screen bg-background w-full'>
@@ -89,7 +103,7 @@ export default async function MenuPage({ params }: MenuPageProps) {
                 slug={slug}
                 cafeName={cafe.name}
                 thumbnail={cafe.thumbnail}
-                addressDisplay={cafe.address_display}
+                addressDisplay={cafe.addressDisplay}
             />
 
             {/* Menu Content */}

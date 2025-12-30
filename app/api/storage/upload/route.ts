@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import {
     getStorageProvider,
     STORAGE_BUCKETS,
@@ -19,8 +19,7 @@ import {
 export async function POST(request: NextRequest) {
     try {
         // Auth check
-        const db = await createClient()
-        const { data: { user } } = await db.auth.getUser()
+        const user = await getCurrentUser()
 
         if (!user) {
             return NextResponse.json(

@@ -1,6 +1,7 @@
 "use client"
 
-import { createLocalClient } from "@/utils/supabase/client"
+import { db } from "@/db"
+import { cafePageViews } from "@/db/schema"
 
 // Rate limit tracking: store last view time per cafe
 const viewedCafes = new Map<string, number>()
@@ -42,6 +43,9 @@ function getDeviceType(): "mobile" | "tablet" | "desktop" {
 /**
  * Track a page view for a cafe
  * Rate-limited to 1 view per cafe per hour per visitor
+ * 
+ * Note: This uses a server action since Drizzle doesn't work in client components.
+ * We call the API endpoint instead.
  */
 export async function trackCafePageView(cafeId: string): Promise<void> {
     if (typeof window === "undefined") return
@@ -54,13 +58,16 @@ export async function trackCafePageView(cafeId: string): Promise<void> {
     }
 
     try {
-        const supabase = createLocalClient()
-
-        await supabase.from("cafe_page_views").insert({
-            cafe_id: cafeId,
-            visitor_id: generateVisitorId(),
-            device_type: getDeviceType(),
-            referrer: document.referrer || null,
+        // Use fetch to call server action since we're in a client component
+        await fetch('/api/analytics/page-view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cafeId,
+                visitorId: generateVisitorId(),
+                deviceType: getDeviceType(),
+                referrer: document.referrer || null,
+            }),
         })
 
         // Update rate limit tracker

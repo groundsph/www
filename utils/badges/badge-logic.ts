@@ -1,7 +1,15 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
-import { createAdminClient } from "@/utils/supabase/admin"
+import { db } from "@/db"
+import {
+    profiles,
+    cafes,
+    reviews,
+    badgeDefinitions,
+    userBadges,
+} from "@/db/schema"
+import { eq, and, count, sql } from "drizzle-orm"
+import { getCurrentUser } from "@/lib/auth"
 
 // ============================================
 // Island Group Classification
@@ -64,84 +72,65 @@ const BADGE_NAMES = {
 // Badge Checking Logic
 // ============================================
 
-
-
 /**
  * Get badge definition ID by name
  */
-async function getBadgeIdByName(
-    db: Awaited<ReturnType<typeof createClient>>,
-    name: string
-): Promise<string | null> {
-    const { data } = await db
-        .from("badge_definitions")
-        .select("id")
-        .eq("name", name)
-        .single()
+async function getBadgeIdByName(name: string): Promise<string | null> {
+    const result = await db
+        .select({ id: badgeDefinitions.id })
+        .from(badgeDefinitions)
+        .where(eq(badgeDefinitions.name, name))
+        .limit(1)
 
-    return data?.id || null
+    return result[0]?.id || null
 }
 
 /**
  * Check if user already has a specific badge
  */
-async function userHasBadge(
-    db: Awaited<ReturnType<typeof createClient>>,
-    userId: string,
-    badgeId: string
-): Promise<boolean> {
-    const { data } = await db
-        .from("user_badges")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("badge_id", badgeId)
-        .single()
+async function userHasBadge(userId: string, badgeId: string): Promise<boolean> {
+    const result = await db
+        .select({ id: userBadges.id })
+        .from(userBadges)
+        .where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)))
+        .limit(1)
 
-    return !!data
+    return result.length > 0
 }
 
 /**
  * Award a badge to a user (internal helper)
  */
-async function awardBadge(
-    adminDb: Awaited<ReturnType<typeof createAdminClient>>,
-    userId: string,
-    badgeId: string
-): Promise<boolean> {
-    const { error } = await adminDb.from("user_badges").insert({
-        user_id: userId,
-        badge_id: badgeId,
-        awarded_at: new Date().toISOString(),
-    })
+async function awardBadge(userId: string, badgeId: string): Promise<boolean> {
+    try {
+        await db.insert(userBadges).values({
+            userId,
+            badgeId,
+            awardedAt: new Date(),
+        })
 
-    if (error) {
+        console.log(`[Badge] Awarded badge ${badgeId} to user ${userId}`)
+        return true
+    } catch (error) {
         console.error(`[Badge] Failed to award badge ${badgeId} to ${userId}:`, error)
         return false
     }
-
-    console.log(`[Badge] Awarded badge ${badgeId} to user ${userId}`)
-    return true
 }
 
 /**
  * Check scouting badges (Scout, Explorer, Pathfinder)
  * Based on number of published cafes contributed by user
  */
-async function checkScoutBadges(
-    db: Awaited<ReturnType<typeof createClient>>,
-    adminDb: Awaited<ReturnType<typeof createAdminClient>>,
-    userId: string
-): Promise<string[]> {
+async function checkScoutBadges(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
     // Count published cafes contributed by this user
-    const { count } = await db
-        .from("cafes")
-        .select("id", { count: "exact", head: true })
-        .eq("contributor_id", userId)
-        .eq("is_published", true)
+    const result = await db
+        .select({ count: count() })
+        .from(cafes)
+        .where(and(eq(cafes.contributorId, userId), eq(cafes.isPublished, true)))
 
-    const scoutedCount = count || 0
+    const scoutedCount = result[0]?.count || 0
 
     // Define thresholds
     const scoutThresholds = [
@@ -152,9 +141,9 @@ async function checkScoutBadges(
 
     for (const threshold of scoutThresholds) {
         if (scoutedCount >= threshold.count) {
-            const badgeId = await getBadgeIdByName(db, threshold.badge)
-            if (badgeId && !(await userHasBadge(db, userId, badgeId))) {
-                if (await awardBadge(adminDb, userId, badgeId)) {
+            const badgeId = await getBadgeIdByName(threshold.badge)
+            if (badgeId && !(await userHasBadge(userId, badgeId))) {
+                if (await awardBadge(userId, badgeId)) {
                     awardedBadges.push(threshold.badge)
                 }
             }
@@ -168,26 +157,21 @@ async function checkScoutBadges(
  * Check review badges (Connoisseur)
  * Based on number of published reviews by user
  */
-async function checkReviewBadges(
-    db: Awaited<ReturnType<typeof createClient>>,
-    adminDb: Awaited<ReturnType<typeof createAdminClient>>,
-    userId: string
-): Promise<string[]> {
+async function checkReviewBadges(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
     // Count published reviews by this user
-    const { count } = await db
-        .from("reviews")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "published")
+    const result = await db
+        .select({ count: count() })
+        .from(reviews)
+        .where(and(eq(reviews.userId, userId), eq(reviews.status, "published")))
 
-    const reviewCount = count || 0
+    const reviewCount = result[0]?.count || 0
 
     if (reviewCount >= 5) {
-        const badgeId = await getBadgeIdByName(db, BADGE_NAMES.CONNOISSEUR)
-        if (badgeId && !(await userHasBadge(db, userId, badgeId))) {
-            if (await awardBadge(adminDb, userId, badgeId)) {
+        const badgeId = await getBadgeIdByName(BADGE_NAMES.CONNOISSEUR)
+        if (badgeId && !(await userHasBadge(userId, badgeId))) {
+            if (await awardBadge(userId, badgeId)) {
                 awardedBadges.push(BADGE_NAMES.CONNOISSEUR)
             }
         }
@@ -200,33 +184,25 @@ async function checkReviewBadges(
  * Check geographic badges (Island Hopper, Kape-ng Pambansa)
  * Based on regions of cafes the user has reviewed
  */
-async function checkGeographicBadges(
-    db: Awaited<ReturnType<typeof createClient>>,
-    adminDb: Awaited<ReturnType<typeof createAdminClient>>,
-    userId: string
-): Promise<string[]> {
+async function checkGeographicBadges(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
     // Get distinct regions from cafes the user has reviewed
-    const { data: reviews } = await db
-        .from("reviews")
-        .select(`
-            cafe:cafes(region)
-        `)
-        .eq("user_id", userId)
-        .eq("status", "published")
+    const reviewsWithCafes = await db
+        .select({ region: cafes.region })
+        .from(reviews)
+        .innerJoin(cafes, eq(reviews.cafeId, cafes.id))
+        .where(and(eq(reviews.userId, userId), eq(reviews.status, "published")))
 
-    if (!reviews || reviews.length === 0) {
+    if (!reviewsWithCafes || reviewsWithCafes.length === 0) {
         return awardedBadges
     }
 
     // Map regions to island groups
     const islandGroups = new Set<IslandGroup>()
-    for (const review of reviews) {
-        // Supabase relational query type
-        const cafe = review.cafe as { region: string } | null
-        if (cafe?.region) {
-            const group = getIslandGroup(cafe.region)
+    for (const review of reviewsWithCafes) {
+        if (review.region) {
+            const group = getIslandGroup(review.region)
             if (group) {
                 islandGroups.add(group)
             }
@@ -235,9 +211,9 @@ async function checkGeographicBadges(
 
     // Island Hopper: 2+ different island groups
     if (islandGroups.size >= 2) {
-        const badgeId = await getBadgeIdByName(db, BADGE_NAMES.ISLAND_HOPPER)
-        if (badgeId && !(await userHasBadge(db, userId, badgeId))) {
-            if (await awardBadge(adminDb, userId, badgeId)) {
+        const badgeId = await getBadgeIdByName(BADGE_NAMES.ISLAND_HOPPER)
+        if (badgeId && !(await userHasBadge(userId, badgeId))) {
+            if (await awardBadge(userId, badgeId)) {
                 awardedBadges.push(BADGE_NAMES.ISLAND_HOPPER)
             }
         }
@@ -245,9 +221,9 @@ async function checkGeographicBadges(
 
     // Kape-ng Pambansa: All 3 island groups
     if (islandGroups.size >= 3) {
-        const badgeId = await getBadgeIdByName(db, BADGE_NAMES.KAPE_NG_PAMBANSA)
-        if (badgeId && !(await userHasBadge(db, userId, badgeId))) {
-            if (await awardBadge(adminDb, userId, badgeId)) {
+        const badgeId = await getBadgeIdByName(BADGE_NAMES.KAPE_NG_PAMBANSA)
+        if (badgeId && !(await userHasBadge(userId, badgeId))) {
+            if (await awardBadge(userId, badgeId)) {
                 awardedBadges.push(BADGE_NAMES.KAPE_NG_PAMBANSA)
             }
         }
@@ -259,23 +235,19 @@ async function checkGeographicBadges(
 /**
  * Check supporter badge
  */
-async function checkSupporterBadge(
-    db: Awaited<ReturnType<typeof createClient>>,
-    adminDb: Awaited<ReturnType<typeof createAdminClient>>,
-    userId: string
-): Promise<string[]> {
+async function checkSupporterBadge(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
-    const { data: profile } = await db
-        .from("profiles")
-        .select("is_supporter")
-        .eq("id", userId)
-        .single()
+    const result = await db
+        .select({ isSupporter: profiles.isSupporter })
+        .from(profiles)
+        .where(eq(profiles.id, userId))
+        .limit(1)
 
-    if (profile?.is_supporter) {
-        const badgeId = await getBadgeIdByName(db, BADGE_NAMES.GROUNDS_SUPPORTER)
-        if (badgeId && !(await userHasBadge(db, userId, badgeId))) {
-            if (await awardBadge(adminDb, userId, badgeId)) {
+    if (result[0]?.isSupporter) {
+        const badgeId = await getBadgeIdByName(BADGE_NAMES.GROUNDS_SUPPORTER)
+        if (badgeId && !(await userHasBadge(userId, badgeId))) {
+            if (await awardBadge(userId, badgeId)) {
                 awardedBadges.push(BADGE_NAMES.GROUNDS_SUPPORTER)
             }
         }
@@ -307,9 +279,6 @@ export async function checkAndAwardBadges(
     userId: string,
     triggers?: BadgeTriggers
 ): Promise<string[]> {
-    const db = await createClient()
-    const adminDb = await createAdminClient()
-
     const awardedBadges: string[] = []
 
     try {
@@ -321,22 +290,22 @@ export async function checkAndAwardBadges(
         const shouldCheckMap = triggers?.map ?? false
 
         if (shouldCheckScout) {
-            const badges = await checkScoutBadges(db, adminDb, userId)
+            const badges = await checkScoutBadges(userId)
             awardedBadges.push(...badges)
         }
 
         if (shouldCheckReviews) {
-            const badges = await checkReviewBadges(db, adminDb, userId)
+            const badges = await checkReviewBadges(userId)
             awardedBadges.push(...badges)
         }
 
         if (shouldCheckGeographic) {
-            const badges = await checkGeographicBadges(db, adminDb, userId)
+            const badges = await checkGeographicBadges(userId)
             awardedBadges.push(...badges)
         }
 
         if (shouldCheckSupporter) {
-            const badges = await checkSupporterBadge(db, adminDb, userId)
+            const badges = await checkSupporterBadge(userId)
             awardedBadges.push(...badges)
         }
 
@@ -360,30 +329,24 @@ export async function checkAndAwardBadges(
  * Should be called when user interacts with the map feature
  */
 export async function trackMapUsage(): Promise<{ awarded: boolean; error?: string }> {
-    const db = await createClient()
-
-    // Get current user
-    const {
-        data: { user },
-    } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { awarded: false, error: "Not authenticated" }
     }
 
     try {
-        const badgeId = await getBadgeIdByName(db, BADGE_NAMES.EYE_SPY)
+        const badgeId = await getBadgeIdByName(BADGE_NAMES.EYE_SPY)
         if (!badgeId) {
             return { awarded: false, error: "Badge not found" }
         }
 
         // Check if user already has this badge
-        if (await userHasBadge(db, user.id, badgeId)) {
+        if (await userHasBadge(user.id, badgeId)) {
             return { awarded: false } // Already has badge, no error
         }
 
         // Award the badge
-        const adminDb = await createAdminClient()
-        const success = await awardBadge(adminDb, user.id, badgeId)
+        const success = await awardBadge(user.id, badgeId)
 
         return { awarded: success }
     } catch (error) {
@@ -407,39 +370,33 @@ export async function backfillBadgesForAllUsers(): Promise<{
     badgesAwarded: number
     errors: string[]
 }> {
-    const db = await createClient()
-
-    // Verify admin access
-    const {
-        data: { user },
-    } = await db.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
         return { success: false, usersProcessed: 0, badgesAwarded: 0, errors: ["Not authenticated"] }
     }
 
-    const { data: profile } = await db
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    // Verify admin access
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    if (profile?.role !== "admin") {
+    if (profileResult[0]?.role !== "admin") {
         return { success: false, usersProcessed: 0, badgesAwarded: 0, errors: ["Unauthorized - Admin only"] }
     }
 
-    const adminDb = await createAdminClient()
-
     // Get all user IDs
-    const { data: profiles, error: fetchError } = await adminDb
-        .from("profiles")
-        .select("id")
+    const allProfiles = await db
+        .select({ id: profiles.id })
+        .from(profiles)
 
-    if (fetchError || !profiles) {
+    if (!allProfiles || allProfiles.length === 0) {
         return {
             success: false,
             usersProcessed: 0,
             badgesAwarded: 0,
-            errors: [`Failed to fetch users: ${fetchError?.message}`],
+            errors: ["Failed to fetch users"],
         }
     }
 
@@ -447,22 +404,17 @@ export async function backfillBadgesForAllUsers(): Promise<{
     let totalBadgesAwarded = 0
     const errors: string[] = []
 
-    console.log(`[Badge Backfill] Starting backfill for ${profiles.length} users...`)
+    console.log(`[Badge Backfill] Starting backfill for ${allProfiles.length} users...`)
 
-    for (const userProfile of profiles) {
+    for (const userProfile of allProfiles) {
         try {
             // Check all badge types for this user
-            const awardedBadges = await checkAndAwardBadgesInternal(
-                db,
-                adminDb,
-                userProfile.id,
-                {
-                    scout: true,
-                    reviews: true,
-                    geographic: true,
-                    supporter: true,
-                }
-            )
+            const awardedBadges = await checkAndAwardBadges(userProfile.id, {
+                scout: true,
+                reviews: true,
+                geographic: true,
+                supporter: true,
+            })
 
             totalBadgesAwarded += awardedBadges.length
             usersProcessed++
@@ -488,43 +440,3 @@ export async function backfillBadgesForAllUsers(): Promise<{
         errors,
     }
 }
-
-/**
- * Internal badge check function that accepts db clients as parameters
- * Used by both regular checks and backfill
- */
-async function checkAndAwardBadgesInternal(
-    db: Awaited<ReturnType<typeof createClient>>,
-    adminDb: Awaited<ReturnType<typeof createAdminClient>>,
-    userId: string,
-    triggers: BadgeTriggers
-): Promise<string[]> {
-    const awardedBadges: string[] = []
-
-    try {
-        if (triggers.scout) {
-            const badges = await checkScoutBadges(db, adminDb, userId)
-            awardedBadges.push(...badges)
-        }
-
-        if (triggers.reviews) {
-            const badges = await checkReviewBadges(db, adminDb, userId)
-            awardedBadges.push(...badges)
-        }
-
-        if (triggers.geographic) {
-            const badges = await checkGeographicBadges(db, adminDb, userId)
-            awardedBadges.push(...badges)
-        }
-
-        if (triggers.supporter) {
-            const badges = await checkSupporterBadge(db, adminDb, userId)
-            awardedBadges.push(...badges)
-        }
-    } catch (error) {
-        console.error(`[Badge] Error in internal check for user ${userId}:`, error)
-    }
-
-    return awardedBadges
-}
-

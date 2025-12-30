@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 import { redirect, notFound } from "next/navigation"
-import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import {
     getCafeForOwnerManagement,
     getCafeSubscription,
@@ -21,10 +21,7 @@ interface Props {
 
 export default async function CafeManagementPage({ params }: Props) {
     const { slug } = await params
-    const db = await createClient()
-    const {
-        data: { user },
-    } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         redirect(`/auth?redirect=/owner/cafes/${slug}`)

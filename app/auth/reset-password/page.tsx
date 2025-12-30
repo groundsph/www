@@ -1,12 +1,11 @@
 "use client"
 
-import { createLocalClient } from "@/utils/supabase/client"
+import { authClient } from "@/lib/auth-client"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useState } from "react"
 
 export default function ResetPasswordPage() {
-    const supabase = createLocalClient()
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
@@ -30,10 +29,18 @@ export default function ResetPasswordPage() {
         setIsLoading(true)
 
         try {
-            const { error } = await supabase.auth.updateUser({ password })
+            // Better Auth password reset using changePassword
+            // The user should already be authenticated via the reset token link
+            const { error: resetError } = await authClient.changePassword({
+                newPassword: password,
+                currentPassword: "", // Not required for reset flow
+                revokeOtherSessions: true,
+            })
 
-            if (error) {
-                throw error
+            if (resetError) {
+                throw new Error(
+                    resetError.message || "Failed to reset password"
+                )
             }
 
             setSuccess(true)

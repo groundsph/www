@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { getOwnedCafes } from "@/app/api/actions/owner"
 import OwnerDashboardClient from "./OwnerDashboardClient"
 
@@ -10,10 +10,7 @@ export const metadata: Metadata = {
 }
 
 export default async function OwnerPage() {
-    const db = await createClient()
-    const {
-        data: { user },
-    } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         redirect("/auth?redirect=/owner")

@@ -10,7 +10,10 @@
  * This approach works well with R2 since credentials stay on the server.
  */
 
-import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
+import { db } from "@/db"
+import { profiles, cafes, reviews, blogPosts, events, badgeDefinitions, cafeClaims, cafeMenuItems, avatarDeletionQueue } from "@/db/schema"
+import { eq, like, sql, arrayContains } from "drizzle-orm"
 import {
     getStorageProvider,
     STORAGE_BUCKETS,
@@ -42,19 +45,16 @@ export interface DeleteResponse {
 // ============================================
 
 async function getAuthenticatedUser() {
-    const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
-    return user
+    return await getCurrentUser()
 }
 
 async function isUserAdmin(userId: string) {
-    const db = await createClient()
-    const { data: profile } = await db
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .single()
-    return profile && ["admin", "moderator"].includes(profile.role || "")
+    const result = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, userId))
+        .limit(1)
+    return result[0] && ["admin", "moderator"].includes(result[0].role || "")
 }
 
 // ============================================
@@ -225,8 +225,7 @@ export async function deleteReviewImagesAction(images: string[] | null): Promise
  * Upload an avatar and update profile
  */
 export async function uploadAvatarAction(formData: FormData): Promise<UploadResponse> {
-    const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { success: false, error: "Not authenticated" }
@@ -252,18 +251,19 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadResp
         return uploadResult
     }
 
+
     // Add cache buster and update profile
     const avatarUrl = `${uploadResult.url}?t=${Date.now()}`
 
-    const { error: updateError } = await db
-        .from("profiles")
-        .update({
-            avatar_url: avatarUrl,
-            updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id)
-
-    if (updateError) {
+    try {
+        await db
+            .update(profiles)
+            .set({
+                avatarUrl: avatarUrl,
+                updatedAt: new Date(),
+            })
+            .where(eq(profiles.id, user.id))
+    } catch (updateError) {
         return { success: false, error: "Failed to update profile" }
     }
 
@@ -274,39 +274,41 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadResp
  * Remove the current user's avatar
  */
 export async function removeAvatarAction(): Promise<DeleteResponse> {
-    const db = await createClient()
-    const { data: { user } } = await db.auth.getUser()
+    const user = await getCurrentUser()
 
     if (!user) {
         return { success: false, error: "Not authenticated" }
     }
 
     // Get current avatar URL
-    const { data: profile } = await db
-        .from("profiles")
-        .select("avatar_url")
-        .eq("id", user.id)
-        .single()
+    const profileResult = await db
+        .select({ avatarUrl: profiles.avatarUrl })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1)
 
-    if (profile?.avatar_url) {
-        await deleteFiles(STORAGE_BUCKETS.AVATARS, [profile.avatar_url])
+    const profile = profileResult[0]
+
+    if (profile?.avatarUrl) {
+        await deleteFiles(STORAGE_BUCKETS.AVATARS, [profile.avatarUrl])
     }
 
     // Clear avatar_url in profile
-    const { error: updateError } = await db
-        .from("profiles")
-        .update({
-            avatar_url: null,
-            updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id)
-
-    if (updateError) {
+    try {
+        await db
+            .update(profiles)
+            .set({
+                avatarUrl: null,
+                updatedAt: new Date(),
+            })
+            .where(eq(profiles.id, user.id))
+    } catch (updateError) {
         return { success: false, error: "Failed to update profile" }
     }
 
     return { success: true }
 }
+
 
 // ============================================
 // Badge Image Actions (Admin only)
@@ -604,8 +606,6 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
         return { success: false, deleted: { cafes: 0, reviews: 0, avatars: 0, blogs: 0, events: 0, menuPhotos: 0, badges: 0, ownershipProofs: 0 }, error: "Admin access required" }
     }
 
-    const { createAdminClient } = await import("@/utils/supabase/admin")
-    const adminDb = await createAdminClient()
     const storage = await getStorageProvider()
 
     const deleted = {
@@ -620,34 +620,25 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
     }
 
     try {
-        // Helper to check if URL is referenced
-        const isUrlReferenced = async (
-            table: string,
-            column: string,
-            url: string,
-            isArray: boolean = false
-        ): Promise<boolean> => {
-            if (isArray) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const { data } = await (adminDb as any)
-                    .from(table)
-                    .select("id")
-                    .contains(column, [url])
-                    .limit(1)
-                    .maybeSingle()
-                return !!data
-            } else {
-                // For avatar_url, match with LIKE to handle cache busters
-                const baseUrl = url.split("?")[0]
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const { data } = await (adminDb as any)
-                    .from(table)
-                    .select("id")
-                    .like(column, `${baseUrl}%`)
-                    .limit(1)
-                    .maybeSingle()
-                return !!data
-            }
+        // Helper to check if URL is referenced in reviews images array
+        const isReviewImageReferenced = async (url: string): Promise<boolean> => {
+            const result = await db
+                .select({ id: reviews.id })
+                .from(reviews)
+                .where(arrayContains(reviews.images, [url]))
+                .limit(1)
+            return result.length > 0
+        }
+
+        // Helper to check if URL is referenced in profiles avatar_url (with LIKE for cache busters)
+        const isAvatarReferenced = async (url: string): Promise<boolean> => {
+            const baseUrl = url.split("?")[0]
+            const result = await db
+                .select({ id: profiles.id })
+                .from(profiles)
+                .where(like(profiles.avatarUrl, `${baseUrl}%`))
+                .limit(1)
+            return result.length > 0
         }
 
         // 1. Clean cafe images
@@ -661,22 +652,20 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
                 if (publicUrl === CAFE_PLACEHOLDER_URL) continue
 
                 // Check thumbnail
-                const { data: thumbRef } = await adminDb
-                    .from("cafes")
-                    .select("id")
-                    .eq("thumbnail", publicUrl)
+                const thumbRef = await db
+                    .select({ id: cafes.id })
+                    .from(cafes)
+                    .where(eq(cafes.thumbnail, publicUrl))
                     .limit(1)
-                    .maybeSingle()
 
                 // Check gallery
-                const { data: galleryRef } = await adminDb
-                    .from("cafes")
-                    .select("id")
-                    .contains("gallery", [publicUrl])
+                const galleryRef = await db
+                    .select({ id: cafes.id })
+                    .from(cafes)
+                    .where(arrayContains(cafes.gallery, [publicUrl]))
                     .limit(1)
-                    .maybeSingle()
 
-                if (!thumbRef && !galleryRef) {
+                if (thumbRef.length === 0 && galleryRef.length === 0) {
                     await storage.delete(STORAGE_BUCKETS.CAFES, [file.path])
                     deleted.cafes++
                 }
@@ -689,7 +678,7 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of reviewFiles.files) {
                 if (file.isDirectory) continue
                 const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.REVIEWS, file.path)
-                const referenced = await isUrlReferenced("reviews", "images", publicUrl, true)
+                const referenced = await isReviewImageReferenced(publicUrl)
                 if (!referenced) {
                     await storage.delete(STORAGE_BUCKETS.REVIEWS, [file.path])
                     deleted.reviews++
@@ -703,7 +692,7 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of avatarFiles.files) {
                 if (file.isDirectory) continue
                 const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.AVATARS, file.path)
-                const referenced = await isUrlReferenced("profiles", "avatar_url", publicUrl, false)
+                const referenced = await isAvatarReferenced(publicUrl)
                 if (!referenced) {
                     await storage.delete(STORAGE_BUCKETS.AVATARS, [file.path])
                     deleted.avatars++
@@ -717,13 +706,12 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of blogFiles.files) {
                 if (file.isDirectory) continue
                 const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.BLOGS, file.path)
-                const { data: blogRef } = await adminDb
-                    .from("blog_posts")
-                    .select("id")
-                    .eq("cover_image", publicUrl)
+                const blogRef = await db
+                    .select({ id: blogPosts.id })
+                    .from(blogPosts)
+                    .where(eq(blogPosts.coverImage, publicUrl))
                     .limit(1)
-                    .maybeSingle()
-                if (!blogRef) {
+                if (blogRef.length === 0) {
                     await storage.delete(STORAGE_BUCKETS.BLOGS, [file.path])
                     deleted.blogs++
                 }
@@ -736,13 +724,12 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of eventFiles.files) {
                 if (file.isDirectory) continue
                 const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.EVENTS, file.path)
-                const { data: eventRef } = await adminDb
-                    .from("events")
-                    .select("id")
-                    .eq("image_url", publicUrl)
+                const eventRef = await db
+                    .select({ id: events.id })
+                    .from(events)
+                    .where(eq(events.imageUrl, publicUrl))
                     .limit(1)
-                    .maybeSingle()
-                if (!eventRef) {
+                if (eventRef.length === 0) {
                     await storage.delete(STORAGE_BUCKETS.EVENTS, [file.path])
                     deleted.events++
                 }
@@ -755,13 +742,12 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of menuFiles.files) {
                 if (file.isDirectory) continue
                 const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.MENU_PHOTOS, file.path)
-                const { data: menuRef } = await adminDb
-                    .from("cafe_menu_items")
-                    .select("id")
-                    .eq("image_url", publicUrl)
+                const menuRef = await db
+                    .select({ id: cafeMenuItems.id })
+                    .from(cafeMenuItems)
+                    .where(eq(cafeMenuItems.imageUrl, publicUrl))
                     .limit(1)
-                    .maybeSingle()
-                if (!menuRef) {
+                if (menuRef.length === 0) {
                     await storage.delete(STORAGE_BUCKETS.MENU_PHOTOS, [file.path])
                     deleted.menuPhotos++
                 }
@@ -774,13 +760,12 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of badgeFiles.files) {
                 if (file.isDirectory) continue
                 const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.BADGES, file.path)
-                const { data: badgeRef } = await adminDb
-                    .from("badge_definitions")
-                    .select("id")
-                    .eq("image_url", publicUrl)
+                const badgeRef = await db
+                    .select({ id: badgeDefinitions.id })
+                    .from(badgeDefinitions)
+                    .where(eq(badgeDefinitions.imageUrl, publicUrl))
                     .limit(1)
-                    .maybeSingle()
-                if (!badgeRef) {
+                if (badgeRef.length === 0) {
                     await storage.delete(STORAGE_BUCKETS.BADGES, [file.path])
                     deleted.badges++
                 }
@@ -793,13 +778,13 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             for (const file of proofFiles.files) {
                 if (file.isDirectory) continue
                 // Ownership proofs store paths, not URLs
-                const { data: claimRef } = await adminDb
-                    .from("cafe_claims")
-                    .select("id")
-                    .contains("proof_urls", [file.path])
+                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.OWNERSHIP_PROOFS, file.path)
+                const claimRef = await db
+                    .select({ id: cafeClaims.id })
+                    .from(cafeClaims)
+                    .where(eq(cafeClaims.proofDocumentUrl, publicUrl))
                     .limit(1)
-                    .maybeSingle()
-                if (!claimRef) {
+                if (claimRef.length === 0) {
                     await storage.delete(STORAGE_BUCKETS.OWNERSHIP_PROOFS, [file.path])
                     deleted.ownershipProofs++
                 }
@@ -832,23 +817,15 @@ export async function processAvatarDeletionQueue(): Promise<{
         return { success: false, processed: 0, error: "Admin access required" }
     }
 
-    const { createAdminClient } = await import("@/utils/supabase/admin")
-    const adminDb = await createAdminClient()
     const storage = await getStorageProvider()
     let processed = 0
 
     try {
         // Fetch pending deletions
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: queue, error: fetchError } = await (adminDb as any)
-            .from("avatar_deletion_queue")
-            .select("id, avatar_url")
-            .limit(100) as { data: { id: string; avatar_url: string }[] | null; error: { message: string } | null }
-
-        if (fetchError) {
-            console.warn("Avatar deletion queue not found or error:", fetchError.message)
-            return { success: true, processed: 0 }
-        }
+        const queue = await db
+            .select({ id: avatarDeletionQueue.id, avatarUrl: avatarDeletionQueue.avatarUrl })
+            .from(avatarDeletionQueue)
+            .limit(100)
 
         if (!queue || queue.length === 0) {
             return { success: true, processed: 0 }
@@ -856,17 +833,17 @@ export async function processAvatarDeletionQueue(): Promise<{
 
         for (const item of queue) {
             // Extract path from URL and delete
-            const path = storage.extractPathFromUrl(item.avatar_url, STORAGE_BUCKETS.AVATARS)
-            if (path) {
-                await storage.delete(STORAGE_BUCKETS.AVATARS, [path])
+            if (item.avatarUrl) {
+                const path = storage.extractPathFromUrl(item.avatarUrl, STORAGE_BUCKETS.AVATARS)
+                if (path) {
+                    await storage.delete(STORAGE_BUCKETS.AVATARS, [path])
+                }
             }
 
             // Remove from queue
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (adminDb as any)
-                .from("avatar_deletion_queue")
-                .delete()
-                .eq("id", item.id)
+            await db
+                .delete(avatarDeletionQueue)
+                .where(eq(avatarDeletionQueue.id, item.id))
 
             processed++
         }

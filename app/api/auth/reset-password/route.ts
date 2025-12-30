@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/utils/supabase/admin"
-import { sendPasswordResetEmail } from "@/utils/email"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
 
 export async function POST(request: NextRequest) {
     try {
@@ -13,39 +13,27 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const supabase = await createAdminClient()
-
-        // Use admin API to generate reset link WITHOUT sending Supabase's email
-        const { data, error } = await supabase.auth.admin.generateLink({
-            type: "recovery",
-            email,
-            options: {
-                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin}/auth/reset-password`,
-            },
-        })
-
-        if (error) {
-            console.error("Supabase generate link error:", error)
-            // Don't reveal whether email exists - return generic success
-            return NextResponse.json({
-                success: true,
-                message:
-                    "If an account with that email exists, a password reset link has been sent.",
+        // Use Better Auth to send password reset via forgetPassword endpoint
+        try {
+            // @ts-expect-error - forgetPassword exists at runtime but is missing from inferred types
+            const response = await auth.api.forgetPassword({
+                body: {
+                    email,
+                    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
+                },
+                headers: await headers(),
             })
-        }
 
-        // Send custom email via Resend
-        if (data?.properties?.action_link) {
-            const emailResult = await sendPasswordResetEmail(
-                email,
-                data.properties.action_link
-            )
-
-            if (!emailResult.success) {
-                console.error("Failed to send email via Resend:", emailResult.error)
+            if (!response) {
+                // User might not exist, but we don't reveal that
+                console.log('[Reset Password] No response from forgetPassword for:', email)
             }
+        } catch (resetError) {
+            // Log but don't expose the error - this is expected if email doesn't exist
+            console.error('[Reset Password] Better Auth error:', resetError)
         }
 
+        // Always return success to prevent email enumeration
         return NextResponse.json({
             success: true,
             message:

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/utils/supabase/admin'
+import { db } from '@/db'
+import { cafes, cafeSubscriptions, profiles, badgeDefinitions, userBadges } from '@/db/schema'
+import { eq, lt, and, isNotNull } from 'drizzle-orm'
 
 /**
  * Cron Job: Check Expired Subscriptions
@@ -37,33 +39,26 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        const adminDb = await createAdminClient()
-        const now = new Date().toISOString()
+        const now = new Date()
 
         // Find all active subscriptions that have expired
-        const { data: expiredSubscriptions, error: fetchError } = await adminDb
-            .from('cafe_subscriptions')
-            .select(`
-                id,
-                cafe_id,
-                tier,
-                current_period_end,
-                cafes:cafe_id (
-                    id,
-                    name,
-                    slug
+        const expiredSubscriptions = await db
+            .select({
+                id: cafeSubscriptions.id,
+                cafeId: cafeSubscriptions.cafeId,
+                tier: cafeSubscriptions.tier,
+                currentPeriodEnd: cafeSubscriptions.currentPeriodEnd,
+                cafeName: cafes.name,
+                cafeSlug: cafes.slug,
+            })
+            .from(cafeSubscriptions)
+            .leftJoin(cafes, eq(cafeSubscriptions.cafeId, cafes.id))
+            .where(
+                and(
+                    eq(cafeSubscriptions.status, 'active'),
+                    lt(cafeSubscriptions.currentPeriodEnd, now)
                 )
-            `)
-            .eq('status', 'active')
-            .lt('current_period_end', now)
-
-        if (fetchError) {
-            console.error('Error fetching expired subscriptions:', fetchError)
-            return NextResponse.json(
-                { error: 'Failed to fetch subscriptions' },
-                { status: 500 }
             )
-        }
 
         if (!expiredSubscriptions || expiredSubscriptions.length === 0) {
             return NextResponse.json({
@@ -82,35 +77,25 @@ export async function GET(request: NextRequest) {
         for (const subscription of expiredSubscriptions) {
             try {
                 // Update subscription status to cancelled
-                const { error: subError } = await adminDb
-                    .from('cafe_subscriptions')
-                    .update({
+                await db
+                    .update(cafeSubscriptions)
+                    .set({
                         status: 'cancelled',
-                        updated_at: new Date().toISOString()
+                        updatedAt: new Date(),
                     })
-                    .eq('id', subscription.id)
-
-                if (subError) {
-                    throw new Error(`Failed to update subscription: ${subError.message}`)
-                }
+                    .where(eq(cafeSubscriptions.id, subscription.id))
 
                 // Downgrade cafe to free tier and remove verified badge
-                const { error: cafeError } = await adminDb
-                    .from('cafes')
-                    .update({
-                        membership_tier: 'free',
-                        is_verified: false,
-                        updated_at: new Date().toISOString()
+                await db
+                    .update(cafes)
+                    .set({
+                        membershipTier: 'free',
+                        isVerified: false,
+                        updatedAt: new Date(),
                     })
-                    .eq('id', subscription.cafe_id)
+                    .where(eq(cafes.id, subscription.cafeId))
 
-                if (cafeError) {
-                    throw new Error(`Failed to update cafe: ${cafeError.message}`)
-                }
-
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const cafe = subscription.cafes as any
-                console.log(`Expired subscription processed for cafe: ${cafe?.name || subscription.cafe_id}`)
+                console.log(`Expired subscription processed for cafe: ${subscription.cafeName || subscription.cafeId}`)
                 processedCount++
 
             } catch (err) {
@@ -127,48 +112,54 @@ export async function GET(request: NextRequest) {
         let expiredSupportersCount = 0
 
         // Find supporters whose expiry has passed (null = lifetime, never expires)
-        const { data: expiredSupporters, error: supporterFetchError } = await adminDb
-            .from('profiles')
-            .select('id, display_name, supporter_expires_at')
-            .eq('is_supporter', true)
-            .not('supporter_expires_at', 'is', null)
-            .lt('supporter_expires_at', now)
+        const expiredSupporters = await db
+            .select({
+                id: profiles.id,
+                displayName: profiles.displayName,
+                supporterExpiresAt: profiles.supporterExpiresAt
+            })
+            .from(profiles)
+            .where(
+                and(
+                    eq(profiles.isSupporter, true),
+                    isNotNull(profiles.supporterExpiresAt),
+                    lt(profiles.supporterExpiresAt, now)
+                )
+            )
 
-        if (supporterFetchError) {
-            console.error('Error fetching expired supporters:', supporterFetchError)
-        } else if (expiredSupporters && expiredSupporters.length > 0) {
+        if (expiredSupporters && expiredSupporters.length > 0) {
             console.log(`Found ${expiredSupporters.length} expired supporter(s)`)
+
+            // Get the supporter badge ID
+            const badgeResult = await db
+                .select({ id: badgeDefinitions.id })
+                .from(badgeDefinitions)
+                .where(eq(badgeDefinitions.name, 'Grounds Supporter'))
+                .limit(1)
+
+            const supporterBadgeId = badgeResult[0]?.id
 
             for (const supporter of expiredSupporters) {
                 try {
                     // Remove supporter status
-                    const { error: updateError } = await adminDb
-                        .from('profiles')
-                        .update({
-                            is_supporter: false,
-                            // Keep supporter_expires_at for history
-                        })
-                        .eq('id', supporter.id)
+                    await db
+                        .update(profiles)
+                        .set({ isSupporter: false })
+                        .where(eq(profiles.id, supporter.id))
 
-                    if (updateError) throw updateError
-
-                    // Remove the supporter badge
-                    // First get the badge ID
-                    const { data: badge } = await adminDb
-                        .from('badge_definitions')
-                        .select('id')
-                        .eq('name', 'Grounds Supporter')
-                        .single()
-
-                    if (badge) {
-                        await adminDb
-                            .from('user_badges')
-                            .delete()
-                            .eq('user_id', supporter.id)
-                            .eq('badge_id', badge.id)
+                    // Remove the supporter badge if exists
+                    if (supporterBadgeId) {
+                        await db
+                            .delete(userBadges)
+                            .where(
+                                and(
+                                    eq(userBadges.userId, supporter.id),
+                                    eq(userBadges.badgeId, supporterBadgeId)
+                                )
+                            )
                     }
 
-                    console.log(`Expired supporter status for: ${supporter.display_name || supporter.id}`)
+                    console.log(`Expired supporter status for: ${supporter.displayName || supporter.id}`)
                     expiredSupportersCount++
 
                 } catch (err) {

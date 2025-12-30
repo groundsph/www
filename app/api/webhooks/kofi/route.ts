@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/utils/supabase/admin';
-import type { User } from '@supabase/supabase-js';
+import { db } from '@/db';
+import { user, profiles, supporterSubscriptions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import {
     parseKofiPayload,
     verifyKofiWebhook,
@@ -93,7 +94,6 @@ async function processKofiPayment(payload: KofiWebhookPayload): Promise<{
     supporterUpdated: boolean;
     badgeAwarded: boolean;
 }> {
-    const supabase = await createAdminClient();
     const result = {
         recorded: false,
         userFound: false,
@@ -101,98 +101,100 @@ async function processKofiPayment(payload: KofiWebhookPayload): Promise<{
         badgeAwarded: false,
     };
 
-    // Look up user by email from auth
-    const { data: authData } = await supabase.auth.admin.listUsers();
-    const authUser = authData.users.find(
-        (u: User) => u.email?.toLowerCase() === payload.email.toLowerCase()
-    );
+    // Look up user by email from Better Auth user table
+    const authUsers = await db
+        .select({ id: user.id, email: user.email })
+        .from(user)
+        .where(eq(user.email, payload.email.toLowerCase()));
 
+    const authUser = authUsers[0];
     const userId = authUser?.id ?? null;
     if (userId) {
         result.userFound = true;
     }
 
     // Record the payment in supporter_subscriptions
-    const { error: insertError } = await supabase
-        .from('supporter_subscriptions')
-        .insert({
-            user_id: userId,
-            kofi_transaction_id: payload.kofi_transaction_id,
+    try {
+        await db.insert(supporterSubscriptions).values({
+            userId: userId,
+            kofiTransactionId: payload.kofi_transaction_id,
             email: payload.email,
-            from_name: payload.from_name,
+            fromName: payload.from_name,
             amount: parseKofiAmount(payload.amount),
             currency: payload.currency,
-            tier_name: payload.tier_name,
-            is_subscription: payload.is_subscription_payment,
-            is_first_subscription: payload.is_first_subscription_payment,
+            tierName: payload.tier_name,
+            isSubscription: payload.is_subscription_payment,
+            isFirstSubscription: payload.is_first_subscription_payment,
             message: payload.message,
         });
-
-    if (insertError) {
+        result.recorded = true;
+    } catch (insertError: unknown) {
         // Check if it's a duplicate (unique constraint on kofi_transaction_id)
-        if (insertError.code === '23505') {
+        const errorMessage = insertError instanceof Error ? insertError.message : '';
+        if (errorMessage.includes('unique') || errorMessage.includes('duplicate')) {
             console.log('[Ko-fi Webhook] Duplicate transaction, already processed');
             return { ...result, recorded: true };
         }
         console.error('[Ko-fi Webhook] Error recording payment:', insertError);
-    } else {
-        result.recorded = true;
     }
 
     // If this qualifies and we found the user, update their supporter status
     if (userId && qualifiesForSupporterStatus(payload)) {
         // Calculate expiry date
         const expiryDate = calculateSupporterExpiry(payload);
-        const expiryValue = expiryDate ? expiryDate.toISOString() : null;
 
         // Get current profile
-        const { data: currentProfile } = await supabase
-            .from('profiles')
-            .select('is_supporter, support_since, supporter_expires_at')
-            .eq('id', userId)
-            .single();
+        const currentProfiles = await db
+            .select({
+                isSupporter: profiles.isSupporter,
+                supportSince: profiles.supportSince,
+                supporterExpiresAt: profiles.supporterExpiresAt
+            })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1);
+
+        const currentProfile = currentProfiles[0];
 
         if (currentProfile) {
             // Determine if we should update expiry
-            // - New supporter: set expiry
-            // - Existing supporter with new payment: extend expiry if new one is later
-            const currentExpiry = currentProfile.supporter_expires_at
-                ? new Date(currentProfile.supporter_expires_at)
-                : null;
+            const currentExpiry = currentProfile.supporterExpiresAt;
 
             // If new expiry is null (lifetime), always use it
             // If current is null (lifetime), keep it
             // Otherwise, use the later date
-            let newExpiry: string | null = expiryValue;
-            if (currentExpiry === null && currentProfile.is_supporter) {
+            let newExpiry: Date | null = expiryDate;
+            if (currentExpiry === null && currentProfile.isSupporter) {
                 // Already lifetime, keep it
                 newExpiry = null;
             } else if (expiryDate && currentExpiry && expiryDate > currentExpiry) {
                 // New expiry is later, use it
-                newExpiry = expiryValue;
+                newExpiry = expiryDate;
             } else if (expiryDate && currentExpiry && currentExpiry > expiryDate) {
                 // Current expiry is later, keep it
-                newExpiry = currentExpiry.toISOString();
+                newExpiry = currentExpiry;
             }
 
-            const updateData: Record<string, unknown> = {
-                is_supporter: true,
-                supporter_expires_at: newExpiry,
+            const updateData: {
+                isSupporter: boolean;
+                supporterExpiresAt: Date | null;
+                supportSince?: Date;
+            } = {
+                isSupporter: true,
+                supporterExpiresAt: newExpiry,
             };
 
             // Only set support_since if they weren't already a supporter
-            if (!currentProfile.is_supporter) {
-                updateData.support_since = new Date().toISOString();
+            if (!currentProfile.isSupporter) {
+                updateData.supportSince = new Date();
             }
 
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update(updateData)
-                .eq('id', userId);
+            try {
+                await db
+                    .update(profiles)
+                    .set(updateData)
+                    .where(eq(profiles.id, userId));
 
-            if (updateError) {
-                console.error('[Ko-fi Webhook] Error updating supporter status:', updateError);
-            } else {
                 result.supporterUpdated = true;
                 console.log('[Ko-fi Webhook] Updated supporter status for user:', userId,
                     'expires:', newExpiry ?? 'lifetime');
@@ -207,6 +209,8 @@ async function processKofiPayment(payload: KofiWebhookPayload): Promise<{
                 } catch (badgeError) {
                     console.error('[Ko-fi Webhook] Error awarding badge:', badgeError);
                 }
+            } catch (updateError) {
+                console.error('[Ko-fi Webhook] Error updating supporter status:', updateError);
             }
         }
     }
