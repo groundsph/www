@@ -3,10 +3,11 @@
  * Logs user contributions to cafes for history display
  */
 
-import { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/utils/types/database.types'
+import { db } from '@/db'
+import { contributionLogs } from '@/db/schema'
 
-export type ContributionActionType = Database['public']['Enums']['contribution_action_type']
+// Matching the enum from the database
+export type ContributionActionType = 'CREATE' | 'UPDATE' | 'VERIFY' | 'MEDIA' | 'SUGGEST'
 
 export interface ContributionDetails {
     /** Human-readable summary of the contribution */
@@ -24,33 +25,24 @@ export interface ContributionDetails {
 /**
  * Log a user contribution to a cafe
  * 
- * @param adminClient - Supabase admin client (bypasses RLS)
  * @param userId - The user who made the contribution
  * @param cafeId - The cafe that was affected
  * @param actionType - Type of contribution (CREATE, UPDATE, VERIFY, MEDIA, SUGGEST)
  * @param details - Optional details about the contribution
  */
 export async function logContribution(
-    adminClient: SupabaseClient<Database>,
     userId: string,
     cafeId: string,
     actionType: ContributionActionType,
     details?: ContributionDetails
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { error } = await adminClient
-            .from('contribution_logs')
-            .insert({
-                user_id: userId,
-                cafe_id: cafeId,
-                action_type: actionType,
-                details: (details ?? {}) as Database['public']['Tables']['contribution_logs']['Insert']['details']
-            })
-
-        if (error) {
-            console.error('[logContribution] Error:', error)
-            return { success: false, error: error.message }
-        }
+        await db.insert(contributionLogs).values({
+            userId,
+            cafeId,
+            actionType,
+            details: details ?? {},
+        })
 
         return { success: true }
     } catch (err) {

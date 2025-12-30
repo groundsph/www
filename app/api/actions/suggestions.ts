@@ -1,8 +1,9 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { cafes, cafeEditSuggestions, profiles, user } from "@/db/schema"
+import { eq, desc, count as drizzleCount } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
-import { createAdminClient } from "@/utils/supabase/admin"
 import { sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/utils/email"
 import { notifyDiscordEditSuggestion } from "./notify"
 import {
@@ -11,6 +12,42 @@ import {
     SuggestedImageChanges
 } from "@/utils/types/suggestions"
 import { logContribution } from "@/utils/contribution-logging"
+
+// Map snake_case suggestion fields to camelCase Drizzle columns
+const fieldMapping: Record<string, string> = {
+    address_display: 'addressDisplay',
+    website_url: 'websiteUrl',
+    has_wifi: 'hasWifi',
+    has_sockets: 'hasSockets',
+    has_parking: 'hasParking',
+    has_aircon: 'hasAircon',
+    is_pet_friendly: 'isPetFriendly',
+    has_outdoor_seating: 'hasOutdoorSeating',
+    has_indoor_seating: 'hasIndoorSeating',
+    has_restroom: 'hasRestroom',
+    has_bidet: 'hasBidet',
+    has_non_dairy: 'hasNonDairy',
+    milk_options: 'milkOptions',
+    serves_food: 'servesFood',
+    is_work_friendly: 'isWorkFriendly',
+    price_level: 'priceLevel',
+    coffee_style: 'coffeeStyle',
+    payment_methods: 'paymentMethods',
+    brew_methods: 'brewMethods',
+    operating_hours: 'operatingHours',
+}
+
+function mapSuggestableFieldsToDrizzle(fields: SuggestableFields): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(fields)) {
+        if (value !== undefined) {
+            const drizzleKey = fieldMapping[key] || key
+            result[drizzleKey] = value
+        }
+    }
+    return result
+}
+
 
 // ============================================
 // Result Types
@@ -31,18 +68,14 @@ interface SubmitSuggestionResult extends ActionResult {
 
 /**
  * Submit a new edit suggestion for a cafe
- * Any authenticated user can submit suggestions
  */
 export async function submitEditSuggestion(
     cafeId: string,
     changes: SuggestableFields,
     imageChanges?: SuggestedImageChanges
 ): Promise<SubmitSuggestionResult> {
-    const db = await createClient()
-
-    // Verify user is authenticated
-    const user = await getCurrentUser()
-    if (!user) {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
         return { success: false, error: "Not authenticated" }
     }
 
@@ -58,44 +91,39 @@ export async function submitEditSuggestion(
         return { success: false, error: "No changes provided" }
     }
 
-    // Verify the cafe exists and get info for notification
-    const { data: cafe, error: cafeError } = await db
-        .from('cafes')
-        .select('id, name, slug')
-        .eq('id', cafeId)
-        .single()
+    // Verify the cafe exists
+    const cafeResult = await db
+        .select({ id: cafes.id, name: cafes.name, slug: cafes.slug })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
 
-    if (cafeError || !cafe) {
+    const cafe = cafeResult[0]
+    if (!cafe) {
         return { success: false, error: "Cafe not found" }
     }
 
     // Insert the suggestion
-    const { data: suggestion, error: insertError } = await db
-        .from('cafe_edit_suggestions')
-        .insert({
-            cafe_id: cafeId,
-            user_id: user.id,
-            status: 'pending',
-            suggested_changes: changes,
-            suggested_images: imageChanges || null,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Using type assertion due to Supabase type generation timing issue
-        } as any)
-        .select('id')
-        .single()
+    const [suggestion] = await db.insert(cafeEditSuggestions).values({
+        cafeId,
+        userId: currentUser.id,
+        status: 'pending',
+        suggestedChanges: changes,
+        suggestedImages: imageChanges || null,
+    }).returning({ id: cafeEditSuggestions.id })
 
-    if (insertError) {
-        console.error("Error inserting suggestion:", insertError)
+    if (!suggestion) {
         return { success: false, error: "Failed to submit suggestion" }
     }
 
-    // Notify Discord about the new suggestion
-    const { data: submitterProfile } = await db
-        .from("profiles")
-        .select("display_name, username")
-        .eq("id", user.id)
-        .single()
+    // Notify Discord
+    const profileResult = await db
+        .select({ displayName: profiles.displayName, username: profiles.username })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    const submitterName = submitterProfile?.display_name || submitterProfile?.username
+    const submitterName = profileResult[0]?.displayName || profileResult[0]?.username
     const suggestedFields = Object.keys(changes)
 
     await notifyDiscordEditSuggestion(
@@ -104,9 +132,8 @@ export async function submitEditSuggestion(
         submitterName
     )
 
-    // Log contribution as SUGGEST
-    const adminDb = await createAdminClient()
-    await logContribution(adminDb, user.id, cafeId, 'SUGGEST', {
+    // Log contribution
+    await logContribution(currentUser.id, cafeId, 'SUGGEST', {
         summary: `Suggested edits: ${suggestedFields.join(', ')}`,
         source: 'edit_suggestion',
         cafe_name: cafe.name,
@@ -120,28 +147,46 @@ export async function submitEditSuggestion(
  * Get user's own suggestions with cafe info
  */
 export async function getUserSuggestions(userId: string): Promise<EditSuggestion[]> {
-    const db = await createClient()
+    const result = await db
+        .select({
+            id: cafeEditSuggestions.id,
+            cafeId: cafeEditSuggestions.cafeId,
+            userId: cafeEditSuggestions.userId,
+            status: cafeEditSuggestions.status,
+            suggestedChanges: cafeEditSuggestions.suggestedChanges,
+            suggestedImages: cafeEditSuggestions.suggestedImages,
+            adminNotes: cafeEditSuggestions.adminNotes,
+            createdAt: cafeEditSuggestions.createdAt,
+            updatedAt: cafeEditSuggestions.updatedAt,
+            reviewedAt: cafeEditSuggestions.reviewedAt,
+            reviewedBy: cafeEditSuggestions.reviewedBy,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+        })
+        .from(cafeEditSuggestions)
+        .leftJoin(cafes, eq(cafeEditSuggestions.cafeId, cafes.id))
+        .where(eq(cafeEditSuggestions.userId, userId))
+        .orderBy(desc(cafeEditSuggestions.createdAt))
 
-    const { data, error } = await db
-        .from('cafe_edit_suggestions')
-        .select(`
-            *,
-            cafe:cafes(id, name, slug, thumbnail)
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-    if (error) {
-        console.error("Error fetching user suggestions:", error)
-        return []
-    }
-
-    return data.map(row => ({
-        ...row,
-        suggested_changes: row.suggested_changes as SuggestableFields,
-        suggested_images: row.suggested_images as SuggestedImageChanges | null,
+    return result.map(row => ({
+        id: row.id,
+        cafe_id: row.cafeId,
+        user_id: row.userId,
         status: row.status as 'pending' | 'approved' | 'rejected',
-        cafe: row.cafe as EditSuggestion['cafe'],
+        suggested_changes: row.suggestedChanges as SuggestableFields,
+        suggested_images: row.suggestedImages as SuggestedImageChanges | null,
+        admin_notes: row.adminNotes,
+        created_at: row.createdAt?.toISOString() ?? null,
+        updated_at: row.updatedAt?.toISOString() ?? null,
+        reviewed_at: row.reviewedAt?.toISOString() ?? null,
+        reviewed_by: row.reviewedBy,
+        cafe: row.cafeName ? {
+            id: row.cafeId,
+            name: row.cafeName,
+            slug: row.cafeSlug!,
+            thumbnail: row.cafeThumbnail ?? '',
+        } : undefined,
     }))
 }
 
@@ -149,60 +194,76 @@ export async function getUserSuggestions(userId: string): Promise<EditSuggestion
 // Admin Actions
 // ============================================
 
-/**
- * Check if current user is admin/moderator
- */
 async function isAdmin(): Promise<boolean> {
-    const db = await createClient()
-    const user = await getCurrentUser()
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return false
 
-    if (!user) return false
+    const result = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    const { data: profile } = await db
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    return profile?.role === 'admin' || profile?.role === 'moderator'
+    const role = result[0]?.role
+    return role === 'admin' || role === 'moderator'
 }
 
 /**
  * Get all pending suggestions (admin only)
  */
 export async function getPendingSuggestions(): Promise<EditSuggestion[]> {
-    const db = await createClient()
+    if (!await isAdmin()) return []
 
-    // Verify admin access
-    if (!await isAdmin()) {
-        console.error("Unauthorized access to getPendingSuggestions")
-        return []
-    }
+    const result = await db
+        .select({
+            id: cafeEditSuggestions.id,
+            cafeId: cafeEditSuggestions.cafeId,
+            userId: cafeEditSuggestions.userId,
+            status: cafeEditSuggestions.status,
+            suggestedChanges: cafeEditSuggestions.suggestedChanges,
+            suggestedImages: cafeEditSuggestions.suggestedImages,
+            adminNotes: cafeEditSuggestions.adminNotes,
+            createdAt: cafeEditSuggestions.createdAt,
+            updatedAt: cafeEditSuggestions.updatedAt,
+            reviewedAt: cafeEditSuggestions.reviewedAt,
+            reviewedBy: cafeEditSuggestions.reviewedBy,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            authorDisplayName: profiles.displayName,
+            authorUsername: profiles.username,
+            authorAvatarUrl: profiles.avatarUrl,
+        })
+        .from(cafeEditSuggestions)
+        .leftJoin(cafes, eq(cafeEditSuggestions.cafeId, cafes.id))
+        .leftJoin(profiles, eq(cafeEditSuggestions.userId, profiles.id))
+        .where(eq(cafeEditSuggestions.status, 'pending'))
+        .orderBy(cafeEditSuggestions.createdAt)
 
-    const { data, error } = await db
-        .from('cafe_edit_suggestions')
-        .select(`
-            *,
-            cafe:cafes(id, name, slug, thumbnail),
-            author:profiles!cafe_edit_suggestions_user_id_fkey(
-                id, username, display_name, avatar_url
-            )
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true })
-
-    if (error) {
-        console.error("Error fetching pending suggestions:", error)
-        return []
-    }
-
-    return data.map(row => ({
-        ...row,
-        suggested_changes: row.suggested_changes as SuggestableFields,
-        suggested_images: row.suggested_images as SuggestedImageChanges | null,
+    return result.map(row => ({
+        id: row.id,
+        cafe_id: row.cafeId,
+        user_id: row.userId,
         status: row.status as 'pending' | 'approved' | 'rejected',
-        cafe: row.cafe as EditSuggestion['cafe'],
-        author: row.author as EditSuggestion['author'],
+        suggested_changes: row.suggestedChanges as SuggestableFields,
+        suggested_images: row.suggestedImages as SuggestedImageChanges | null,
+        admin_notes: row.adminNotes,
+        created_at: row.createdAt?.toISOString() ?? null,
+        updated_at: row.updatedAt?.toISOString() ?? null,
+        reviewed_at: row.reviewedAt?.toISOString() ?? null,
+        reviewed_by: row.reviewedBy,
+        cafe: row.cafeName ? {
+            id: row.cafeId,
+            name: row.cafeName,
+            slug: row.cafeSlug!,
+            thumbnail: row.cafeThumbnail ?? '',
+        } : undefined,
+        author: row.authorDisplayName ? {
+            id: row.userId,
+            display_name: row.authorDisplayName,
+            username: row.authorUsername!,
+            avatar_url: row.authorAvatarUrl,
+        } : undefined,
     }))
 }
 
@@ -210,78 +271,81 @@ export async function getPendingSuggestions(): Promise<EditSuggestion[]> {
  * Get suggestions for a specific cafe (admin only)
  */
 export async function getCafeSuggestions(cafeId: string): Promise<EditSuggestion[]> {
-    const db = await createClient()
+    if (!await isAdmin()) return []
 
-    // Verify admin access
-    if (!await isAdmin()) {
-        console.error("Unauthorized access to getCafeSuggestions")
-        return []
-    }
+    const result = await db
+        .select({
+            id: cafeEditSuggestions.id,
+            cafeId: cafeEditSuggestions.cafeId,
+            userId: cafeEditSuggestions.userId,
+            status: cafeEditSuggestions.status,
+            suggestedChanges: cafeEditSuggestions.suggestedChanges,
+            suggestedImages: cafeEditSuggestions.suggestedImages,
+            adminNotes: cafeEditSuggestions.adminNotes,
+            createdAt: cafeEditSuggestions.createdAt,
+            updatedAt: cafeEditSuggestions.updatedAt,
+            reviewedAt: cafeEditSuggestions.reviewedAt,
+            reviewedBy: cafeEditSuggestions.reviewedBy,
+            authorDisplayName: profiles.displayName,
+            authorUsername: profiles.username,
+            authorAvatarUrl: profiles.avatarUrl,
+        })
+        .from(cafeEditSuggestions)
+        .leftJoin(profiles, eq(cafeEditSuggestions.userId, profiles.id))
+        .where(eq(cafeEditSuggestions.cafeId, cafeId))
+        .orderBy(desc(cafeEditSuggestions.createdAt))
 
-    const { data, error } = await db
-        .from('cafe_edit_suggestions')
-        .select(`
-            *,
-            author:profiles!cafe_edit_suggestions_user_id_fkey(
-                id, username, display_name, avatar_url
-            )
-        `)
-        .eq('cafe_id', cafeId)
-        .order('created_at', { ascending: false })
-
-    if (error) {
-        console.error("Error fetching cafe suggestions:", error)
-        return []
-    }
-
-    return data.map(row => ({
-        ...row,
-        suggested_changes: row.suggested_changes as SuggestableFields,
-        suggested_images: row.suggested_images as SuggestedImageChanges | null,
+    return result.map(row => ({
+        id: row.id,
+        cafe_id: row.cafeId,
+        user_id: row.userId,
         status: row.status as 'pending' | 'approved' | 'rejected',
-        author: row.author as EditSuggestion['author'],
+        suggested_changes: row.suggestedChanges as SuggestableFields,
+        suggested_images: row.suggestedImages as SuggestedImageChanges | null,
+        admin_notes: row.adminNotes,
+        created_at: row.createdAt?.toISOString() ?? null,
+        updated_at: row.updatedAt?.toISOString() ?? null,
+        reviewed_at: row.reviewedAt?.toISOString() ?? null,
+        reviewed_by: row.reviewedBy,
+        author: row.authorDisplayName ? {
+            id: row.userId,
+            display_name: row.authorDisplayName,
+            username: row.authorUsername!,
+            avatar_url: row.authorAvatarUrl,
+        } : undefined,
     }))
 }
 
 /**
  * Approve a suggestion and apply changes to the cafe (admin only)
- * @param suggestionId - ID of the suggestion to approve
- * @param applyChanges - Optional subset of changes to apply (if not provided, all changes are applied)
  */
 export async function approveSuggestion(
     suggestionId: string,
     applyChanges?: Partial<SuggestableFields>
 ): Promise<ActionResult> {
-    const db = await createClient()
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
 
-    // Verify admin access
-    const user = await getCurrentUser()
-    if (!user) return { success: false, error: "Not authenticated" }
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    const { data: profile } = await db
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+    const role = profileResult[0]?.role
+    if (role !== 'admin' && role !== 'moderator') {
         return { success: false, error: "Unauthorized" }
     }
 
-    // Fetch the suggestion with cafe and author data
-    const { data: suggestion, error: fetchError } = await db
-        .from('cafe_edit_suggestions')
-        .select(`
-            *,
-            cafe:cafes(id, name, slug),
-            author:profiles!cafe_edit_suggestions_user_id_fkey(
-                id, display_name, username
-            )
-        `)
-        .eq('id', suggestionId)
-        .single()
+    // Fetch the suggestion
+    const suggestionResult = await db
+        .select()
+        .from(cafeEditSuggestions)
+        .where(eq(cafeEditSuggestions.id, suggestionId))
+        .limit(1)
 
-    if (fetchError || !suggestion) {
+    const suggestion = suggestionResult[0]
+    if (!suggestion) {
         return { success: false, error: "Suggestion not found" }
     }
 
@@ -289,55 +353,43 @@ export async function approveSuggestion(
         return { success: false, error: "Suggestion already processed" }
     }
 
-    const suggestedChanges = suggestion.suggested_changes as SuggestableFields
+    const suggestedChanges = suggestion.suggestedChanges as SuggestableFields
     const changesToApply = applyChanges || suggestedChanges
 
-    // Use admin client to apply changes
-    const adminDb = await createAdminClient()
-
-    // Apply cafe updates
+    // Apply cafe updates (map snake_case to camelCase)
     if (Object.keys(changesToApply).length > 0) {
-        const { error: updateError } = await adminDb
-            .from('cafes')
-            .update(changesToApply as Record<string, unknown>)
-            .eq('id', suggestion.cafe_id)
-
-        if (updateError) {
-            console.error("Error applying suggestion changes:", updateError)
-            return { success: false, error: "Failed to apply changes" }
-        }
+        const drizzleUpdates = mapSuggestableFieldsToDrizzle(changesToApply)
+        await db.update(cafes)
+            .set(drizzleUpdates)
+            .where(eq(cafes.id, suggestion.cafeId))
     }
 
-    // Handle image changes if any
-    const imageChanges = suggestion.suggested_images as SuggestedImageChanges | null
+    // Handle image changes
+    const imageChanges = suggestion.suggestedImages as SuggestedImageChanges | null
     if (imageChanges) {
-        // Fetch current cafe data
-        const { data: cafe } = await adminDb
-            .from('cafes')
-            .select('gallery, thumbnail')
-            .eq('id', suggestion.cafe_id)
-            .single()
+        const cafeResult = await db
+            .select({ gallery: cafes.gallery, thumbnail: cafes.thumbnail })
+            .from(cafes)
+            .where(eq(cafes.id, suggestion.cafeId))
+            .limit(1)
 
+        const cafe = cafeResult[0]
         if (cafe) {
             const updates: Record<string, unknown> = {}
 
-            // Handle new thumbnail
             if (imageChanges.new_thumbnail) {
                 updates.thumbnail = imageChanges.new_thumbnail
             }
 
-            // Handle gallery changes
             if (imageChanges.add_to_gallery?.length || imageChanges.remove_from_gallery?.length) {
                 let gallery = cafe.gallery || []
 
-                // Remove images
                 if (imageChanges.remove_from_gallery?.length) {
                     gallery = gallery.filter((img: string) =>
                         !imageChanges.remove_from_gallery!.includes(img)
                     )
                 }
 
-                // Add new images
                 if (imageChanges.add_to_gallery?.length) {
                     gallery = [...gallery, ...imageChanges.add_to_gallery]
                 }
@@ -346,50 +398,42 @@ export async function approveSuggestion(
             }
 
             if (Object.keys(updates).length > 0) {
-                await adminDb
-                    .from('cafes')
-                    .update(updates)
-                    .eq('id', suggestion.cafe_id)
+                await db.update(cafes).set(updates).where(eq(cafes.id, suggestion.cafeId))
             }
         }
     }
 
     // Mark suggestion as approved
-    const { error: statusError } = await adminDb
-        .from('cafe_edit_suggestions')
-        .update({
-            status: 'approved',
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: user.id,
-        })
-        .eq('id', suggestionId)
+    await db.update(cafeEditSuggestions).set({
+        status: 'approved',
+        reviewedAt: new Date(),
+        reviewedBy: currentUser.id,
+    }).where(eq(cafeEditSuggestions.id, suggestionId))
 
-    if (statusError) {
-        console.error("Error updating suggestion status:", statusError)
-        // Changes were applied, but status update failed - non-critical
-    }
+    // Get cafe and author info for email
+    const [cafeData, authorProfile, authorUser] = await Promise.all([
+        db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(eq(cafes.id, suggestion.cafeId)).limit(1),
+        db.select({ displayName: profiles.displayName, username: profiles.username }).from(profiles).where(eq(profiles.id, suggestion.userId)).limit(1),
+        db.select({ email: user.email }).from(user).where(eq(user.id, suggestion.userId)).limit(1),
+    ])
 
-    // Send email notification to the suggestion author
-    const cafeData = suggestion.cafe as { id: string; name: string; slug: string } | null
-    const authorData = suggestion.author as { id: string; display_name: string; username: string } | null
+    const cafe = cafeData[0]
+    const author = authorProfile[0]
+    const email = authorUser[0]?.email
 
-    if (cafeData && authorData) {
-        // Get author's email
-        const { data: authUser } = await adminDb.auth.admin.getUserById(authorData.id)
-        if (authUser?.user?.email) {
-            await sendSuggestionApprovedEmail(
-                authUser.user.email,
-                cafeData.name,
-                cafeData.slug,
-                authorData.display_name || authorData.username
-            )
-        }
+    if (cafe && author && email) {
+        await sendSuggestionApprovedEmail(
+            email,
+            cafe.name,
+            cafe.slug,
+            author.displayName || author.username
+        )
 
-        // Log UPDATE contribution for the suggester (their suggestion was accepted)
-        await logContribution(adminDb, authorData.id, suggestion.cafe_id, 'UPDATE', {
+        // Log contribution
+        await logContribution(suggestion.userId, suggestion.cafeId, 'UPDATE', {
             summary: `Suggestion approved: ${Object.keys(changesToApply).join(', ')}`,
             source: 'approved_suggestion',
-            cafe_name: cafeData.name,
+            cafe_name: cafe.name,
             changed_fields: Object.keys(changesToApply)
         })
     }
@@ -399,43 +443,34 @@ export async function approveSuggestion(
 
 /**
  * Reject a suggestion (admin only)
- * @param suggestionId - ID of the suggestion to reject
- * @param adminNotes - Optional reason for rejection
  */
 export async function rejectSuggestion(
     suggestionId: string,
     adminNotes?: string
 ): Promise<ActionResult> {
-    const db = await createClient()
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
 
-    // Verify admin access
-    const user = await getCurrentUser()
-    if (!user) return { success: false, error: "Not authenticated" }
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    const { data: profile } = await db
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (profile?.role !== 'admin' && profile?.role !== 'moderator') {
+    const role = profileResult[0]?.role
+    if (role !== 'admin' && role !== 'moderator') {
         return { success: false, error: "Unauthorized" }
     }
 
-    // Fetch the suggestion with cafe and author data
-    const { data: suggestion, error: fetchError } = await db
-        .from('cafe_edit_suggestions')
-        .select(`
-            *,
-            cafe:cafes(id, name, slug),
-            author:profiles!cafe_edit_suggestions_user_id_fkey(
-                id, display_name, username
-            )
-        `)
-        .eq('id', suggestionId)
-        .single()
+    // Fetch the suggestion
+    const suggestionResult = await db
+        .select()
+        .from(cafeEditSuggestions)
+        .where(eq(cafeEditSuggestions.id, suggestionId))
+        .limit(1)
 
-    if (fetchError || !suggestion) {
+    const suggestion = suggestionResult[0]
+    if (!suggestion) {
         return { success: false, error: "Suggestion not found" }
     }
 
@@ -443,63 +478,47 @@ export async function rejectSuggestion(
         return { success: false, error: "Suggestion already processed" }
     }
 
-    // Use admin client to update
-    const adminDb = await createAdminClient()
+    // Update status
+    await db.update(cafeEditSuggestions).set({
+        status: 'rejected',
+        adminNotes: adminNotes || null,
+        reviewedAt: new Date(),
+        reviewedBy: currentUser.id,
+    }).where(eq(cafeEditSuggestions.id, suggestionId))
 
-    const { error: updateError } = await adminDb
-        .from('cafe_edit_suggestions')
-        .update({
-            status: 'rejected',
-            admin_notes: adminNotes || null,
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: user.id,
-        })
-        .eq('id', suggestionId)
+    // Send email to author
+    const [cafeData, authorProfile, authorUser] = await Promise.all([
+        db.select({ name: cafes.name }).from(cafes).where(eq(cafes.id, suggestion.cafeId)).limit(1),
+        db.select({ displayName: profiles.displayName, username: profiles.username }).from(profiles).where(eq(profiles.id, suggestion.userId)).limit(1),
+        db.select({ email: user.email }).from(user).where(eq(user.id, suggestion.userId)).limit(1),
+    ])
 
-    if (updateError) {
-        console.error("Error rejecting suggestion:", updateError)
-        return { success: false, error: "Failed to reject suggestion" }
-    }
+    const cafe = cafeData[0]
+    const author = authorProfile[0]
+    const email = authorUser[0]?.email
 
-    // Send email notification to the suggestion author
-    const cafeData = suggestion.cafe as { id: string; name: string; slug: string } | null
-    const authorData = suggestion.author as { id: string; display_name: string; username: string } | null
-
-    if (cafeData && authorData) {
-        // Get author's email
-        const { data: authUser } = await adminDb.auth.admin.getUserById(authorData.id)
-        if (authUser?.user?.email) {
-            await sendSuggestionRejectedEmail(
-                authUser.user.email,
-                cafeData.name,
-                authorData.display_name || authorData.username,
-                adminNotes
-            )
-        }
+    if (cafe && author && email) {
+        await sendSuggestionRejectedEmail(
+            email,
+            cafe.name,
+            author.displayName || author.username,
+            adminNotes
+        )
     }
 
     return { success: true }
 }
 
 /**
- * Get count of pending suggestions (for admin dashboard stats)
+ * Get count of pending suggestions
  */
 export async function getPendingSuggestionsCount(): Promise<number> {
-    const db = await createClient()
+    if (!await isAdmin()) return 0
 
-    if (!await isAdmin()) {
-        return 0
-    }
+    const result = await db
+        .select({ count: drizzleCount() })
+        .from(cafeEditSuggestions)
+        .where(eq(cafeEditSuggestions.status, 'pending'))
 
-    const { count, error } = await db
-        .from('cafe_edit_suggestions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
-
-    if (error) {
-        console.error("Error counting pending suggestions:", error)
-        return 0
-    }
-
-    return count || 0
+    return result[0]?.count ?? 0
 }

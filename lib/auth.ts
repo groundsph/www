@@ -42,7 +42,7 @@ export const auth = betterAuth({
     rateLimit: {
         enabled: true,
         window: 60, // 1 minute
-        max: 10, // 10 requests per minute
+        max: 100, // 100 requests per minute (was 10, too aggressive)
     },
     trustedOrigins: [
         process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3000",

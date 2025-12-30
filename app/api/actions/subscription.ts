@@ -1,8 +1,9 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { cafes, cafeSubscriptions, profiles } from "@/db/schema"
+import { eq } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
-import { createAdminClient } from "@/utils/supabase/admin"
 import {
     OwnerActionResult,
     SubscriptionCheckoutResult,
@@ -31,8 +32,6 @@ export async function createSubscriptionCheckout(
     cafeId: string,
     tier: 'pro' | 'premium'
 ): Promise<SubscriptionCheckoutResult> {
-    const db = await createClient()
-
     // Verify ownership
     const isOwner = await isOwnerOfCafe(cafeId)
     if (!isOwner) {
@@ -46,12 +45,13 @@ export async function createSubscriptionCheckout(
     }
 
     // Get cafe info for reference
-    const { data: cafe } = await db
-        .from('cafes')
-        .select('name, slug')
-        .eq('id', cafeId)
-        .single()
+    const cafeResult = await db
+        .select({ name: cafes.name, slug: cafes.slug })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
 
+    const cafe = cafeResult[0]
     if (!cafe) {
         return { success: false, error: 'Cafe not found' }
     }
@@ -83,8 +83,6 @@ export async function createSubscriptionCheckout(
 export async function cancelCafeSubscription(
     cafeId: string
 ): Promise<OwnerActionResult> {
-    const db = await createClient()
-
     // Verify ownership
     const isOwner = await isOwnerOfCafe(cafeId)
     if (!isOwner) {
@@ -92,27 +90,28 @@ export async function cancelCafeSubscription(
     }
 
     // Get current subscription
-    const { data: subscription } = await db
-        .from('cafe_subscriptions')
-        .select('helix_subscription_id')
-        .eq('cafe_id', cafeId)
-        .single()
+    const subResult = await db
+        .select({ helixSubscriptionId: cafeSubscriptions.helixSubscriptionId })
+        .from(cafeSubscriptions)
+        .where(eq(cafeSubscriptions.cafeId, cafeId))
+        .limit(1)
 
-    if (!subscription?.helix_subscription_id) {
+    const subscription = subResult[0]
+    if (!subscription?.helixSubscriptionId) {
         return { success: false, error: 'No active subscription found' }
     }
 
     try {
-        await helixCancelSubscription(subscription.helix_subscription_id)
+        await helixCancelSubscription(subscription.helixSubscriptionId)
 
         // Update local record
         await db
-            .from('cafe_subscriptions')
-            .update({
+            .update(cafeSubscriptions)
+            .set({
                 status: 'cancelled',
-                updated_at: new Date().toISOString(),
+                updatedAt: new Date(),
             })
-            .eq('cafe_id', cafeId)
+            .where(eq(cafeSubscriptions.cafeId, cafeId))
 
         return { success: true }
     } catch (error) {
@@ -128,8 +127,6 @@ export async function updateCafeSubscription(
     cafeId: string,
     newTier: 'pro' | 'premium'
 ): Promise<OwnerActionResult> {
-    const db = await createClient()
-
     // Verify ownership
     const isOwner = await isOwnerOfCafe(cafeId)
     if (!isOwner) {
@@ -137,14 +134,17 @@ export async function updateCafeSubscription(
     }
 
     // Get current subscription
-    const { data: subscription } = await db
-        .from('cafe_subscriptions')
-        .select('helix_subscription_id, tier')
-        .eq('cafe_id', cafeId)
-        .single()
+    const subResult = await db
+        .select({
+            helixSubscriptionId: cafeSubscriptions.helixSubscriptionId,
+            tier: cafeSubscriptions.tier
+        })
+        .from(cafeSubscriptions)
+        .where(eq(cafeSubscriptions.cafeId, cafeId))
+        .limit(1)
 
-    if (!subscription?.helix_subscription_id) {
-        // No existing subscription, redirect to checkout
+    const subscription = subResult[0]
+    if (!subscription?.helixSubscriptionId) {
         return {
             success: false,
             error: 'No active subscription. Please subscribe first.'
@@ -153,18 +153,18 @@ export async function updateCafeSubscription(
 
     try {
         await helixUpdateSubscription(
-            subscription.helix_subscription_id,
+            subscription.helixSubscriptionId,
             getProductIdFromTier(newTier)
         )
 
         // Update local record
         await db
-            .from('cafe_subscriptions')
-            .update({
+            .update(cafeSubscriptions)
+            .set({
                 tier: toDbTier(newTier),
-                updated_at: new Date().toISOString(),
+                updatedAt: new Date(),
             })
-            .eq('cafe_id', cafeId)
+            .where(eq(cafeSubscriptions.cafeId, cafeId))
 
         return { success: true }
     } catch (error) {
@@ -175,21 +175,19 @@ export async function updateCafeSubscription(
 
 /**
  * Sync subscription status from HelixPay
- * Called periodically or when needed to ensure data is fresh
  */
 export async function syncSubscriptionStatus(
     cafeId: string
 ): Promise<CafeSubscription | null> {
-    const db = await createClient()
-
     // Get current subscription
-    const { data: subscription } = await db
-        .from('cafe_subscriptions')
-        .select('*')
-        .eq('cafe_id', cafeId)
-        .single()
+    const subResult = await db
+        .select()
+        .from(cafeSubscriptions)
+        .where(eq(cafeSubscriptions.cafeId, cafeId))
+        .limit(1)
 
-    if (!subscription?.helix_subscription_id) {
+    const subscription = subResult[0]
+    if (!subscription?.helixSubscriptionId) {
         // Return default free subscription
         return {
             id: '',
@@ -205,35 +203,35 @@ export async function syncSubscriptionStatus(
     }
 
     try {
-        const helixSub = await helixGetSubscription(subscription.helix_subscription_id)
+        const helixSub = await helixGetSubscription(subscription.helixSubscriptionId)
         const tier = getTierFromProductId(helixSub.product_id)
 
         // Update local record if changed
         if (
             helixSub.status !== subscription.status ||
-            helixSub.current_period_end !== subscription.current_period_end
+            helixSub.current_period_end !== subscription.currentPeriodEnd?.toISOString()
         ) {
             await db
-                .from('cafe_subscriptions')
-                .update({
+                .update(cafeSubscriptions)
+                .set({
                     status: helixSub.status,
                     tier: tier ? toDbTier(tier) : subscription.tier,
-                    current_period_start: helixSub.current_period_start,
-                    current_period_end: helixSub.current_period_end,
-                    updated_at: new Date().toISOString(),
+                    currentPeriodStart: new Date(helixSub.current_period_start),
+                    currentPeriodEnd: new Date(helixSub.current_period_end),
+                    updatedAt: new Date(),
                 })
-                .eq('cafe_id', cafeId)
+                .where(eq(cafeSubscriptions.cafeId, cafeId))
         }
 
         return {
             id: subscription.id,
-            cafe_id: subscription.cafe_id,
-            tier: tier ? tier : toDisplayTier(subscription.tier),
-            helix_subscription_id: subscription.helix_subscription_id,
+            cafe_id: subscription.cafeId,
+            tier: tier ? tier : toDisplayTier(subscription.tier ?? 'free'),
+            helix_subscription_id: subscription.helixSubscriptionId,
             status: helixSub.status,
             current_period_start: helixSub.current_period_start,
             current_period_end: helixSub.current_period_end,
-            created_at: subscription.created_at,
+            created_at: subscription.createdAt?.toISOString() ?? null,
             updated_at: new Date().toISOString(),
         }
     } catch (error) {
@@ -241,17 +239,17 @@ export async function syncSubscriptionStatus(
         // Return cached data on error
         return {
             id: subscription.id,
-            cafe_id: subscription.cafe_id,
-            tier: toDisplayTier(subscription.tier),
-            helix_subscription_id: subscription.helix_subscription_id,
-            status: subscription.status,
-            current_period_start: subscription.current_period_start,
-            current_period_end: subscription.current_period_end,
-            created_at: subscription.created_at,
-            updated_at: subscription.updated_at,
-            proof_of_payment_url: subscription.proof_of_payment_url,
-            is_manual_payment: subscription.is_manual_payment ?? undefined,
-            payment_verified: subscription.payment_verified ?? undefined,
+            cafe_id: subscription.cafeId,
+            tier: toDisplayTier(subscription.tier ?? 'free'),
+            helix_subscription_id: subscription.helixSubscriptionId,
+            status: subscription.status ?? 'active',
+            current_period_start: subscription.currentPeriodStart?.toISOString() ?? null,
+            current_period_end: subscription.currentPeriodEnd?.toISOString() ?? null,
+            created_at: subscription.createdAt?.toISOString() ?? null,
+            updated_at: subscription.updatedAt?.toISOString() ?? null,
+            proof_of_payment_url: subscription.proofOfPaymentUrl ?? undefined,
+            is_manual_payment: subscription.isManualPayment ?? undefined,
+            payment_verified: subscription.paymentVerified ?? undefined,
         }
     }
 }
@@ -262,7 +260,6 @@ export async function syncSubscriptionStatus(
 
 /**
  * Create or update subscription record from webhook
- * This is called by the webhook handler, not directly by users
  */
 export async function upsertSubscriptionFromWebhook(params: {
     cafe_id: string
@@ -272,39 +269,55 @@ export async function upsertSubscriptionFromWebhook(params: {
     current_period_start: string
     current_period_end: string
 }): Promise<OwnerActionResult> {
-    const db = await createClient()
+    try {
+        // Check if subscription exists
+        const existing = await db
+            .select({ id: cafeSubscriptions.id })
+            .from(cafeSubscriptions)
+            .where(eq(cafeSubscriptions.cafeId, params.cafe_id))
+            .limit(1)
 
-    const { error } = await db
-        .from('cafe_subscriptions')
-        .upsert({
-            cafe_id: params.cafe_id,
-            helix_subscription_id: params.helix_subscription_id,
-            tier: toDbTier(params.tier),
-            status: params.status,
-            current_period_start: params.current_period_start,
-            current_period_end: params.current_period_end,
-            updated_at: new Date().toISOString(),
-        }, {
-            onConflict: 'cafe_id',
-        })
+        if (existing[0]) {
+            // Update
+            await db
+                .update(cafeSubscriptions)
+                .set({
+                    helixSubscriptionId: params.helix_subscription_id,
+                    tier: toDbTier(params.tier),
+                    status: params.status,
+                    currentPeriodStart: new Date(params.current_period_start),
+                    currentPeriodEnd: new Date(params.current_period_end),
+                    updatedAt: new Date(),
+                })
+                .where(eq(cafeSubscriptions.cafeId, params.cafe_id))
+        } else {
+            // Insert
+            await db.insert(cafeSubscriptions).values({
+                cafeId: params.cafe_id,
+                helixSubscriptionId: params.helix_subscription_id,
+                tier: toDbTier(params.tier),
+                status: params.status,
+                currentPeriodStart: new Date(params.current_period_start),
+                currentPeriodEnd: new Date(params.current_period_end),
+            })
+        }
 
-    if (error) {
+        // If subscription is active, update cafe's membership_tier
+        if (params.status === 'active') {
+            await db
+                .update(cafes)
+                .set({
+                    membershipTier: toDbTier(params.tier),
+                    updatedAt: new Date(),
+                })
+                .where(eq(cafes.id, params.cafe_id))
+        }
+
+        return { success: true }
+    } catch (error) {
         console.error('Error upserting subscription:', error)
         return { success: false, error: 'Failed to update subscription record' }
     }
-
-    // If subscription is active, update cafe's membership_tier
-    if (params.status === 'active') {
-        await db
-            .from('cafes')
-            .update({
-                membership_tier: toDbTier(params.tier),
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', params.cafe_id)
-    }
-
-    return { success: true }
 }
 
 /**
@@ -313,48 +326,42 @@ export async function upsertSubscriptionFromWebhook(params: {
 export async function handleSubscriptionCancellation(
     helix_subscription_id: string
 ): Promise<OwnerActionResult> {
-    const db = await createClient()
-
     // Find the subscription
-    const { data: subscription } = await db
-        .from('cafe_subscriptions')
-        .select('cafe_id')
-        .eq('helix_subscription_id', helix_subscription_id)
-        .single()
+    const subResult = await db
+        .select({ cafeId: cafeSubscriptions.cafeId })
+        .from(cafeSubscriptions)
+        .where(eq(cafeSubscriptions.helixSubscriptionId, helix_subscription_id))
+        .limit(1)
 
+    const subscription = subResult[0]
     if (!subscription) {
         return { success: false, error: 'Subscription not found' }
     }
 
-    // Update subscription status
-    const { error: subError } = await db
-        .from('cafe_subscriptions')
-        .update({
-            status: 'cancelled',
-            updated_at: new Date().toISOString(),
-        })
-        .eq('helix_subscription_id', helix_subscription_id)
+    try {
+        // Update subscription status
+        await db
+            .update(cafeSubscriptions)
+            .set({
+                status: 'cancelled',
+                updatedAt: new Date(),
+            })
+            .where(eq(cafeSubscriptions.helixSubscriptionId, helix_subscription_id))
 
-    if (subError) {
-        console.error('Error updating subscription:', subError)
+        // Downgrade cafe to free tier
+        await db
+            .update(cafes)
+            .set({
+                membershipTier: 'free',
+                updatedAt: new Date(),
+            })
+            .where(eq(cafes.id, subscription.cafeId))
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error handling subscription cancellation:', error)
         return { success: false, error: 'Failed to update subscription status' }
     }
-
-    // Downgrade cafe to free tier
-    const { error: cafeError } = await db
-        .from('cafes')
-        .update({
-            membership_tier: 'free',
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', subscription.cafe_id)
-
-    if (cafeError) {
-        console.error('Error updating cafe tier:', cafeError)
-        // Non-critical, continue
-    }
-
-    return { success: true }
 }
 
 /**
@@ -365,8 +372,6 @@ export async function submitManualPayment(
     tier: 'pro' | 'premium',
     proofUrl: string
 ): Promise<OwnerActionResult> {
-    const db = await createAdminClient()
-
     // Verify ownership
     const isOwner = await isOwnerOfCafe(cafeId)
     if (!isOwner) {
@@ -375,59 +380,73 @@ export async function submitManualPayment(
 
     try {
         // Get cafe info for notification
-        const { data: cafe } = await db
-            .from('cafes')
-            .select('name, slug, owner_ids')
-            .eq('id', cafeId)
-            .single()
+        const cafeResult = await db
+            .select({ name: cafes.name, slug: cafes.slug, ownerIds: cafes.ownerIds })
+            .from(cafes)
+            .where(eq(cafes.id, cafeId))
+            .limit(1)
+
+        const cafe = cafeResult[0]
 
         // Calculate period (6 months)
         const startDate = new Date()
         const endDate = new Date()
         endDate.setMonth(endDate.getMonth() + 6)
 
-        // Upsert subscription record
-        const { error } = await db
-            .from('cafe_subscriptions')
-            .upsert({
-                cafe_id: cafeId,
-                tier: toDbTier(tier),
-                status: 'active', // Grants immediate access
-                is_manual_payment: true,
-                payment_verified: false,
-                proof_of_payment_url: proofUrl,
-                current_period_start: startDate.toISOString(),
-                current_period_end: endDate.toISOString(),
-                updated_at: new Date().toISOString(),
-            }, {
-                onConflict: 'cafe_id'
-            })
+        // Check if subscription exists
+        const existing = await db
+            .select({ id: cafeSubscriptions.id })
+            .from(cafeSubscriptions)
+            .where(eq(cafeSubscriptions.cafeId, cafeId))
+            .limit(1)
 
-        if (error) {
-            console.error('Error submitting manual payment:', error)
-            return { success: false, error: 'Failed to submit payment record' }
+        if (existing[0]) {
+            await db
+                .update(cafeSubscriptions)
+                .set({
+                    tier: toDbTier(tier),
+                    status: 'active',
+                    isManualPayment: true,
+                    paymentVerified: false,
+                    proofOfPaymentUrl: proofUrl,
+                    currentPeriodStart: startDate,
+                    currentPeriodEnd: endDate,
+                    updatedAt: new Date(),
+                })
+                .where(eq(cafeSubscriptions.cafeId, cafeId))
+        } else {
+            await db.insert(cafeSubscriptions).values({
+                cafeId,
+                tier: toDbTier(tier),
+                status: 'active',
+                isManualPayment: true,
+                paymentVerified: false,
+                proofOfPaymentUrl: proofUrl,
+                currentPeriodStart: startDate,
+                currentPeriodEnd: endDate,
+            })
         }
 
         // Update cafe membership status immediately
         await db
-            .from('cafes')
-            .update({
-                membership_tier: toDbTier(tier),
-                updated_at: new Date().toISOString(),
+            .update(cafes)
+            .set({
+                membershipTier: toDbTier(tier),
+                updatedAt: new Date(),
             })
-            .eq('id', cafeId)
+            .where(eq(cafes.id, cafeId))
 
         // Send Discord notification
         if (cafe) {
-            const ownerIds = cafe.owner_ids as string[] | null
+            const ownerIds = cafe.ownerIds
             let ownerName: string | undefined
             if (ownerIds && ownerIds.length > 0) {
-                const { data: profile } = await db
-                    .from('profiles')
-                    .select('display_name')
-                    .eq('id', ownerIds[0])
-                    .single()
-                ownerName = profile?.display_name || undefined
+                const profileResult = await db
+                    .select({ displayName: profiles.displayName })
+                    .from(profiles)
+                    .where(eq(profiles.id, ownerIds[0]))
+                    .limit(1)
+                ownerName = profileResult[0]?.displayName || undefined
             }
 
             const { notifyDiscordSubscription } = await import('@/app/api/actions/notify')
@@ -451,22 +470,18 @@ export async function submitManualPayment(
 export async function handlePaymentFailed(
     helix_subscription_id: string
 ): Promise<OwnerActionResult> {
-    const db = await createClient()
+    try {
+        await db
+            .update(cafeSubscriptions)
+            .set({
+                status: 'past_due',
+                updatedAt: new Date(),
+            })
+            .where(eq(cafeSubscriptions.helixSubscriptionId, helix_subscription_id))
 
-    const { error } = await db
-        .from('cafe_subscriptions')
-        .update({
-            status: 'past_due',
-            updated_at: new Date().toISOString(),
-        })
-        .eq('helix_subscription_id', helix_subscription_id)
-
-    if (error) {
+        return { success: true }
+    } catch (error) {
         console.error('Error updating subscription status:', error)
         return { success: false, error: 'Failed to update subscription status' }
     }
-
-    // TODO: Send email notification to cafe owner about failed payment
-
-    return { success: true }
 }

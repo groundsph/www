@@ -1,13 +1,12 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { cafes, profiles } from "@/db/schema"
+import { eq } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
-import { createAdminClient } from "@/utils/supabase/admin"
 import { notifyDiscord } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
 import { OperatingHour } from "@/utils/types/cafe"
-import { SupabaseClient } from "@supabase/supabase-js"
-import { Database } from "@/utils/types/database.types"
 import { logContribution } from "@/utils/contribution-logging"
 
 // Generate a URL-friendly slug from cafe name
@@ -21,18 +20,18 @@ function generateSlug(name: string): string {
 }
 
 // Make slug unique by appending random suffix if needed
-async function ensureUniqueSlug(db: SupabaseClient<Database>, baseSlug: string): Promise<string> {
+async function ensureUniqueSlug(baseSlug: string): Promise<string> {
     let slug = baseSlug
     let counter = 0
 
     while (true) {
-        const { data } = await db
-            .from('cafes')
-            .select('id')
-            .eq('slug', slug)
-            .single()
+        const result = await db
+            .select({ id: cafes.id })
+            .from(cafes)
+            .where(eq(cafes.slug, slug))
+            .limit(1)
 
-        if (!data) break // Slug is unique
+        if (!result[0]) break // Slug is unique
 
         counter++
         slug = `${baseSlug}-${counter}`
@@ -57,8 +56,6 @@ export async function submitCafe(
     thumbnailUrl: string | null,
     galleryUrls: string[]
 ): Promise<SubmitCafeResult> {
-    const db = await createClient()
-
     // Get current user
     const user = await getCurrentUser()
     if (!user) {
@@ -84,9 +81,9 @@ export async function submitCafe(
     try {
         // Generate unique slug
         const baseSlug = generateSlug(formData.name)
-        const slug = await ensureUniqueSlug(db, baseSlug)
+        const slug = await ensureUniqueSlug(baseSlug)
 
-        // Format operating hours for DB (ensure it's valid JSON)
+        // Format operating hours for DB
         const operatingHoursJson = formData.operating_hours.length > 0
             ? formData.operating_hours.map((h: OperatingHour) => ({
                 day: h.day,
@@ -102,80 +99,76 @@ export async function submitCafe(
             : null
 
         // Insert cafe into database
-        const { data: cafe, error: insertError } = await db
-            .from('cafes')
-            .insert({
-                name: formData.name.trim(),
-                slug,
-                description: formData.description.trim() || null,
-                thumbnail: finalThumbnail,
-                gallery: galleryUrls.length > 0 ? galleryUrls : null,
+        const [cafe] = await db.insert(cafes).values({
+            name: formData.name.trim(),
+            slug,
+            description: formData.description.trim() || null,
+            thumbnail: finalThumbnail,
+            gallery: galleryUrls.length > 0 ? galleryUrls : null,
 
-                // Location
-                region: formData.region,
-                province: formData.province,
-                city_municipality: formData.city_municipality,
-                area: formData.area.trim() || null,
-                address_display: formData.address_display.trim(),
-                lat: formData.lat,
-                lng: formData.lng,
+            // Location
+            region: formData.region,
+            province: formData.province,
+            cityMunicipality: formData.city_municipality,
+            area: formData.area.trim() || null,
+            addressDisplay: formData.address_display.trim(),
+            lat: formData.lat,
+            lng: formData.lng,
 
-                // Amenities
-                has_wifi: formData.has_wifi,
-                has_sockets: formData.has_sockets,
-                has_parking: formData.has_parking,
-                has_aircon: formData.has_aircon,
-                is_pet_friendly: formData.is_pet_friendly,
-                has_outdoor_seating: formData.has_outdoor_seating,
-                has_indoor_seating: formData.has_indoor_seating,
-                has_restroom: formData.has_restroom,
-                has_bidet: formData.has_bidet,
-                has_non_dairy: formData.has_non_dairy,
-                milk_options: formData.milk_options.length > 0 ? formData.milk_options : null,
-                serves_food: formData.serves_food,
-                is_work_friendly: formData.is_work_friendly,
+            // Amenities
+            hasWifi: formData.has_wifi,
+            hasSockets: formData.has_sockets,
+            hasParking: formData.has_parking,
+            hasAircon: formData.has_aircon,
+            isPetFriendly: formData.is_pet_friendly,
+            hasOutdoorSeating: formData.has_outdoor_seating,
+            hasIndoorSeating: formData.has_indoor_seating,
+            hasRestroom: formData.has_restroom,
+            hasBidet: formData.has_bidet,
+            hasNonDairy: formData.has_non_dairy,
+            milkOptions: formData.milk_options.length > 0 ? formData.milk_options : null,
+            servesFood: formData.serves_food,
+            isWorkFriendly: formData.is_work_friendly,
 
-                // Details
-                price_level: formData.price_level,
-                payment_methods: formData.payment_methods.trim() || null,
-                specialty: formData.specialty.length > 0 ? formData.specialty : null,
-                tags: formData.tags.length > 0 ? formData.tags : null,
-                brew_methods: formData.brew_methods.length > 0 ? formData.brew_methods : null,
-                roaster: formData.roaster.trim() || null,
+            // Details
+            priceLevel: formData.price_level,
+            paymentMethods: formData.payment_methods.trim() || null,
+            specialty: formData.specialty.length > 0 ? formData.specialty : null,
+            tags: formData.tags.length > 0 ? formData.tags : null,
+            brewMethods: formData.brew_methods.length > 0 ? formData.brew_methods : null,
+            roaster: formData.roaster.trim() || null,
 
-                // Schedule
-                operating_hours: operatingHoursJson,
+            // Schedule
+            operatingHours: operatingHoursJson,
 
-                // Contact
-                website_url: formData.website_url.trim() || null,
-                phone: formData.phone.trim() || null,
-                email: formData.email.trim() || null,
-                socials: socialsJson,
+            // Contact
+            websiteUrl: formData.website_url.trim() || null,
+            phone: formData.phone.trim() || null,
+            email: formData.email.trim() || null,
+            socials: socialsJson,
 
-                // Meta
-                contributor_id: user.id,
-                is_published: false, // Requires admin approval
-                is_active: true,
-                is_verified: false,
-                is_claimed: false, // Set to false; ownership is handled via claim approval
-                owner_ids: null, // Set via claim approval process
-            })
-            .select('id, slug')
-            .single()
+            // Meta
+            contributorId: user.id,
+            isPublished: false, // Requires admin approval
+            isActive: true,
+            isVerified: false,
+            isClaimed: false,
+            ownerIds: null,
+        }).returning({ id: cafes.id, slug: cafes.slug })
 
-        if (insertError) {
-            console.error("Cafe insert error:", insertError)
+        if (!cafe) {
             return { success: false, error: "Failed to submit cafe" }
         }
 
         // Get submitter profile for notification
-        const { data: profile } = await db
-            .from('profiles')
-            .select('display_name, username')
-            .eq('id', user.id)
-            .single()
+        const profileResult = await db
+            .select({ displayName: profiles.displayName, username: profiles.username })
+            .from(profiles)
+            .where(eq(profiles.id, user.id))
+            .limit(1)
 
-        const submitterName = profile?.display_name || profile?.username || 'Anonymous'
+        const profile = profileResult[0]
+        const submitterName = profile?.displayName || profile?.username || 'Anonymous'
 
         // Notify Discord
         await notifyDiscord(
@@ -185,8 +178,7 @@ export async function submitCafe(
         )
 
         // Log contribution
-        const adminDb = await createAdminClient()
-        await logContribution(adminDb, user.id, cafe.id, 'CREATE', {
+        await logContribution(user.id, cafe.id, 'CREATE', {
             summary: `Scouted ${formData.name}`,
             source: 'cafe_submission',
             cafe_name: formData.name

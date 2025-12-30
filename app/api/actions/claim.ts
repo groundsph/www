@@ -1,8 +1,9 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
+import { db } from "@/db"
+import { cafes, cafeClaims, profiles, user } from "@/db/schema"
+import { eq, and, desc } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
-import { createAdminClient } from "@/utils/supabase/admin"
 import { notifyDiscordCafeClaim } from "@/app/api/actions/notify"
 import { Resend } from "resend"
 import ClaimApprovedEmail from "@/emails/ClaimApprovedEmail"
@@ -13,26 +14,24 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 /**
  * Get a signed URL for an ownership proof document (admin only)
- * Returns a temporary URL that expires in 1 hour
  */
 export async function getOwnershipProofSignedUrl(
     proofPath: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
-    const db = await createClient()
-
-    // Check admin
-    const user = await getCurrentUser()
-    if (!user) {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
         return { success: false, error: "Not authenticated" }
     }
 
-    const { data: profile } = await db
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    // Check admin/moderator role
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    if (!profile || !["admin", "moderator"].includes(profile.role || "")) {
+    const role = profileResult[0]?.role
+    if (!role || !["admin", "moderator"].includes(role)) {
         return { success: false, error: "Not authorized" }
     }
 
@@ -86,168 +85,244 @@ export async function submitCafeClaim(
     proofText: string,
     proofDocumentUrl?: string
 ): Promise<{ success: boolean; error?: string; claim?: CafeClaim }> {
-    const db = await createClient()
-
-    // Check auth
-    const user = await getCurrentUser()
-    if (!user) {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
         return { success: false, error: "You must be logged in to claim a cafe" }
     }
 
     // Check if cafe exists and is not already claimed
-    const { data: cafe, error: cafeError } = await db
-        .from("cafes")
-        .select("id, is_claimed, owner_ids")
-        .eq("id", cafeId)
-        .single()
+    const cafeResult = await db
+        .select({ id: cafes.id, isClaimed: cafes.isClaimed, ownerIds: cafes.ownerIds })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
 
-    if (cafeError || !cafe) {
+    const cafe = cafeResult[0]
+    if (!cafe) {
         return { success: false, error: "Cafe not found" }
     }
 
-    if (cafe.is_claimed) {
+    if (cafe.isClaimed) {
         return { success: false, error: "This cafe has already been claimed" }
     }
 
     // Get user profile for notification
-    const { data: userProfile } = await db
-        .from("profiles")
-        .select("display_name, username")
-        .eq("id", user.id)
-        .single()
+    const profileResult = await db
+        .select({ displayName: profiles.displayName, username: profiles.username })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    const userProfile = profileResult[0]
 
     // Check if user already has a pending claim for this cafe
-    const { data: existingClaim } = await db
-        .from("cafe_claims")
-        .select("id, status")
-        .eq("cafe_id", cafeId)
-        .eq("user_id", user.id)
-        .eq("status", "pending")
-        .single()
+    const existingResult = await db
+        .select({ id: cafeClaims.id })
+        .from(cafeClaims)
+        .where(and(
+            eq(cafeClaims.cafeId, cafeId),
+            eq(cafeClaims.userId, currentUser.id),
+            eq(cafeClaims.status, "pending")
+        ))
+        .limit(1)
 
-    if (existingClaim) {
+    if (existingResult[0]) {
         return { success: false, error: "You already have a pending claim for this cafe" }
     }
 
     // Submit claim
-    const { data: claim, error } = await db
-        .from("cafe_claims")
-        .insert({
-            cafe_id: cafeId,
-            user_id: user.id,
-            proof_text: proofText,
-            proof_document_url: proofDocumentUrl || null,
-        })
-        .select()
-        .single()
+    const [inserted] = await db.insert(cafeClaims).values({
+        cafeId,
+        userId: currentUser.id,
+        proofText,
+        proofDocumentUrl: proofDocumentUrl || null,
+    }).returning()
 
-    if (error) {
-        console.error("[submitCafeClaim] Error:", error)
+    if (!inserted) {
         return { success: false, error: "Failed to submit claim" }
     }
 
     // Get cafe details for notification
-    const { data: cafeDetails } = await db
-        .from("cafes")
-        .select("name, slug")
-        .eq("id", cafeId)
-        .single()
+    const cafeDetailsResult = await db
+        .select({ name: cafes.name, slug: cafes.slug })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
 
-    // Send Discord notification (don't await, fire and forget)
+    const cafeDetails = cafeDetailsResult[0]
+
+    // Send Discord notification
     if (cafeDetails) {
         notifyDiscordCafeClaim(
             { name: cafeDetails.name, slug: cafeDetails.slug },
-            userProfile?.display_name || userProfile?.username || "Unknown User",
+            userProfile?.displayName || userProfile?.username || "Unknown User",
             proofText
         ).catch(err => console.error("Discord notification failed:", err))
     }
 
-    return { success: true, claim: claim as CafeClaim }
+    const claim: CafeClaim = {
+        id: inserted.id,
+        cafe_id: inserted.cafeId,
+        user_id: inserted.userId,
+        status: inserted.status as "pending" | "approved" | "rejected",
+        proof_text: inserted.proofText,
+        proof_document_url: inserted.proofDocumentUrl,
+        admin_notes: inserted.adminNotes,
+        created_at: inserted.createdAt?.toISOString() ?? null,
+        reviewed_at: inserted.reviewedAt?.toISOString() ?? null,
+        reviewed_by: inserted.reviewedBy,
+    }
+
+    return { success: true, claim }
 }
 
 /**
  * Get claims submitted by the current user
  */
 export async function getUserClaims(): Promise<CafeClaim[]> {
-    const db = await createClient()
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
 
-    const user = await getCurrentUser()
-    if (!user) return []
+    const claimsResult = await db
+        .select({
+            id: cafeClaims.id,
+            cafeId: cafeClaims.cafeId,
+            userId: cafeClaims.userId,
+            status: cafeClaims.status,
+            proofText: cafeClaims.proofText,
+            proofDocumentUrl: cafeClaims.proofDocumentUrl,
+            adminNotes: cafeClaims.adminNotes,
+            createdAt: cafeClaims.createdAt,
+            reviewedAt: cafeClaims.reviewedAt,
+            reviewedBy: cafeClaims.reviewedBy,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+        })
+        .from(cafeClaims)
+        .leftJoin(cafes, eq(cafeClaims.cafeId, cafes.id))
+        .where(eq(cafeClaims.userId, currentUser.id))
+        .orderBy(desc(cafeClaims.createdAt))
 
-    const { data: claims, error } = await db
-        .from("cafe_claims")
-        .select(`
-            *,
-            cafe:cafes(id, name, slug, thumbnail)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
-    if (error) {
-        console.error("[getUserClaims] Error:", error)
-        return []
-    }
-
-    return claims as CafeClaim[]
+    return claimsResult.map(c => ({
+        id: c.id,
+        cafe_id: c.cafeId,
+        user_id: c.userId,
+        status: c.status as "pending" | "approved" | "rejected",
+        proof_text: c.proofText,
+        proof_document_url: c.proofDocumentUrl,
+        admin_notes: c.adminNotes,
+        created_at: c.createdAt?.toISOString() ?? null,
+        reviewed_at: c.reviewedAt?.toISOString() ?? null,
+        reviewed_by: c.reviewedBy,
+        cafe: c.cafeName ? {
+            id: c.cafeId,
+            name: c.cafeName,
+            slug: c.cafeSlug!,
+            thumbnail: c.cafeThumbnail,
+        } : undefined,
+    }))
 }
 
 /**
  * Check if current user has a pending claim for a specific cafe
  */
 export async function getUserClaimForCafe(cafeId: string): Promise<CafeClaim | null> {
-    const db = await createClient()
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return null
 
-    const user = await getCurrentUser()
-    if (!user) return null
-
-    const { data: claim } = await db
-        .from("cafe_claims")
-        .select("*")
-        .eq("cafe_id", cafeId)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
+    const result = await db
+        .select()
+        .from(cafeClaims)
+        .where(and(eq(cafeClaims.cafeId, cafeId), eq(cafeClaims.userId, currentUser.id)))
+        .orderBy(desc(cafeClaims.createdAt))
         .limit(1)
-        .single()
 
-    return claim as CafeClaim | null
+    const claim = result[0]
+    if (!claim) return null
+
+    return {
+        id: claim.id,
+        cafe_id: claim.cafeId,
+        user_id: claim.userId,
+        status: claim.status as "pending" | "approved" | "rejected",
+        proof_text: claim.proofText,
+        proof_document_url: claim.proofDocumentUrl,
+        admin_notes: claim.adminNotes,
+        created_at: claim.createdAt?.toISOString() ?? null,
+        reviewed_at: claim.reviewedAt?.toISOString() ?? null,
+        reviewed_by: claim.reviewedBy,
+    }
 }
 
 /**
  * Get all pending claims (admin only)
  */
 export async function getPendingClaims(): Promise<CafeClaim[]> {
-    const db = await createClient()
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
 
-    // Check admin
-    const user = await getCurrentUser()
-    if (!user) return []
+    // Check admin role
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    const { data: profile } = await db
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
-
-    if (!profile || !["admin", "moderator"].includes(profile.role || "")) {
+    const role = profileResult[0]?.role
+    if (!role || !["admin", "moderator"].includes(role)) {
         return []
     }
 
-    const { data: claims, error } = await db
-        .from("cafe_claims")
-        .select(`
-            *,
-            cafe:cafes(id, name, slug, thumbnail),
-            user:profiles!cafe_claims_user_id_fkey(id, display_name, username, avatar_url)
-        `)
-        .eq("status", "pending")
-        .order("created_at", { ascending: true })
+    const claimsResult = await db
+        .select({
+            id: cafeClaims.id,
+            cafeId: cafeClaims.cafeId,
+            userId: cafeClaims.userId,
+            status: cafeClaims.status,
+            proofText: cafeClaims.proofText,
+            proofDocumentUrl: cafeClaims.proofDocumentUrl,
+            adminNotes: cafeClaims.adminNotes,
+            createdAt: cafeClaims.createdAt,
+            reviewedAt: cafeClaims.reviewedAt,
+            reviewedBy: cafeClaims.reviewedBy,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            userDisplayName: profiles.displayName,
+            userUsername: profiles.username,
+            userAvatarUrl: profiles.avatarUrl,
+        })
+        .from(cafeClaims)
+        .leftJoin(cafes, eq(cafeClaims.cafeId, cafes.id))
+        .leftJoin(profiles, eq(cafeClaims.userId, profiles.id))
+        .where(eq(cafeClaims.status, "pending"))
+        .orderBy(cafeClaims.createdAt)
 
-    if (error) {
-        console.error("[getPendingClaims] Error:", error)
-        return []
-    }
-
-    return claims as CafeClaim[]
+    return claimsResult.map(c => ({
+        id: c.id,
+        cafe_id: c.cafeId,
+        user_id: c.userId,
+        status: c.status as "pending" | "approved" | "rejected",
+        proof_text: c.proofText,
+        proof_document_url: c.proofDocumentUrl,
+        admin_notes: c.adminNotes,
+        created_at: c.createdAt?.toISOString() ?? null,
+        reviewed_at: c.reviewedAt?.toISOString() ?? null,
+        reviewed_by: c.reviewedBy,
+        cafe: c.cafeName ? {
+            id: c.cafeId,
+            name: c.cafeName,
+            slug: c.cafeSlug!,
+            thumbnail: c.cafeThumbnail,
+        } : undefined,
+        user: c.userDisplayName ? {
+            id: c.userId,
+            display_name: c.userDisplayName,
+            username: c.userUsername!,
+            avatar_url: c.userAvatarUrl,
+        } : undefined,
+    }))
 }
 
 /**
@@ -257,108 +332,84 @@ export async function approveClaim(
     claimId: string,
     notes?: string
 ): Promise<{ success: boolean; error?: string }> {
-    const db = await createClient()
-    const adminDb = await createAdminClient()
-
-    // Check admin
-    const user = await getCurrentUser()
-    if (!user) {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
         return { success: false, error: "Not authenticated" }
     }
 
-    const { data: profile } = await db
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    // Check admin role
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    if (!profile || !["admin", "moderator"].includes(profile.role || "")) {
+    const role = profileResult[0]?.role
+    if (!role || !["admin", "moderator"].includes(role)) {
         return { success: false, error: "Not authorized" }
     }
 
     // Get claim
-    const { data: claim, error: claimError } = await adminDb
-        .from("cafe_claims")
-        .select("*")
-        .eq("id", claimId)
-        .single()
+    const claimResult = await db
+        .select()
+        .from(cafeClaims)
+        .where(eq(cafeClaims.id, claimId))
+        .limit(1)
 
-    if (claimError || !claim) {
+    const claim = claimResult[0]
+    if (!claim) {
         return { success: false, error: "Claim not found" }
     }
 
     // Update claim status
-    const { error: updateClaimError } = await adminDb
-        .from("cafe_claims")
-        .update({
-            status: "approved",
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: user.id,
-            admin_notes: notes || null,
-        })
-        .eq("id", claimId)
-
-    if (updateClaimError) {
-        console.error("[approveClaim] Update claim error:", updateClaimError)
-        return { success: false, error: "Failed to update claim" }
-    }
+    await db.update(cafeClaims).set({
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedBy: currentUser.id,
+        adminNotes: notes || null,
+    }).where(eq(cafeClaims.id, claimId))
 
     // Update cafe ownership
-    const { data: cafe } = await adminDb
-        .from("cafes")
-        .select("owner_ids")
-        .eq("id", claim.cafe_id)
-        .single()
+    const cafeResult = await db
+        .select({ ownerIds: cafes.ownerIds })
+        .from(cafes)
+        .where(eq(cafes.id, claim.cafeId))
+        .limit(1)
 
-    const currentOwners = cafe?.owner_ids || []
-    if (!currentOwners.includes(claim.user_id)) {
-        const { error: updateCafeError } = await adminDb
-            .from("cafes")
-            .update({
-                owner_ids: [...currentOwners, claim.user_id],
-                is_claimed: true,
-            })
-            .eq("id", claim.cafe_id)
-
-        if (updateCafeError) {
-            console.error("[approveClaim] Update cafe error:", updateCafeError)
-            return { success: false, error: "Failed to update cafe ownership" }
-        }
+    const currentOwners = cafeResult[0]?.ownerIds || []
+    if (!currentOwners.includes(claim.userId)) {
+        await db.update(cafes).set({
+            ownerIds: [...currentOwners, claim.userId],
+            isClaimed: true,
+        }).where(eq(cafes.id, claim.cafeId))
     }
 
     // Send email notification to claimant
     try {
-        // Get claimant display_name from profiles
-        const { data: claimantProfile } = await adminDb
-            .from("profiles")
-            .select("display_name")
-            .eq("id", claim.user_id)
-            .single()
+        // Get claimant profile and email
+        const [claimantProfile, claimantUser, cafeData] = await Promise.all([
+            db.select({ displayName: profiles.displayName }).from(profiles).where(eq(profiles.id, claim.userId)).limit(1),
+            db.select({ email: user.email }).from(user).where(eq(user.id, claim.userId)).limit(1),
+            db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(eq(cafes.id, claim.cafeId)).limit(1),
+        ])
 
-        // Get claimant email from auth
-        const { data: { user: claimantUser } } = await adminDb.auth.admin.getUserById(claim.user_id)
+        const email = claimantUser[0]?.email
+        const cafe = cafeData[0]
 
-        const { data: cafeData } = await adminDb
-            .from("cafes")
-            .select("name, slug")
-            .eq("id", claim.cafe_id)
-            .single()
-
-        if (claimantUser?.email && cafeData) {
+        if (email && cafe) {
             await resend.emails.send({
                 from: "Grounds <noreply@grounds.ph>",
-                to: claimantUser.email,
-                subject: `Your claim for ${cafeData.name} has been approved! 🎉`,
+                to: email,
+                subject: `Your claim for ${cafe.name} has been approved! 🎉`,
                 react: ClaimApprovedEmail({
-                    cafeName: cafeData.name,
-                    cafeSlug: cafeData.slug,
-                    ownerName: claimantProfile?.display_name || undefined,
+                    cafeName: cafe.name,
+                    cafeSlug: cafe.slug,
+                    ownerName: claimantProfile[0]?.displayName || undefined,
                 }),
             })
         }
     } catch (emailErr) {
         console.error("[approveClaim] Email error:", emailErr)
-        // Don't fail the approval if email fails
     }
 
     return { success: true }
@@ -371,76 +422,58 @@ export async function rejectClaim(
     claimId: string,
     notes?: string
 ): Promise<{ success: boolean; error?: string }> {
-    const db = await createClient()
-
-    // Check admin
-    const user = await getCurrentUser()
-    if (!user) {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
         return { success: false, error: "Not authenticated" }
     }
 
-    const { data: profile } = await db
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+    // Check admin role
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
 
-    if (!profile || !["admin", "moderator"].includes(profile.role || "")) {
+    const role = profileResult[0]?.role
+    if (!role || !["admin", "moderator"].includes(role)) {
         return { success: false, error: "Not authorized" }
     }
 
-    const { error } = await db
-        .from("cafe_claims")
-        .update({
-            status: "rejected",
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: user.id,
-            admin_notes: notes || null,
-        })
-        .eq("id", claimId)
-
-    if (error) {
-        console.error("[rejectClaim] Error:", error)
-        return { success: false, error: "Failed to reject claim" }
-    }
+    // Update claim status
+    await db.update(cafeClaims).set({
+        status: "rejected",
+        reviewedAt: new Date(),
+        reviewedBy: currentUser.id,
+        adminNotes: notes || null,
+    }).where(eq(cafeClaims.id, claimId))
 
     // Send email notification to claimant
     try {
-        // Get claim, claimant, and cafe details
-        const { data: claimData } = await db
-            .from("cafe_claims")
-            .select("user_id, cafe_id")
-            .eq("id", claimId)
-            .single()
+        const claimResult = await db
+            .select({ userId: cafeClaims.userId, cafeId: cafeClaims.cafeId })
+            .from(cafeClaims)
+            .where(eq(cafeClaims.id, claimId))
+            .limit(1)
 
+        const claimData = claimResult[0]
         if (claimData) {
-            // Get admin client for email lookup
-            const adminDb = await createAdminClient()
+            const [claimantProfile, claimantUser, cafeData] = await Promise.all([
+                db.select({ displayName: profiles.displayName }).from(profiles).where(eq(profiles.id, claimData.userId)).limit(1),
+                db.select({ email: user.email }).from(user).where(eq(user.id, claimData.userId)).limit(1),
+                db.select({ name: cafes.name }).from(cafes).where(eq(cafes.id, claimData.cafeId)).limit(1),
+            ])
 
-            // Get claimant display_name from profiles
-            const { data: claimantProfile } = await adminDb
-                .from("profiles")
-                .select("display_name")
-                .eq("id", claimData.user_id)
-                .single()
+            const email = claimantUser[0]?.email
+            const cafe = cafeData[0]
 
-            // Get claimant email from auth
-            const { data: { user: claimantUser } } = await adminDb.auth.admin.getUserById(claimData.user_id)
-
-            const { data: cafeData } = await db
-                .from("cafes")
-                .select("name")
-                .eq("id", claimData.cafe_id)
-                .single()
-
-            if (claimantUser?.email && cafeData) {
+            if (email && cafe) {
                 await resend.emails.send({
                     from: "Grounds <noreply@grounds.ph>",
-                    to: claimantUser.email,
-                    subject: `Update on your claim for ${cafeData.name}`,
+                    to: email,
+                    subject: `Update on your claim for ${cafe.name}`,
                     react: ClaimRejectedEmail({
-                        cafeName: cafeData.name,
-                        ownerName: claimantProfile?.display_name || undefined,
+                        cafeName: cafe.name,
+                        ownerName: claimantProfile[0]?.displayName || undefined,
                         reason: notes || undefined,
                     }),
                 })
@@ -448,7 +481,6 @@ export async function rejectClaim(
         }
     } catch (emailErr) {
         console.error("[rejectClaim] Email error:", emailErr)
-        // Don't fail the rejection if email fails
     }
 
     return { success: true }
