@@ -6,66 +6,123 @@ import { eq } from "drizzle-orm"
 // Routes that require authentication (exact match)
 const protectedRoutesExact = ["/profile"]
 // Routes that require authentication (prefix match)
-const protectedRoutesPrefixes = ["/submit"]
+const protectedRoutesPrefixes = ["/submit", "/owner", "/manage", "/writer"]
+// Routes to skip auth checks entirely (performance optimization)
+const skipAuthPrefixes = ["/api/", "/_next/", "/auth/callback"]
 
-export async function proxy(request: NextRequest) {
-    const token = request.cookies.get("better-auth.session_token")?.value || request.cookies.get("__Secure-better-auth.session_token")?.value
-
-    let authUser = null
-    let profileCompleted = false
-
-    if (token) {
-        try {
-            // Split token to handle signed/prefixed cookies (token.signature)
-            // The DB stores the raw token, but the cookie may contain a signature suffix
-            const tokenValue = token.split(".")[0]
-
-            // Query session and user
-            const sessionResult = await db.select({
-                user: user,
-                session: session
-            })
-                .from(session)
-                .innerJoin(user, eq(session.userId, user.id))
-                .where(eq(session.token, tokenValue))
-                .limit(1)
-
-            const validSession = sessionResult[0]
-            if (validSession && new Date(validSession.session.expiresAt) > new Date()) {
-                authUser = validSession.user
-
-                // Check if user has completed their profile setup
-                // profiles.id is UUID, authUser.id is string (containing UUID). Drizzle handles string->uuid
-                const profileResult = await db.select({ profileCompleted: profiles.profileCompleted })
-                    .from(profiles)
-                    .where(eq(profiles.id, authUser.id))
-                    .limit(1)
-
-                profileCompleted = !!profileResult[0]?.profileCompleted
-            }
-        } catch (error) {
-            console.error("Middleware auth check failed:", error)
-        }
-    }
-
-    const { pathname } = request.nextUrl
-
-    // Check if the route is protected
-    const isProtectedRoute =
+/**
+ * Helper to check if a route requires authentication
+ */
+function isProtectedRoute(pathname: string): boolean {
+    return (
         protectedRoutesExact.includes(pathname) ||
         protectedRoutesPrefixes.some((route) => pathname.startsWith(route))
+    )
+}
 
-    // Redirect to auth if accessing protected route without being logged in
-    if (isProtectedRoute && !authUser) {
-        const authUrl = request.nextUrl.clone()
-        authUrl.pathname = "/auth"
-        authUrl.searchParams.set("redirect", pathname)
-        return NextResponse.redirect(authUrl)
+/**
+ * Helper to check if auth checks should be skipped entirely
+ */
+function shouldSkipAuth(pathname: string): boolean {
+    return skipAuthPrefixes.some((prefix) => pathname.startsWith(prefix))
+}
+
+/**
+ * Get authenticated user from session token
+ */
+async function getAuthUser(token: string) {
+    try {
+        // Split token to handle signed cookies (token.signature format)
+        const tokenValue = token.split(".")[0]
+
+        const sessionResult = await db
+            .select({
+                user: user,
+                session: session,
+            })
+            .from(session)
+            .innerJoin(user, eq(session.userId, user.id))
+            .where(eq(session.token, tokenValue))
+            .limit(1)
+
+        const validSession = sessionResult[0]
+        if (validSession && new Date(validSession.session.expiresAt) > new Date()) {
+            return validSession.user
+        }
+        return null
+    } catch (error) {
+        console.error("Middleware auth check failed:", error)
+        return null
+    }
+}
+
+/**
+ * Check if user has completed profile setup
+ */
+async function hasCompletedProfile(userId: string): Promise<boolean> {
+    try {
+        const profileResult = await db
+            .select({ profileCompleted: profiles.profileCompleted })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1)
+
+        return !!profileResult[0]?.profileCompleted
+    } catch {
+        return false
+    }
+}
+
+export async function proxy(request: NextRequest) {
+    const { pathname } = request.nextUrl
+
+    // Skip auth checks for API routes and static assets (performance)
+    if (shouldSkipAuth(pathname)) {
+        return NextResponse.next()
     }
 
-    // If user is logged in but hasn't completed profile setup, redirect to profile setup
-    // (except if already on auth page or callback)
-    if (isProtectedRoute && authUser && !profileCompleted && !pathname.startsWith("/auth")) {
+    const isProtected = isProtectedRoute(pathname)
+    const isAuthPage = pathname.startsWith("/auth")
+
+    // Early exit: If route is not protected and not auth page, skip auth
+    if (!isProtected && !isAuthPage) {
+        return NextResponse.next()
+    }
+
+    // Get session token
+    const token =
+        request.cookies.get("better-auth.session_token")?.value ||
+        request.cookies.get("__Secure-better-auth.session_token")?.value
+
+    // No token = not authenticated
+    if (!token) {
+        if (isProtected) {
+            const authUrl = request.nextUrl.clone()
+            authUrl.pathname = "/auth"
+            authUrl.searchParams.set("redirect", pathname)
+            return NextResponse.redirect(authUrl)
+        }
+        return NextResponse.next()
+    }
+
+    // Validate session
+    const authUser = await getAuthUser(token)
+
+    if (!authUser) {
+        if (isProtected) {
+            const authUrl = request.nextUrl.clone()
+            authUrl.pathname = "/auth"
+            authUrl.searchParams.set("redirect", pathname)
+            return NextResponse.redirect(authUrl)
+        }
+        return NextResponse.next()
+    }
+
+    // Check profile completion (only for protected routes)
+    const profileCompleted = isProtected ? await hasCompletedProfile(authUser.id) : true
+
+    // Protected route + incomplete profile = redirect to profile setup
+    if (isProtected && !profileCompleted) {
         const authUrl = request.nextUrl.clone()
         authUrl.pathname = "/auth"
         authUrl.searchParams.set("setup", "username")
@@ -73,15 +130,14 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(authUrl)
     }
 
-    // Redirect away from auth if already logged in AND has completed profile setup
-    const isSettingUpUsername = request.nextUrl.searchParams.get("setup") === "username"
-    if (pathname.startsWith("/auth") && authUser && !pathname.includes("/callback")) {
-        // Don't redirect if user still needs to complete profile setup
+    // Auth page + authenticated + profile complete = redirect away
+    if (isAuthPage && !pathname.includes("/callback")) {
+        const isSettingUpUsername = request.nextUrl.searchParams.get("setup") === "username"
+
         if (!profileCompleted || isSettingUpUsername) {
-            // Stay on auth page for profile setup
             return NextResponse.next()
         }
-        // User is fully set up, redirect them away from auth
+
         const redirect = request.nextUrl.searchParams.get("redirect") || "/"
         const redirectUrl = request.nextUrl.clone()
         redirectUrl.pathname = redirect
@@ -96,7 +152,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
     matcher: [
         /*
-         * Match all request paths except for the ones starting with:
+         * Match all request paths except for:
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)

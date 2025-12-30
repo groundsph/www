@@ -16,8 +16,8 @@ import { useNotification } from "./NotificationProvider"
 
 export type Profile = Tables<"profiles">
 
-// Better Auth user type
-interface BetterAuthUser {
+// Better Auth user type - matches the session user from better-auth
+export interface BetterAuthUser {
     id: string
     email: string
     emailVerified: boolean
@@ -32,26 +32,20 @@ interface AuthContextType {
     profile: Profile | null
     isAdmin: boolean
     isWriter: boolean
+    isOwner: boolean
     isLoading: boolean
     refreshProfile: () => Promise<void>
 }
 
-export const AuthContext = createContext<AuthContextType>({
-    user: null,
-    profile: null,
-    isAdmin: false,
-    isWriter: false,
-    isLoading: true,
-    refreshProfile: async () => {},
-})
+const AuthContext = createContext<AuthContextType | null>(null)
 
 /**
  * Custom hook to access the auth context.
  * Throws an error if used outside of AuthProvider.
  */
-export function useAuth() {
+export function useAuth(): AuthContextType {
     const context = useContext(AuthContext)
-    if (context === undefined) {
+    if (!context) {
         throw new Error("useAuth must be used within an AuthProvider")
     }
     return context
@@ -62,27 +56,24 @@ export default function AuthProvider({
 }: {
     children: React.ReactNode
 }) {
-    // Context
     const { addNotification } = useNotification()
     const router = useRouter()
 
     // Better Auth session hook
     const { data: session, isPending } = useSession()
 
-    // States
+    // Profile state
     const [profile, setProfile] = useState<Profile | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
+    const [isProfileLoading, setIsProfileLoading] = useState(true)
 
-    // Track if we've already shown the sign-in notification to prevent duplicates
+    // Track sign-in/out transitions for notifications
+    const previousUserIdRef = useRef<string | null>(null)
     const hasShownSignInNotification = useRef(false)
-    const wasSignedIn = useRef(false)
-    const previousUserId = useRef<string | null>(null)
 
-    // Functions
+    // Fetch profile from API
     const fetchProfile = useCallback(
         async (userId: string): Promise<Profile | null> => {
             try {
-                // Fetch profile from API
                 const response = await fetch(`/api/profile/${userId}`)
                 if (!response.ok) {
                     console.error(
@@ -100,6 +91,7 @@ export default function AuthProvider({
         []
     )
 
+    // Public method to refresh profile
     const refreshProfile = useCallback(async () => {
         if (session?.user) {
             const data = await fetchProfile(session.user.id)
@@ -107,64 +99,60 @@ export default function AuthProvider({
         }
     }, [session?.user, fetchProfile])
 
-    // Handle auth state changes based on Better Auth session
+    // Handle session changes
     useEffect(() => {
         if (isPending) return
 
-        const handleSessionChange = async () => {
-            if (session?.user) {
-                // User is signed in
-                const userId = session.user.id
-                const isNewSignIn = previousUserId.current !== userId
+        const userId = session?.user?.id ?? null
+        const previousUserId = previousUserIdRef.current
 
-                // Fetch profile
-                const profileData = await fetchProfile(userId)
-                setProfile(profileData)
+        // User signed in
+        if (userId && userId !== previousUserId) {
+            fetchProfile(userId).then((data) => {
+                setProfile(data)
+                setIsProfileLoading(false)
 
-                // Show notification only for new sign-ins
+                // Show notification only on actual sign-in (not initial load)
                 if (
-                    isNewSignIn &&
-                    previousUserId.current !== null &&
+                    previousUserId !== null &&
                     !hasShownSignInNotification.current
                 ) {
                     addNotification("You are now signed in.", "success")
                     hasShownSignInNotification.current = true
                     router.refresh()
                 }
-
-                previousUserId.current = userId
-                wasSignedIn.current = true
-            } else {
-                // User is signed out
-                if (wasSignedIn.current) {
-                    addNotification("You are now signed out.", "warning")
-                    router.refresh()
-                }
-
-                setProfile(null)
-                previousUserId.current = null
-                wasSignedIn.current = false
-                hasShownSignInNotification.current = false
-            }
-
-            setIsLoading(false)
+            })
+        }
+        // User signed out
+        else if (!userId && previousUserId !== null) {
+            setProfile(null)
+            setIsProfileLoading(false)
+            addNotification("You are now signed out.", "warning")
+            hasShownSignInNotification.current = false
+            router.refresh()
+        }
+        // No change or initial load with no user
+        else if (!userId) {
+            setIsProfileLoading(false)
         }
 
-        handleSessionChange()
-    }, [session, isPending, fetchProfile, addNotification, router])
+        previousUserIdRef.current = userId
+    }, [session?.user?.id, isPending, fetchProfile, addNotification, router])
 
-    // Computed values
+    // Computed role checks
     const isAdmin = profile?.role === "admin" || profile?.role === "moderator"
     const isWriter = profile?.role === "writer"
+    const isOwner = !!profile?.id // Placeholder - could check owned cafes
 
-    // Memoize context value to prevent unnecessary re-renders
+    // Memoized context value
     const contextValue = useMemo<AuthContextType>(
         () => ({
             user: session?.user ?? null,
             profile,
             isAdmin,
             isWriter,
-            isLoading: isPending || isLoading,
+            isOwner,
+            isLoading: isPending || isProfileLoading,
             refreshProfile,
         }),
         [
@@ -172,16 +160,19 @@ export default function AuthProvider({
             profile,
             isAdmin,
             isWriter,
+            isOwner,
             isPending,
-            isLoading,
+            isProfileLoading,
             refreshProfile,
         ]
     )
 
-    // Render
     return (
         <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     )
 }
+
+// Re-export the context for advanced use cases
+export { AuthContext }
