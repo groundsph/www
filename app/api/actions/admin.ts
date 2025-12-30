@@ -2622,7 +2622,596 @@ export async function searchCafesForFeatured(query: string): Promise<{
 }
 
 // ============================================
-// END OF PHASE 4 - Badges & Featured Schedules
+// Owner Verification Management Functions
 // ============================================
-// The remaining phase will be added incrementally:
+
+import { ownerVerificationRequests, featuredSlotRequests } from "@/db/schema"
+
+export interface OwnerVerificationForAdmin {
+    id: string
+    cafe_id: string
+    user_id: string
+    verification_type: 'document' | 'email' | 'social_proof'
+    proof_urls: string[]
+    notes: string | null
+    status: 'pending' | 'approved' | 'rejected'
+    admin_notes: string | null
+    created_at: string | null
+    cafe: {
+        id: string
+        name: string
+        slug: string
+        thumbnail: string
+        email: string | null
+    } | null
+    user: {
+        id: string
+        username: string
+        display_name: string
+        avatar_url: string | null
+    } | null
+}
+
+/**
+ * Get all pending owner verification requests
+ */
+export async function getPendingVerifications(): Promise<OwnerVerificationForAdmin[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    const result = await db
+        .select({
+            id: ownerVerificationRequests.id,
+            cafeId: ownerVerificationRequests.cafeId,
+            userId: ownerVerificationRequests.userId,
+            verificationType: ownerVerificationRequests.verificationType,
+            proofUrls: ownerVerificationRequests.proofUrls,
+            notes: ownerVerificationRequests.notes,
+            status: ownerVerificationRequests.status,
+            adminNotes: ownerVerificationRequests.adminNotes,
+            createdAt: ownerVerificationRequests.createdAt,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            cafeEmail: cafes.email,
+            userName: profiles.username,
+            userDisplayName: profiles.displayName,
+            userAvatarUrl: profiles.avatarUrl,
+        })
+        .from(ownerVerificationRequests)
+        .leftJoin(cafes, eq(ownerVerificationRequests.cafeId, cafes.id))
+        .leftJoin(profiles, eq(ownerVerificationRequests.userId, profiles.id))
+        .where(eq(ownerVerificationRequests.status, 'pending'))
+        .orderBy(asc(ownerVerificationRequests.createdAt))
+
+    return result.map(r => ({
+        id: r.id,
+        cafe_id: r.cafeId,
+        user_id: r.userId,
+        verification_type: r.verificationType as OwnerVerificationForAdmin['verification_type'],
+        proof_urls: r.proofUrls ?? [],
+        notes: r.notes,
+        status: r.status as OwnerVerificationForAdmin['status'],
+        admin_notes: r.adminNotes,
+        created_at: r.createdAt?.toISOString() ?? null,
+        cafe: r.cafeName ? {
+            id: r.cafeId,
+            name: r.cafeName,
+            slug: r.cafeSlug!,
+            thumbnail: r.cafeThumbnail ?? '',
+            email: r.cafeEmail,
+        } : null,
+        user: r.userName ? {
+            id: r.userId,
+            username: r.userName,
+            display_name: r.userDisplayName ?? '',
+            avatar_url: r.userAvatarUrl,
+        } : null,
+    }))
+}
+
+/**
+ * Get all verification requests (for history view)
+ */
+export async function getAllVerifications(status?: 'pending' | 'approved' | 'rejected'): Promise<OwnerVerificationForAdmin[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return []
+    }
+
+    const conditions = status ? [eq(ownerVerificationRequests.status, status)] : []
+
+    const result = await db
+        .select({
+            id: ownerVerificationRequests.id,
+            cafeId: ownerVerificationRequests.cafeId,
+            userId: ownerVerificationRequests.userId,
+            verificationType: ownerVerificationRequests.verificationType,
+            proofUrls: ownerVerificationRequests.proofUrls,
+            notes: ownerVerificationRequests.notes,
+            status: ownerVerificationRequests.status,
+            adminNotes: ownerVerificationRequests.adminNotes,
+            createdAt: ownerVerificationRequests.createdAt,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            cafeEmail: cafes.email,
+            userName: profiles.username,
+            userDisplayName: profiles.displayName,
+            userAvatarUrl: profiles.avatarUrl,
+        })
+        .from(ownerVerificationRequests)
+        .leftJoin(cafes, eq(ownerVerificationRequests.cafeId, cafes.id))
+        .leftJoin(profiles, eq(ownerVerificationRequests.userId, profiles.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(ownerVerificationRequests.createdAt))
+        .limit(100)
+
+    return result.map(r => ({
+        id: r.id,
+        cafe_id: r.cafeId,
+        user_id: r.userId,
+        verification_type: r.verificationType as OwnerVerificationForAdmin['verification_type'],
+        proof_urls: r.proofUrls ?? [],
+        notes: r.notes,
+        status: r.status as OwnerVerificationForAdmin['status'],
+        admin_notes: r.adminNotes,
+        created_at: r.createdAt?.toISOString() ?? null,
+        cafe: r.cafeName ? {
+            id: r.cafeId,
+            name: r.cafeName,
+            slug: r.cafeSlug!,
+            thumbnail: r.cafeThumbnail ?? '',
+            email: r.cafeEmail,
+        } : null,
+        user: r.userName ? {
+            id: r.userId,
+            username: r.userName,
+            display_name: r.userDisplayName ?? '',
+            avatar_url: r.userAvatarUrl,
+        } : null,
+    }))
+}
+
+/**
+ * Approve an owner verification request
+ */
+export async function approveVerification(requestId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Get the verification request
+    const requestResult = await db
+        .select({ cafeId: ownerVerificationRequests.cafeId, userId: ownerVerificationRequests.userId, status: ownerVerificationRequests.status })
+        .from(ownerVerificationRequests)
+        .where(eq(ownerVerificationRequests.id, requestId))
+        .limit(1)
+
+    const request = requestResult[0]
+    if (!request) {
+        return { success: false, error: "Verification request not found" }
+    }
+
+    if (request.status !== 'pending') {
+        return { success: false, error: "Request has already been processed" }
+    }
+
+    // Get current cafe owner_ids
+    const cafeResult = await db
+        .select({ ownerIds: cafes.ownerIds })
+        .from(cafes)
+        .where(eq(cafes.id, request.cafeId))
+        .limit(1)
+
+    const currentOwners = cafeResult[0]?.ownerIds || []
+    const newOwners = currentOwners.includes(request.userId)
+        ? currentOwners
+        : [...currentOwners, request.userId]
+
+    // Update cafe with new owner
+    try {
+        await db.update(cafes)
+            .set({
+                ownerIds: newOwners,
+                isClaimed: true,
+                updatedAt: new Date(),
+            })
+            .where(eq(cafes.id, request.cafeId))
+    } catch (error) {
+        console.error("Error updating cafe owners:", error)
+        return { success: false, error: "Failed to update cafe ownership" }
+    }
+
+    // Update verification request status
+    try {
+        await db.update(ownerVerificationRequests)
+            .set({
+                status: 'approved',
+                reviewedBy: currentUser.id,
+                reviewedAt: new Date(),
+            })
+            .where(eq(ownerVerificationRequests.id, requestId))
+    } catch (error) {
+        console.error("Error updating verification status:", error)
+        return { success: false, error: "Failed to update verification status" }
+    }
+
+    // Create a free subscription for the cafe if one doesn't exist
+    const existingSubResult = await db
+        .select({ id: cafeSubscriptions.id })
+        .from(cafeSubscriptions)
+        .where(eq(cafeSubscriptions.cafeId, request.cafeId))
+        .limit(1)
+
+    if (!existingSubResult[0]) {
+        await db.insert(cafeSubscriptions).values({
+            cafeId: request.cafeId,
+            tier: 'free',
+            status: 'active',
+        })
+    }
+
+    return { success: true }
+}
+
+/**
+ * Reject an owner verification request
+ */
+export async function rejectVerification(requestId: string, reason: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Verify request exists and is pending
+    const requestResult = await db
+        .select({ status: ownerVerificationRequests.status })
+        .from(ownerVerificationRequests)
+        .where(eq(ownerVerificationRequests.id, requestId))
+        .limit(1)
+
+    if (!requestResult[0]) {
+        return { success: false, error: "Verification request not found" }
+    }
+
+    if (requestResult[0].status !== 'pending') {
+        return { success: false, error: "Request has already been processed" }
+    }
+
+    try {
+        await db.update(ownerVerificationRequests)
+            .set({
+                status: 'rejected',
+                adminNotes: reason,
+                reviewedBy: currentUser.id,
+                reviewedAt: new Date(),
+            })
+            .where(eq(ownerVerificationRequests.id, requestId))
+    } catch (error) {
+        console.error("Error rejecting verification:", error)
+        return { success: false, error: "Failed to reject verification" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Send verification email to cafe's listed email
+ */
+export async function sendVerificationEmail(requestId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Get request with cafe email
+    const requestResult = await db
+        .select({
+            id: ownerVerificationRequests.id,
+            cafeEmail: cafes.email,
+            cafeName: cafes.name,
+        })
+        .from(ownerVerificationRequests)
+        .leftJoin(cafes, eq(ownerVerificationRequests.cafeId, cafes.id))
+        .where(eq(ownerVerificationRequests.id, requestId))
+        .limit(1)
+
+    const request = requestResult[0]
+    if (!request) {
+        return { success: false, error: "Verification request not found" }
+    }
+
+    if (!request.cafeEmail) {
+        return { success: false, error: "Cafe does not have an email address" }
+    }
+
+    // TODO: Implement email sending with verification link
+    console.log(`Would send verification email to ${request.cafeEmail} for request ${requestId}`)
+
+    return { success: true }
+}
+
+// ============================================
+// User Role Management (Admin Only)
+// ============================================
+
+type UserRole = 'admin' | 'moderator' | 'writer' | 'user'
+
+export interface TeamMember {
+    id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+    role: UserRole | null
+    created_at: string | null
+}
+
+/**
+ * Search users for role assignment
+ */
+export async function searchUsersForRoleAssignment(query: string, limit: number = 10): Promise<TeamMember[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin') {
+        return []
+    }
+
+    if (!query || query.length < 2) return []
+
+    const searchTerm = `%${query.trim()}%`
+    const result = await db
+        .select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+            role: profiles.role,
+            createdAt: profiles.createdAt,
+        })
+        .from(profiles)
+        .where(or(
+            ilike(profiles.username, searchTerm),
+            ilike(profiles.displayName, searchTerm)
+        ))
+        .limit(limit)
+
+    return result.map(u => ({
+        id: u.id,
+        username: u.username ?? '',
+        display_name: u.displayName ?? '',
+        avatar_url: u.avatarUrl,
+        role: u.role as UserRole | null,
+        created_at: u.createdAt?.toISOString() ?? null,
+    }))
+}
+
+/**
+ * Update a user's role
+ */
+export async function updateUserRole(targetUserId: string, newRole: UserRole): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin') {
+        return { success: false, error: "Only admins can change user roles" }
+    }
+
+    if (targetUserId === currentUser.id) {
+        return { success: false, error: "You cannot change your own role" }
+    }
+
+    try {
+        await db.update(profiles)
+            .set({ role: newRole })
+            .where(eq(profiles.id, targetUserId))
+    } catch (error) {
+        console.error("Error updating user role:", error)
+        return { success: false, error: "Failed to update user role" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Get all admins and moderators
+ */
+export async function getAdminsAndModerators(): Promise<TeamMember[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin') {
+        return []
+    }
+
+    const result = await db
+        .select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+            role: profiles.role,
+            createdAt: profiles.createdAt,
+        })
+        .from(profiles)
+        .where(inArray(profiles.role, ['admin', 'moderator', 'writer']))
+        .orderBy(asc(profiles.role), asc(profiles.createdAt))
+
+    return result.map(u => ({
+        id: u.id,
+        username: u.username ?? '',
+        display_name: u.displayName ?? '',
+        avatar_url: u.avatarUrl,
+        role: u.role as UserRole | null,
+        created_at: u.createdAt?.toISOString() ?? null,
+    }))
+}
+
+// ============================================
+// Featured Slot Requests (Admin)
+// ============================================
+
+/**
+ * Get all featured slot requests (optionally filtered by status)
+ */
+export async function adminGetFeaturedRequests(status?: 'pending' | 'approved' | 'rejected') {
+    const isAdminUser = await isAdmin()
+    if (!isAdminUser) return []
+
+    const conditions = status ? [eq(featuredSlotRequests.status, status)] : []
+
+    const result = await db
+        .select({
+            id: featuredSlotRequests.id,
+            ownerId: featuredSlotRequests.ownerId,
+            cafeId: featuredSlotRequests.cafeId,
+            requestedMonth: featuredSlotRequests.requestedMonth,
+            status: featuredSlotRequests.status,
+            adminNotes: featuredSlotRequests.adminNotes,
+            processedAt: featuredSlotRequests.processedAt,
+            createdAt: featuredSlotRequests.createdAt,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            cafeCity: cafes.cityMunicipality,
+            cafeRegion: cafes.region,
+            ownerUsername: profiles.username,
+            ownerDisplayName: profiles.displayName,
+        })
+        .from(featuredSlotRequests)
+        .leftJoin(cafes, eq(featuredSlotRequests.cafeId, cafes.id))
+        .leftJoin(profiles, eq(featuredSlotRequests.ownerId, profiles.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(featuredSlotRequests.createdAt))
+
+    return result.map(r => ({
+        id: r.id,
+        owner_id: r.ownerId,
+        cafe_id: r.cafeId,
+        requested_month: r.requestedMonth,
+        status: r.status,
+        admin_notes: r.adminNotes,
+        processed_at: r.processedAt?.toISOString() ?? null,
+        created_at: r.createdAt?.toISOString() ?? null,
+        cafe: r.cafeName ? {
+            id: r.cafeId,
+            name: r.cafeName,
+            slug: r.cafeSlug!,
+            thumbnail: r.cafeThumbnail ?? '',
+            city_municipality: r.cafeCity ?? '',
+            region: r.cafeRegion ?? '',
+
+        } : null,
+        owner: r.ownerUsername ? {
+            id: r.ownerId,
+            username: r.ownerUsername,
+            display_name: r.ownerDisplayName ?? '',
+        } : null,
+    }))
+}
+
+/**
+ * Update featured slot request status
+ */
+export async function adminUpdateFeaturedRequestStatus(
+    requestId: string,
+    status: 'approved' | 'rejected',
+    adminNotes?: string
+): Promise<AdminActionResult> {
+    const isAdminUser = await isAdmin()
+    if (!isAdminUser) {
+        return { success: false, error: 'Not authorized' }
+    }
+
+    const updates: Record<string, unknown> = {
+        status,
+        processedAt: new Date(),
+    }
+
+    if (adminNotes !== undefined) {
+        updates.adminNotes = adminNotes
+    }
+
+    try {
+        await db.update(featuredSlotRequests)
+            .set(updates)
+            .where(eq(featuredSlotRequests.id, requestId))
+    } catch (error) {
+        console.error('Error updating featured request:', error)
+        return { success: false, error: 'Failed to update request' }
+    }
+
+    return { success: true }
+}
+
+// ============================================
+// MIGRATION COMPLETE - All admin.ts functions migrated to Drizzle ORM
+// ============================================
+// Total migrated: ~58 functions across 5 phases
+// Phase 1: Core Cafe Functions (permission, cafe CRUD, pagination)
+// Phase 2: Subscriptions, Stories, Cleanup
+// Phase 3: Review Moderation
+// Phase 4: Badges & Featured Schedules
 // Phase 5: Verification & User Roles
