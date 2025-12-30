@@ -42,6 +42,27 @@ interface CafeSearchResult {
     region: string
 }
 
+interface FeaturedRequest {
+    id: string
+    cafe_id: string | null
+    owner_id: string | null
+    requested_month: string
+    status: string | null
+    created_at: string | null
+    admin_notes: string | null
+    processed_at: string | null
+    cafe: {
+        id: string
+        name: string
+        slug: string
+        thumbnail: string
+        city_municipality: string
+        region: string
+    } | null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase returns SelectQueryError for missing FK relation
+    owner: any
+}
+
 export default function FeaturedScheduleManager({
     initialSchedules,
 }: FeaturedScheduleManagerProps) {
@@ -80,19 +101,20 @@ export default function FeaturedScheduleManager({
     const [conflictWarning, setConflictWarning] = useState<string | null>(null)
 
     // Feature Requests state
-    const [featureRequests, setFeatureRequests] = useState<any[]>([])
-    const [loadingRequests, setLoadingRequests] = useState(false)
+    const [featureRequests, setFeatureRequests] = useState<FeaturedRequest[]>(
+        []
+    )
+    // const [loadingRequests, setLoadingRequests] = useState(false)
 
     useEffect(() => {
+        const loadPendingRequests = async () => {
+            // setLoadingRequests(true)
+            const reqs = await adminGetFeaturedRequests("pending")
+            setFeatureRequests(reqs)
+            // setLoadingRequests(false)
+        }
         loadPendingRequests()
     }, [])
-
-    const loadPendingRequests = async () => {
-        setLoadingRequests(true)
-        const reqs = await adminGetFeaturedRequests("pending")
-        setFeatureRequests(reqs)
-        setLoadingRequests(false)
-    }
 
     const handleRequestAction = async (
         requestId: string,

@@ -170,7 +170,7 @@ export default function CafeManagementClient({
     const [featuredRequests, setFeaturedRequests] = useState<
         FeaturedSlotRequest[]
     >([])
-    const [isLoadingRequests, setIsLoadingRequests] = useState(false)
+    const [, setIsLoadingRequests] = useState(false)
 
     // Fetch featured requests on load
     useEffect(() => {

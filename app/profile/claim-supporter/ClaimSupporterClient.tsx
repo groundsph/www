@@ -30,7 +30,7 @@ export default function ClaimSupporterClient() {
         try {
             const res = await claimSupporterStatus(email)
             setResult(res)
-        } catch (err) {
+        } catch {
             setResult({
                 success: false,
                 error: "Something went wrong. Please try again.",

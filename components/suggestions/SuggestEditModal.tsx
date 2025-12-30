@@ -46,6 +46,7 @@ import {
     BREW_METHODS,
     COFFEE_STYLES,
 } from "@/utils/data/philippines"
+import React from "react"
 
 interface SuggestEditModalProps {
     isOpen: boolean
@@ -411,7 +412,7 @@ export default function SuggestEditModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
+                <React.Fragment key='suggest-edit-modal'>
                     <motion.div
                         key='suggest-edit-backdrop'
                         initial={{ opacity: 0 }}
@@ -2003,7 +2004,7 @@ export default function SuggestEditModal({
                             </div>
                         )}
                     </motion.div>
-                </>
+                </React.Fragment>
             )}
 
             {/* Image Cropper Modal */}

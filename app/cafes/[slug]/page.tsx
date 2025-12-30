@@ -194,6 +194,7 @@ export default async function CafePage({
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
             <CafeDetails
+                key={cafe.id}
                 cafe={cafe}
                 reviews={reviews}
                 menuItems={menuItems}
