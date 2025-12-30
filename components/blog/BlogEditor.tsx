@@ -24,6 +24,7 @@ import {
 } from "@/utils/types/blog"
 import { createBlogPost, updateBlogPost } from "@/app/api/actions/blog"
 import { uploadBlogImageAction } from "@/utils/storage/actions"
+import { generateExcerptAction } from "@/app/api/actions/ai"
 import MarkdownRender from "@/components/MarkdownRender"
 
 interface BlogEditorProps {
@@ -62,6 +63,7 @@ export default function BlogEditor({
     const [isUploading, setIsUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [autoSlug, setAutoSlug] = useState(!post?.slug)
+    const [isGeneratingExcerpt, setIsGeneratingExcerpt] = useState(false)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -345,6 +347,53 @@ export default function BlogEditor({
                             maxLength={300}
                             className='w-full px-4 py-3 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none resize-none transition-all placeholder:text-text/30 leading-relaxed'
                         />
+                        <div className='flex justify-end'>
+                            <button
+                                onClick={async () => {
+                                    if (!content.trim()) {
+                                        setError(
+                                            "Please write some content first to generate an excerpt."
+                                        )
+                                        return
+                                    }
+                                    setIsGeneratingExcerpt(true)
+                                    setError(null)
+                                    try {
+                                        const res =
+                                            await generateExcerptAction(content)
+                                        if (res.success && res.excerpt) {
+                                            setExcerpt(res.excerpt)
+                                        } else {
+                                            setError(
+                                                res.error ||
+                                                    "Failed to generate excerpt"
+                                            )
+                                        }
+                                    } catch (err) {
+                                        console.error(err)
+                                        setError("Failed to generate excerpt")
+                                    } finally {
+                                        setIsGeneratingExcerpt(false)
+                                    }
+                                }}
+                                disabled={
+                                    isGeneratingExcerpt || !content.trim()
+                                }
+                                className='text-xs font-medium text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors px-2 py-1 rounded-lg hover:bg-primary/5'
+                            >
+                                {isGeneratingExcerpt ? (
+                                    <>
+                                        <Loader2 className='w-3 h-3 animate-spin' />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className='text-[10px]'>✨</span>
+                                        Generate with AI
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content */}
