@@ -115,8 +115,8 @@ function mapEventToSnakeCase(e: {
         is_national: e.isNational ?? false,
         status: e.status as EventStatus,
         created_by: e.createdBy,
-        created_at: e.createdAt?.toISOString() ?? null,
-        updated_at: e.updatedAt?.toISOString() ?? null,
+        created_at: e.createdAt?.toISOString() ?? '',
+        updated_at: e.updatedAt?.toISOString() ?? '',
         cafe: cafe ? { id: cafe.id, name: cafe.name, slug: cafe.slug, thumbnail: cafe.thumbnail } : null,
         creator: creator ? { id: creator.id, display_name: creator.displayName, avatar_url: creator.avatarUrl } : null,
     } as EventWithCafe
@@ -303,8 +303,8 @@ export async function getEventsForMonth(
         is_national: e.isNational ?? false,
         status: e.status as EventStatus,
         created_by: e.createdBy,
-        created_at: e.createdAt?.toISOString() ?? null,
-        updated_at: e.updatedAt?.toISOString() ?? null,
+        created_at: e.createdAt?.toISOString() ?? '',
+        updated_at: e.updatedAt?.toISOString() ?? '',
     })) as Event[]
 }
 
@@ -481,8 +481,8 @@ export async function updateEvent(eventId: string, input: Partial<EventInput>): 
         is_national: existingEvent.isNational ?? false,
         status: existingEvent.status as EventStatus,
         created_by: existingEvent.createdBy,
-        created_at: existingEvent.createdAt?.toISOString() ?? null,
-        updated_at: existingEvent.updatedAt?.toISOString() ?? null,
+        created_at: existingEvent.createdAt?.toISOString() ?? '',
+        updated_at: existingEvent.updatedAt?.toISOString() ?? '',
     }
 
     if (!(await canManageEvent(eventForCheck))) {
@@ -537,8 +537,8 @@ export async function deleteEvent(eventId: string): Promise<EventActionResult> {
         is_national: existingEvent.isNational ?? false,
         status: existingEvent.status as EventStatus,
         created_by: existingEvent.createdBy,
-        created_at: existingEvent.createdAt?.toISOString() ?? null,
-        updated_at: existingEvent.updatedAt?.toISOString() ?? null,
+        created_at: existingEvent.createdAt?.toISOString() ?? '',
+        updated_at: existingEvent.updatedAt?.toISOString() ?? '',
     }
 
     if (!(await canManageEvent(eventForCheck))) {

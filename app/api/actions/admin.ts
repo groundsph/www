@@ -3155,16 +3155,15 @@ export async function adminGetFeaturedRequests(status?: 'pending' | 'approved' |
         admin_notes: r.adminNotes,
         processed_at: r.processedAt?.toISOString() ?? null,
         created_at: r.createdAt?.toISOString() ?? null,
-        cafe: r.cafeName ? {
+        cafe: r.cafeName && r.cafeId ? {
             id: r.cafeId,
             name: r.cafeName,
             slug: r.cafeSlug!,
             thumbnail: r.cafeThumbnail ?? '',
             city_municipality: r.cafeCity ?? '',
             region: r.cafeRegion ?? '',
-
         } : null,
-        owner: r.ownerUsername ? {
+        owner: r.ownerUsername && r.ownerId ? {
             id: r.ownerId,
             username: r.ownerUsername,
             display_name: r.ownerDisplayName ?? '',

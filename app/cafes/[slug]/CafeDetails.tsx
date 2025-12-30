@@ -179,7 +179,7 @@ export default function CafeDetails({
                         <ReviewItem
                             key={review.id}
                             review={review}
-                            currentUser={authUser}
+                            currentUser={authUser ?? null}
                             onEdit={(r) => {
                                 if (user) {
                                     setEditingReview(r)
@@ -204,7 +204,7 @@ export default function CafeDetails({
             {/* Hero Section */}
             <CafeHero
                 cafe={cafe}
-                user={user}
+                user={user ?? null}
                 isVisited={isVisited}
                 isFavorite={isFavorite}
                 isInWishlist={isInWishlist}

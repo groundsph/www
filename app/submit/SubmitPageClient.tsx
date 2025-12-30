@@ -1,12 +1,11 @@
 "use client"
 
-import { AuthContext } from "@/components/AuthProvider"
-import { useContext } from "react"
+import { useAuth } from "@/components/AuthProvider"
 import CafeSubmissionForm from "@/components/submit/CafeSubmissionForm"
 
 export default function SubmitPageClient() {
     // Context - auth is handled by middleware
-    const { profile } = useContext(AuthContext)
+    const { profile } = useAuth()
 
     const handleSuccess = (cafeId: string, slug: string) => {
         // Could redirect to the cafe page once approved,

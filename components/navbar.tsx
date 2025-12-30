@@ -1,6 +1,6 @@
 "use client"
 
-import { AuthContext } from "@/components/AuthProvider"
+import { useAuth } from "@/components/AuthProvider"
 import { routes } from "@/utils/routes"
 import {
     ChevronRightIcon,
@@ -10,11 +10,10 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useContext } from "react"
 
 export default function Navbar() {
     // Context
-    const { user, isWriter, isAdmin } = useContext(AuthContext)
+    const { user, isWriter, isAdmin } = useAuth()
 
     // Constants
     const curPath = usePathname()
@@ -174,7 +173,7 @@ export default function Navbar() {
 }
 
 function Auth() {
-    const { user, profile, isLoading } = useContext(AuthContext)
+    const { user, profile, isLoading } = useAuth()
 
     const handleSignOut = async () => {
         const { signOut } = await import("@/lib/auth-client")
