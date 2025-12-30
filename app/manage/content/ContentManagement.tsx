@@ -10,6 +10,7 @@ import {
     Pencil,
     Eye,
     Loader2,
+    Flag,
 } from "lucide-react"
 import { BlogPost } from "@/utils/types/blog"
 import { EventWithCafe } from "@/utils/types/extra"
@@ -17,6 +18,7 @@ import { type FeaturedSchedule } from "@/app/api/actions/admin"
 import BlogEditor from "@/components/blog/BlogEditor"
 import FeaturedScheduleManager from "../FeaturedScheduleManager"
 import EventsManagement from "@/components/events/EventsManagement"
+import BlogReportsPanel from "./components/BlogReportsPanel"
 import Link from "next/link"
 
 interface ContentManagementProps {
@@ -25,7 +27,7 @@ interface ContentManagementProps {
     featuredSchedules: FeaturedSchedule[]
 }
 
-type TabType = "blog" | "events" | "featured"
+type TabType = "blog" | "events" | "featured" | "reports"
 
 export default function ContentManagement({
     blogPosts: initialBlogPosts,
@@ -142,6 +144,17 @@ export default function ContentManagement({
                     <Star className='w-4 h-4' />
                     Featured
                 </button>
+                <button
+                    onClick={() => setActiveTab("reports")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                        activeTab === "reports"
+                            ? "bg-primary text-white"
+                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
+                    }`}
+                >
+                    <Flag className='w-4 h-4' />
+                    Reports
+                </button>
             </div>
 
             {/* Blog Tab */}
@@ -248,6 +261,9 @@ export default function ContentManagement({
             {activeTab === "featured" && (
                 <FeaturedScheduleManager initialSchedules={featuredSchedules} />
             )}
+
+            {/* Reports Tab */}
+            {activeTab === "reports" && <BlogReportsPanel />}
 
             {/* Blog Editor Modal */}
             {showBlogEditor && (

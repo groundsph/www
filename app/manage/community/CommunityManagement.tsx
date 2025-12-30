@@ -19,6 +19,7 @@ import {
     Search,
     Shield,
     ShieldCheck,
+    PenTool,
 } from "lucide-react"
 import {
     moderateReview,
@@ -124,7 +125,7 @@ export default function CommunityManagement({
 
     const handlePromoteUser = async (
         userId: string,
-        role: "moderator" | "admin"
+        role: "writer" | "moderator" | "admin"
     ) => {
         setTeamLoading(true)
         const result = await updateUserRole(userId, role)
@@ -534,6 +535,18 @@ export default function CommunityManagement({
                                                 onClick={() =>
                                                     handlePromoteUser(
                                                         user.id,
+                                                        "writer"
+                                                    )
+                                                }
+                                                disabled={teamLoading}
+                                                className='px-3 py-1.5 bg-green-500/20 text-green-600 rounded-lg hover:bg-green-500/30 transition text-sm disabled:opacity-50'
+                                            >
+                                                Writer
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    handlePromoteUser(
+                                                        user.id,
                                                         "moderator"
                                                     )
                                                 }
@@ -600,8 +613,11 @@ export default function CommunityManagement({
                                                 {member.display_name}
                                                 {member.role === "admin" ? (
                                                     <ShieldCheck className='w-4 h-4 text-amber-500' />
-                                                ) : (
+                                                ) : member.role ===
+                                                  "moderator" ? (
                                                     <Shield className='w-4 h-4 text-blue-500' />
+                                                ) : (
+                                                    <PenTool className='w-4 h-4 text-green-500' />
                                                 )}
                                             </div>
                                             <div className='text-sm text-text/60 truncate'>
@@ -613,12 +629,18 @@ export default function CommunityManagement({
                                                 className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                                     member.role === "admin"
                                                         ? "bg-amber-500/20 text-amber-600"
-                                                        : "bg-blue-500/20 text-blue-600"
+                                                        : member.role ===
+                                                            "moderator"
+                                                          ? "bg-blue-500/20 text-blue-600"
+                                                          : "bg-green-500/20 text-green-600"
                                                 }`}
                                             >
                                                 {member.role === "admin"
                                                     ? "Admin"
-                                                    : "Moderator"}
+                                                    : member.role ===
+                                                        "moderator"
+                                                      ? "Moderator"
+                                                      : "Writer"}
                                             </span>
                                             <button
                                                 onClick={() =>

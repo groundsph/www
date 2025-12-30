@@ -102,9 +102,9 @@ export async function isAdmin(): Promise<boolean> {
 
 /**
  * Get the current user's role
- * Returns 'admin', 'moderator', 'user', or null if not authenticated
+ * Returns 'admin', 'moderator', 'writer', 'user', or null if not authenticated
  */
-export async function getUserRole(): Promise<'admin' | 'moderator' | 'user' | null> {
+export async function getUserRole(): Promise<'admin' | 'moderator' | 'writer' | 'user' | null> {
     const db = await createClient()
     const { data: { user } } = await db.auth.getUser()
 
@@ -2980,7 +2980,7 @@ export async function getAdminsAndModerators(): Promise<TeamMember[]> {
     const { data: users, error } = await db
         .from('profiles')
         .select('id, username, display_name, avatar_url, role, created_at')
-        .in('role', ['admin', 'moderator'])
+        .in('role', ['admin', 'moderator', 'writer'])
         .order('role', { ascending: true })
         .order('created_at', { ascending: true })
 

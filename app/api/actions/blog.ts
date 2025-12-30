@@ -31,6 +31,25 @@ async function isAdminOrModerator(): Promise<boolean> {
     return profile?.role === "admin" || profile?.role === "moderator"
 }
 
+async function isWriter(): Promise<boolean> {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return false
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    return profile?.role === "writer"
+}
+
+// Categories writers are allowed to use (editorial content)
+const WRITER_ALLOWED_CATEGORIES: BlogCategory[] = ["news", "guides", "community"]
+
 async function isCafeOwner(cafeId: string): Promise<boolean> {
     const supabase = await createClient()
     const {
@@ -374,14 +393,25 @@ export async function createBlogPost(
 
     // Check permissions
     const isAdmin = await isAdminOrModerator()
+    const hasWriterRole = await isWriter()
     const isOwner = input.cafe_id ? await isCafeOwner(input.cafe_id) : false
 
-    if (!isAdmin && !isOwner) {
+    if (!isAdmin && !hasWriterRole && !isOwner) {
         return { success: false, error: "Not authorized to create blog posts" }
     }
 
-    // If cafe owner, require cafe_id
-    if (!isAdmin && !input.cafe_id) {
+    // Writers can only use certain categories
+    if (hasWriterRole && !isAdmin) {
+        if (!WRITER_ALLOWED_CATEGORIES.includes(input.category)) {
+            return {
+                success: false,
+                error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}`,
+            }
+        }
+    }
+
+    // If cafe owner (not admin or writer), require cafe_id
+    if (!isAdmin && !hasWriterRole && !input.cafe_id) {
         return { success: false, error: "Cafe owners must link posts to a cafe" }
     }
 

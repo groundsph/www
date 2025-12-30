@@ -150,6 +150,67 @@ export type Database = {
           },
         ]
       }
+      blog_reports: {
+        Row: {
+          admin_notes: string | null
+          blog_post_id: string
+          created_at: string | null
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          blog_post_id: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          blog_post_id?: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_reports_blog_post_id_fkey"
+            columns: ["blog_post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cafe_claims: {
         Row: {
           admin_notes: string | null
@@ -1532,7 +1593,7 @@ export type Database = {
       scout_rank: "novice" | "expert" | "vanguard"
       slot_type: "hero" | "sidebar" | "collection" | "regional_spotlight"
       subscription_status: "active" | "cancelled" | "past_due" | "trialing"
-      user_role: "user" | "moderator" | "admin"
+      user_role: "user" | "writer" | "moderator" | "admin"
       verification_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -1688,7 +1749,7 @@ export const Constants = {
       scout_rank: ["novice", "expert", "vanguard"],
       slot_type: ["hero", "sidebar", "collection", "regional_spotlight"],
       subscription_status: ["active", "cancelled", "past_due", "trialing"],
-      user_role: ["user", "moderator", "admin"],
+      user_role: ["user", "writer", "moderator", "admin"],
       verification_status: ["pending", "approved", "rejected"],
     },
   },

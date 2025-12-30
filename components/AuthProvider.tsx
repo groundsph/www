@@ -21,6 +21,7 @@ interface AuthContextType {
     user: User | null
     profile: Profile | null
     isAdmin: boolean
+    isWriter: boolean
     isLoading: boolean
     refreshProfile: () => Promise<void>
 }
@@ -29,6 +30,7 @@ export const AuthContext = createContext<AuthContextType>({
     user: null,
     profile: null,
     isAdmin: false,
+    isWriter: false,
     isLoading: true,
     refreshProfile: async () => {},
 })
@@ -198,6 +200,7 @@ export default function AuthProvider({
 
     // Computed values
     const isAdmin = profile?.role === "admin" || profile?.role === "moderator"
+    const isWriter = profile?.role === "writer"
 
     // Memoize context value to prevent unnecessary re-renders
     const contextValue = useMemo<AuthContextType>(
@@ -205,10 +208,11 @@ export default function AuthProvider({
             user,
             profile,
             isAdmin,
+            isWriter,
             isLoading,
             refreshProfile,
         }),
-        [user, profile, isAdmin, isLoading, refreshProfile]
+        [user, profile, isAdmin, isWriter, isLoading, refreshProfile]
     )
 
     // Render
