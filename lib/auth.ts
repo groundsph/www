@@ -28,10 +28,10 @@ export const auth = betterAuth({
             clientId: process.env.GOOGLE_CLIENT_ID || "",
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
         },
-        facebook: {
-            clientId: process.env.FACEBOOK_CLIENT_ID || "",
-            clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
-        },
+        // facebook: {
+        //     clientId: process.env.FACEBOOK_CLIENT_ID || "",
+        //     clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
+        // },
         discord: {
             clientId: process.env.DISCORD_CLIENT_ID || "",
             clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
@@ -49,7 +49,7 @@ export const auth = betterAuth({
     account: {
         accountLinking: {
             enabled: true,
-            trustedProviders: ["google", "facebook", "discord"],
+            trustedProviders: ["google", /* "facebook", */ "discord"],
             allowDifferentEmails: true,
         },
     },

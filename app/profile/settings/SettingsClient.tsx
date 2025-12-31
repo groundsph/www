@@ -1002,7 +1002,7 @@ export default function SettingsClient({ user }: { user: User }) {
                                             </div>
 
                                             {/* Facebook */}
-                                            <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-xl'>
+                                            {/* <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-xl'>
                                                 <div className='flex items-center gap-3'>
                                                     <div className='w-10 h-10 flex items-center justify-center bg-[#1877F2] text-white rounded-full p-2'>
                                                         <svg
@@ -1061,7 +1061,7 @@ export default function SettingsClient({ user }: { user: User }) {
                                                         Connect
                                                     </button>
                                                 )}
-                                            </div>
+                                            </div> */}
 
                                             {/* Discord */}
                                             <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-xl'>

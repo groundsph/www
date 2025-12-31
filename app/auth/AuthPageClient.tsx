@@ -778,7 +778,7 @@ export default function AuthPageClient() {
                                     </svg>
                                     Google
                                 </button>
-                                <button
+                                {/* <button
                                     onClick={async () => {
                                         setIsLoading(true)
                                         try {
@@ -811,7 +811,7 @@ export default function AuthPageClient() {
                                         <path d='M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.771-5.818 5.766-5.818 2.022 0 3.19.17 3.19.17l-.014 3.61h-2.11c-1.361 0-1.781.962-1.781 2.068v1.561h3.984l-.136 3.681h-3.848v7.953h-5.05z' />
                                     </svg>
                                     Facebook
-                                </button>
+                                </button> */}
                                 <button
                                     onClick={async () => {
                                         setIsLoading(true)
