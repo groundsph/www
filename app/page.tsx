@@ -123,7 +123,7 @@ export default async function Home() {
                                         <ArrowRightIcon className='w-4 h-4' />
                                     </Link>
                                 </div>
-                                <div className='flex flex-col gap-8'>
+                                <div className='flex flex-col gap-4'>
                                     {latestPosts
                                         .slice(0, 4)
                                         .map((post, idx) => (
@@ -132,12 +132,12 @@ export default async function Home() {
                                                 href={`/blog/${post.slug}`}
                                                 className='group flex items-start gap-5 hover:opacity-80 transition-all hover:bg-secondary/10 py-2 px-2 rounded-xl'
                                             >
-                                                <span className='font-serif text-3xl md:text-4xl font-bold text-text/30 group-hover:text-primary transition-colors min-w-12 text-right'>
+                                                {/* <span className='font-serif text-3xl md:text-4xl font-bold text-text/30 group-hover:text-primary transition-colors min-w-12 text-right'>
                                                     {String(idx + 1).padStart(
                                                         2,
                                                         "0"
                                                     )}
-                                                </span>
+                                                </span> */}
                                                 <div className='flex flex-col gap-1 pt-1'>
                                                     <span className='font-semibold text-lg md:text-xl group-hover:text-primary transition-colors line-clamp-2'>
                                                         {post.title}
@@ -169,7 +169,7 @@ export default async function Home() {
                                         <ArrowRightIcon className='w-4 h-4' />
                                     </Link>
                                 </div>
-                                <div className='flex flex-col gap-8'>
+                                <div className='flex flex-col gap-4'>
                                     {upcomingEvents.slice(0, 4).map((event) => {
                                         const startDate = new Date(
                                             event.start_date

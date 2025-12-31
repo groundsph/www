@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "uriwhfpoprbrcehboadj.supabase.co",
-      },
-      {
-        protocol: "https",
         hostname: "cdn.grounds.ph",
       }
     ]

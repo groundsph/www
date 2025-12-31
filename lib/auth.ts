@@ -11,8 +11,8 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true,
-        requireEmailVerification: false, // Match current Supabase behavior
-        minPasswordLength: 6, // Supabase default
+        requireEmailVerification: false,
+        minPasswordLength: 6,
         password: {
             hash: async (password) => {
                 return await bcrypt.hash(password, 10);

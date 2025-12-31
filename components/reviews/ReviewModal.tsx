@@ -63,7 +63,7 @@ export default function ReviewModal({
 
             const uploadedUrls: string[] = []
 
-            // Upload new files (client-side, direct to Supabase)
+            // Upload new files (client-side, direct to storage)
             if (newFiles.length > 0) {
                 for (const file of newFiles) {
                     const result = await uploadReviewImage(file)

@@ -35,13 +35,8 @@ export {
     getStorageProvider,
     getStorageProviderName,
     isUsingR2,
-    isUsingSupabase,
     type StorageProviderType,
 } from "./factory"
-
-// Re-export providers for direct access if needed
-export { getSupabaseStorageProvider } from "./providers/supabase"
-// Note: R2 provider is loaded dynamically to avoid dependency issues
 
 // Helpers
 export {
