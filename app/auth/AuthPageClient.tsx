@@ -1,6 +1,6 @@
 "use client"
 
-import { AuthContext } from "@/components/AuthProvider"
+import { AuthContext, useAuth } from "@/components/AuthProvider"
 import {
     checkUsernameAvailability,
     updateProfile,
@@ -10,16 +10,14 @@ import { motion } from "motion/react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect, useContext } from "react"
+import { useNotification } from "@/components/NotificationProvider"
 
 type AuthMode = "signin" | "signup" | "username" | "reset"
 
 export default function AuthPageClient() {
     // Context
-    const authContext = useContext(AuthContext)
-    if (!authContext) {
-        throw new Error("AuthContext not found")
-    }
-    const { refreshProfile, user } = authContext
+    const { refreshProfile, user } = useAuth()
+    const { addNotification } = useNotification()
 
     // Constants
     const searchParams = useSearchParams()
@@ -118,6 +116,13 @@ export default function AuthPageClient() {
     // Conditional UI (Passkey Autofill)
     useEffect(() => {
         if (mode === "signin") {
+            if (
+                !PublicKeyCredential.isConditionalMediationAvailable ||
+                !PublicKeyCredential.isConditionalMediationAvailable()
+            ) {
+                return
+            }
+
             authClient.signIn
                 .passkey({
                     autoFill: true,
@@ -129,8 +134,17 @@ export default function AuthPageClient() {
                                     "Passkey autofill error:",
                                     ctx.error
                                 )
+                                addNotification(
+                                    "Passkey autofill failed",
+                                    "error"
+                                )
                             }
                         },
+                        onSuccess: () =>
+                            addNotification(
+                                "Passkey autofill successful",
+                                "success"
+                            ),
                     },
                 })
                 .catch(() => {
