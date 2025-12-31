@@ -3,6 +3,8 @@ import CafeMapWrapper from "@/components/CafeMapWrapper"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { Metadata } from "next"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
     title: "Map",
     description: "Explore the best cafes in Cebu on an interactive map.",

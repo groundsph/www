@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import CafesPageClient from "./cafePage"
 import { getAllCafes } from "@/app/api/actions/cafe"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
     title: "Cafes",
     description:
