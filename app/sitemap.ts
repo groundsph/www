@@ -3,8 +3,6 @@ import { db } from '@/db'
 import { cafes, blogPosts, cafeMenuItems } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 
-export const dynamic = "force-dynamic"
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = 'https://grounds.ph'
 

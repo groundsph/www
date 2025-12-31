@@ -27,49 +27,86 @@ export default function LandingHero({
         // Skip if geolocation not supported
         if (!navigator.geolocation) return
 
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                try {
-                    // Reverse geocode using Nominatim (OpenStreetMap)
-                    const response = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&addressdetails=1`,
-                        { headers: { "User-Agent": "Grounds Coffee App" } }
-                    )
-                    const data = await response.json()
-
-                    // Extract city and region from response
-                    const city =
-                        data.address?.city ||
-                        data.address?.town ||
-                        data.address?.municipality ||
-                        data.address?.village
-                    const region = data.address?.state || data.address?.region
-
-                    if (city || region) {
-                        // Fetch location-based featured cafe
-                        const localFeatured = await getLocationFeatured(
-                            city,
-                            region
-                        )
-                        if (localFeatured) {
-                            setFeatured(localFeatured)
-                            setIsLocalFeatured(true)
-                            setLocationName(city || region || null)
-                        }
-                    }
-                } catch (error) {
-                    console.error(
-                        "Failed to get location-based featured:",
-                        error
-                    )
+        // Check sessionStorage cache first
+        const cachedLocation = sessionStorage.getItem("grounds_location")
+        if (cachedLocation) {
+            try {
+                const {
+                    city,
+                    region,
+                    featured: cachedFeatured,
+                } = JSON.parse(cachedLocation)
+                if (cachedFeatured) {
+                    setFeatured(cachedFeatured)
+                    setIsLocalFeatured(true)
+                    setLocationName(city || region || null)
+                    return
                 }
-            },
-            () => {
-                // User denied location or error - silently use default featured
-                console.log("Location access denied, using default featured")
-            },
-            { timeout: 10000, maximumAge: 300000 } // 10s timeout, cache for 5 min
-        )
+            } catch {
+                // Invalid cache, proceed with fresh fetch
+            }
+        }
+
+        // Delay geolocation request to prioritize initial paint
+        const timeoutId = setTimeout(() => {
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    try {
+                        // Reverse geocode using Nominatim (OpenStreetMap)
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&addressdetails=1`,
+                            { headers: { "User-Agent": "Grounds Coffee App" } }
+                        )
+                        const data = await response.json()
+
+                        // Extract city and region from response
+                        const city =
+                            data.address?.city ||
+                            data.address?.town ||
+                            data.address?.municipality ||
+                            data.address?.village
+                        const region =
+                            data.address?.state || data.address?.region
+
+                        if (city || region) {
+                            // Fetch location-based featured cafe
+                            const localFeatured = await getLocationFeatured(
+                                city,
+                                region
+                            )
+                            if (localFeatured) {
+                                setFeatured(localFeatured)
+                                setIsLocalFeatured(true)
+                                setLocationName(city || region || null)
+                                // Cache in sessionStorage
+                                sessionStorage.setItem(
+                                    "grounds_location",
+                                    JSON.stringify({
+                                        city,
+                                        region,
+                                        featured: localFeatured,
+                                    })
+                                )
+                            }
+                        }
+                    } catch (error) {
+                        console.error(
+                            "Failed to get location-based featured:",
+                            error
+                        )
+                    }
+                },
+                () => {
+                    // User denied location or error - silently use default featured
+                    console.log(
+                        "Location access denied, using default featured"
+                    )
+                },
+                { timeout: 10000, maximumAge: 300000 } // 10s timeout, cache for 5 min
+            )
+        }, 1500) // 1.5s delay to prioritize initial content paint
+
+        return () => clearTimeout(timeoutId)
     }, [])
 
     return (
@@ -205,6 +242,8 @@ export default function LandingHero({
                                     draggable={false}
                                     priority
                                     sizes='(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 80vw'
+                                    placeholder='blur'
+                                    blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwEAAhEDEEA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
                                 />
                             )}
                         </motion.div>
