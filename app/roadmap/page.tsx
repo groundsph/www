@@ -54,18 +54,6 @@ const inProgress: RoadmapItem[] = [
         icon: <Coffee className='w-5 h-5' />,
     },
     {
-        title: "Profile Settings",
-        description:
-            "Change your password, manage security, and link authentication methods",
-        icon: <Users className='w-5 h-5' />,
-    },
-    {
-        title: "Passkey Support",
-        description:
-            "Passwordless login using device biometrics for faster, more secure access",
-        icon: <CheckCircle2 className='w-5 h-5' />,
-    },
-    {
         title: "Social Login & Account Linking",
         description:
             "Sign in with Google, Facebook, and link multiple auth methods to one account",
