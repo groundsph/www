@@ -2,6 +2,8 @@ import { Metadata } from "next"
 import EventsPageClient from "@/components/events/EventsPageClient"
 import { getEvents } from "@/app/api/actions/events"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
     title: "Events",
     description:

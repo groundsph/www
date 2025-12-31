@@ -12,8 +12,8 @@ import Link from "next/link"
 import { MapPinIcon, ArrowRightIcon, Coffee } from "lucide-react"
 import { format } from "date-fns"
 
-// SSR revalidation every hour
-export const revalidate = 60
+// Dynamic rendering for Dokploy build compatibility
+export const dynamic = "force-dynamic"
 
 export default async function Home() {
     const jsonLd = {
