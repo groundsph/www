@@ -178,7 +178,6 @@ function Auth() {
     const handleSignOut = async () => {
         const { signOut } = await import("@/lib/auth-client")
         await signOut()
-        window.location.href = "/"
     }
 
     // Show nothing while loading to prevent flashing

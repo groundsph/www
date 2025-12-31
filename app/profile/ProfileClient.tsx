@@ -17,6 +17,7 @@ import {
     Loader2,
     Medal,
     MessageSquare,
+    Settings,
     Share2,
     Shield,
     Sparkles,
@@ -459,6 +460,13 @@ export default function ProfileClient() {
                                     >
                                         <Edit2 className='w-4 h-4' />
                                     </button>
+                                    <Link
+                                        href='/profile/settings'
+                                        className='p-1.5 rounded-full hover:bg-text/10 transition-colors'
+                                        title='Account Settings'
+                                    >
+                                        <Settings className='w-4 h-4' />
+                                    </Link>
                                     <button
                                         onClick={async () => {
                                             const profileUrl = `${window.location.origin}/profile/${profileData.username}`

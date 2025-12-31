@@ -5,7 +5,7 @@ import {
     checkUsernameAvailability,
     updateProfile,
 } from "@/app/api/actions/profile"
-import { signIn, signUp } from "@/lib/auth-client"
+import { signIn, signUp, authClient } from "@/lib/auth-client"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -114,6 +114,30 @@ export default function AuthPageClient() {
 
         return () => clearTimeout(timeoutId)
     }, [username, mode, currentProfile])
+
+    // Conditional UI (Passkey Autofill)
+    useEffect(() => {
+        if (mode === "signin") {
+            authClient.signIn
+                .passkey({
+                    autoFill: true,
+                    fetchOptions: {
+                        onError: (ctx) => {
+                            // Ignore abort errors from conditional UI
+                            if (ctx.error.status !== 401) {
+                                console.error(
+                                    "Passkey autofill error:",
+                                    ctx.error
+                                )
+                            }
+                        },
+                    },
+                })
+                .catch(() => {
+                    // Ignore initial abort errors or failures when conditional UI starts
+                })
+        }
+    }, [mode])
 
     // Functions
     const checkPasswordRequirements = (password: string) => {
@@ -479,6 +503,8 @@ export default function AuthPageClient() {
                                 <div>
                                     <input
                                         type='email'
+                                        name='email'
+                                        autoComplete='username webauthn'
                                         placeholder='juan@grounds.ph'
                                         value={email}
                                         onChange={(e) =>
@@ -620,6 +646,67 @@ export default function AuthPageClient() {
                                           : "Sign up"}
                                 </button>
                             </form>
+
+                            {/* Passkey Sign In - Only on sign-in mode */}
+                            {mode === "signin" && (
+                                <div className='mt-4'>
+                                    <div className='relative flex items-center justify-center text-text/40 text-sm my-4'>
+                                        <div className='flex-1 border-t border-text/10' />
+                                        <span className='px-3'>or</span>
+                                        <div className='flex-1 border-t border-text/10' />
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            setIsLoading(true)
+                                            setError(null)
+                                            try {
+                                                const result =
+                                                    await authClient.signIn.passkey()
+                                                if (result.error) {
+                                                    setError(
+                                                        result.error.message ||
+                                                            "Passkey authentication failed"
+                                                    )
+                                                } else {
+                                                    const redirect =
+                                                        searchParams.get(
+                                                            "redirect"
+                                                        ) || "/"
+                                                    window.location.href =
+                                                        redirect
+                                                }
+                                            } catch (err) {
+                                                console.error(
+                                                    "Passkey sign-in error:",
+                                                    err
+                                                )
+                                                setError(
+                                                    "Passkey authentication failed"
+                                                )
+                                            } finally {
+                                                setIsLoading(false)
+                                            }
+                                        }}
+                                        disabled={isLoading}
+                                        className='w-full py-3 bg-text/10 text-text font-semibold rounded-xl hover:bg-text/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer'
+                                    >
+                                        <svg
+                                            className='w-5 h-5'
+                                            fill='none'
+                                            viewBox='0 0 24 24'
+                                            stroke='currentColor'
+                                        >
+                                            <path
+                                                strokeLinecap='round'
+                                                strokeLinejoin='round'
+                                                strokeWidth={2}
+                                                d='M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4'
+                                            />
+                                        </svg>
+                                        Sign in with Passkey
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Forgot Password Link */}
                             {mode === "signin" && (

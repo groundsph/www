@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { db } from "@/db"
 import { headers } from "next/headers"
 import { admin, anonymous, phoneNumber } from "better-auth/plugins"
+import { passkey } from "@better-auth/passkey"
 import bcrypt from "bcrypt"
 
 export const auth = betterAuth({
@@ -22,7 +23,7 @@ export const auth = betterAuth({
             }
         }
     },
-    plugins: [admin(), anonymous(), phoneNumber()],
+    plugins: [admin(), anonymous(), phoneNumber(), passkey()],
     user: {
         additionalFields: {
             userMetadata: { type: 'json', required: false, input: false },
