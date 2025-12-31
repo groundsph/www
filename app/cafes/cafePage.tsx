@@ -84,6 +84,7 @@ export default function CafesPageClient({
             try {
                 const { city, region } = JSON.parse(cachedLocation)
                 if (city || region) {
+                    // eslint-disable-next-line react-hooks/set-state-in-effect
                     setUserLocation({ city, region })
                     return
                 }

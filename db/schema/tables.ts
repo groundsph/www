@@ -7,11 +7,10 @@ import {
     real,
     integer,
     jsonb,
-    index,
     uniqueIndex,
     customType,
 } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
+
 import * as enums from "./enums"
 
 // Custom tsvector type for full-text search columns

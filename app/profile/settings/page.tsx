@@ -11,5 +11,5 @@ export default async function SettingsPage() {
         redirect("/auth?redirect=/profile/settings")
     }
 
-    return <SettingsClient user={user} />
+    return <SettingsClient />
 }

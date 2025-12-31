@@ -49,7 +49,7 @@ export default function ReportButton({ postId, className }: ReportButtonProps) {
             } else {
                 setError(result.error || "Failed to submit report")
             }
-        } catch (err) {
+        } catch {
             setError("An unexpected error occurred")
         } finally {
             setIsSubmitting(false)
@@ -112,7 +112,8 @@ export default function ReportButton({ postId, className }: ReportButtonProps) {
                                                 Report Content
                                             </h3>
                                             <p className='text-xs text-text/60'>
-                                                Help us understand what's wrong
+                                                Help us understand what&apos;s
+                                                wrong
                                             </p>
                                         </div>
                                     </div>

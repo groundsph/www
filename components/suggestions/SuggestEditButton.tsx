@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useContext } from "react"
+import { useState } from "react"
 import { Pencil } from "lucide-react"
-import { AuthContext } from "@/components/AuthProvider"
 import { CafeWithRatings } from "@/utils/types/extra"
 import SuggestEditModal from "./SuggestEditModal"
 import Link from "next/link"
+import { useAuth } from "../AuthProvider"
 
 interface SuggestEditButtonProps {
     cafe: CafeWithRatings
@@ -16,8 +16,7 @@ export default function SuggestEditButton({
     cafe,
     variant = "default",
 }: SuggestEditButtonProps) {
-    const authContext = useContext(AuthContext)
-    const user = authContext?.user
+    const user = useAuth().user
     const [isModalOpen, setIsModalOpen] = useState(false)
 
     // If not logged in, show a link to auth

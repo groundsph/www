@@ -152,8 +152,8 @@ export default function WriterDashboard({
                         No stories founding
                     </h3>
                     <p className='text-text/60 max-w-sm mx-auto mt-2 mb-6'>
-                        You haven't written any stories yet, or none match your
-                        search filters.
+                        You haven&apos;t written any stories yet, or none match
+                        your search filters.
                     </p>
                     <Link
                         href='/writer/new'

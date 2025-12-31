@@ -30,17 +30,6 @@ import {
     type LinkedAccount,
 } from "@/app/api/actions/auth"
 
-interface User {
-    id: string
-    email: string
-    name: string
-    emailVerified: boolean
-    image?: string | null
-    createdAt: Date
-    updatedAt: Date
-    role?: string | null
-}
-
 interface Session {
     id: string
     token: string
@@ -56,7 +45,7 @@ type Passkey = Record<string, any>
 
 type TabType = "password" | "sessions" | "passkeys" | "connected-accounts"
 
-export default function SettingsClient({ user }: { user: User }) {
+export default function SettingsClient() {
     const { addNotification } = useNotification()
     const searchParams = useSearchParams()
 
@@ -652,7 +641,7 @@ export default function SettingsClient({ user }: { user: User }) {
                                                 Active Sessions
                                             </h2>
                                             <p className='text-text/60 text-sm mt-1'>
-                                                Manage devices where you're
+                                                Manage devices where you&apos;re
                                                 currently logged in
                                             </p>
                                         </div>

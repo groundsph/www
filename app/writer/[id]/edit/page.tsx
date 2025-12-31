@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { getWriterBlogPostById } from "@/app/api/actions/blog"
 import EditStoryClient from "./EditStoryClient"
 

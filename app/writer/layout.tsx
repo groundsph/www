@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation"
 import { getUserRole } from "@/app/api/actions/admin"
-import Link from "next/link"
-import { LayoutDashboard } from "lucide-react"
 
 export const metadata = {
     title: "Writer Dashboard",

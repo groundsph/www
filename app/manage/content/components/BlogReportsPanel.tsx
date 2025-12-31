@@ -10,12 +10,10 @@ import {
     Loader2,
     ChevronDown,
     ChevronUp,
-    AlertCircle,
 } from "lucide-react"
 import {
     getBlogReports,
     resolveBlogReport,
-    type PaginatedBlogReportsResult,
 } from "@/app/api/actions/blog-report"
 import { BlogReport, BLOG_REPORT_REASONS } from "@/utils/types/blog-report"
 import { formatDistanceToNow } from "date-fns"
@@ -215,7 +213,7 @@ export default function BlogReportsPanel() {
                                         {report.details && (
                                             <div>
                                                 <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
-                                                    Reporter's Details
+                                                    Reporter&apos;s Details
                                                 </h4>
                                                 <p className='text-sm text-text/80 whitespace-pre-wrap'>
                                                     {report.details}

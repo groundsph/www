@@ -5,8 +5,7 @@ import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
 import Image from "next/image"
-import { useState, useContext, useRef, useEffect, useMemo } from "react"
-import { AuthContext } from "@/components/AuthProvider"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 // Components
@@ -27,6 +26,7 @@ import ContributionHistoryModal from "@/components/history/ContributionHistoryMo
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
 import { trackCafePageView } from "@/utils/analytics"
+import { useAuth } from "@/components/AuthProvider"
 
 export interface Review {
     id: string
@@ -65,8 +65,7 @@ export default function CafeDetails({
     menuItems?: CafeMenuItem[]
 }) {
     // Auth
-    const authContext = useContext(AuthContext)
-    const authUser = authContext?.user
+    const authUser = useAuth().user
 
     // Cafe Actions Hook
     const {

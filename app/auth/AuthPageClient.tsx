@@ -1,6 +1,6 @@
 "use client"
 
-import { AuthContext, useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/AuthProvider"
 import {
     checkUsernameAvailability,
     updateProfile,
@@ -9,7 +9,7 @@ import { signIn, signUp, authClient } from "@/lib/auth-client"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect } from "react"
 import { useNotification } from "@/components/NotificationProvider"
 
 type AuthMode = "signin" | "signup" | "username" | "reset"
@@ -151,7 +151,7 @@ export default function AuthPageClient() {
                     // Ignore initial abort errors or failures when conditional UI starts
                 })
         }
-    }, [mode])
+    }, [mode, addNotification])
 
     // Functions
     const checkPasswordRequirements = (password: string) => {

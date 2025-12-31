@@ -1,16 +1,14 @@
 "use client"
 
-import { AuthContext } from "@/components/AuthProvider"
-import { useContext, useEffect, useState, useCallback } from "react"
+import { useAuth } from "@/components/AuthProvider"
+import { useEffect, useState, useCallback } from "react"
 
 /**
  * Custom hook to manage cafe passport actions (favorite, wishlist, visited)
  * Consolidates the duplicated toggle logic from CafeDetails
  */
 export function useCafeActions(cafeId: string) {
-    const authContext = useContext(AuthContext)
-    const user = authContext?.user
-    const profile = authContext?.profile
+    const { user, profile, refreshProfile } = useAuth()
 
     // States
     const [isVisited, setIsVisited] = useState(false)
@@ -43,12 +41,12 @@ export function useCafeActions(cafeId: string) {
                 "@/app/api/actions/profile"
             )
             await toggleVisitedAction(cafeId)
-            authContext.refreshProfile()
+            refreshProfile()
         } catch (error) {
             console.error("Visited toggle failed", error)
             setIsVisited(!newState)
         }
-    }, [user, isVisited, cafeId, authContext])
+    }, [user, isVisited, cafeId, refreshProfile])
 
     const toggleFavorite = useCallback(async () => {
         if (!user) return
@@ -61,12 +59,12 @@ export function useCafeActions(cafeId: string) {
                 "@/app/api/actions/profile"
             )
             await toggleFavoriteAction(cafeId)
-            authContext.refreshProfile()
+            refreshProfile()
         } catch (error) {
             console.error("Favorite toggle failed", error)
             setIsFavorite(!newState)
         }
-    }, [user, isFavorite, cafeId, authContext])
+    }, [user, isFavorite, cafeId, refreshProfile])
 
     const toggleWishlist = useCallback(async () => {
         if (!user) return
@@ -79,12 +77,12 @@ export function useCafeActions(cafeId: string) {
                 "@/app/api/actions/profile"
             )
             await toggleWishlistAction(cafeId)
-            authContext.refreshProfile()
+            refreshProfile()
         } catch (error) {
             console.error("Wishlist toggle failed", error)
             setIsInWishlist(!newState)
         }
-    }, [user, isInWishlist, cafeId, authContext])
+    }, [user, isInWishlist, cafeId, refreshProfile])
 
     return {
         user,

@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeSubscriptions } from "@/db/schema"
+import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions } from "@/db/schema"
 import { eq, and, ne, desc, inArray, arrayContains } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"

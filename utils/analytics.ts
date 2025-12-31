@@ -1,7 +1,6 @@
 "use client"
 
-import { db } from "@/db"
-import { cafePageViews } from "@/db/schema"
+
 
 // Rate limit tracking: store last view time per cafe
 const viewedCafes = new Map<string, number>()

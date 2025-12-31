@@ -123,32 +123,30 @@ export default async function Home() {
                                     </Link>
                                 </div>
                                 <div className='flex flex-col gap-4'>
-                                    {latestPosts
-                                        .slice(0, 4)
-                                        .map((post, idx) => (
-                                            <Link
-                                                key={post.id}
-                                                href={`/blog/${post.slug}`}
-                                                className='group flex items-start gap-5 hover:opacity-80 transition-all hover:bg-secondary/10 py-2 px-2 rounded-xl'
-                                            >
-                                                {/* <span className='font-serif text-3xl md:text-4xl font-bold text-text/30 group-hover:text-primary transition-colors min-w-12 text-right'>
+                                    {latestPosts.slice(0, 4).map((post) => (
+                                        <Link
+                                            key={post.id}
+                                            href={`/blog/${post.slug}`}
+                                            className='group flex items-start gap-5 hover:opacity-80 transition-all hover:bg-secondary/10 py-2 px-2 rounded-xl'
+                                        >
+                                            {/* <span className='font-serif text-3xl md:text-4xl font-bold text-text/30 group-hover:text-primary transition-colors min-w-12 text-right'>
                                                     {String(idx + 1).padStart(
                                                         2,
                                                         "0"
                                                     )}
                                                 </span> */}
-                                                <div className='flex flex-col gap-1 pt-1'>
-                                                    <span className='font-semibold text-lg md:text-xl group-hover:text-primary transition-colors line-clamp-2'>
-                                                        {post.title}
+                                            <div className='flex flex-col gap-1 pt-1'>
+                                                <span className='font-semibold text-lg md:text-xl group-hover:text-primary transition-colors line-clamp-2'>
+                                                    {post.title}
+                                                </span>
+                                                {post.excerpt && (
+                                                    <span className='text-text/50 text-sm line-clamp-2'>
+                                                        {post.excerpt}
                                                     </span>
-                                                    {post.excerpt && (
-                                                        <span className='text-text/50 text-sm line-clamp-2'>
-                                                            {post.excerpt}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </Link>
-                                        ))}
+                                                )}
+                                            </div>
+                                        </Link>
+                                    ))}
                                 </div>
                             </div>
                         )}

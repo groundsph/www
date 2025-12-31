@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { events, cafes, profiles, cafeSubscriptions } from "@/db/schema"
-import { eq, and, gte, lt, lte, desc, asc, count, sql, inArray } from "drizzle-orm"
+import { eq, and, gte, lt, lte, desc, asc, count, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
 

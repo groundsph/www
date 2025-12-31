@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { cafePageViews, cafes, profiles } from "@/db/schema"
-import { eq, gte, lte, and, inArray, sql } from "drizzle-orm"
+import { eq, gte, lte, and, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 
 export interface SiteAnalytics {

@@ -97,7 +97,7 @@ export default function AuthProvider({
             const data = await fetchProfile(session.user.id)
             setProfile(data)
         }
-    }, [session?.user, fetchProfile])
+    }, [session, fetchProfile])
 
     // Handle session changes
     useEffect(() => {
@@ -125,6 +125,7 @@ export default function AuthProvider({
         }
         // User signed out
         else if (!userId && previousUserId !== null) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setProfile(null)
             setIsProfileLoading(false)
             addNotification("You are now signed out.", "warning")

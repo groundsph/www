@@ -13,7 +13,7 @@
 import { getCurrentUser } from "@/lib/auth"
 import { db } from "@/db"
 import { profiles, cafes, reviews, blogPosts, events, badgeDefinitions, cafeClaims, cafeMenuItems, avatarDeletionQueue } from "@/db/schema"
-import { eq, like, sql, arrayContains } from "drizzle-orm"
+import { eq, like, arrayContains } from "drizzle-orm"
 import {
     getStorageProvider,
     STORAGE_BUCKETS,
@@ -263,7 +263,7 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadResp
                 updatedAt: new Date(),
             })
             .where(eq(profiles.id, user.id))
-    } catch (updateError) {
+    } catch {
         return { success: false, error: "Failed to update profile" }
     }
 
@@ -302,7 +302,7 @@ export async function removeAvatarAction(): Promise<DeleteResponse> {
                 updatedAt: new Date(),
             })
             .where(eq(profiles.id, user.id))
-    } catch (updateError) {
+    } catch {
         return { success: false, error: "Failed to update profile" }
     }
 

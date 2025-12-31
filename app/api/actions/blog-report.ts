@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { blogReports, blogPosts, profiles } from "@/db/schema"
-import { eq, desc, and, count as drizzleCount, sql } from "drizzle-orm"
+import { eq, desc, and, count as drizzleCount } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { BlogReport, BlogReportInput, BLOG_REPORT_REASONS } from "@/utils/types/blog-report"
 import { notifyDiscordBlogReport } from "@/app/api/actions/notify"

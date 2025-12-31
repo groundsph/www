@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import BlogEditor from "@/components/blog/BlogEditor"
-import { BlogPost, BlogCategory } from "@/utils/types/blog"
+import { BlogPost } from "@/utils/types/blog"
 
 interface EditStoryClientProps {
     post: BlogPost

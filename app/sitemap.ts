@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/db'
 import { cafes, blogPosts, cafeMenuItems } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 export const dynamic = "force-dynamic"
 

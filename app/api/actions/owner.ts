@@ -13,7 +13,7 @@ import {
     ownerVerificationRequests,
     featuredSlotRequests,
 } from "@/db/schema"
-import { eq, and, desc, inArray, sql, not } from "drizzle-orm"
+import { eq, and, desc, inArray, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import {
     OwnedCafe,

@@ -8,7 +8,7 @@ import {
     badgeDefinitions,
     userBadges,
 } from "@/db/schema"
-import { eq, and, count, sql } from "drizzle-orm"
+import { eq, and, count } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 
 // ============================================
