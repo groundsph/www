@@ -3318,7 +3318,7 @@ export async function getPaginatedUsers(params: UserPaginationParams): Promise<P
         .select({ count: drizzleCount() })
         .from(profiles)
         .leftJoin(user, eq(profiles.id, user.id))
-    
+
     if (whereClause) {
         countQuery.where(whereClause)
     }
@@ -3356,7 +3356,11 @@ export async function getPaginatedUsers(params: UserPaginationParams): Promise<P
     const users = await usersQuery
 
     return {
-        users,
+        users: users.map(u => ({
+            ...u,
+            role: u.role ?? 'user',
+            isBanned: u.isBanned ?? false,
+        })),
         total,
         page,
         pageSize,
