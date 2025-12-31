@@ -1,20 +1,23 @@
-import { neon } from "@neondatabase/serverless"
-import { drizzle, NeonHttpDatabase } from "drizzle-orm/neon-http"
+import { Pool } from "pg"
+import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres"
 import * as schema from "@/db/schema"
 
 // Lazy initialization to prevent connection at build time
-let _db: NeonHttpDatabase<typeof schema> | null = null
+let _db: NodePgDatabase<typeof schema> | null = null
+let _pool: Pool | null = null
 
-function getDb(): NeonHttpDatabase<typeof schema> {
+function getDb(): NodePgDatabase<typeof schema> {
     if (!_db) {
-        const sql = neon(process.env.DATABASE_URL!)
-        _db = drizzle(sql, { schema })
+        _pool = new Pool({
+            connectionString: process.env.DATABASE_URL!,
+        })
+        _db = drizzle(_pool, { schema })
     }
     return _db
 }
 
 // Proxy to make db access lazy - only connects when first queried at runtime
-export const db = new Proxy({} as NeonHttpDatabase<typeof schema>, {
+export const db = new Proxy({} as NodePgDatabase<typeof schema>, {
     get(_, prop) {
         return (getDb() as unknown as Record<string, unknown>)[prop as string]
     }
