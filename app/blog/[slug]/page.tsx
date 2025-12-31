@@ -12,7 +12,8 @@ import { Calendar, Clock, ArrowLeft, Eye, Coffee, User } from "lucide-react"
 import ShareButton from "@/components/blog/ShareButton"
 import ReportButton from "@/components/blog/ReportButton"
 
-export const revalidate = 60 // Revalidate every minute
+// Dynamic rendering for Dokploy build
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({
     params,

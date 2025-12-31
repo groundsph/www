@@ -10,7 +10,8 @@ export const metadata = {
         "Coffee stories, brewing guides, and news from the Philippine coffee community",
 }
 
-export const revalidate = 300 // Revalidate every 5 minutes
+// Dynamic rendering for Dokploy build
+export const dynamic = "force-dynamic"
 
 export default async function BlogPage({
     searchParams,
