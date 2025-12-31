@@ -85,7 +85,12 @@ export default function ProfileClient() {
 
     // Passport cafe data
     const [visitedCafes, setVisitedCafes] = useState<
-        { name: string; slug: string; visited_at: string | null }[]
+        {
+            name: string
+            slug: string
+            thumbnail: string | null
+            visited_at: string | null
+        }[]
     >([])
     const [favoriteCafes, setFavoriteCafes] = useState<
         { name: string; slug: string }[]

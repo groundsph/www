@@ -34,7 +34,7 @@ export interface FullProfileData {
         total_reviews: number | null
     }[]
     passportCafes: {
-        visited: { name: string; slug: string; visited_at: string | null }[]
+        visited: { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
         favorites: { name: string; slug: string }[]
         wishlist: { name: string; slug: string }[]
     }
@@ -133,7 +133,7 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
 
     // 4. Get passport cafes
     const passport = profile.passport as ProfilePassport | null
-    let visitedCafes: { name: string; slug: string; visited_at: string | null }[] = []
+    let visitedCafes: { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[] = []
     let favoriteCafes: { name: string; slug: string }[] = []
     let wishlistCafes: { name: string; slug: string }[] = []
 
@@ -147,7 +147,7 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
         if (allCafeIds.length > 0) {
             const uniqueIds = [...new Set(allCafeIds)]
             const passportCafesResult = await db
-                .select({ id: cafes.id, name: cafes.name, slug: cafes.slug })
+                .select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
                 .from(cafes)
                 .where(inArray(cafes.id, uniqueIds))
 
@@ -161,6 +161,7 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
                 }
             }
 
+            // Build visited cafes array and sort by date (oldest first for left-to-right display)
             visitedCafes = (passport.visited_ids || [])
                 .map((id) => {
                     const cafe = cafeMap.get(id)
@@ -168,10 +169,20 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
                     return {
                         name: cafe.name,
                         slug: cafe.slug,
+                        thumbnail: cafe.thumbnail,
                         visited_at: visitDatesMap.get(id) || null,
                     }
                 })
-                .filter(Boolean) as { name: string; slug: string; visited_at: string | null }[]
+                .filter(Boolean) as { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
+
+            // Sort: entries with dates first (oldest to newest), then entries without dates
+            visitedCafes.sort((a, b) => {
+                if (!a.visited_at && !b.visited_at) return 0
+                if (!a.visited_at) return -1 // No date goes to the left (older)
+                if (!b.visited_at) return 1
+                return new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime()
+            })
+
             favoriteCafes = (passport.favorite_ids || [])
                 .map((id) => cafeMap.get(id))
                 .filter(Boolean) as { name: string; slug: string }[]
@@ -273,7 +284,7 @@ export interface PublicProfileData {
         user_id: string
     }[]
     passportCafes: {
-        visited: { name: string; slug: string; visited_at: string | null }[]
+        visited: { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
         favorites: { name: string; slug: string }[]
         wishlist: { name: string; slug: string }[]
     }
@@ -335,22 +346,31 @@ export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?
         // Passport - visited cafes (with dates from visits array)
         (async () => {
             if (!passport?.visited_ids?.length) return []
-            const cafeResults = await db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug }).from(cafes).where(inArray(cafes.id, passport.visited_ids))
+            const cafeResults = await db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail }).from(cafes).where(inArray(cafes.id, passport.visited_ids))
             const visitDatesMap = new Map<string, string>()
             if (passport.visits) {
                 for (const v of passport.visits) {
                     visitDatesMap.set(v.cafe_id, v.visited_at)
                 }
             }
-            return passport.visited_ids.map(id => {
+            const result = passport.visited_ids.map(id => {
                 const cafe = cafeResults.find(c => c.id === id)
                 if (!cafe) return null
                 return {
                     name: cafe.name,
                     slug: cafe.slug,
+                    thumbnail: cafe.thumbnail,
                     visited_at: visitDatesMap.get(id) || null,
                 }
-            }).filter(Boolean) as { name: string; slug: string; visited_at: string | null }[]
+            }).filter(Boolean) as { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
+            // Sort: entries without dates to the left (older), then by date oldest to newest
+            result.sort((a, b) => {
+                if (!a.visited_at && !b.visited_at) return 0
+                if (!a.visited_at) return -1
+                if (!b.visited_at) return 1
+                return new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime()
+            })
+            return result
         })(),
 
         // Passport - favorite cafes

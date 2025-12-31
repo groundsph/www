@@ -2,12 +2,15 @@
 
 import { Coffee, Route } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useRef, useMemo } from "react"
 import { motion } from "motion/react"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface VisitHistoryCafe {
     name: string
     slug: string
+    thumbnail: string | null
     visited_at: string | null
 }
 
@@ -30,15 +33,35 @@ function seededRandom(seed: string): number {
 // Generate random vertical offset for a badge (seeded by cafe slug)
 function getVerticalOffset(slug: string): number {
     const random = seededRandom(slug)
-    // Return offset between -30 and 30 pixels
-    return (random - 0.5) * 60
+    // Return offset between -70 and 70 pixels (even more dramatic)
+    return (random - 0.5) * 140
 }
 
-// Generate random curve direction (up or down) for path
-function getCurveDirection(fromSlug: string, toSlug: string): number {
-    const random = seededRandom(fromSlug + toSlug)
-    // Return curve control offset between -40 and 40
-    return (random - 0.5) * 80
+// Generate S-curve control points for more interesting paths
+function getSCurveControls(
+    fromSlug: string,
+    toSlug: string,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+) {
+    const random1 = seededRandom(fromSlug + toSlug)
+    const random2 = seededRandom(toSlug + fromSlug + "curve")
+
+    // S-curve: first control point goes one direction, second goes opposite
+    const curveIntensity = 40 + random1 * 50 // 40-90px curve intensity
+    const direction = random1 > 0.5 ? 1 : -1
+
+    // First control point - 1/3 of the way, curves up/down
+    const cp1x = x1 + (x2 - x1) * 0.33
+    const cp1y = y1 + direction * curveIntensity * (0.5 + random2 * 0.5)
+
+    // Second control point - 2/3 of the way, curves opposite direction
+    const cp2x = x1 + (x2 - x1) * 0.67
+    const cp2y = y2 - direction * curveIntensity * (0.5 + random1 * 0.5)
+
+    return { cp1x, cp1y, cp2x, cp2y }
 }
 
 export default function VisitHistory({
@@ -81,9 +104,9 @@ export default function VisitHistory({
     }
 
     const BADGE_SIZE = 64
-    const BADGE_SPACING = 140
-    const CONTAINER_HEIGHT = 180
-    const CENTER_Y = CONTAINER_HEIGHT / 2 - 20
+    const BADGE_SPACING = 180 // Increased for full names
+    const CONTAINER_HEIGHT = 320 // Taller for more vertical variation and padding
+    const CENTER_Y = CONTAINER_HEIGHT / 2 - 20 // Adjusted center
 
     return (
         <div className={`w-full ${className}`}>
@@ -129,22 +152,27 @@ export default function VisitHistory({
                                 60 +
                                 (index + 1) * BADGE_SPACING +
                                 BADGE_SIZE / 2
-                            const y1 = CENTER_Y + getVerticalOffset(cafe.slug)
+                            const y1 =
+                                CENTER_Y +
+                                (index === 0 ? 0 : getVerticalOffset(cafe.slug))
                             const y2 =
                                 CENTER_Y + getVerticalOffset(nextCafe.slug)
 
-                            // Random curve control point
-                            const curveOffset = getCurveDirection(
-                                cafe.slug,
-                                nextCafe.slug
-                            )
-                            const midX = (x1 + x2) / 2
-                            const midY = (y1 + y2) / 2 + curveOffset
+                            // Get S-curve control points for more interesting paths
+                            const { cp1x, cp1y, cp2x, cp2y } =
+                                getSCurveControls(
+                                    cafe.slug,
+                                    nextCafe.slug,
+                                    x1,
+                                    y1,
+                                    x2,
+                                    y2
+                                )
 
                             return (
                                 <path
                                     key={`path-${cafe.slug}-${nextCafe.slug}`}
-                                    d={`M ${x1} ${y1} Q ${midX} ${midY} ${x2} ${y2}`}
+                                    d={`M ${x1} ${y1} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${x2} ${y2}`}
                                     fill='none'
                                     stroke='currentColor'
                                     strokeWidth='2'
@@ -158,10 +186,10 @@ export default function VisitHistory({
                     {/* Badge nodes */}
                     {sortedVisits.map((cafe, index) => {
                         const x = 60 + index * BADGE_SPACING
-                        const y =
-                            CENTER_Y +
-                            getVerticalOffset(cafe.slug) -
-                            BADGE_SIZE / 2
+                        // First item is always centered (offset 0)
+                        const offset =
+                            index === 0 ? 0 : getVerticalOffset(cafe.slug)
+                        const y = CENTER_Y + offset - BADGE_SIZE / 2
 
                         return (
                             <motion.div
@@ -184,26 +212,42 @@ export default function VisitHistory({
                                     href={`/cafes/${cafe.slug}`}
                                     className='group flex flex-col items-center'
                                 >
-                                    {/* Badge circle */}
+                                    {/* Badge circle with thumbnail */}
                                     <div
-                                        className='rounded-full bg-background border-2 border-primary/40 flex items-center justify-center shadow-md group-hover:border-primary group-hover:shadow-lg group-hover:scale-110 transition-all duration-200'
+                                        className='rounded-full bg-background border-2 border-primary/40 flex items-center justify-center shadow-md group-hover:border-primary group-hover:shadow-lg group-hover:scale-110 transition-all duration-200 overflow-hidden'
                                         style={{
                                             width: `${BADGE_SIZE}px`,
                                             height: `${BADGE_SIZE}px`,
                                         }}
                                     >
-                                        <Coffee className='w-6 h-6 text-primary/70 group-hover:text-primary transition-colors' />
+                                        {cafe.thumbnail ? (
+                                            <Image
+                                                src={getCafeThumbnailUrl(
+                                                    cafe.thumbnail
+                                                )}
+                                                alt={cafe.name}
+                                                width={BADGE_SIZE}
+                                                height={BADGE_SIZE}
+                                                className='object-cover w-full h-full'
+                                            />
+                                        ) : (
+                                            <Coffee className='w-6 h-6 text-primary/70 group-hover:text-primary transition-colors' />
+                                        )}
                                     </div>
 
-                                    {/* Cafe name tooltip on hover */}
-                                    <div className='absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10'>
-                                        <div className='bg-text text-background text-xs font-medium px-2 py-1 rounded whitespace-nowrap max-w-[140px] truncate'>
-                                            {cafe.name}
-                                        </div>
-                                    </div>
+                                    {/* Cafe name - full display */}
+                                    <span
+                                        className='mt-2 text-xs text-text/80 font-medium text-center leading-tight'
+                                        style={{
+                                            maxWidth: "120px",
+                                            wordBreak: "break-word",
+                                        }}
+                                    >
+                                        {cafe.name}
+                                    </span>
 
-                                    {/* Date below badge */}
-                                    <span className='mt-2 text-xs text-text/50 font-medium whitespace-nowrap'>
+                                    {/* Date below name */}
+                                    <span className='text-[10px] text-text/40 font-medium whitespace-nowrap'>
                                         {cafe.visited_at
                                             ? new Date(
                                                   cafe.visited_at
