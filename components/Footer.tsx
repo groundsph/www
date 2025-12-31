@@ -112,6 +112,12 @@ export default function Footer() {
                             >
                                 Contact
                             </Link>
+                            <Link
+                                href='/roadmap'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                Roadmap
+                            </Link>
                         </div>
                         <div className='flex flex-col gap-3'>
                             <h4 className='font-serif font-semibold text-sm text-background/50 uppercase tracking-wider'>
