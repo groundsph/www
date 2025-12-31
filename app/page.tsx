@@ -11,10 +11,9 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import Link from "next/link"
 import { MapPinIcon, ArrowRightIcon, Coffee } from "lucide-react"
 import { format } from "date-fns"
-import SupportersSection from "@/components/SupportersSection"
 
 // SSR revalidation every hour
-export const revalidate = 3600
+export const revalidate = 60
 
 export default async function Home() {
     const jsonLd = {

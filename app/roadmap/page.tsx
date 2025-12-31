@@ -53,12 +53,6 @@ const inProgress: RoadmapItem[] = [
             "Expanding our database with more cafes across the Philippines",
         icon: <Coffee className='w-5 h-5' />,
     },
-    {
-        title: "Social Login & Account Linking",
-        description:
-            "Sign in with Google, Facebook, and link multiple auth methods to one account",
-        icon: <Share2 className='w-5 h-5' />,
-    },
 ]
 
 const upNext: RoadmapItem[] = [
