@@ -27,10 +27,16 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { PHILIPPINES_LOCATIONS, COFFEE_STYLES } from "@/utils/data/philippines"
 import { useEffect, useState, useTransition } from "react"
 
-export default function CafesPageClient() {
+interface CafesPageClientProps {
+    initialCafes?: CafeWithRatings[]
+}
+
+export default function CafesPageClient({
+    initialCafes = [],
+}: CafesPageClientProps) {
     // States
-    const [cafes, setCafes] = useState<CafeWithRatings[]>([])
-    const [loading, setLoading] = useState(true)
+    const [cafes, setCafes] = useState<CafeWithRatings[]>(initialCafes)
+    const [loading, setLoading] = useState(initialCafes.length === 0)
     const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -62,8 +68,22 @@ export default function CafesPageClient() {
         near_me: false,
     })
 
-    // Location Detection
+    // Location Detection - reuse cache from landing page
     useEffect(() => {
+        // Check sessionStorage cache first (set by landing page)
+        const cachedLocation = sessionStorage.getItem("grounds_location")
+        if (cachedLocation) {
+            try {
+                const { city, region } = JSON.parse(cachedLocation)
+                if (city || region) {
+                    setUserLocation({ city, region })
+                    return
+                }
+            } catch {
+                // Invalid cache, proceed with fresh fetch
+            }
+        }
+
         if (!navigator.geolocation) return
 
         navigator.geolocation.getCurrentPosition(
@@ -568,6 +588,16 @@ export default function CafesPageClient() {
                                                     </span>
                                                 </>
                                             )}
+                                            {cafe.coffee_style && (
+                                                <>
+                                                    <span className='text-text/30'>
+                                                        •
+                                                    </span>
+                                                    <span className='text-text/60 capitalize'>
+                                                        {cafe.coffee_style}
+                                                    </span>
+                                                </>
+                                            )}
                                             <div className='flex-1' />
                                             {cafe.operating_hours && (
                                                 <div
@@ -707,6 +737,9 @@ export default function CafesPageClient() {
                                             alt=''
                                             fill
                                             className='object-cover rounded-2xl'
+                                            sizes='(max-width: 768px) 100vw, 50vw'
+                                            placeholder='blur'
+                                            blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwEAAhEDEEA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
                                         />
                                     </div>
                                 </motion.a>

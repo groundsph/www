@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import CafesPageClient from "./cafePage"
+import { getAllCafes } from "@/app/api/actions/cafe"
 
 export const metadata: Metadata = {
     title: "Cafes",
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     },
 }
 
-export default function CafesPage() {
-    return <CafesPageClient />
+export default async function CafesPage() {
+    const initialCafes = await getAllCafes(1, 40, {})
+    return <CafesPageClient initialCafes={initialCafes} />
 }
