@@ -12,6 +12,7 @@ import {
     Bell,
     Share2,
     Palette,
+    Navigation,
 } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -53,9 +54,6 @@ const inProgress: RoadmapItem[] = [
             "Expanding our database with more cafes across the Philippines",
         icon: <Coffee className='w-5 h-5' />,
     },
-]
-
-const upNext: RoadmapItem[] = [
     {
         title: "Hidden Gem Cafes",
         description:
@@ -73,6 +71,14 @@ const upNext: RoadmapItem[] = [
         description:
             "Track the cafes you've visited and build your personal coffee journey",
         icon: <Clock className='w-5 h-5' />,
+    },
+]
+const upNext: RoadmapItem[] = [
+    {
+        title: "Spot Guides",
+        description:
+            "Visual step-by-step guides using photos or videos to help you navigate to hard-to-find cafes",
+        icon: <Navigation className='w-5 h-5' />,
     },
 ]
 
