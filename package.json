@@ -20,7 +20,7 @@
         "@react-email/tailwind": "^2.0.2",
         "@tailwindcss/typography": "^0.5.19",
         "bcrypt": "^6.0.0",
-        "better-auth": "^1.4.9",
+        "better-auth": "^1.4.10",
         "browser-image-compression": "^2.0.2",
         "clsx": "^2.1.1",
         "date-fns": "^4.1.0",

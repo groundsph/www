@@ -42,7 +42,14 @@ export const auth = betterAuth({
             clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
         },
     },
-    plugins: [admin(), anonymous(), phoneNumber(), passkey()],
+    plugins: [
+        admin({
+            adminUserIds: process.env.ADMIN_USER_IDS?.split(",") || [],
+        }),
+        anonymous(),
+        phoneNumber(),
+        passkey()
+    ],
     user: {
         additionalFields: {
             userMetadata: { type: 'json', required: false, input: false },

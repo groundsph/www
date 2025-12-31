@@ -3238,3 +3238,166 @@ export async function adminUpdateFeaturedRequestStatus(
 // Phase 3: Review Moderation
 // Phase 4: Badges & Featured Schedules
 // Phase 5: Verification & User Roles
+
+// ============================================
+// User Management Functions
+// ============================================
+
+export interface UserPaginationParams {
+    page?: number
+    pageSize?: number
+    search?: string
+    role?: 'admin' | 'moderator' | 'writer' | 'user'
+    sortBy?: 'createdAt' | 'name'
+    sortOrder?: 'asc' | 'desc'
+}
+
+export interface PaginatedUsersResult {
+    users: {
+        id: string
+        username: string | null
+        displayName: string | null
+        avatarUrl: string | null
+        email: string | null
+        role: string
+        createdAt: Date | null
+        isBanned: boolean
+    }[]
+    total: number
+    page: number
+    pageSize: number
+    hasMore: boolean
+}
+
+/**
+ * Get paginated users for admin management
+ */
+export async function getPaginatedUsers(params: UserPaginationParams): Promise<PaginatedUsersResult> {
+    const {
+        page = 1,
+        pageSize = 20,
+        search,
+        role,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
+    } = params
+
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { users: [], total: 0, page, pageSize, hasMore: false }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { users: [], total: 0, page, pageSize, hasMore: false }
+    }
+
+    // Build conditions
+    const conditions = []
+
+    if (role) {
+        conditions.push(eq(profiles.role, role))
+    }
+
+    if (search && search.trim()) {
+        const searchTerm = `%${search.trim()}%`
+        conditions.push(or(
+            ilike(profiles.username, searchTerm),
+            ilike(profiles.displayName, searchTerm),
+            ilike(user.email, searchTerm)
+        )!)
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+    // Get total count
+    const countQuery = db
+        .select({ count: drizzleCount() })
+        .from(profiles)
+        .leftJoin(user, eq(profiles.id, user.id))
+    
+    if (whereClause) {
+        countQuery.where(whereClause)
+    }
+
+    const countResult = await countQuery
+    const total = countResult[0]?.count ?? 0
+
+    // Determine sorting
+    let orderBy
+    const sortCol = sortBy === 'name' ? profiles.displayName : profiles.createdAt
+    orderBy = sortOrder === 'asc' ? asc(sortCol!) : desc(sortCol!)
+
+    // Fetch users
+    const usersQuery = db
+        .select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+            role: profiles.role,
+            createdAt: profiles.createdAt,
+            email: user.email,
+            isBanned: user.banned
+        })
+        .from(profiles)
+        .leftJoin(user, eq(profiles.id, user.id))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy(orderBy)
+
+    if (whereClause) {
+        usersQuery.where(whereClause)
+    }
+
+    const users = await usersQuery
+
+    return {
+        users,
+        total,
+        page,
+        pageSize,
+        hasMore: total > page * pageSize
+    }
+}
+
+import { auth } from "@/lib/auth"
+
+/**
+ * Delete a user (Admin only)
+ * Uses Better Auth Admin API to properly remove user and all related data
+ */
+export async function deleteUserAsAdmin(userId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin') {
+        return { success: false, error: "Unauthorized: Admin access required" }
+    }
+
+    try {
+        // Use Better Auth Admin API
+        // We need to use the api.removeUser method exposed by the admin plugin
+        const res = await auth.api.removeUser({
+            body: {
+                userId
+            },
+            // Empty headers as this is a server-side call
+            headers: new Headers()
+        })
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error deleting user:", error)
+        return { success: false, error: "Failed to delete user" }
+    }
+}

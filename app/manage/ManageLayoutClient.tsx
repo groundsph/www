@@ -47,6 +47,12 @@ const navItems: NavItem[] = [
         adminOnly: true,
     },
     {
+        name: "Users",
+        href: "/manage/users",
+        icon: <Users className='w-5 h-5' />,
+        adminOnly: true,
+    },
+    {
         name: "System",
         href: "/manage/system",
         icon: <Settings className='w-5 h-5' />,
