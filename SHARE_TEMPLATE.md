@@ -32,7 +32,7 @@ It's built with the community in mind, so I'd love to hear your feedback or reco
 
 ## 👨‍💻 For Developer Communities (e.g., r/webdev, r/NextJS, r/reactjs)
 
-**Title:** Built a full-stack Cafe Discovery app with Next.js 16, Supabase, and Tailwind v4 🚀
+**Title:** Built a full-stack Cafe Discovery app with Next.js 16, Drizzle ORM, and Tailwind v4 🚀
 
 **Body:**
 
@@ -44,7 +44,9 @@ I just launched **Grounds**, a cafe discovery platform for the Philippines. It w
 
 - **Framework:** Next.js 16 (App Router)
 - **Styling:** Tailwind CSS v4
-- **Backend:** Supabase (SSR)
+- **Database:** Neon PostgreSQL + Drizzle ORM
+- **Auth:** Better Auth
+- **Storage:** Cloudflare R2
 - **Maps:** Leaflet + React Leaflet
 - **UI:** Motion for animations, Lucide React for icons
 
@@ -73,10 +75,10 @@ Check it out! 👇
 #CoffeePH #WebDev #BuildInPublic
 
 **Option 2 (Tech Focused):**
-Built my latest project "Grounds" using Next.js 16, Supabase, and Tailwind v4! 🛠️
+Built my latest project "Grounds" using Next.js 16, Drizzle ORM, and Tailwind v4! 🛠️
 It's a full-stack cafe discovery platform with interactive maps and owner dashboards.
 Live demo here: [Insert Link]
-#NextJS #Supabase #React #WebDevelopment
+#NextJS #DrizzleORM #React #WebDevelopment
 
 ---
 
@@ -93,7 +95,7 @@ Grounds is a comprehensive web application designed to help users discover and e
 
 - **Architecture:** Built on **Next.js 16** for server-side rendering and optimal performance.
 - **Design:** Utilized **Tailwind CSS v4** for a responsive and modern UI.
-- **Backend:** Integrated **Supabase** for robust authentication and real-time database capabilities.
+- **Backend:** Integrated **Neon PostgreSQL + Drizzle ORM** for the database with **Better Auth** for authentication.
 - **Features:** Implemented complex geospatial data visualization using **Leaflet**.
 
 This project allowed me to solve interesting challenges around map clustering, role-based access control, and image optimization.

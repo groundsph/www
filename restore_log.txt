@@ -1,1 +1,0 @@
-pg_restore: error: archive format "plain" is not supported; please use psql
