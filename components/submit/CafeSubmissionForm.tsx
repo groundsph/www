@@ -28,6 +28,9 @@ import {
     Search,
     AlertCircle,
     ImageIcon,
+    Armchair,
+    Droplet,
+    MilkOff,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
@@ -1686,6 +1689,7 @@ export default function CafeSubmissionForm({
                                             formData.has_restroom ||
                                             formData.has_bidet ||
                                             formData.has_non_dairy ||
+                                            formData.has_decaf ||
                                             formData.serves_food) && (
                                             <div>
                                                 <h2 className='text-lg font-serif font-semibold mb-3'>
@@ -1730,21 +1734,25 @@ export default function CafeSubmissionForm({
                                                     )}
                                                     {formData.has_indoor_seating && (
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Armchair className='w-4 h-4 text-primary' />{" "}
                                                             Indoor Seating
                                                         </span>
                                                     )}
                                                     {formData.has_restroom && (
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Droplet className='w-4 h-4 text-primary' />{" "}
                                                             Restroom
                                                         </span>
                                                     )}
                                                     {formData.has_bidet && (
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Droplet className='w-4 h-4 text-primary' />{" "}
                                                             Bidet
                                                         </span>
                                                     )}
                                                     {formData.has_non_dairy && (
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <MilkOff className='w-4 h-4 text-primary' />{" "}
                                                             Non-Dairy Milk
                                                             {formData
                                                                 .milk_options
@@ -1757,6 +1765,12 @@ export default function CafeSubmissionForm({
                                                                     )
                                                                 </span>
                                                             )}
+                                                        </span>
+                                                    )}
+                                                    {formData.has_decaf && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Coffee className='w-4 h-4 text-primary' />{" "}
+                                                            Decaf Options
                                                         </span>
                                                     )}
                                                     {formData.serves_food && (

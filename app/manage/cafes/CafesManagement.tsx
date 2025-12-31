@@ -33,6 +33,7 @@ import {
     Toilet,
     Droplet,
     MilkOff,
+    Coffee,
 } from "lucide-react"
 import {
     approveCafe,
@@ -147,6 +148,7 @@ export default function CafesManagement({
         has_restroom: { icon: Toilet, label: "Restroom" },
         has_bidet: { icon: Droplet, label: "Bidet" },
         has_non_dairy: { icon: MilkOff, label: "Non-Dairy Milk" },
+        has_decaf: { icon: Coffee, label: "Decaf Options" },
         serves_food: { icon: Utensils, label: "Serves Food" },
         is_work_friendly: { icon: Briefcase, label: "Work Friendly" },
     }

@@ -160,6 +160,7 @@ function mapCafeToCafeWithRatings(cafe: any, contributor?: any, ratings?: any): 
         has_restroom: cafe.hasRestroom,
         has_bidet: cafe.hasBidet,
         has_non_dairy: cafe.hasNonDairy,
+        has_decaf: cafe.hasDecaf,
         is_pet_friendly: cafe.isPetFriendly,
         is_work_friendly: cafe.isWorkFriendly,
         serves_food: cafe.servesFood,

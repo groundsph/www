@@ -94,10 +94,12 @@ export interface CafeFilters {
     has_restroom?: boolean;
     has_bidet?: boolean;
     has_non_dairy?: boolean;
+    has_decaf?: boolean;
     is_work_friendly?: boolean;
     price_level?: Database['public']['Enums']['price_level']; // Uses the actual DB Enum type
     coffee_style?: Database['public']['Enums']['coffee_style']; // Classic (2nd-wave) or Artisan (3rd-wave)
     region?: string;
+    tags?: string[]; // Filter by vibe tags (any matching)
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";
 }
@@ -154,6 +156,7 @@ export interface CafeSubmission {
     has_restroom: boolean;
     has_bidet: boolean;
     has_non_dairy: boolean;
+    has_decaf: boolean;
     milk_options: string[];
     serves_food: boolean;
     is_work_friendly: boolean;
@@ -203,6 +206,7 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     has_restroom: false,
     has_bidet: false,
     has_non_dairy: false,
+    has_decaf: false,
     milk_options: [],
     serves_food: false,
     is_work_friendly: false,

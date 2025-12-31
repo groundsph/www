@@ -13,6 +13,7 @@ import {
     Toilet,
     Droplet,
     MilkOff,
+    Coffee,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 
@@ -33,6 +34,7 @@ const AMENITY_OPTIONS: AmenityOption[] = [
     { key: "has_restroom", label: "Restroom", icon: Toilet },
     { key: "has_bidet", label: "Bidet", icon: Droplet },
     { key: "has_non_dairy", label: "Non-Dairy Milk", icon: MilkOff },
+    { key: "has_decaf", label: "Decaf Options", icon: Coffee },
     { key: "serves_food", label: "Serves Food", icon: Utensils },
     { key: "is_work_friendly", label: "Work Friendly", icon: Laptop },
 ]

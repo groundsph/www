@@ -22,6 +22,7 @@ export interface SuggestableFields {
     has_restroom?: boolean;
     has_bidet?: boolean;
     has_non_dairy?: boolean;
+    has_decaf?: boolean;
     milk_options?: string[];
     serves_food?: boolean;
     is_work_friendly?: boolean;

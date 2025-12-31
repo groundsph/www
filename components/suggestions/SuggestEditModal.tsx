@@ -66,6 +66,7 @@ const AMENITY_FIELDS = [
     { key: "has_restroom", label: "Restroom", icon: Utensils },
     { key: "has_bidet", label: "Bidet", icon: Utensils },
     { key: "has_non_dairy", label: "Non-Dairy Milk", icon: Coffee },
+    { key: "has_decaf", label: "Decaf Options", icon: Coffee },
     { key: "serves_food", label: "Serves Food", icon: Utensils },
     { key: "is_work_friendly", label: "Work Friendly", icon: Briefcase },
 ] as const

@@ -43,6 +43,7 @@ function mapCafeToSnakeCase(c: {
     hasRestroom: boolean | null
     hasBidet: boolean | null
     hasNonDairy: boolean | null
+    hasDecaf: boolean | null
     isPetFriendly: boolean | null
     isWorkFriendly: boolean | null
     servesFood: boolean | null
@@ -94,6 +95,7 @@ function mapCafeToSnakeCase(c: {
         has_restroom: c.hasRestroom,
         has_bidet: c.hasBidet,
         has_non_dairy: c.hasNonDairy,
+        has_decaf: c.hasDecaf,
         is_pet_friendly: c.isPetFriendly,
         is_work_friendly: c.isWorkFriendly,
         serves_food: c.servesFood,
@@ -115,7 +117,7 @@ function mapCafeToSnakeCase(c: {
             display_name: contributor.displayName,
             avatar_url: contributor.avatarUrl,
         } : null,
-    } as CafeWithRatings
+    } as unknown as CafeWithRatings
 }
 
 export async function getCafeBySlug(slug: string) {
@@ -157,6 +159,7 @@ export async function getCafeBySlug(slug: string) {
             hasRestroom: cafes.hasRestroom,
             hasBidet: cafes.hasBidet,
             hasNonDairy: cafes.hasNonDairy,
+            hasDecaf: cafes.hasDecaf,
             isPetFriendly: cafes.isPetFriendly,
             isWorkFriendly: cafes.isWorkFriendly,
             servesFood: cafes.servesFood,
@@ -264,6 +267,7 @@ export async function getDailyFeatured() {
                 hasRestroom: cafes.hasRestroom,
                 hasBidet: cafes.hasBidet,
                 hasNonDairy: cafes.hasNonDairy,
+                hasDecaf: cafes.hasDecaf,
                 isPetFriendly: cafes.isPetFriendly,
                 isWorkFriendly: cafes.isWorkFriendly,
                 servesFood: cafes.servesFood,
@@ -327,6 +331,7 @@ export async function getDailyFeatured() {
             hasRestroom: cafes.hasRestroom,
             hasBidet: cafes.hasBidet,
             hasNonDairy: cafes.hasNonDairy,
+            hasDecaf: cafes.hasDecaf,
             isPetFriendly: cafes.isPetFriendly,
             isWorkFriendly: cafes.isWorkFriendly,
             servesFood: cafes.servesFood,
@@ -405,7 +410,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                     hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
                     hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
                     hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
-                    hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, isPetFriendly: cafes.isPetFriendly,
+                    hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
                     isWorkFriendly: cafes.isWorkFriendly, servesFood: cafes.servesFood, isActive: cafes.isActive,
                     isPublished: cafes.isPublished, isVerified: cafes.isVerified, isClaimed: cafes.isClaimed,
                     ownerIds: cafes.ownerIds, contributorId: cafes.contributorId, featuredUntil: cafes.featuredUntil,
@@ -436,7 +441,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
                 hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
                 hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
-                hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, isPetFriendly: cafes.isPetFriendly,
+                hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
                 isWorkFriendly: cafes.isWorkFriendly, servesFood: cafes.servesFood, isActive: cafes.isActive,
                 isPublished: cafes.isPublished, isVerified: cafes.isVerified, isClaimed: cafes.isClaimed,
                 ownerIds: cafes.ownerIds, contributorId: cafes.contributorId, featuredUntil: cafes.featuredUntil,
@@ -468,7 +473,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
                 hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
                 hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
-                hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, isPetFriendly: cafes.isPetFriendly,
+                hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
                 isWorkFriendly: cafes.isWorkFriendly, servesFood: cafes.servesFood, isActive: cafes.isActive,
                 isPublished: cafes.isPublished, isVerified: cafes.isVerified, isClaimed: cafes.isClaimed,
                 ownerIds: cafes.ownerIds, contributorId: cafes.contributorId, featuredUntil: cafes.featuredUntil,
@@ -519,10 +524,15 @@ export async function getAllCafes(
     if (filters.has_restroom) conditions.push(eq(cafes.hasRestroom, true))
     if (filters.has_bidet) conditions.push(eq(cafes.hasBidet, true))
     if (filters.has_non_dairy) conditions.push(eq(cafes.hasNonDairy, true))
+    if (filters.has_decaf) conditions.push(eq(cafes.hasDecaf, true))
     if (filters.is_work_friendly) conditions.push(eq(cafes.isWorkFriendly, true))
     if (filters.price_level) conditions.push(eq(cafes.priceLevel, filters.price_level))
     if (filters.coffee_style) conditions.push(eq(cafes.coffeeStyle, filters.coffee_style))
     if (filters.region) conditions.push(eq(cafes.region, filters.region))
+    if (filters.tags && filters.tags.length > 0) {
+        // Match cafes that have any of the specified tags using PostgreSQL array overlap
+        conditions.push(sql`${cafes.tags} && ARRAY[${sql.join(filters.tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
+    }
 
     // Determine ordering
     let orderBy
@@ -550,7 +560,7 @@ export async function getAllCafes(
             hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
             hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
             hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
-            hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, isPetFriendly: cafes.isPetFriendly,
+            hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
             isWorkFriendly: cafes.isWorkFriendly, servesFood: cafes.servesFood, isActive: cafes.isActive,
             isPublished: cafes.isPublished, isVerified: cafes.isVerified, isClaimed: cafes.isClaimed,
             ownerIds: cafes.ownerIds, contributorId: cafes.contributorId, featuredUntil: cafes.featuredUntil,

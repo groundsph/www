@@ -1,13 +1,14 @@
 {
     "name": "grounds-website",
-    "version": "0.9.6",
+    "version": "0.9.8",
     "private": true,
     "scripts": {
         "dev": "next dev --experimental-https",
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
-        "merge": "git checkout prod && git merge dev && git push origin prod && git checkout dev"
+        "merge": "git checkout prod && git merge dev && git push origin prod && git checkout dev",
+        "db-push": "drizzle-kit push"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.958.0",

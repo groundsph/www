@@ -93,6 +93,7 @@ export default function AmenitiesSection({
                         has_restroom: cafe.has_restroom || false,
                         has_bidet: cafe.has_bidet || false,
                         has_non_dairy: cafe.has_non_dairy || false,
+                        has_decaf: cafe.has_decaf || false,
                         serves_food: cafe.serves_food || false,
                         is_work_friendly: cafe.is_work_friendly || false,
                     }}

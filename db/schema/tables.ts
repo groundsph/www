@@ -120,6 +120,7 @@ export const cafes = pgTable(
         hasRestroom: boolean("has_restroom"),
         hasBidet: boolean("has_bidet"),
         hasNonDairy: boolean("has_non_dairy"),
+        hasDecaf: boolean("has_decaf"),
         isPetFriendly: boolean("is_pet_friendly"),
         isWorkFriendly: boolean("is_work_friendly"),
         servesFood: boolean("serves_food"),

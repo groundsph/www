@@ -20,11 +20,16 @@ import {
     Toilet,
     Droplet,
     MilkOff,
+    Coffee,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
 import { CafeWithRatings } from "@/utils/types/extra"
-import { PHILIPPINES_LOCATIONS, COFFEE_STYLES } from "@/utils/data/philippines"
+import {
+    PHILIPPINES_LOCATIONS,
+    COFFEE_STYLES,
+    CAFE_VIBE_TAGS,
+} from "@/utils/data/philippines"
 import { useEffect, useState, useTransition } from "react"
 
 interface CafesPageClientProps {
@@ -60,12 +65,14 @@ export default function CafesPageClient({
         has_restroom: false,
         has_bidet: false,
         has_non_dairy: false,
+        has_decaf: false,
         is_work_friendly: false,
         open_now: false,
         price_level: "" as "" | "low" | "medium" | "high",
         coffee_style: "" as "" | "classic" | "artisan",
         region: "",
         near_me: false,
+        tags: [] as string[],
     })
 
     // Location Detection - reuse cache from landing page
@@ -128,10 +135,12 @@ export default function CafesPageClient({
                     has_restroom: filters.has_restroom,
                     has_bidet: filters.has_bidet,
                     has_non_dairy: filters.has_non_dairy,
+                    has_decaf: filters.has_decaf,
                     is_work_friendly: filters.is_work_friendly,
                     price_level: filters.price_level || undefined,
                     coffee_style: filters.coffee_style || undefined,
                     region: filters.region || undefined,
+                    tags: filters.tags.length > 0 ? filters.tags : undefined,
                     sortBy: sortBy as "recommended" | "rating" | "reviews",
                 })
                 setCafes(fetchedCafes)
@@ -184,7 +193,8 @@ export default function CafesPageClient({
             value === true ||
             (key === "price_level" && value !== "") ||
             (key === "coffee_style" && value !== "") ||
-            (key === "region" && value !== "")
+            (key === "region" && value !== "") ||
+            (key === "tags" && Array.isArray(value) && value.length > 0)
     ).length
 
     const filterOptions = [
@@ -234,6 +244,11 @@ export default function CafesPageClient({
             key: "has_non_dairy",
             label: "Non-Dairy",
             icon: <MilkOff className='w-4 h-4' />,
+        },
+        {
+            key: "has_decaf",
+            label: "Decaf",
+            icon: <Coffee className='w-4 h-4' />,
         },
         {
             key: "is_work_friendly",
@@ -339,12 +354,14 @@ export default function CafesPageClient({
                                                     has_restroom: false,
                                                     has_bidet: false,
                                                     has_non_dairy: false,
+                                                    has_decaf: false,
                                                     is_work_friendly: false,
                                                     open_now: false,
                                                     price_level: "",
                                                     coffee_style: "",
                                                     region: "",
                                                     near_me: false,
+                                                    tags: [],
                                                 })
                                             }}
                                             className='text-xs text-text/60 hover:text-text cursor-pointer'
@@ -485,6 +502,46 @@ export default function CafesPageClient({
                                                 </button>
                                             )
                                         )}
+                                    </div>
+                                </div>
+
+                                {/* Vibe Tags Filter */}
+                                <div className='mt-3'>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>
+                                        Vibes
+                                    </span>
+                                    <div className='flex flex-row flex-wrap gap-2'>
+                                        {CAFE_VIBE_TAGS.map((tag) => {
+                                            const isSelected =
+                                                filters.tags.includes(tag)
+                                            return (
+                                                <button
+                                                    key={tag}
+                                                    onClick={() => {
+                                                        setFilters((prev) => ({
+                                                            ...prev,
+                                                            tags: isSelected
+                                                                ? prev.tags.filter(
+                                                                      (t) =>
+                                                                          t !==
+                                                                          tag
+                                                                  )
+                                                                : [
+                                                                      ...prev.tags,
+                                                                      tag,
+                                                                  ],
+                                                        }))
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer capitalize ${
+                                                        isSelected
+                                                            ? "bg-text text-background border-text"
+                                                            : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                                    }`}
+                                                >
+                                                    #{tag.replace(/_/g, " ")}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 </div>
                             </div>
@@ -771,12 +828,14 @@ export default function CafesPageClient({
                                         has_restroom: false,
                                         has_bidet: false,
                                         has_non_dairy: false,
+                                        has_decaf: false,
                                         is_work_friendly: false,
                                         open_now: false,
                                         price_level: "",
                                         coffee_style: "",
                                         region: "",
                                         near_me: false,
+                                        tags: [],
                                     })
                                 }}
                                 className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'

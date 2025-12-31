@@ -126,6 +126,7 @@ export async function submitCafe(
             hasRestroom: formData.has_restroom,
             hasBidet: formData.has_bidet,
             hasNonDairy: formData.has_non_dairy,
+            hasDecaf: formData.has_decaf,
             milkOptions: formData.milk_options.length > 0 ? formData.milk_options : null,
             servesFood: formData.serves_food,
             isWorkFriendly: formData.is_work_friendly,

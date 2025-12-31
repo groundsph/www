@@ -54,21 +54,6 @@ const inProgress: RoadmapItem[] = [
         icon: <Coffee className='w-5 h-5' />,
     },
     {
-        title: "Enhanced Search",
-        description:
-            "Improved search with filters for amenities, coffee style, and more",
-        icon: <Sparkles className='w-5 h-5' />,
-    },
-    {
-        title: "Decaf & Vibe Filters",
-        description:
-            "Search by decaf availability, tags, and cafe vibes to find your perfect spot",
-        icon: <Star className='w-5 h-5' />,
-    },
-]
-
-const upNext: RoadmapItem[] = [
-    {
         title: "Profile Settings",
         description:
             "Change your password, manage security, and link authentication methods",
@@ -86,11 +71,26 @@ const upNext: RoadmapItem[] = [
             "Sign in with Google, Facebook, and link multiple auth methods to one account",
         icon: <Share2 className='w-5 h-5' />,
     },
+]
+
+const upNext: RoadmapItem[] = [
     {
         title: "Hidden Gem Cafes",
         description:
             "A special feature for sharing secret spots that stay off the public listings",
         icon: <MapPin className='w-5 h-5' />,
+    },
+    {
+        title: "User Collections",
+        description:
+            "Save and organize your favorite cafes into shareable lists",
+        icon: <Star className='w-5 h-5' />,
+    },
+    {
+        title: "Visit History & Check-ins",
+        description:
+            "Track the cafes you've visited and build your personal coffee journey",
+        icon: <Clock className='w-5 h-5' />,
     },
 ]
 
@@ -118,18 +118,6 @@ const exploring: RoadmapItem[] = [
         description:
             "A sleek dark theme for night owls and low-light environments",
         icon: <Palette className='w-5 h-5' />,
-    },
-    {
-        title: "User Collections",
-        description:
-            "Save and organize your favorite cafes into shareable lists",
-        icon: <Star className='w-5 h-5' />,
-    },
-    {
-        title: "Visit History & Check-ins",
-        description:
-            "Track the cafes you've visited and build your personal coffee journey",
-        icon: <Clock className='w-5 h-5' />,
     },
 ]
 
