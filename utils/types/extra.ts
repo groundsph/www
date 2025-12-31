@@ -114,10 +114,20 @@ export interface ProfileStats {
 }
 
 // Profile Passport JSON structure
+// Supports hybrid format: visited_ids for legacy, visits for new entries with dates
 export interface ProfilePassport {
-    visited_ids: string[];
+    visited_ids: string[]; // Legacy - IDs only (backward compatible)
+    visits?: { cafe_id: string; visited_at: string }[]; // New - includes timestamps
     wishlist_ids: string[];
     favorite_ids: string[];
+}
+
+// Visit history item for display (with computed date)
+export interface VisitHistoryItem {
+    cafe_id: string;
+    name: string;
+    slug: string;
+    visited_at: string | null;
 }
 
 // Profile with badges type

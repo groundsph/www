@@ -31,6 +31,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
+import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
 
@@ -84,7 +85,7 @@ export default function ProfileClient() {
 
     // Passport cafe data
     const [visitedCafes, setVisitedCafes] = useState<
-        { name: string; slug: string }[]
+        { name: string; slug: string; visited_at: string | null }[]
     >([])
     const [favoriteCafes, setFavoriteCafes] = useState<
         { name: string; slug: string }[]
@@ -995,10 +996,18 @@ export default function ProfileClient() {
                     </div>
                 </section>
 
+                {/* Visit History Section */}
+                <section className='mt-10'>
+                    <VisitHistory visits={visitedCafes} />
+                </section>
+
                 {/* Passport Section */}
                 <section className='mt-10'>
                     <Passport
-                        visited={visitedCafes}
+                        visited={visitedCafes.map((c) => ({
+                            name: c.name,
+                            slug: c.slug,
+                        }))}
                         favorites={favoriteCafes}
                         wishlist={wishlistCafes}
                         isOwnProfile={true}
