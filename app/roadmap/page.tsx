@@ -15,13 +15,28 @@ import {
 } from "lucide-react"
 
 export const metadata: Metadata = {
-    title: "Roadmap",
+    title: "Roadmap - What We're Building Next",
     description:
-        "See what we're building next at Grounds. Our public roadmap shows features in progress, upcoming plans, and ideas we're exploring.",
+        "See what's coming to Grounds. Our public roadmap shows features in progress like enhanced search and decaf filters, upcoming auth improvements, and future plans like a mobile app and dark mode.",
+    keywords: [
+        "Grounds roadmap",
+        "cafe app features",
+        "upcoming features",
+        "product roadmap",
+        "Grounds updates",
+        "cafe finder features",
+    ],
     openGraph: {
-        title: "Roadmap",
+        title: "Roadmap - What We're Building Next | Grounds",
         description:
-            "See what we're building next at Grounds. Our public roadmap shows features in progress, upcoming plans, and ideas we're exploring.",
+            "See what's coming to Grounds. Explore features we're building, what's up next, and ideas we're exploring for the future of cafe discovery.",
+        type: "website",
+    },
+    twitter: {
+        card: "summary",
+        title: "Roadmap | Grounds",
+        description:
+            "See what's coming to Grounds — enhanced search, passkey support, hidden cafes, and more.",
     },
 }
 
