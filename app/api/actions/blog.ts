@@ -11,6 +11,7 @@ import {
     BlogStatus,
     generateSlug,
 } from "@/utils/types/blog"
+import { format } from "date-fns"
 
 // ============================================
 // Helper Functions
@@ -507,7 +508,8 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
     }
 
     // Generate unique slug
-    const baseSlug = input.slug || generateSlug(input.title)
+    const dateStr = format(new Date(), "dd-MM-yyyy")
+    const baseSlug = input.slug || generateSlug(`${input.title}-${dateStr}`)
     let slug = baseSlug
     let counter = 1
 
@@ -557,7 +559,8 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     // Handle slug update
     let slug = input.slug
     if (input.title && !input.slug) {
-        slug = generateSlug(input.title)
+        const dateStr = format(new Date(), "dd-MM-yyyy")
+        slug = generateSlug(`${input.title}-${dateStr}`)
         let counter = 1
         const baseSlug = slug
 
