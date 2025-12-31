@@ -21,13 +21,19 @@ type ScopeMode = "local" | "national"
 
 const PAGE_SIZE = 12
 
-export default function EventsPageClient() {
+interface EventsPageClientProps {
+    initialEvents?: EventWithCafe[]
+}
+
+export default function EventsPageClient({
+    initialEvents = [],
+}: EventsPageClientProps) {
     const { location, loading: locationLoading } = useUserLocation()
     const [viewMode, setViewMode] = useState<ViewMode>("list")
     const [scopeMode, setScopeMode] = useState<ScopeMode>("local")
-    const [events, setEvents] = useState<EventWithCafe[]>([])
+    const [events, setEvents] = useState<EventWithCafe[]>(initialEvents)
     const [calendarEvents, setCalendarEvents] = useState<Event[]>([])
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(initialEvents.length === 0)
     const [loadingMore, setLoadingMore] = useState(false)
     const [hasMore, setHasMore] = useState(true)
     const [page, setPage] = useState(1)

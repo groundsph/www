@@ -60,12 +60,6 @@ const inProgress: RoadmapItem[] = [
         icon: <Sparkles className='w-5 h-5' />,
     },
     {
-        title: "Page Optimization",
-        description:
-            "Faster load times and smoother experience across all devices",
-        icon: <Rocket className='w-5 h-5' />,
-    },
-    {
         title: "Decaf & Vibe Filters",
         description:
             "Search by decaf availability, tags, and cafe vibes to find your perfect spot",
