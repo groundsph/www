@@ -22,6 +22,7 @@ import {
     Users,
     Search,
     ImagePlus,
+    Gem,
 } from "lucide-react"
 import {
     approveCafe,
@@ -171,6 +172,8 @@ export default function CafeEditor({
             slug: cafe.slug,
             is_verified: cafe.is_verified || false,
             owner_ids: cafe.owner_ids || null,
+            is_hidden_gem: cafe.is_hidden_gem || false,
+            finding_hint: cafe.finding_hint || null,
         })
         setSaving(false)
         if (result.success) {
@@ -434,6 +437,67 @@ export default function CafeEditor({
                                     }`}
                                 />
                             </button>
+                        </div>
+
+                        {/* Hidden Gem Status Toggle */}
+                        <div className='flex flex-col gap-4 p-4 bg-background border border-text/10 rounded-lg'>
+                            <div className='flex items-center justify-between'>
+                                <div className='flex items-center gap-3'>
+                                    <Gem
+                                        className={`w-5 h-5 ${cafe.is_hidden_gem ? "text-amber-500" : "text-text/40"}`}
+                                    />
+                                    <div>
+                                        <p className='font-medium'>
+                                            Hidden Gem
+                                        </p>
+                                        <p className='text-sm text-text/60'>
+                                            Hidden Gems are excluded from maps
+                                            and featured sections
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() =>
+                                        updateField(
+                                            "is_hidden_gem",
+                                            !cafe.is_hidden_gem
+                                        )
+                                    }
+                                    className={`relative inline-flex h-6 min-w-11 items-center rounded-full transition-colors cursor-pointer ${
+                                        cafe.is_hidden_gem
+                                            ? "bg-amber-500"
+                                            : "bg-text/20"
+                                    }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                            cafe.is_hidden_gem
+                                                ? "translate-x-6"
+                                                : "translate-x-1"
+                                        }`}
+                                    />
+                                </button>
+                            </div>
+                            {cafe.is_hidden_gem && (
+                                <div>
+                                    <label className='block text-sm font-medium text-text/60 mb-2'>
+                                        Finding Hint (optional)
+                                    </label>
+                                    <input
+                                        type='text'
+                                        value={cafe.finding_hint || ""}
+                                        onChange={(e) =>
+                                            updateField(
+                                                "finding_hint",
+                                                e.target.value || null
+                                            )
+                                        }
+                                        maxLength={200}
+                                        placeholder='e.g. Look for the blue door near the old market...'
+                                        className='w-full px-4 py-2 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 text-sm'
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label className='block text-sm font-medium text-text/60 mb-2'>

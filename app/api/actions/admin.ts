@@ -176,6 +176,8 @@ function mapCafeToCafeWithRatings(cafe: any, contributor?: any, ratings?: any): 
         average_rating: ratings?.averageRating ?? null,
         total_reviews: ratings?.totalReviews ?? 0,
         rating_distribution: ratings?.ratingDistribution ?? null,
+        is_hidden_gem: cafe.isHiddenGem ?? false,
+        finding_hint: cafe.findingHint ?? null,
         contributor: contributor ? {
             id: contributor.id,
             username: contributor.username,
@@ -555,6 +557,8 @@ export async function updateCafe(
         slug: string
         is_verified: boolean
         owner_ids: string[] | null
+        is_hidden_gem: boolean
+        finding_hint: string | null
     }>
 ): Promise<AdminActionResult> {
     const currentUser = await getCurrentUser()
@@ -602,6 +606,8 @@ export async function updateCafe(
         website_url: 'websiteUrl',
         is_verified: 'isVerified',
         owner_ids: 'ownerIds',
+        is_hidden_gem: 'isHiddenGem',
+        finding_hint: 'findingHint',
     }
 
     const drizzleUpdates: Record<string, unknown> = { updatedAt: new Date() }

@@ -619,12 +619,14 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_claimed: boolean | null
+          is_hidden_gem: boolean | null
           is_pet_friendly: boolean | null
           is_published: boolean | null
           is_verified: boolean | null
           is_work_friendly: boolean | null
-          lat: number
-          lng: number
+          finding_hint: string | null
+          lat: number | null
+          lng: number | null
           membership_tier: Database["public"]["Enums"]["membership_tier"] | null
           milk_options: string[] | null
           name: string
@@ -671,12 +673,14 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_claimed?: boolean | null
+          is_hidden_gem?: boolean | null
           is_pet_friendly?: boolean | null
           is_published?: boolean | null
           is_verified?: boolean | null
           is_work_friendly?: boolean | null
-          lat: number
-          lng: number
+          finding_hint?: string | null
+          lat?: number | null
+          lng?: number | null
           membership_tier?:
           | Database["public"]["Enums"]["membership_tier"]
           | null
@@ -725,12 +729,14 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_claimed?: boolean | null
+          is_hidden_gem?: boolean | null
           is_pet_friendly?: boolean | null
           is_published?: boolean | null
           is_verified?: boolean | null
           is_work_friendly?: boolean | null
-          lat?: number
-          lng?: number
+          finding_hint?: string | null
+          lat?: number | null
+          lng?: number | null
           membership_tier?:
           | Database["public"]["Enums"]["membership_tier"]
           | null

@@ -35,6 +35,8 @@ export interface SuggestableFields {
     roaster?: string;
     operating_hours?: OperatingHours;
     socials?: CafeSocial[];
+    is_hidden_gem?: boolean;
+    finding_hint?: string;
 }
 
 export interface SuggestedImageChanges {

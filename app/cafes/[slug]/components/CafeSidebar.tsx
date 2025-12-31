@@ -73,23 +73,51 @@ export default function CafeSidebar({
 
     return (
         <div className='w-full max-w-96 h-fit flex flex-col gap-3 sticky top-4'>
-            {/* Map */}
-            <div className='w-full h-auto aspect-video relative flex flex-col items-center justify-center overflow-clip rounded-xl border-2 border-text/10'>
-                <DynamicCafeMiniMap
-                    key={cafe.id}
-                    cafe={cafe}
-                />
-            </div>
+            {/* Map - Only show if cafe has coordinates (not a Hidden Gem) */}
+            {cafe.lat !== null && cafe.lng !== null ? (
+                <>
+                    <div className='w-full h-auto aspect-video relative flex flex-col items-center justify-center overflow-clip rounded-xl border-2 border-text/10'>
+                        <DynamicCafeMiniMap
+                            key={cafe.id}
+                            cafe={
+                                cafe as {
+                                    id: string
+                                    name: string
+                                    lat: number
+                                    lng: number
+                                }
+                            }
+                        />
+                    </div>
 
-            {/* Address Link */}
-            <a
-                href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-sm font-semibold text-text/60 hover:text-text/60 transition-colors hover:underline'
-            >
-                {cafe.address_display}
-            </a>
+                    {/* Address Link */}
+                    <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-sm font-semibold text-text/60 hover:text-text/60 transition-colors hover:underline'
+                    >
+                        {cafe.address_display}
+                    </a>
+                </>
+            ) : (
+                /* Hidden Gem - Show finding hint instead of map */
+                <div className='w-full bg-amber-50 border border-amber-200 rounded-xl p-4'>
+                    <div className='flex items-center gap-2 mb-2'>
+                        <span className='font-semibold text-amber-800'>
+                            🌟 Hidden Gem
+                        </span>
+                    </div>
+                    <p className='text-sm text-amber-700'>
+                        {cafe.address_display}
+                    </p>
+                    {cafe.finding_hint && (
+                        <p className='text-sm text-amber-600 mt-2 italic'>
+                            💡 Hint: {cafe.finding_hint}
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Website */}
             {cafe.website_url && (

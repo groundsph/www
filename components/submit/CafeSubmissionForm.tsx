@@ -31,6 +31,7 @@ import {
     Armchair,
     Droplet,
     MilkOff,
+    Gem,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
@@ -200,9 +201,14 @@ export default function CafeSubmissionForm({
                 if (!formData.region) return "Please select a region"
                 if (!formData.province) return "Please select a province"
                 if (!formData.city_municipality) return "Please select a city"
-                if (!formData.address_display.trim())
+                // Only require full address if NOT a Hidden Gem
+                if (!formData.is_hidden_gem && !formData.address_display.trim())
                     return "Address is required"
-                if (formData.lat === null || formData.lng === null)
+                // Only require coordinates if NOT a Hidden Gem
+                if (
+                    !formData.is_hidden_gem &&
+                    (formData.lat === null || formData.lng === null)
+                )
                     return "Please set the location coordinates"
                 break
         }
@@ -1296,7 +1302,15 @@ export default function CafeSubmissionForm({
                                 <div>
                                     <label className='block text-sm font-medium mb-2'>
                                         Full Address{" "}
-                                        <span className='text-red-500'>*</span>
+                                        {!formData.is_hidden_gem ? (
+                                            <span className='text-red-500'>
+                                                *
+                                            </span>
+                                        ) : (
+                                            <span className='text-text/40 font-normal'>
+                                                (optional)
+                                            </span>
+                                        )}
                                     </label>
                                     <input
                                         type='text'
@@ -1307,7 +1321,11 @@ export default function CafeSubmissionForm({
                                                 e.target.value
                                             )
                                         }
-                                        placeholder='e.g. 123 Main Street, Brgy. Example'
+                                        placeholder={
+                                            formData.is_hidden_gem
+                                                ? "e.g. Near the old church, General area description"
+                                                : "e.g. 123 Main Street, Brgy. Example"
+                                        }
                                         className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
                                     />
                                 </div>
@@ -1315,24 +1333,112 @@ export default function CafeSubmissionForm({
                                 <div>
                                     <label className='block text-sm font-medium mb-2'>
                                         Map Location{" "}
-                                        <span className='text-red-500'>*</span>
+                                        {!formData.is_hidden_gem && (
+                                            <span className='text-red-500'>
+                                                *
+                                            </span>
+                                        )}
                                     </label>
-                                    <LocationPicker
-                                        lat={formData.lat}
-                                        lng={formData.lng}
-                                        onChange={(lat, lng) => {
-                                            updateFormData("lat", lat)
-                                            updateFormData("lng", lng)
-                                        }}
-                                        onAddressChange={(addr) => {
-                                            if (!formData.address_display) {
-                                                updateFormData(
-                                                    "address_display",
-                                                    addr
-                                                )
-                                            }
-                                        }}
-                                    />
+
+                                    {/* Hidden Gem Toggle */}
+                                    <div className='mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl'>
+                                        <label className='flex items-start gap-3 cursor-pointer'>
+                                            <input
+                                                type='checkbox'
+                                                checked={formData.is_hidden_gem}
+                                                onChange={(e) => {
+                                                    updateFormData(
+                                                        "is_hidden_gem",
+                                                        e.target.checked
+                                                    )
+                                                    // Clear coordinates when switching to Hidden Gem
+                                                    if (e.target.checked) {
+                                                        updateFormData(
+                                                            "lat",
+                                                            null
+                                                        )
+                                                        updateFormData(
+                                                            "lng",
+                                                            null
+                                                        )
+                                                    }
+                                                }}
+                                                className='w-5 h-5 rounded border-amber-300 text-amber-600 focus:ring-amber-500 mt-0.5'
+                                            />
+                                            <div className='flex-1'>
+                                                <span className='font-medium text-amber-800 flex items-center gap-2'>
+                                                    <Gem className='w-4 h-4' />
+                                                    Submit as Hidden Gem
+                                                </span>
+                                                <p className='text-sm text-amber-700 mt-1'>
+                                                    Hidden Gems are cafes with
+                                                    approximate locations only.
+                                                    Perfect for cafes you want
+                                                    to share but keep a bit
+                                                    mysterious!
+                                                </p>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    {/* Show map picker or finding hint based on Hidden Gem toggle */}
+                                    {formData.is_hidden_gem ? (
+                                        <div className='space-y-4'>
+                                            <div className='p-4 bg-amber-50/50 border border-amber-100 rounded-xl'>
+                                                <p className='text-sm text-amber-800 flex items-center gap-2'>
+                                                    <Gem className='w-4 h-4' />
+                                                    No exact location needed for
+                                                    Hidden Gems
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className='block text-sm font-medium mb-2'>
+                                                    Finding Hint{" "}
+                                                    <span className='text-text/40 font-normal'>
+                                                        (optional)
+                                                    </span>
+                                                </label>
+                                                <textarea
+                                                    value={
+                                                        formData.finding_hint
+                                                    }
+                                                    onChange={(e) =>
+                                                        updateFormData(
+                                                            "finding_hint",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    maxLength={200}
+                                                    placeholder="Give visitors a clue on how to find this gem... (e.g. 'Look for the blue door near the old church')"
+                                                    rows={3}
+                                                    className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none'
+                                                />
+                                                <p className='text-xs text-text/40 mt-1'>
+                                                    {200 -
+                                                        (formData.finding_hint
+                                                            ?.length || 0)}{" "}
+                                                    characters remaining
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <LocationPicker
+                                            lat={formData.lat}
+                                            lng={formData.lng}
+                                            onChange={(lat, lng) => {
+                                                updateFormData("lat", lat)
+                                                updateFormData("lng", lng)
+                                            }}
+                                            onAddressChange={(addr) => {
+                                                if (!formData.address_display) {
+                                                    updateFormData(
+                                                        "address_display",
+                                                        addr
+                                                    )
+                                                }
+                                            }}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         )}

@@ -35,6 +35,8 @@ const fieldMapping: Record<string, string> = {
     payment_methods: 'paymentMethods',
     brew_methods: 'brewMethods',
     operating_hours: 'operatingHours',
+    is_hidden_gem: 'isHiddenGem',
+    finding_hint: 'findingHint',
 }
 
 function mapSuggestableFieldsToDrizzle(fields: SuggestableFields): Record<string, unknown> {

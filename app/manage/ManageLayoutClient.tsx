@@ -83,6 +83,9 @@ export default function ManageLayoutClient({
                                     (item.href !== "/manage" &&
                                         pathname.startsWith(item.href))
 
+                                const isCafePreview =
+                                    pathname.startsWith("/manage/preview") &&
+                                    item.href === "/manage/cafes"
                                 return (
                                     <li
                                         key={item.href}
@@ -91,7 +94,7 @@ export default function ManageLayoutClient({
                                         <Link
                                             href={item.href}
                                             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm font-medium whitespace-nowrap ${
-                                                isActive
+                                                isActive || isCafePreview
                                                     ? "bg-primary text-white shadow-md"
                                                     : "text-text/70 hover:bg-tertiary hover:text-text"
                                             }`}

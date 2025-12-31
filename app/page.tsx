@@ -54,7 +54,9 @@ export default async function Home() {
     const [featured, recentlyAdded, cafeCount, upcomingEvents, blogResult] =
         await Promise.all([
             getDailyFeatured() as Promise<CafeWithRatings | null>,
-            getAllCafes(1, 10, {}) as Promise<CafeWithRatings[]>,
+            getAllCafes(1, 10, { exclude_hidden_gems: true }) as Promise<
+                CafeWithRatings[]
+            >,
             getPublishedCafeCount(),
             getUpcomingEvents(5),
             getPublishedBlogPosts({ pageSize: 4 }),

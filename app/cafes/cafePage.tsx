@@ -21,6 +21,7 @@ import {
     Droplet,
     MilkOff,
     Coffee,
+    Gem,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
@@ -608,6 +609,15 @@ export default function CafesPageClient({
                                                     {cafe.name}
                                                     {cafe.is_verified && (
                                                         <BadgeCheck className='w-5 h-5' />
+                                                    )}
+                                                    {cafe.is_hidden_gem && (
+                                                        <span
+                                                            className='inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full'
+                                                            title='Hidden Gem - Approximate location only'
+                                                        >
+                                                            <Gem className='w-3 h-3' />
+                                                            Hidden Gem
+                                                        </span>
                                                     )}
                                                 </h3>
                                                 <p className='text-xs md:text-sm font-semibold text-text/60'>

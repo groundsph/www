@@ -18,8 +18,8 @@ function mapCafeToSnakeCase(c: {
     cityMunicipality: string
     province: string
     region: string
-    lat: number
-    lng: number
+    lat: number | null
+    lng: number | null
     priceLevel: string | null
     coffeeStyle: string | null
     membershipTier: string | null
@@ -54,6 +54,8 @@ function mapCafeToSnakeCase(c: {
     ownerIds: string[] | null
     contributorId: string | null
     featuredUntil: Date | null
+    isHiddenGem?: boolean | null
+    findingHint?: string | null
     createdAt: Date | null
     updatedAt: Date | null
     averageRating?: number | null
@@ -106,6 +108,8 @@ function mapCafeToSnakeCase(c: {
         owner_ids: c.ownerIds,
         contributor_id: c.contributorId,
         featured_until: c.featuredUntil?.toISOString() ?? null,
+        is_hidden_gem: c.isHiddenGem ?? false,
+        finding_hint: c.findingHint ?? null,
         created_at: c.createdAt?.toISOString() ?? null,
         updated_at: c.updatedAt?.toISOString() ?? null,
         average_rating: c.averageRating ?? null,
@@ -349,7 +353,7 @@ export async function getDailyFeatured() {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(eq(cafes.isPublished, true), ne(cafes.thumbnail, "placeholder")))
+        .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), ne(cafes.thumbnail, "placeholder")))
         .orderBy(desc(cafeRatingStats.averageRating))
         .limit(10)
 
@@ -450,7 +454,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`)))
+            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`)))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -482,7 +486,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`)))
+            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`)))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -533,6 +537,7 @@ export async function getAllCafes(
         // Match cafes that have any of the specified tags using PostgreSQL array overlap
         conditions.push(sql`${cafes.tags} && ARRAY[${sql.join(filters.tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
     }
+    if (filters.exclude_hidden_gems) conditions.push(eq(cafes.isHiddenGem, false))
 
     // Determine ordering
     let orderBy

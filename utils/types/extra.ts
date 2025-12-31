@@ -102,6 +102,7 @@ export interface CafeFilters {
     tags?: string[]; // Filter by vibe tags (any matching)
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";
+    exclude_hidden_gems?: boolean; // Exclude Hidden Gems from results
 }
 
 // Profile Stats JSON structure
@@ -178,6 +179,10 @@ export interface CafeSubmission {
     socials: CafeSocial[];
     is_owner: boolean;
     ownership_proof_files: File[];
+
+    // Hidden Gem fields
+    is_hidden_gem: boolean;
+    finding_hint: string;
 }
 
 // Serializable version of CafeSubmission for server actions (excludes File objects)
@@ -224,4 +229,6 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     socials: [],
     is_owner: false,
     ownership_proof_files: [],
+    is_hidden_gem: false,
+    finding_hint: '',
 };

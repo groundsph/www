@@ -150,27 +150,56 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
                 </div>
             )}
 
-            {/* Map */}
-            <div className='w-full h-auto aspect-video relative overflow-clip rounded-xl border-2 border-text/10'>
-                <DynamicCafeMiniMap
-                    key={cafe.id}
-                    cafe={cafe}
-                />
-            </div>
+            {/* Map - Only show if cafe has coordinates (not a Hidden Gem) */}
+            {cafe.lat !== null && cafe.lng !== null ? (
+                <>
+                    <div className='w-full h-auto aspect-video relative overflow-clip rounded-xl border-2 border-text/10'>
+                        <DynamicCafeMiniMap
+                            key={cafe.id}
+                            cafe={
+                                cafe as {
+                                    id: string
+                                    name: string
+                                    lat: number
+                                    lng: number
+                                }
+                            }
+                        />
+                    </div>
 
-            {/* Address & Directions */}
-            <a
-                href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='flex items-center gap-2 p-3 bg-text/5 rounded-xl hover:bg-text/10 transition-colors'
-            >
-                <MapPin className='w-5 h-5 text-primary shrink-0' />
-                <span className='text-sm font-medium flex-1'>
-                    {cafe.address_display}
-                </span>
-                <ExternalLink className='w-4 h-4 text-text/40' />
-            </a>
+                    {/* Address & Directions */}
+                    <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='flex items-center gap-2 p-3 bg-text/5 rounded-xl hover:bg-text/10 transition-colors'
+                    >
+                        <MapPin className='w-5 h-5 text-primary shrink-0' />
+                        <span className='text-sm font-medium flex-1'>
+                            {cafe.address_display}
+                        </span>
+                        <ExternalLink className='w-4 h-4 text-text/40' />
+                    </a>
+                </>
+            ) : (
+                /* Hidden Gem - Show finding hint instead of map */
+                <div className='w-full bg-amber-50 border border-amber-200 rounded-xl p-4'>
+                    <div className='flex items-center gap-2 mb-2'>
+                        <MapPin className='w-5 h-5 text-amber-600' />
+                        <span className='font-semibold text-amber-800'>
+                            Hidden Gem
+                        </span>
+                    </div>
+                    <p className='text-sm text-amber-700'>
+                        {cafe.address_display}
+                    </p>
+                    {cafe.finding_hint && (
+                        <p className='text-sm text-amber-600 mt-2 italic'>
+                            💡 Hint: {cafe.finding_hint}
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Operating Hours */}
             <div className='bg-text/5 rounded-xl p-4'>

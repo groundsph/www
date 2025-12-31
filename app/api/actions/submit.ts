@@ -66,13 +66,15 @@ export async function submitCafe(
     if (!formData.name.trim()) {
         return { success: false, error: "Cafe name is required" }
     }
-    if (!formData.address_display.trim()) {
+    // Hidden Gems don't require full address (approximate location only)
+    if (!formData.is_hidden_gem && !formData.address_display.trim()) {
         return { success: false, error: "Address is required" }
     }
     if (!formData.region || !formData.province || !formData.city_municipality) {
         return { success: false, error: "Location details are required" }
     }
-    if (formData.lat === null || formData.lng === null) {
+    // Hidden Gems don't require lat/lng (approximate location only)
+    if (!formData.is_hidden_gem && (formData.lat === null || formData.lng === null)) {
         return { success: false, error: "Please select a location on the map" }
     }
     // Thumbnail is now optional - use placeholder if not provided
@@ -111,7 +113,8 @@ export async function submitCafe(
             province: formData.province,
             cityMunicipality: formData.city_municipality,
             area: formData.area.trim() || null,
-            addressDisplay: formData.address_display.trim(),
+            // For Hidden Gems with no address, use city/province as fallback
+            addressDisplay: formData.address_display.trim() || `${formData.city_municipality}, ${formData.province}`,
             lat: formData.lat,
             lng: formData.lng,
 
@@ -154,6 +157,8 @@ export async function submitCafe(
             isActive: true,
             isVerified: false,
             isClaimed: false,
+            isHiddenGem: formData.is_hidden_gem || false,
+            findingHint: formData.finding_hint?.trim() || null,
             ownerIds: null,
         }).returning({ id: cafes.id, slug: cafes.slug })
 

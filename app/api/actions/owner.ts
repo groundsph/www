@@ -255,6 +255,8 @@ export async function getCafeForOwnerManagement(cafeId: string): Promise<CafeWit
         average_rating: ratings?.averageRating ?? null,
         total_reviews: ratings?.totalReviews ?? 0,
         rating_distribution: ratings?.ratingDistribution as CafeWithRatings['rating_distribution'] ?? null,
+        is_hidden_gem: cafe.isHiddenGem ?? false,
+        finding_hint: cafe.findingHint ?? null,
     }
 }
 
@@ -341,6 +343,8 @@ export async function updateCafeAsOwner(
         phone: string
         email: string
         socials: unknown
+        is_hidden_gem: boolean
+        finding_hint: string | null
     }>
 ): Promise<OwnerActionResult> {
     const isOwner = await isOwnerOfCafe(cafeId)
@@ -390,6 +394,8 @@ export async function updateCafeAsOwner(
         brew_methods: 'brewMethods',
         operating_hours: 'operatingHours',
         website_url: 'websiteUrl',
+        is_hidden_gem: 'isHiddenGem',
+        finding_hint: 'findingHint',
     }
 
     for (const [key, value] of Object.entries(updates)) {
