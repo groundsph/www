@@ -14,7 +14,10 @@ import {
 import { useRouter } from "next/navigation"
 import { useNotification } from "./NotificationProvider"
 
-export type Profile = Tables<"profiles">
+// Extend the base profile type with computed fields from the API
+export type Profile = Tables<"profiles"> & {
+    owned_cafe_count?: number
+}
 
 // Better Auth user type - matches the session user from better-auth
 export interface BetterAuthUser {
@@ -143,7 +146,7 @@ export default function AuthProvider({
     // Computed role checks
     const isAdmin = profile?.role === "admin" || profile?.role === "moderator"
     const isWriter = profile?.role === "writer"
-    const isOwner = !!profile?.id // Placeholder - could check owned cafes
+    const isOwner = (profile?.owned_cafe_count ?? 0) > 0
 
     // Memoized context value
     const contextValue = useMemo<AuthContextType>(

@@ -1,6 +1,6 @@
 import { db } from "@/db"
-import { profiles } from "@/db/schema"
-import { eq } from "drizzle-orm"
+import { profiles, cafes } from "@/db/schema"
+import { eq, sql } from "drizzle-orm"
 import { NextResponse } from "next/server"
 
 export async function GET(
@@ -21,6 +21,14 @@ export async function GET(
             return NextResponse.json(null, { status: 404 })
         }
 
+        // Check if user owns any cafes
+        const ownedCafesResult = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(cafes)
+            .where(sql`${cafes.ownerIds} @> ARRAY[${userId}]::uuid[]`)
+
+        const ownedCafeCount = ownedCafesResult[0]?.count ?? 0
+
         // Map to snake_case for consistency with existing client code
         return NextResponse.json({
             id: profile.id,
@@ -36,6 +44,7 @@ export async function GET(
             profile_completed: profile.profileCompleted,
             passport: profile.passport,
             stats: profile.stats,
+            owned_cafe_count: ownedCafeCount,
             created_at: profile.createdAt?.toISOString() ?? null,
             updated_at: profile.updatedAt?.toISOString() ?? null,
         })

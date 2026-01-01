@@ -21,6 +21,18 @@ export const auth = betterAuth({
         minPasswordLength: 12,
         password: {
             hash: async (password) => {
+                // Validate password requirements before hashing
+                const errors: string[] = []
+                if (password.length < 12) errors.push("at least 12 characters")
+                if (!/[A-Z]/.test(password)) errors.push("one uppercase letter")
+                if (!/[a-z]/.test(password)) errors.push("one lowercase letter")
+                if (!/[0-9]/.test(password)) errors.push("one number")
+                if (!/[^A-Za-z0-9]/.test(password)) errors.push("one special character")
+
+                if (errors.length > 0) {
+                    throw new Error(`Password must contain ${errors.join(", ")}`)
+                }
+
                 return await bcrypt.hash(password, 10);
             },
             verify: async ({ hash, password }) => {
@@ -68,7 +80,7 @@ export const auth = betterAuth({
         updateAge: 60 * 60 * 24, // 1 day
         cookieCache: {
             enabled: true,
-            maxAge: 5 * 60, // 5 minutes
+            maxAge: 15 * 60, // 15 minutes (was 5, increased to reduce DB lookups)
         },
     },
     rateLimit: {
