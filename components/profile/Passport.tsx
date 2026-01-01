@@ -42,20 +42,20 @@ export default function Passport({
     }
 
     return (
-        <div className={`w-full ${className}`}>
+        <div className={`w-full ${className} [&_button]:cursor-pointer`}>
             {/* Header / Tabs */}
-            <div className='flex items-center justify-between mb-6'>
+            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6'>
                 <div className='flex items-center gap-2'>
-                    <MapPin className='w-5 h-5' />
-                    <h2 className='text-xl font-semibold font-serif'>
+                    <MapPin className='w-4 h-4 sm:w-5 sm:h-5' />
+                    <h2 className='text-lg sm:text-xl font-semibold font-serif'>
                         Coffee Passport
                     </h2>
                 </div>
 
-                <div className='flex bg-text/5 p-1 rounded-lg'>
+                <div className='flex bg-text/5 p-1 rounded-lg w-full sm:w-auto'>
                     <button
                         onClick={() => setActiveTab("visited")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                             activeTab === "visited"
                                 ? "bg-background shadow-xs text-primary"
                                 : "text-text/60 hover:text-text/80"
@@ -65,7 +65,7 @@ export default function Passport({
                     </button>
                     <button
                         onClick={() => setActiveTab("favorites")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                             activeTab === "favorites"
                                 ? "bg-background shadow-xs text-red-500"
                                 : "text-text/60 hover:text-text/80"
@@ -75,7 +75,7 @@ export default function Passport({
                     </button>
                     <button
                         onClick={() => setActiveTab("wishlist")}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                             activeTab === "wishlist"
                                 ? "bg-background shadow-xs text-secondary"
                                 : "text-text/60 hover:text-text/80"
@@ -87,7 +87,7 @@ export default function Passport({
             </div>
 
             {/* Content Area */}
-            <div className='bg-text/5 border border-text/10 rounded-xl min-h-[300px] overflow-hidden relative'>
+            <div className='bg-text/5 border border-text/10 rounded-xl min-h-[250px] sm:min-h-[300px] overflow-hidden relative'>
                 {/* Background Texture/Pattern */}
                 <div
                     className='absolute inset-0 opacity-[0.03] pointer-events-none'
@@ -105,7 +105,7 @@ export default function Passport({
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
                             transition={{ duration: 0.2 }}
-                            className='p-6'
+                            className='p-4 sm:p-6'
                         >
                             <div className='flex items-center gap-2 mb-6'>
                                 <div className='p-2 bg-primary/10 rounded-lg'>
@@ -120,7 +120,7 @@ export default function Passport({
                             </div>
 
                             {visited.length > 0 ? (
-                                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8'>
+                                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-8'>
                                     {visited.map((cafe) => (
                                         <Link
                                             key={cafe.slug}
@@ -167,7 +167,7 @@ export default function Passport({
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ duration: 0.2 }}
-                            className='p-6'
+                            className='p-4 sm:p-6'
                         >
                             <div className='flex items-center gap-2 mb-6'>
                                 <div className='p-2 bg-red-500/10 rounded-lg'>
@@ -222,7 +222,7 @@ export default function Passport({
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ duration: 0.2 }}
-                            className='p-6'
+                            className='p-4 sm:p-6'
                         >
                             <div className='flex items-center gap-2 mb-6'>
                                 <div className='p-2 bg-secondary/10 rounded-lg'>

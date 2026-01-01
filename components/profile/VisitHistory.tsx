@@ -1,9 +1,9 @@
 "use client"
 
-import { Coffee, Route } from "lucide-react"
+import { Coffee, Route, Footprints } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useEffect, useRef, useMemo } from "react"
+import { useEffect, useRef, useMemo, useState } from "react"
 import { motion } from "motion/react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
@@ -31,10 +31,73 @@ function seededRandom(seed: string): number {
 }
 
 // Generate random vertical offset for a badge (seeded by cafe slug)
-function getVerticalOffset(slug: string): number {
+function getVerticalOffset(slug: string, isMobile: boolean): number {
     const random = seededRandom(slug)
-    // Return offset between -70 and 70 pixels (even more dramatic)
-    return (random - 0.5) * 140
+    // Return offset between -40 and 40 pixels on mobile, -70 and 70 on desktop
+    const range = isMobile ? 80 : 140
+    return (random - 0.5) * range
+}
+
+// Get points along a bezier curve for footstep placement
+function getPointOnCurve(
+    t: number,
+    x1: number,
+    y1: number,
+    cp1x: number,
+    cp1y: number,
+    cp2x: number,
+    cp2y: number,
+    x2: number,
+    y2: number
+) {
+    const t2 = t * t
+    const t3 = t2 * t
+    const mt = 1 - t
+    const mt2 = mt * mt
+    const mt3 = mt2 * mt
+
+    const x = mt3 * x1 + 3 * mt2 * t * cp1x + 3 * mt * t2 * cp2x + t3 * x2
+    const y = mt3 * y1 + 3 * mt2 * t * cp1y + 3 * mt * t2 * cp2y + t3 * y2
+
+    return { x, y }
+}
+
+// Get tangent angle at a point on the curve (for rotation)
+function getTangentAngle(
+    t: number,
+    x1: number,
+    y1: number,
+    cp1x: number,
+    cp1y: number,
+    cp2x: number,
+    cp2y: number,
+    x2: number,
+    y2: number
+) {
+    const delta = 0.001
+    const p1 = getPointOnCurve(
+        Math.max(0, t - delta),
+        x1,
+        y1,
+        cp1x,
+        cp1y,
+        cp2x,
+        cp2y,
+        x2,
+        y2
+    )
+    const p2 = getPointOnCurve(
+        Math.min(1, t + delta),
+        x1,
+        y1,
+        cp1x,
+        cp1y,
+        cp2x,
+        cp2y,
+        x2,
+        y2
+    )
+    return Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI)
 }
 
 // Generate S-curve control points for more interesting paths
@@ -69,6 +132,22 @@ export default function VisitHistory({
     className = "",
 }: VisitHistoryProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const [isMobile, setIsMobile] = useState(false)
+
+    // Detect mobile viewport
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640)
+        checkMobile()
+        window.addEventListener("resize", checkMobile)
+        return () => window.removeEventListener("resize", checkMobile)
+    }, [])
+
+    // Responsive dimensions
+    const BADGE_SIZE = isMobile ? 48 : 64
+    const BADGE_SPACING = isMobile ? 120 : 180
+    const CONTAINER_HEIGHT = isMobile ? 240 : 320
+    const CENTER_Y = CONTAINER_HEIGHT / 2 - (isMobile ? 10 : 20)
+    const FOOTSTEP_COUNT = isMobile ? 3 : 4
 
     // Sort visits oldest first (leftmost) to newest (rightmost)
     const sortedVisits = useMemo(() => {
@@ -103,47 +182,48 @@ export default function VisitHistory({
         )
     }
 
-    const BADGE_SIZE = 64
-    const BADGE_SPACING = 180 // Increased for full names
-    const CONTAINER_HEIGHT = 320 // Taller for more vertical variation and padding
-    const CENTER_Y = CONTAINER_HEIGHT / 2 - 20 // Adjusted center
-
     return (
         <div className={`w-full ${className}`}>
             <div className='flex items-center gap-2 mb-4'>
-                <Route className='w-5 h-5' />
-                <h2 className='text-xl font-semibold font-serif'>
+                <Route className='w-4 h-4 sm:w-5 sm:h-5' />
+                <h2 className='text-lg sm:text-xl font-semibold font-serif'>
                     Visit History
                 </h2>
-                <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                <span className='ml-auto bg-primary/15 text-primary text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full'>
                     {sortedVisits.length}{" "}
                     {sortedVisits.length === 1 ? "visit" : "visits"}
                 </span>
             </div>
 
-            {/* Scrollable container */}
-            <div
-                ref={scrollContainerRef}
-                className='bg-text/5 border border-text/10 rounded-xl overflow-x-auto overflow-y-hidden relative'
-                style={{ scrollBehavior: "smooth" }}
-            >
-                {/* Content wrapper with padding for scroll */}
+            {/* Fixed wrapper for visual box (background & border) */}
+            <div className='bg-text/5 border border-text/10 rounded-xl relative overflow-hidden'>
+                {/* Scrollable container */}
                 <div
-                    className='relative'
+                    ref={scrollContainerRef}
+                    className='overflow-x-auto overflow-y-hidden relative
+                        [&::-webkit-scrollbar]:h-2
+                        [&::-webkit-scrollbar-track]:bg-transparent
+                        [&::-webkit-scrollbar-track]:rounded-full
+                        [&::-webkit-scrollbar-thumb]:bg-primary/30
+                        [&::-webkit-scrollbar-thumb]:rounded-full
+                        [&::-webkit-scrollbar-thumb]:hover:bg-primary/50
+                        scrollbar-thin'
                     style={{
-                        width: `${sortedVisits.length * BADGE_SPACING + 80}px`,
-                        height: `${CONTAINER_HEIGHT}px`,
-                        minWidth: "100%",
+                        scrollBehavior: "smooth",
+                        scrollbarWidth: "thin",
+                        scrollbarColor: "rgb(116 81 45 / 0.3) transparent",
                     }}
                 >
-                    {/* SVG Paths connecting badges */}
-                    <svg
-                        className='absolute inset-0 pointer-events-none'
+                    {/* Content wrapper with padding for scroll */}
+                    <div
+                        className='relative'
                         style={{
                             width: `${sortedVisits.length * BADGE_SPACING + 80}px`,
                             height: `${CONTAINER_HEIGHT}px`,
+                            minWidth: "100%",
                         }}
                     >
+                        {/* Footstep icons connecting badges */}
                         {sortedVisits.slice(0, -1).map((cafe, index) => {
                             const nextCafe = sortedVisits[index + 1]
                             const x1 =
@@ -154,11 +234,14 @@ export default function VisitHistory({
                                 BADGE_SIZE / 2
                             const y1 =
                                 CENTER_Y +
-                                (index === 0 ? 0 : getVerticalOffset(cafe.slug))
+                                (index === 0
+                                    ? 0
+                                    : getVerticalOffset(cafe.slug, isMobile))
                             const y2 =
-                                CENTER_Y + getVerticalOffset(nextCafe.slug)
+                                CENTER_Y +
+                                getVerticalOffset(nextCafe.slug, isMobile)
 
-                            // Get S-curve control points for more interesting paths
+                            // Get S-curve control points
                             const { cp1x, cp1y, cp2x, cp2y } =
                                 getSCurveControls(
                                     cafe.slug,
@@ -169,107 +252,176 @@ export default function VisitHistory({
                                     y2
                                 )
 
+                            // Generate footstep positions along the curve (start at 25%, end at 75%)
+                            const footsteps = []
+                            const startT = isMobile ? 0.35 : 0.25
+                            const endT = isMobile ? 0.95 : 1.0
+                            for (let i = 0; i < FOOTSTEP_COUNT; i++) {
+                                const t =
+                                    startT +
+                                    ((endT - startT) * (i + 0.5)) /
+                                        FOOTSTEP_COUNT
+                                const point = getPointOnCurve(
+                                    t,
+                                    x1,
+                                    y1,
+                                    cp1x,
+                                    cp1y,
+                                    cp2x,
+                                    cp2y,
+                                    x2,
+                                    y2
+                                )
+                                const angle = getTangentAngle(
+                                    t,
+                                    x1,
+                                    y1,
+                                    cp1x,
+                                    cp1y,
+                                    cp2x,
+                                    cp2y,
+                                    x2,
+                                    y2
+                                )
+                                footsteps.push({ ...point, angle, t })
+                            }
+
+                            return footsteps.map((footstep, fIndex) => (
+                                <motion.div
+                                    key={`footstep-${cafe.slug}-${nextCafe.slug}-${fIndex}`}
+                                    className='absolute pointer-events-none'
+                                    style={{
+                                        left: `${footstep.x}px`,
+                                        top: `${footstep.y}px`,
+                                    }}
+                                    initial={{
+                                        scale: 0,
+                                        opacity: 0,
+                                        x: "-50%",
+                                        y: "-50%",
+                                        rotate: 0,
+                                    }}
+                                    animate={{
+                                        scale: 1,
+                                        opacity: 0.35,
+                                        x: "-50%",
+                                        y: "-50%",
+                                        rotate: footstep.angle + 90,
+                                    }}
+                                    transition={{
+                                        delay:
+                                            index * 0.1 +
+                                            fIndex * 0.05 +
+                                            footstep.t * 0.1,
+                                        type: "spring",
+                                        stiffness: 400,
+                                        damping: 25,
+                                    }}
+                                >
+                                    <Footprints
+                                        className={`${isMobile ? "w-4 h-4" : "w-5 h-5"} text-primary fill-primary/40`}
+                                    />
+                                </motion.div>
+                            ))
+                        })}
+
+                        {/* Badge nodes */}
+                        {sortedVisits.map((cafe, index) => {
+                            const x = 60 + index * BADGE_SPACING
+                            // First item is always centered (offset 0)
+                            const offset =
+                                index === 0
+                                    ? 0
+                                    : getVerticalOffset(cafe.slug, isMobile)
+                            const y = CENTER_Y + offset - BADGE_SIZE / 2
+
                             return (
-                                <path
-                                    key={`path-${cafe.slug}-${nextCafe.slug}`}
-                                    d={`M ${x1} ${y1} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${x2} ${y2}`}
-                                    fill='none'
-                                    stroke='currentColor'
-                                    strokeWidth='2'
-                                    strokeDasharray='6 4'
-                                    className='text-text/30'
-                                />
+                                <motion.div
+                                    key={cafe.slug}
+                                    className='absolute'
+                                    style={{
+                                        left: `${x}px`,
+                                        top: `${y}px`,
+                                    }}
+                                    initial={{ scale: 0, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{
+                                        delay: index * 0.05,
+                                        type: "spring",
+                                        stiffness: 300,
+                                        damping: 20,
+                                    }}
+                                >
+                                    <Link
+                                        href={`/cafes/${cafe.slug}`}
+                                        className='group flex flex-col items-center'
+                                    >
+                                        {/* Badge circle with thumbnail */}
+                                        <div
+                                            className='rounded-full bg-background border-2 border-primary/40 flex items-center justify-center shadow-md group-hover:border-primary group-hover:shadow-lg group-hover:scale-110 transition-all duration-200 overflow-hidden'
+                                            style={{
+                                                width: `${BADGE_SIZE}px`,
+                                                height: `${BADGE_SIZE}px`,
+                                            }}
+                                        >
+                                            {cafe.thumbnail ? (
+                                                <Image
+                                                    src={getCafeThumbnailUrl(
+                                                        cafe.thumbnail
+                                                    )}
+                                                    alt={cafe.name}
+                                                    width={BADGE_SIZE}
+                                                    height={BADGE_SIZE}
+                                                    className='object-cover w-full h-full'
+                                                />
+                                            ) : (
+                                                <Coffee
+                                                    className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary/70 group-hover:text-primary transition-colors`}
+                                                />
+                                            )}
+                                        </div>
+
+                                        {/* Cafe name - responsive display */}
+                                        <span
+                                            className='mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-text/80 font-medium text-center leading-tight'
+                                            style={{
+                                                maxWidth: isMobile
+                                                    ? "100px"
+                                                    : "120px",
+                                                wordBreak: "break-word",
+                                            }}
+                                        >
+                                            {cafe.name}
+                                        </span>
+
+                                        {/* Date below name */}
+                                        <span className='text-[9px] sm:text-[10px] text-text/40 font-medium whitespace-nowrap'>
+                                            {cafe.visited_at
+                                                ? new Date(
+                                                      cafe.visited_at
+                                                  ).toLocaleDateString(
+                                                      "en-US",
+                                                      {
+                                                          month: "short",
+                                                          day: "numeric",
+                                                      }
+                                                  )
+                                                : "—"}
+                                        </span>
+                                    </Link>
+                                </motion.div>
                             )
                         })}
-                    </svg>
-
-                    {/* Badge nodes */}
-                    {sortedVisits.map((cafe, index) => {
-                        const x = 60 + index * BADGE_SPACING
-                        // First item is always centered (offset 0)
-                        const offset =
-                            index === 0 ? 0 : getVerticalOffset(cafe.slug)
-                        const y = CENTER_Y + offset - BADGE_SIZE / 2
-
-                        return (
-                            <motion.div
-                                key={cafe.slug}
-                                className='absolute'
-                                style={{
-                                    left: `${x}px`,
-                                    top: `${y}px`,
-                                }}
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{
-                                    delay: index * 0.05,
-                                    type: "spring",
-                                    stiffness: 300,
-                                    damping: 20,
-                                }}
-                            >
-                                <Link
-                                    href={`/cafes/${cafe.slug}`}
-                                    className='group flex flex-col items-center'
-                                >
-                                    {/* Badge circle with thumbnail */}
-                                    <div
-                                        className='rounded-full bg-background border-2 border-primary/40 flex items-center justify-center shadow-md group-hover:border-primary group-hover:shadow-lg group-hover:scale-110 transition-all duration-200 overflow-hidden'
-                                        style={{
-                                            width: `${BADGE_SIZE}px`,
-                                            height: `${BADGE_SIZE}px`,
-                                        }}
-                                    >
-                                        {cafe.thumbnail ? (
-                                            <Image
-                                                src={getCafeThumbnailUrl(
-                                                    cafe.thumbnail
-                                                )}
-                                                alt={cafe.name}
-                                                width={BADGE_SIZE}
-                                                height={BADGE_SIZE}
-                                                className='object-cover w-full h-full'
-                                            />
-                                        ) : (
-                                            <Coffee className='w-6 h-6 text-primary/70 group-hover:text-primary transition-colors' />
-                                        )}
-                                    </div>
-
-                                    {/* Cafe name - full display */}
-                                    <span
-                                        className='mt-2 text-xs text-text/80 font-medium text-center leading-tight'
-                                        style={{
-                                            maxWidth: "120px",
-                                            wordBreak: "break-word",
-                                        }}
-                                    >
-                                        {cafe.name}
-                                    </span>
-
-                                    {/* Date below name */}
-                                    <span className='text-[10px] text-text/40 font-medium whitespace-nowrap'>
-                                        {cafe.visited_at
-                                            ? new Date(
-                                                  cafe.visited_at
-                                              ).toLocaleDateString("en-US", {
-                                                  month: "short",
-                                                  day: "numeric",
-                                              })
-                                            : "—"}
-                                    </span>
-                                </Link>
-                            </motion.div>
-                        )
-                    })}
+                    </div>
                 </div>
 
-                {/* Scroll hint gradient overlays */}
-                <div className='absolute left-0 top-0 bottom-0 w-8 bg-linear-to-r from-text/5 to-transparent pointer-events-none' />
-                <div className='absolute right-0 top-0 bottom-0 w-8 bg-linear-to-l from-text/5 to-transparent pointer-events-none' />
+                {/* Scroll hint gradient overlays - Fixed positioning */}
+                <div className='absolute left-0 top-0 bottom-0 w-6 sm:w-8 bg-linear-to-r from-text/5 to-transparent pointer-events-none' />
+                <div className='absolute right-0 top-0 bottom-0 w-6 sm:w-8 bg-linear-to-l from-text/5 to-transparent pointer-events-none' />
             </div>
 
             {/* Scroll hint text */}
-            <p className='text-xs text-text/40 text-center mt-2'>
+            <p className='text-[10px] sm:text-xs text-text/40 text-center mt-2'>
                 ← Scroll cafe journey →
             </p>
         </div>
