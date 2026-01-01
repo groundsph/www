@@ -53,8 +53,11 @@ export default function UsersManagePage() {
                 setUsers(res.data.users as User[])
                 setTotalUsers(res.data.total ?? res.data.users.length)
             }
-        } catch (err: any) {
-            addNotification(err.message || "Failed to fetch users", "error")
+        } catch (err: unknown) {
+            addNotification(
+                err instanceof Error ? err.message : "Failed to fetch users",
+                "error"
+            )
         } finally {
             setLoading(false)
         }
@@ -89,8 +92,9 @@ export default function UsersManagePage() {
                 `User "${userName}" deleted successfully`,
                 "success"
             )
-        } catch (err: any) {
-            addNotification(`Failed to delete user: ${err.message}`, "error")
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Unknown error"
+            addNotification(`Failed to delete user: ${message}`, "error")
         } finally {
             setDeletingId(null)
         }

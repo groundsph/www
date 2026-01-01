@@ -69,7 +69,7 @@ export default function AuthPageClient() {
         if (authError === "auth_failed") {
             addNotification("Authentication failed. Please try again.", "error")
         }
-    }, [searchParams, user])
+    }, [searchParams, user, addNotification])
 
     // Debounced username availability check
     useEffect(() => {

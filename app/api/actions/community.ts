@@ -1,8 +1,8 @@
 "use server"
 
 import { db } from "@/db"
-import { collections, profiles, cafes } from "@/db/schema"
-import { eq, and, desc, like, or, sql, inArray } from "drizzle-orm"
+import { collections, profiles } from "@/db/schema"
+import { eq, desc, or, sql, inArray } from "drizzle-orm"
 
 // =============================================================================
 // PUBLIC COLLECTIONS

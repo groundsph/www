@@ -123,6 +123,7 @@ export default async function Image({
                         src={profile.avatarUrl}
                         width={140}
                         height={140}
+                        alt=''
                         style={{
                             borderRadius: 70,
                             border: `4px solid ${colors.primary}`,

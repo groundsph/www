@@ -73,9 +73,7 @@ export default function CommunityPageClient({
 
     // Collections state
     const [collections, setCollections] = useState(initialCollections)
-    const [collectionsTotal, setCollectionsTotal] = useState(
-        initialCollectionsTotal
-    )
+    const [collectionsTotal] = useState(initialCollectionsTotal)
     const [collectionsPage, setCollectionsPage] = useState(1)
     const [loadingCollections, setLoadingCollections] = useState(false)
 

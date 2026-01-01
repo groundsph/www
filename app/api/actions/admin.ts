@@ -3327,9 +3327,8 @@ export async function getPaginatedUsers(params: UserPaginationParams): Promise<P
     const total = countResult[0]?.count ?? 0
 
     // Determine sorting
-    let orderBy
     const sortCol = sortBy === 'name' ? profiles.displayName : profiles.createdAt
-    orderBy = sortOrder === 'asc' ? asc(sortCol!) : desc(sortCol!)
+    const orderBy = sortOrder === 'asc' ? asc(sortCol!) : desc(sortCol!)
 
     // Fetch users
     const usersQuery = db
@@ -3391,7 +3390,7 @@ export async function deleteUserAsAdmin(userId: string): Promise<AdminActionResu
     try {
         // Use Better Auth Admin API
         // We need to use the api.removeUser method exposed by the admin plugin
-        const res = await auth.api.removeUser({
+        await auth.api.removeUser({
             body: {
                 userId
             },

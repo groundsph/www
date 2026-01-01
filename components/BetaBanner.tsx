@@ -46,7 +46,8 @@ export default function AnnouncementBanner() {
         const dismissedId = localStorage.getItem("announcement-dismissed-id")
         if (dismissedId === CURRENT_ANNOUNCEMENT.id) return
 
-        setIsVisible(true)
+        const timeoutId = setTimeout(() => setIsVisible(true), 0)
+        return () => clearTimeout(timeoutId)
     }, [])
 
     const handleDismiss = () => {

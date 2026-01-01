@@ -24,7 +24,7 @@ export default function CollectionsListClient({
 }: {
     initialCollections: Collection[]
 }) {
-    const [collections, setCollections] = useState(initialCollections)
+    const [collections] = useState(initialCollections)
     const [showCreateModal, setShowCreateModal] = useState(false)
 
     const handleCreated = (newCollection: { id: string; slug: string }) => {

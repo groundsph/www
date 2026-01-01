@@ -22,10 +22,12 @@ export default async function EditCollectionPage({ params }: Props) {
 
     const { id } = await params
 
+    let collection
     try {
-        const collection = await getCollectionForEdit(id)
-        return <CollectionEditorClient collection={collection} />
+        collection = await getCollectionForEdit(id)
     } catch {
         notFound()
     }
+
+    return <CollectionEditorClient collection={collection} />
 }
