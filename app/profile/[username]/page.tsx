@@ -24,9 +24,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description:
             profile.bio ||
             `Check out ${profile.display_name}'s coffee profile on Grounds.`,
-        openGraph: {
-            images: profile.avatar_url ? [profile.avatar_url] : [],
-        },
     }
 }
 

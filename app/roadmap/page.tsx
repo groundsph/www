@@ -9,6 +9,10 @@ import {
     Share2,
     Palette,
     Navigation,
+    ArrowUpCircle,
+    Zap,
+    Key,
+    Search,
 } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -42,6 +46,39 @@ interface RoadmapItem {
     description: string
     icon: React.ReactNode
 }
+
+const recentlyShipped: RoadmapItem[] = [
+    {
+        title: "Smart Login & Security",
+        description:
+            "Seamless sign-in with Passkeys, plus social login via Discord and Google.",
+        icon: <Key className='w-5 h-5' />,
+    },
+    {
+        title: "Cafe Discovery Tools",
+        description:
+            "Find your perfect spot with new Decaf, 3rd Wave, and Vibe-based filters.",
+        icon: <Search className='w-5 h-5' />,
+    },
+    {
+        title: "Hidden Gems",
+        description:
+            "Discover and share those special 'low-key' spots that deserve more love.",
+        icon: <Star className='w-5 h-5' />,
+    },
+    {
+        title: "Enhanced Menus",
+        description:
+            "Visual menus with photos to help you decide before you arrive.",
+        icon: <Navigation className='w-5 h-5' />,
+    },
+    {
+        title: "Performance Upgrades",
+        description:
+            "Faster load times and snappier interactions across the entire site.",
+        icon: <Zap className='w-5 h-5' />,
+    },
+]
 
 const inProgress: RoadmapItem[] = [
     {
@@ -176,6 +213,16 @@ export default function RoadmapPage() {
             {/* Roadmap Content */}
             <div className='max-w-4xl mx-auto px-4 py-16'>
                 <div className='flex flex-col gap-16'>
+                    {/* Recently Shipped */}
+                    <RoadmapSection
+                        title='Recently Shipped'
+                        items={recentlyShipped}
+                        icon={
+                            <CheckCircle2 className='w-5 h-5 text-emerald-600' />
+                        }
+                        accentColor='bg-emerald-100'
+                    />
+
                     {/* In Progress */}
                     <RoadmapSection
                         title='In Progress'
@@ -189,9 +236,9 @@ export default function RoadmapPage() {
                         title='Up Next'
                         items={upNext}
                         icon={
-                            <CheckCircle2 className='w-5 h-5 text-emerald-600' />
+                            <ArrowUpCircle className='w-5 h-5 text-blue-600' />
                         }
-                        accentColor='bg-emerald-100'
+                        accentColor='bg-blue-100'
                     />
 
                     {/* Exploring */}
