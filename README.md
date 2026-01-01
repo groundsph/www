@@ -2,6 +2,10 @@
 
 **Discover the Philippines' Best Cafes** — A community-driven platform for exploring the vibrant coffee culture across the Philippines.
 
+## 📌 Versioning
+
+This project follows a custom versioning scheme: `YEAR.FEATURE_NUM.FIXES`.
+
 ---
 
 ## ✨ Features

@@ -78,6 +78,12 @@ const recentlyShipped: RoadmapItem[] = [
             "Faster load times and snappier interactions across the entire site.",
         icon: <Zap className='w-5 h-5' />,
     },
+    {
+        title: "User Collections",
+        description:
+            "Save and organize your favorite cafes into shareable lists",
+        icon: <Star className='w-5 h-5' />,
+    },
 ]
 
 const inProgress: RoadmapItem[] = [
@@ -87,13 +93,8 @@ const inProgress: RoadmapItem[] = [
             "Expanding our database with more cafes across the Philippines",
         icon: <Coffee className='w-5 h-5' />,
     },
-    {
-        title: "User Collections",
-        description:
-            "Save and organize your favorite cafes into shareable lists",
-        icon: <Star className='w-5 h-5' />,
-    },
 ]
+
 const upNext: RoadmapItem[] = [
     {
         title: "Spot Guides",

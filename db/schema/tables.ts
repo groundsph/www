@@ -458,3 +458,42 @@ export const supporterSubscriptions = pgTable("supporter_subscriptions", {
     tierName: text("tier_name"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
+
+// ============================================================================
+// COLLECTION TABLES
+// ============================================================================
+
+export const collections = pgTable(
+    "collections",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => profiles.id, { onDelete: "cascade" }),
+        title: text("title").notNull(),
+        slug: text("slug").notNull().unique(),
+        description: text("description"),
+        coverImage: text("cover_image"),
+        items: jsonb("items").$type<{ cafeId: string; note?: string }[]>().default([]),
+        itemCount: integer("item_count").default(0),
+        isPublic: boolean("is_public").default(true),
+        viewsCount: integer("views_count").default(0),
+        likesCount: integer("likes_count").default(0),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+    },
+    (table) => ({
+        slugIdx: uniqueIndex("collections_slug_idx").on(table.slug),
+    })
+)
+
+export const collectionLikes = pgTable("collection_likes", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    collectionId: uuid("collection_id")
+        .notNull()
+        .references(() => collections.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})

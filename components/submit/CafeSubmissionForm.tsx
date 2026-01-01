@@ -112,6 +112,34 @@ export default function CafeSubmissionForm({
     // Ownership proof files for owner verification
     const [ownershipProofFiles, setOwnershipProofFiles] = useState<File[]>([])
 
+    // Computed state for Step 0 verification
+    const isNameVerified =
+        preSearchQuery.trim().length >= 3 &&
+        !isSearching &&
+        preSearchResults.length === 0
+
+    // Debounced search for Step 0
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (preSearchQuery.trim().length >= 3) {
+                try {
+                    // isSearching is already set to true by input change
+                    const results = await searchCafesSimple(
+                        preSearchQuery.trim()
+                    )
+                    setPreSearchResults(results)
+                } catch (err) {
+                    console.error("[PreSearch] Error:", err)
+                    setPreSearchResults([])
+                } finally {
+                    setIsSearching(false)
+                }
+            }
+        }, 500)
+
+        return () => clearTimeout(timer)
+    }, [preSearchQuery])
+
     useEffect(() => {
         const checkDuplicates = async () => {
             const trimmedName = formData.name.trim()
@@ -193,7 +221,8 @@ export default function CafeSubmissionForm({
     const validateStep = (step: number): string | null => {
         switch (step) {
             case 0:
-                // No strict validation for "Before We Begin" - just informational
+                if (!isNameVerified)
+                    return "Please verify the cafe name availability first"
                 break
             case 1:
                 if (!formData.name.trim()) return "Cafe name is required"
@@ -724,30 +753,15 @@ export default function CafeSubmissionForm({
                                         <input
                                             type='text'
                                             value={preSearchQuery}
-                                            onChange={async (e) => {
+                                            onChange={(e) => {
                                                 const query = e.target.value
                                                 setPreSearchQuery(query)
 
                                                 if (query.trim().length >= 3) {
+                                                    // Immediately set searching to disable "Next" button while debounce waits
                                                     setIsSearching(true)
-                                                    try {
-                                                        const results =
-                                                            await searchCafesSimple(
-                                                                query.trim()
-                                                            )
-                                                        setPreSearchResults(
-                                                            results
-                                                        )
-                                                    } catch (err) {
-                                                        console.error(
-                                                            "[PreSearch] Error:",
-                                                            err
-                                                        )
-                                                        setPreSearchResults([])
-                                                    } finally {
-                                                        setIsSearching(false)
-                                                    }
                                                 } else {
+                                                    setIsSearching(false)
                                                     setPreSearchResults([])
                                                 }
                                             }}
@@ -2293,7 +2307,8 @@ export default function CafeSubmissionForm({
                     <button
                         type='button'
                         onClick={nextStep}
-                        className='flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors cursor-pointer'
+                        disabled={currentStep === 0 && !isNameVerified}
+                        className='flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
                     >
                         Next
                         <ChevronRight className='w-5 h-5' />

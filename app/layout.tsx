@@ -149,7 +149,7 @@ export default function RootLayout({
             className=''
         >
             <body
-                className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen`}
+                className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen [&_button]:cursor-pointer`}
             >
                 <Suspense fallback={null}>
                     <NavigationProgress />

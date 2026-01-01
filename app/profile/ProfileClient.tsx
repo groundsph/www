@@ -14,6 +14,7 @@ import {
     ChevronDown,
     Coffee,
     Edit2,
+    Layers,
     Loader2,
     Medal,
     MessageSquare,
@@ -34,6 +35,7 @@ import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
+import { getUserCollections } from "@/app/api/actions/collection"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -106,6 +108,22 @@ export default function ProfileClient() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OwnedCafe type from owner actions
     const [ownedCafes, setOwnedCafes] = useState<any[]>([])
 
+    // Collections
+    const [collections, setCollections] = useState<
+        {
+            id: string
+            title: string
+            slug: string
+            description: string | null
+            coverImage: string | null
+            itemCount: number | null
+            isPublic: boolean | null
+            viewsCount: number | null
+            likesCount: number | null
+            createdAt: string | null
+        }[]
+    >([])
+
     // Redirect if not authenticated
     useEffect(() => {
         if (!user && !loading) {
@@ -144,6 +162,20 @@ export default function ProfileClient() {
         }
 
         fetchData()
+    }, [user])
+
+    // Fetch collections separately (not part of getFullProfileData)
+    useEffect(() => {
+        const fetchCollections = async () => {
+            if (!user) return
+            try {
+                const data = await getUserCollections(user.id)
+                setCollections(data)
+            } catch (error) {
+                console.error("Error fetching collections:", error)
+            }
+        }
+        fetchCollections()
     }, [user])
 
     // Handle save
@@ -1017,6 +1049,79 @@ export default function ProfileClient() {
                         wishlist={wishlistCafes}
                         isOwnProfile={true}
                     />
+                </section>
+
+                {/* Collections Section */}
+                <section className='mt-10'>
+                    <div className='flex items-center gap-2 mb-4'>
+                        <Layers className='w-5 h-5' />
+                        <h2 className='text-xl font-semibold font-serif'>
+                            My Collections
+                        </h2>
+                        <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                            {collections.length}
+                        </span>
+                    </div>
+
+                    {collections.length > 0 ? (
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                {collections.slice(0, 3).map((collection) => (
+                                    <Link
+                                        key={collection.id}
+                                        href={`/community/${collection.slug}`}
+                                        className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group'
+                                    >
+                                        {collection.coverImage ? (
+                                            <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                <Image
+                                                    src={collection.coverImage}
+                                                    alt={collection.title}
+                                                    fill
+                                                    className='object-cover'
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                <Layers className='w-5 h-5 text-primary/60' />
+                                            </div>
+                                        )}
+                                        <div className='flex-1 min-w-0'>
+                                            <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                {collection.title}
+                                            </p>
+                                            <p className='text-xs text-text/50'>
+                                                {collection.itemCount ?? 0}{" "}
+                                                cafes
+                                            </p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+
+                            <Link
+                                href='/profile/collections'
+                                className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                            >
+                                <Layers className='w-4 h-4' />
+                                Manage Collections
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                            <Layers className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                            <p className='text-text/60 font-medium mb-4'>
+                                No collections yet
+                            </p>
+                            <Link
+                                href='/profile/collections'
+                                className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                            >
+                                <Layers className='w-4 h-4' />
+                                Create Collection
+                            </Link>
+                        </div>
+                    )}
                 </section>
 
                 <section

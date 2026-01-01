@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm"
 // Routes that require authentication (exact match)
 const protectedRoutesExact = ["/profile", "/profile/settings", "/profile/claim-supporter"]
 // Routes that require authentication (prefix match)
-const protectedRoutesPrefixes = ["/submit", "/owner", "/manage", "/writer"]
+const protectedRoutesPrefixes = ["/submit", "/owner", "/manage", "/writer", "/profile/collections"]
 // Routes to skip auth checks entirely (performance optimization)
 const skipAuthPrefixes = ["/api/", "/_next/", "/auth/callback"]
 

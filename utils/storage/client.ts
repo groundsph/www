@@ -98,6 +98,16 @@ export async function uploadOwnershipProof(file: File): Promise<ClientUploadResu
     return uploadOwnershipProofAction(formData)
 }
 
+/**
+ * Upload a collection cover image via API route
+ */
+export async function uploadCollectionCover(file: File): Promise<ClientUploadResult> {
+    return uploadWithProgress({
+        file,
+        bucket: "collections",
+    })
+}
+
 // ============================================
 // Progress Upload via API Route
 // For cases where progress tracking is essential
