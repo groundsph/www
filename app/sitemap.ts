@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/db'
-import { cafes, blogPosts, cafeMenuItems } from '@/db/schema'
+import { cafes, blogPosts, cafeMenuItems, collections } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
 export const dynamic = "force-dynamic"
@@ -16,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
         { url: `${baseUrl}/map`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
         // Community pages
-        { url: `${baseUrl}/events`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
+        { url: `${baseUrl}/community`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
         { url: `${baseUrl}/submit`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
         { url: `${baseUrl}/donate`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
         { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
@@ -80,5 +80,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }
     }
 
-    return [...staticPages, ...cafePages, ...blogPages, ...menuPages]
+    // Public collection pages
+    const collectionResults = await db
+        .select({ slug: collections.slug, updatedAt: collections.updatedAt })
+        .from(collections)
+        .where(eq(collections.isPublic, true))
+
+    const collectionPages: MetadataRoute.Sitemap = collectionResults.map((collection) => ({
+        url: `${baseUrl}/community/${collection.slug}`,
+        lastModified: collection.updatedAt || new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.6,
+    }))
+
+    return [...staticPages, ...cafePages, ...blogPages, ...menuPages, ...collectionPages]
 }

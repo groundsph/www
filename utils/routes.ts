@@ -16,12 +16,8 @@ export const routes: Route[] = [
         title: 'blog',
         href: '/blog',
     },
-    // {
-    //     title: 'events',
-    //     href: '/events',
-    // },
-    // // {
-    //     title: 'community',
-    //     href: '/community',
-    // },
+    {
+        title: 'community',
+        href: '/community',
+    },
 ]
