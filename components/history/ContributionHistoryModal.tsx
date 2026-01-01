@@ -157,79 +157,82 @@ export default function ContributionHistoryModal({
                         </div>
                     ) : (
                         <div className='space-y-3'>
-                            {contributions.map((log) => {
-                                const Icon =
-                                    ACTION_ICONS[log.action_type] || Pencil
-                                const label =
-                                    ACTION_LABELS[log.action_type] ||
-                                    log.action_type
-                                const details = log.details as {
-                                    summary?: string
-                                } | null
+                            {contributions
+                                .filter((log) => log.action_type !== "SUGGEST")
+                                .map((log) => {
+                                    const Icon =
+                                        ACTION_ICONS[log.action_type] || Pencil
+                                    const label =
+                                        ACTION_LABELS[log.action_type] ||
+                                        log.action_type
+                                    const details = log.details as {
+                                        summary?: string
+                                    } | null
 
-                                return (
-                                    <div
-                                        key={log.id}
-                                        className='flex items-start gap-3 p-3 rounded-xl bg-text/5 hover:bg-text/10 transition-colors'
-                                    >
-                                        {/* Icon */}
-                                        <div className='shrink-0 w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center'>
-                                            <Icon className='w-4 h-4 text-accent' />
-                                        </div>
+                                    return (
+                                        <div
+                                            key={log.id}
+                                            className='flex items-start gap-3 p-3 rounded-xl bg-text/5 hover:bg-text/10 transition-colors'
+                                        >
+                                            {/* Icon */}
+                                            <div className='shrink-0 w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center'>
+                                                <Icon className='w-4 h-4 text-accent' />
+                                            </div>
 
-                                        {/* Content */}
-                                        <div className='flex-1 min-w-0'>
-                                            <div className='flex items-center gap-2 flex-wrap'>
-                                                <span className='font-medium text-sm'>
-                                                    {label}
-                                                </span>
-                                                <span className='text-text/40'>
-                                                    by
-                                                </span>
-                                                <Link
-                                                    href={`/profile/${log.author.username}`}
-                                                    className='flex items-center gap-1.5 hover:text-accent transition-colors cursor-pointer hover:underline'
-                                                >
-                                                    {log.author.avatar_url ? (
-                                                        <Image
-                                                            src={
-                                                                log.author
-                                                                    .avatar_url
-                                                            }
-                                                            alt={
+                                            {/* Content */}
+                                            <div className='flex-1 min-w-0'>
+                                                <div className='flex items-center gap-2 flex-wrap'>
+                                                    <span className='font-medium text-sm'>
+                                                        {label}
+                                                    </span>
+                                                    <span className='text-text/40'>
+                                                        by
+                                                    </span>
+                                                    <Link
+                                                        href={`/profile/${log.author.username}`}
+                                                        className='flex items-center gap-1.5 hover:text-accent transition-colors cursor-pointer hover:underline'
+                                                    >
+                                                        {log.author
+                                                            .avatar_url ? (
+                                                            <Image
+                                                                src={
+                                                                    log.author
+                                                                        .avatar_url
+                                                                }
+                                                                alt={
+                                                                    log.author
+                                                                        .display_name
+                                                                }
+                                                                width={18}
+                                                                height={18}
+                                                                className='rounded-full'
+                                                            />
+                                                        ) : (
+                                                            <UserIcon className='w-4 h-4' />
+                                                        )}
+                                                        <span className='text-sm font-medium'>
+                                                            {
                                                                 log.author
                                                                     .display_name
                                                             }
-                                                            width={18}
-                                                            height={18}
-                                                            className='rounded-full'
-                                                        />
-                                                    ) : (
-                                                        <UserIcon className='w-4 h-4' />
-                                                    )}
-                                                    <span className='text-sm font-medium'>
-                                                        {
-                                                            log.author
-                                                                .display_name
-                                                        }
-                                                    </span>
-                                                </Link>
-                                            </div>
-                                            {details?.summary && (
-                                                <p className='text-sm text-text/60 mt-0.5 truncate'>
-                                                    {details.summary}
+                                                        </span>
+                                                    </Link>
+                                                </div>
+                                                {details?.summary && (
+                                                    <p className='text-sm text-text/60 mt-0.5 truncate'>
+                                                        {details.summary}
+                                                    </p>
+                                                )}
+                                                <p className='text-xs text-text/40 mt-1'>
+                                                    {log.created_at &&
+                                                        formatRelativeTime(
+                                                            log.created_at
+                                                        )}
                                                 </p>
-                                            )}
-                                            <p className='text-xs text-text/40 mt-1'>
-                                                {log.created_at &&
-                                                    formatRelativeTime(
-                                                        log.created_at
-                                                    )}
-                                            </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                )
-                            })}
+                                    )
+                                })}
                         </div>
                     )}
                 </div>

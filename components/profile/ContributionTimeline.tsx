@@ -95,7 +95,11 @@ export default function ContributionTimeline({
         )
     }
 
-    if (contributions.length === 0) {
+    const visibleContributions = contributions.filter(
+        (log) => log.action_type !== "SUGGEST"
+    )
+
+    if (visibleContributions.length === 0) {
         return (
             <div className='p-6'>
                 <div className='flex items-center gap-2 mb-4'>
@@ -111,8 +115,8 @@ export default function ContributionTimeline({
     }
 
     const displayedContributions = showAll
-        ? contributions
-        : contributions.slice(0, 5)
+        ? visibleContributions
+        : visibleContributions.slice(0, 5)
 
     return (
         <div className='p-6'>
@@ -121,7 +125,7 @@ export default function ContributionTimeline({
                     <History className='w-5 h-5 text-accent' />
                     <h3 className='font-semibold'>Contributions</h3>
                     <span className='text-sm text-text/50'>
-                        ({contributions.length})
+                        ({visibleContributions.length})
                     </span>
                 </div>
             </div>
@@ -156,13 +160,6 @@ export default function ContributionTimeline({
                                         href={`/cafes/${log.cafe.slug}`}
                                         className='font-medium hover:text-accent transition-colors flex items-center gap-2'
                                     >
-                                        <Image
-                                            src={log.cafe.thumbnail}
-                                            alt={log.cafe.name}
-                                            width={20}
-                                            height={20}
-                                            className='rounded-sm object-cover'
-                                        />
                                         <span className='truncate'>
                                             {log.cafe.name}
                                         </span>
@@ -178,14 +175,14 @@ export default function ContributionTimeline({
                 })}
             </div>
 
-            {contributions.length > 5 && (
+            {visibleContributions.length > 5 && (
                 <button
                     onClick={() => setShowAll(!showAll)}
                     className='w-full mt-4 py-2 text-sm text-accent hover:text-accent/80 transition-colors cursor-pointer'
                 >
                     {showAll
                         ? "Show less"
-                        : `Show all ${contributions.length} contributions`}
+                        : `Show all ${visibleContributions.length} contributions`}
                 </button>
             )}
         </div>
