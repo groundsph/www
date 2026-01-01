@@ -12,8 +12,8 @@
 
 import { getCurrentUser } from "@/lib/auth"
 import { db } from "@/db"
-import { profiles, cafes, reviews, blogPosts, events, badgeDefinitions, cafeClaims, cafeMenuItems, avatarDeletionQueue } from "@/db/schema"
-import { eq, like, arrayContains } from "drizzle-orm"
+import { profiles, cafes, reviews, blogPosts, events, badgeDefinitions, cafeClaims, cafeMenuItems, collections, avatarDeletionQueue } from "@/db/schema"
+import { eq, sql, isNotNull } from "drizzle-orm"
 import {
     getStorageProvider,
     STORAGE_BUCKETS,
@@ -595,20 +595,170 @@ export interface CleanupResult {
  * This function lists all files in storage and checks if they're referenced in the database
  * Files not referenced anywhere are deleted
  */
+/**
+ * Clean up orphaned images across all storage buckets
+ * Optimized to use batch DB queries and proper pagination
+ */
 export async function cleanupOrphanedImages(): Promise<CleanupResult> {
     const user = await getAuthenticatedUser()
     if (!user) {
-        return { success: false, deleted: { cafes: 0, reviews: 0, avatars: 0, blogs: 0, events: 0, menuPhotos: 0, badges: 0, ownershipProofs: 0 }, error: "Not authenticated" }
+        return { success: false, deleted: createEmptyCleanupStats(), error: "Not authenticated" }
     }
 
     const isAdmin = await isUserAdmin(user.id)
     if (!isAdmin) {
-        return { success: false, deleted: { cafes: 0, reviews: 0, avatars: 0, blogs: 0, events: 0, menuPhotos: 0, badges: 0, ownershipProofs: 0 }, error: "Admin access required" }
+        return { success: false, deleted: createEmptyCleanupStats(), error: "Admin access required" }
     }
 
     const storage = await getStorageProvider()
+    const deleted = createEmptyCleanupStats()
 
-    const deleted = {
+    try {
+        // ---------------------------------------------------------
+        // 1. Fetch all valid image URLs from DB (Batching)
+        // ---------------------------------------------------------
+
+        // Cafe Images
+        const cafeImages = new Set<string>()
+        const cafesResult = await db.select({ thumbnail: cafes.thumbnail, gallery: cafes.gallery }).from(cafes)
+        for (const c of cafesResult) {
+            if (c.thumbnail) cafeImages.add(c.thumbnail)
+            if (c.gallery) c.gallery.forEach(url => cafeImages.add(url))
+        }
+
+        // Review Images
+        const reviewImages = new Set<string>()
+        const reviewsResult = await db.select({ images: reviews.images }).from(reviews).where(sql`array_length(images, 1) > 0`)
+        for (const r of reviewsResult) {
+            r.images?.forEach(url => reviewImages.add(url))
+        }
+
+        // Avatar Images (strip query params for matching)
+        const avatarImages = new Set<string>()
+        const profilesResult = await db.select({ avatarUrl: profiles.avatarUrl }).from(profiles).where(isNotNull(profiles.avatarUrl))
+        for (const p of profilesResult) {
+            if (p.avatarUrl) avatarImages.add(p.avatarUrl.split('?')[0])
+        }
+
+        // Blog Images
+        const blogImages = new Set<string>()
+        const blogsResult = await db.select({ coverImage: blogPosts.coverImage }).from(blogPosts).where(isNotNull(blogPosts.coverImage))
+        for (const b of blogsResult) {
+            if (b.coverImage) blogImages.add(b.coverImage)
+        }
+
+        // Event Images
+        const eventImages = new Set<string>()
+        const eventsResult = await db.select({ imageUrl: events.imageUrl }).from(events).where(isNotNull(events.imageUrl))
+        for (const e of eventsResult) {
+            if (e.imageUrl) eventImages.add(e.imageUrl)
+        }
+
+        // Menu Photo Images
+        const menuImages = new Set<string>()
+        const menuResult = await db.select({ imageUrl: cafeMenuItems.imageUrl }).from(cafeMenuItems).where(isNotNull(cafeMenuItems.imageUrl))
+        for (const m of menuResult) {
+            if (m.imageUrl) menuImages.add(m.imageUrl)
+        }
+
+        // Badge Images
+        const badgeImages = new Set<string>()
+        const badgeResult = await db.select({ imageUrl: badgeDefinitions.imageUrl }).from(badgeDefinitions).where(isNotNull(badgeDefinitions.imageUrl))
+        for (const b of badgeResult) {
+            if (b.imageUrl) badgeImages.add(b.imageUrl)
+        }
+
+        // Ownership Proofs
+        const proofImages = new Set<string>()
+        const proofResult = await db.select({ proofDocumentUrl: cafeClaims.proofDocumentUrl }).from(cafeClaims).where(isNotNull(cafeClaims.proofDocumentUrl))
+        for (const p of proofResult) {
+            if (p.proofDocumentUrl) proofImages.add(p.proofDocumentUrl)
+        }
+
+        // Collection Images
+        const collectionImages = new Set<string>()
+        const collectionsResult = await db.select({ coverImage: collections.coverImage }).from(collections).where(isNotNull(collections.coverImage))
+        for (const c of collectionsResult) {
+            if (c.coverImage) collectionImages.add(c.coverImage)
+        }
+
+
+        // ---------------------------------------------------------
+        // 2. Iterate Storage and Delete Orphans
+        // ---------------------------------------------------------
+
+        // Helper to process a bucket
+        const processBucket = async (
+            bucket: StorageBucket,
+            validUrls: Set<string>,
+            statsKey: keyof typeof deleted,
+            isAvatar = false
+        ) => {
+            let offset = 0
+            const LIMIT = 1000
+            let hasMore = true
+
+            while (hasMore) {
+                const result = await storage.list(bucket, { limit: LIMIT, offset })
+                if (!result.success || !result.files) break
+
+                const toDelete: string[] = []
+
+                for (const file of result.files) {
+                    if (file.isDirectory) continue
+
+                    const publicUrl = storage.getPublicUrl(bucket, file.path)
+
+                    // Skip placeholder
+                    if (publicUrl === CAFE_PLACEHOLDER_URL) continue
+
+                    let isReferenced = false
+                    if (isAvatar) {
+                        // For avatars, exact match usually fails due to cache buster query params
+                        // We checked the validUrls set which has query params stripped
+                        // So we strip them here too
+                        isReferenced = validUrls.has(publicUrl.split('?')[0])
+                    } else {
+                        isReferenced = validUrls.has(publicUrl)
+                    }
+
+                    if (!isReferenced) {
+                        toDelete.push(file.path)
+                    }
+                }
+
+                if (toDelete.length > 0) {
+                    await storage.delete(bucket, toDelete)
+                    deleted[statsKey] += toDelete.length
+                }
+
+                if (result.files.length < LIMIT) {
+                    hasMore = false
+                } else {
+                    offset += LIMIT
+                }
+            }
+        }
+
+        await processBucket(STORAGE_BUCKETS.CAFES, cafeImages, 'cafes')
+        await processBucket(STORAGE_BUCKETS.REVIEWS, reviewImages, 'reviews')
+        await processBucket(STORAGE_BUCKETS.AVATARS, avatarImages, 'avatars', true)
+        await processBucket(STORAGE_BUCKETS.BLOGS, blogImages, 'blogs')
+        await processBucket(STORAGE_BUCKETS.EVENTS, eventImages, 'events')
+        await processBucket(STORAGE_BUCKETS.MENU_PHOTOS, menuImages, 'menuPhotos')
+        await processBucket(STORAGE_BUCKETS.BADGES, badgeImages, 'badges')
+        await processBucket(STORAGE_BUCKETS.OWNERSHIP_PROOFS, proofImages, 'ownershipProofs')
+        await processBucket(STORAGE_BUCKETS.COLLECTIONS, collectionImages, 'collections')
+
+        return { success: true, deleted }
+    } catch (error) {
+        console.error("[Storage] Cleanup error:", error)
+        return { success: false, deleted, error: "Cleanup failed" }
+    }
+}
+
+function createEmptyCleanupStats() {
+    return {
         cafes: 0,
         reviews: 0,
         avatars: 0,
@@ -617,184 +767,7 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
         menuPhotos: 0,
         badges: 0,
         ownershipProofs: 0,
-    }
-
-    try {
-        // Helper to check if URL is referenced in reviews images array
-        const isReviewImageReferenced = async (url: string): Promise<boolean> => {
-            const result = await db
-                .select({ id: reviews.id })
-                .from(reviews)
-                .where(arrayContains(reviews.images, [url]))
-                .limit(1)
-            return result.length > 0
-        }
-
-        // Helper to check if URL is referenced in profiles avatar_url (with LIKE for cache busters)
-        const isAvatarReferenced = async (url: string): Promise<boolean> => {
-            const baseUrl = url.split("?")[0]
-            const result = await db
-                .select({ id: profiles.id })
-                .from(profiles)
-                .where(like(profiles.avatarUrl, `${baseUrl}%`))
-                .limit(1)
-            return result.length > 0
-        }
-
-        // 1. Clean cafe images
-        const cafeFiles = await storage.list(STORAGE_BUCKETS.CAFES, { limit: 1000 })
-        if (cafeFiles.success && cafeFiles.files) {
-            for (const file of cafeFiles.files) {
-                if (file.isDirectory) continue
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.CAFES, file.path)
-
-                // Skip placeholder
-                if (publicUrl === CAFE_PLACEHOLDER_URL) continue
-
-                // Check thumbnail
-                const thumbRef = await db
-                    .select({ id: cafes.id })
-                    .from(cafes)
-                    .where(eq(cafes.thumbnail, publicUrl))
-                    .limit(1)
-
-                // Check gallery
-                const galleryRef = await db
-                    .select({ id: cafes.id })
-                    .from(cafes)
-                    .where(arrayContains(cafes.gallery, [publicUrl]))
-                    .limit(1)
-
-                if (thumbRef.length === 0 && galleryRef.length === 0) {
-                    await storage.delete(STORAGE_BUCKETS.CAFES, [file.path])
-                    deleted.cafes++
-                }
-            }
-        }
-
-        // 2. Clean review images
-        const reviewFiles = await storage.list(STORAGE_BUCKETS.REVIEWS, { limit: 1000 })
-        if (reviewFiles.success && reviewFiles.files) {
-            for (const file of reviewFiles.files) {
-                if (file.isDirectory) continue
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.REVIEWS, file.path)
-                const referenced = await isReviewImageReferenced(publicUrl)
-                if (!referenced) {
-                    await storage.delete(STORAGE_BUCKETS.REVIEWS, [file.path])
-                    deleted.reviews++
-                }
-            }
-        }
-
-        // 3. Clean avatar images
-        const avatarFiles = await storage.list(STORAGE_BUCKETS.AVATARS, { limit: 1000 })
-        if (avatarFiles.success && avatarFiles.files) {
-            for (const file of avatarFiles.files) {
-                if (file.isDirectory) continue
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.AVATARS, file.path)
-                const referenced = await isAvatarReferenced(publicUrl)
-                if (!referenced) {
-                    await storage.delete(STORAGE_BUCKETS.AVATARS, [file.path])
-                    deleted.avatars++
-                }
-            }
-        }
-
-        // 4. Clean blog images
-        const blogFiles = await storage.list(STORAGE_BUCKETS.BLOGS, { limit: 1000 })
-        if (blogFiles.success && blogFiles.files) {
-            for (const file of blogFiles.files) {
-                if (file.isDirectory) continue
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.BLOGS, file.path)
-                const blogRef = await db
-                    .select({ id: blogPosts.id })
-                    .from(blogPosts)
-                    .where(eq(blogPosts.coverImage, publicUrl))
-                    .limit(1)
-                if (blogRef.length === 0) {
-                    await storage.delete(STORAGE_BUCKETS.BLOGS, [file.path])
-                    deleted.blogs++
-                }
-            }
-        }
-
-        // 5. Clean event images
-        const eventFiles = await storage.list(STORAGE_BUCKETS.EVENTS, { limit: 1000 })
-        if (eventFiles.success && eventFiles.files) {
-            for (const file of eventFiles.files) {
-                if (file.isDirectory) continue
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.EVENTS, file.path)
-                const eventRef = await db
-                    .select({ id: events.id })
-                    .from(events)
-                    .where(eq(events.imageUrl, publicUrl))
-                    .limit(1)
-                if (eventRef.length === 0) {
-                    await storage.delete(STORAGE_BUCKETS.EVENTS, [file.path])
-                    deleted.events++
-                }
-            }
-        }
-
-        // 6. Clean menu photos
-        const menuFiles = await storage.list(STORAGE_BUCKETS.MENU_PHOTOS, { limit: 1000 })
-        if (menuFiles.success && menuFiles.files) {
-            for (const file of menuFiles.files) {
-                if (file.isDirectory) continue
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.MENU_PHOTOS, file.path)
-                const menuRef = await db
-                    .select({ id: cafeMenuItems.id })
-                    .from(cafeMenuItems)
-                    .where(eq(cafeMenuItems.imageUrl, publicUrl))
-                    .limit(1)
-                if (menuRef.length === 0) {
-                    await storage.delete(STORAGE_BUCKETS.MENU_PHOTOS, [file.path])
-                    deleted.menuPhotos++
-                }
-            }
-        }
-
-        // 7. Clean badge images
-        const badgeFiles = await storage.list(STORAGE_BUCKETS.BADGES, { limit: 1000 })
-        if (badgeFiles.success && badgeFiles.files) {
-            for (const file of badgeFiles.files) {
-                if (file.isDirectory) continue
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.BADGES, file.path)
-                const badgeRef = await db
-                    .select({ id: badgeDefinitions.id })
-                    .from(badgeDefinitions)
-                    .where(eq(badgeDefinitions.imageUrl, publicUrl))
-                    .limit(1)
-                if (badgeRef.length === 0) {
-                    await storage.delete(STORAGE_BUCKETS.BADGES, [file.path])
-                    deleted.badges++
-                }
-            }
-        }
-
-        // 8. Clean ownership proofs
-        const proofFiles = await storage.list(STORAGE_BUCKETS.OWNERSHIP_PROOFS, { limit: 1000 })
-        if (proofFiles.success && proofFiles.files) {
-            for (const file of proofFiles.files) {
-                if (file.isDirectory) continue
-                // Ownership proofs store paths, not URLs
-                const publicUrl = storage.getPublicUrl(STORAGE_BUCKETS.OWNERSHIP_PROOFS, file.path)
-                const claimRef = await db
-                    .select({ id: cafeClaims.id })
-                    .from(cafeClaims)
-                    .where(eq(cafeClaims.proofDocumentUrl, publicUrl))
-                    .limit(1)
-                if (claimRef.length === 0) {
-                    await storage.delete(STORAGE_BUCKETS.OWNERSHIP_PROOFS, [file.path])
-                    deleted.ownershipProofs++
-                }
-            }
-        }
-
-        return { success: true, deleted }
-    } catch (error) {
-        console.error("[Storage] Cleanup error:", error)
-        return { success: false, deleted, error: "Cleanup failed" }
+        collections: 0,
     }
 }
 
