@@ -56,6 +56,7 @@ import ImageCropper from "@/components/ui/ImageCropper"
 import AmenitiesSection from "@/components/cafe-editor/AmenitiesSection"
 import HoursSection from "@/components/cafe-editor/HoursSection"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { useNotification } from "@/components/NotificationProvider"
 
 const STEPS = [
     { id: 0, title: "Before We Begin", icon: Search },
@@ -76,6 +77,7 @@ interface CafeSubmissionFormProps {
 export default function CafeSubmissionForm({
     onSuccess,
 }: CafeSubmissionFormProps) {
+    const { addNotification } = useNotification()
     const [currentStep, setCurrentStep] = useState(0)
     const [formData, setFormData] = useState<CafeSubmission>(
         DEFAULT_CAFE_SUBMISSION
@@ -493,10 +495,17 @@ export default function CafeSubmissionForm({
             console.log("[Cafe Submit] Success!")
             clearDraft()
             setSuccess(true)
+            addNotification(
+                "Cafe submitted successfully! We'll review it soon.",
+                "success"
+            )
             onSuccess?.(result.cafeId!, result.slug!)
         } catch (err: unknown) {
             console.error("[Cafe Submit] Error:", err)
-            setError(err instanceof Error ? err.message : "An error occurred")
+            const errorMessage =
+                err instanceof Error ? err.message : "An error occurred"
+            setError(errorMessage)
+            addNotification(errorMessage, "error")
         } finally {
             setIsSubmitting(false)
             setIsProcessing(false)
