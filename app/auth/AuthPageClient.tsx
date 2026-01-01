@@ -31,8 +31,6 @@ export default function AuthPageClient() {
     const [confirmPassword, setConfirmPassword] = useState("")
     const [username, setUsername] = useState("")
     const [displayName, setDisplayName] = useState("")
-    const [error, setError] = useState<string | null>(null)
-    const [success, setSuccess] = useState<string | null>(null)
     const [usernameStatus, setUsernameStatus] = useState<
         "idle" | "checking" | "available" | "taken" | "current"
     >("idle")
@@ -69,7 +67,7 @@ export default function AuthPageClient() {
             fetchCurrentProfile()
         }
         if (authError === "auth_failed") {
-            setError("Authentication failed. Please try again.")
+            addNotification("Authentication failed. Please try again.", "error")
         }
     }, [searchParams, user])
 
@@ -167,7 +165,6 @@ export default function AuthPageClient() {
     const handleEmailSignIn = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        setError(null)
         try {
             const { error } = await signIn.email({
                 email,
@@ -178,7 +175,10 @@ export default function AuthPageClient() {
             const redirect = searchParams.get("redirect") || "/"
             window.location.href = redirect
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Failed to sign in")
+            addNotification(
+                err instanceof Error ? err.message : "Failed to sign in",
+                "error"
+            )
         } finally {
             setIsLoading(false)
         }
@@ -187,23 +187,23 @@ export default function AuthPageClient() {
     const handleEmailSignUp = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        setError(null)
 
         if (password !== confirmPassword) {
-            setError("Passwords do not match")
+            addNotification("Passwords do not match", "error")
             setIsLoading(false)
             return
         }
 
         if (!isPasswordValid) {
-            setError("Please fulfill all password requirements")
+            addNotification("Please fulfill all password requirements", "error")
             setIsLoading(false)
             return
         }
 
         if (!acceptedTerms) {
-            setError(
-                "You must accept the Terms and Conditions to create an account"
+            addNotification(
+                "You must accept the Terms and Conditions to create an account",
+                "error"
             )
             setIsLoading(false)
             return
@@ -224,7 +224,10 @@ export default function AuthPageClient() {
             router.replace(newUrl)
             setMode("username")
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Failed to sign up")
+            addNotification(
+                err instanceof Error ? err.message : "Failed to sign up",
+                "error"
+            )
         } finally {
             setIsLoading(false)
         }
@@ -233,16 +236,15 @@ export default function AuthPageClient() {
     const handleUsernameSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        setError(null)
 
         if (!username.trim()) {
-            setError("Username is required")
+            addNotification("Username is required", "error")
             setIsLoading(false)
             return
         }
 
         if (!displayName.trim()) {
-            setError("Display name is required")
+            addNotification("Display name is required", "error")
             setIsLoading(false)
             return
         }
@@ -264,8 +266,9 @@ export default function AuthPageClient() {
             const redirect = searchParams.get("redirect") || "/"
             window.location.href = redirect
         } catch (err: unknown) {
-            setError(
-                err instanceof Error ? err.message : "Failed to set profile"
+            addNotification(
+                err instanceof Error ? err.message : "Failed to set profile",
+                "error"
             )
         } finally {
             setIsLoading(false)
@@ -275,8 +278,6 @@ export default function AuthPageClient() {
     const handlePasswordReset = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
-        setError(null)
-        setSuccess(null)
 
         try {
             // Call the forgot password endpoint
@@ -294,13 +295,17 @@ export default function AuthPageClient() {
                 throw new Error(data.message || "Failed to send reset email")
             }
 
-            setSuccess("Password reset link sent! Check your email.")
+            addNotification(
+                "Password reset link sent! Check your email.",
+                "success"
+            )
             setEmail("")
         } catch (err: unknown) {
-            setError(
+            addNotification(
                 err instanceof Error
                     ? err.message
-                    : "Failed to send reset email"
+                    : "Failed to send reset email",
+                "error"
             )
         } finally {
             setIsLoading(false)
@@ -336,20 +341,6 @@ export default function AuthPageClient() {
                         {mode === "username" && "Set Up Your Profile"}
                         {mode === "reset" && "Reset Your Password"}
                     </h2>
-
-                    {/* Error Message */}
-                    {error && (
-                        <div className='bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm'>
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Success Message */}
-                    {success && (
-                        <div className='bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg mb-4 text-sm'>
-                            {success}
-                        </div>
-                    )}
 
                     {/* Profile Setup Form (after signup) */}
                     {mode === "username" && (
@@ -668,14 +659,14 @@ export default function AuthPageClient() {
                                     <button
                                         onClick={async () => {
                                             setIsLoading(true)
-                                            setError(null)
                                             try {
                                                 const result =
                                                     await authClient.signIn.passkey()
                                                 if (result.error) {
-                                                    setError(
+                                                    addNotification(
                                                         result.error.message ||
-                                                            "Passkey authentication failed"
+                                                            "Passkey authentication failed",
+                                                        "error"
                                                     )
                                                 } else {
                                                     const redirect =
@@ -690,8 +681,9 @@ export default function AuthPageClient() {
                                                     "Passkey sign-in error:",
                                                     err
                                                 )
-                                                setError(
-                                                    "Passkey authentication failed"
+                                                addNotification(
+                                                    "Passkey authentication failed",
+                                                    "error"
                                                 )
                                             } finally {
                                                 setIsLoading(false)
@@ -742,8 +734,9 @@ export default function AuthPageClient() {
                                                 "Google sign in error",
                                                 err
                                             )
-                                            setError(
-                                                "Failed to sign in with Google"
+                                            addNotification(
+                                                "Failed to sign in with Google",
+                                                "error"
                                             )
                                             setIsLoading(false)
                                         }
@@ -825,8 +818,9 @@ export default function AuthPageClient() {
                                                 "Discord sign in error",
                                                 err
                                             )
-                                            setError(
-                                                "Failed to sign in with Discord"
+                                            addNotification(
+                                                "Failed to sign in with Discord",
+                                                "error"
                                             )
                                             setIsLoading(false)
                                         }
@@ -851,8 +845,6 @@ export default function AuthPageClient() {
                                     <button
                                         onClick={() => {
                                             setMode("reset")
-                                            setError(null)
-                                            setSuccess(null)
                                         }}
                                         className='text-text/60 text-sm hover:text-primary transition-colors cursor-pointer'
                                     >
@@ -869,7 +861,6 @@ export default function AuthPageClient() {
                                         <button
                                             onClick={() => {
                                                 setMode("signup")
-                                                setError(null)
                                             }}
                                             className='text-primary font-semibold hover:underline cursor-pointer'
                                         >
@@ -882,7 +873,6 @@ export default function AuthPageClient() {
                                         <button
                                             onClick={() => {
                                                 setMode("signin")
-                                                setError(null)
                                             }}
                                             className='text-primary font-semibold hover:underline cursor-pointer'
                                         >
@@ -934,8 +924,6 @@ export default function AuthPageClient() {
                                 <button
                                     onClick={() => {
                                         setMode("signin")
-                                        setError(null)
-                                        setSuccess(null)
                                     }}
                                     className='text-primary font-semibold hover:underline'
                                 >
