@@ -140,13 +140,25 @@ export default function AuthPageClient() {
                         },
                     },
                 })
+                .then((result) => {
+                    if (result?.error) {
+                        addNotification(
+                            result.error.message ||
+                                "Passkey authentication failed",
+                            "error"
+                        )
+                    } else {
+                        const redirect = searchParams.get("redirect") || "/"
+                        window.location.href = redirect
+                    }
+                })
                 .catch(() => {
                     // Ignore initial abort errors or failures when conditional UI starts
                 })
         }
 
         initPasskeyAutofill()
-    }, [mode, addNotification])
+    }, [mode, addNotification, searchParams])
 
     // Functions
     const checkPasswordRequirements = (password: string) => {
