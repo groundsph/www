@@ -27,7 +27,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             description:
                 collection.description ||
                 `A curated collection of ${collection.itemCount} cafes`,
-            images: collection.coverImage ? [collection.coverImage] : undefined,
         },
     }
 }

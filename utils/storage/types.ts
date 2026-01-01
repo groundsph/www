@@ -125,6 +125,7 @@ export const STORAGE_BUCKETS = {
     MENU_PHOTOS: 'menu-photos',
     BADGES: 'badges',
     OWNERSHIP_PROOFS: 'ownership-proofs',
+    COLLECTIONS: 'collections',
 } as const
 
 export type StorageBucket = typeof STORAGE_BUCKETS[keyof typeof STORAGE_BUCKETS]
@@ -180,6 +181,12 @@ export const BUCKET_CONFIGS: Record<StorageBucket, BucketConfig> = {
         isPublic: false, // Private bucket - requires signed URLs
         maxFileSize: 10 * 1024 * 1024, // 10MB
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    },
+    [STORAGE_BUCKETS.COLLECTIONS]: {
+        name: STORAGE_BUCKETS.COLLECTIONS,
+        isPublic: true,
+        maxFileSize: 5 * 1024 * 1024, // 5MB
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
     },
 }
 

@@ -236,7 +236,7 @@ export default function CollectionViewClient({
             </div>
 
             {/* Cafes List */}
-            <div className='max-w-4xl mx-auto px-6 pb-8'>
+            <div className='max-w-5xl mx-auto px-6 pb-8'>
                 {validCafes.length === 0 ? (
                     <div className='text-center py-16'>
                         <Coffee className='w-16 h-16 text-secondary/40 mx-auto mb-4' />

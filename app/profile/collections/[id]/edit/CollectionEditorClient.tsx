@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { Reorder } from "motion/react"
 import {
     ArrowLeft,
     Save,
@@ -23,6 +24,7 @@ import {
     deleteCollection,
     searchCafesForCollection,
 } from "@/app/api/actions/collection"
+import { getCafesByIds } from "@/app/api/actions/profile"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { useNotification } from "@/components/NotificationProvider"
 import ImageCropper from "@/components/ui/ImageCropper"
@@ -120,6 +122,38 @@ export default function CollectionEditorClient({
 
         return () => clearTimeout(timeoutId)
     }, [searchQuery, items])
+
+    // Fetch cafe details for existing items on mount
+    useEffect(() => {
+        const fetchExistingCafes = async () => {
+            const existingCafeIds = items
+                .map((item) => item.cafeId)
+                .filter((id) => !cafesData.has(id))
+
+            if (existingCafeIds.length === 0) return
+
+            try {
+                const cafesResult = await getCafesByIds(existingCafeIds)
+                setCafesData((prev) => {
+                    const newMap = new Map(prev)
+                    for (const cafe of cafesResult) {
+                        newMap.set(cafe.id, {
+                            id: cafe.id,
+                            name: cafe.name,
+                            thumbnail: cafe.thumbnail || "",
+                            location: `${cafe.city_municipality}, ${cafe.region}`,
+                        })
+                    }
+                    return newMap
+                })
+            } catch (err) {
+                console.error("Failed to fetch existing cafe details:", err)
+            }
+        }
+
+        fetchExistingCafes()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Only run on mount
 
     // Add cafe to collection
     const addCafe = (cafe: CafeSearchResult) => {
@@ -230,8 +264,8 @@ export default function CollectionEditorClient({
         setIsUploadingCover(true)
 
         try {
-            const file = new File([croppedBlob], "cover.webp", {
-                type: "image/webp",
+            const file = new File([croppedBlob], "cover.jpg", {
+                type: "image/jpeg",
             })
             const result = await uploadCollectionCover(file)
             if (result.success && result.url) {
@@ -492,13 +526,28 @@ export default function CollectionEditorClient({
                                     </p>
                                 </div>
                             ) : (
-                                <div className='space-y-3'>
+                                <Reorder.Group
+                                    axis='y'
+                                    values={items.map((i) => i.cafeId)}
+                                    onReorder={(newOrder) => {
+                                        // Reorder items based on new cafeId order
+                                        const newItems = newOrder.map(
+                                            (cafeId) =>
+                                                items.find(
+                                                    (i) => i.cafeId === cafeId
+                                                )!
+                                        )
+                                        setItems(newItems)
+                                    }}
+                                    className='space-y-3'
+                                >
                                     {items.map((item, index) => {
                                         const cafe = cafesData.get(item.cafeId)
                                         return (
-                                            <div
+                                            <Reorder.Item
                                                 key={item.cafeId}
-                                                className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl group'
+                                                value={item.cafeId}
+                                                className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl group cursor-grab active:cursor-grabbing'
                                             >
                                                 {/* Drag Handle & Index */}
                                                 <div className='flex flex-col items-center gap-1 pt-1'>
@@ -591,10 +640,10 @@ export default function CollectionEditorClient({
                                                         <X className='w-4 h-4' />
                                                     </button>
                                                 </div>
-                                            </div>
+                                            </Reorder.Item>
                                         )
                                     })}
-                                </div>
+                                </Reorder.Group>
                             )}
                         </div>
                     </div>

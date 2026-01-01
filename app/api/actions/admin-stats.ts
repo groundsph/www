@@ -23,6 +23,7 @@ export interface SystemStats {
             menu_photos: number
             events: number
             ownership_proofs: number
+            collections: number
         }
         storage_limit_bytes?: number
         storage_left_bytes?: number
@@ -58,6 +59,7 @@ async function getStorageStats(): Promise<{
         menu_photos: number
         events: number
         ownership_proofs: number
+        collections: number
     }
     provider: string
 }> {
@@ -72,6 +74,7 @@ async function getStorageStats(): Promise<{
         STORAGE_BUCKETS.MENU_PHOTOS,
         STORAGE_BUCKETS.EVENTS,
         STORAGE_BUCKETS.OWNERSHIP_PROOFS,
+        STORAGE_BUCKETS.COLLECTIONS,
     ]
 
     const bucketSizes: Record<string, number> = {
@@ -83,6 +86,7 @@ async function getStorageStats(): Promise<{
         menu_photos: 0,
         events: 0,
         ownership_proofs: 0,
+        collections: 0,
     }
 
     const bucketKeyMap: Record<StorageBucket, keyof typeof bucketSizes> = {
@@ -94,6 +98,7 @@ async function getStorageStats(): Promise<{
         "menu-photos": "menu_photos",
         events: "events",
         "ownership-proofs": "ownership_proofs",
+        collections: "collections",
     }
 
     for (const bucket of buckets) {
@@ -122,6 +127,7 @@ async function getStorageStats(): Promise<{
             menu_photos: number
             events: number
             ownership_proofs: number
+            collections: number
         },
         provider: storage.name,
     }
