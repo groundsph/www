@@ -784,8 +784,9 @@ export default function AuthPageClient() {
                                                 "Facebook sign in error",
                                                 err
                                             )
-                                            setError(
-                                                "Failed to sign in with Facebook"
+                                            addNotification(
+                                                "Failed to sign in with Facebook",
+                                                "error"
                                             )
                                             setIsLoading(false)
                                         }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { authClient } from "@/lib/auth-client"
+import { useNotification } from "@/components/NotificationProvider"
 import {
     Trash2,
     RefreshCw,
@@ -27,18 +28,17 @@ type User = {
 }
 
 export default function UsersManagePage() {
+    const { addNotification } = useNotification()
     const [users, setUsers] = useState<User[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [deletingId, setDeletingId] = useState<string | null>(null)
-    const [error, setError] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const [totalUsers, setTotalUsers] = useState(0)
     const limit = 20
 
     const fetchUsers = async () => {
         setLoading(true)
-        setError(null)
         try {
             const res = await authClient.admin.listUsers({
                 query: {
@@ -54,7 +54,7 @@ export default function UsersManagePage() {
                 setTotalUsers(res.data.total ?? res.data.users.length)
             }
         } catch (err: any) {
-            setError(err.message || "Failed to fetch users")
+            addNotification(err.message || "Failed to fetch users", "error")
         } finally {
             setLoading(false)
         }
@@ -85,8 +85,12 @@ export default function UsersManagePage() {
             await authClient.admin.removeUser({ userId })
             setUsers((prev) => prev.filter((u) => u.id !== userId))
             setTotalUsers((prev) => prev - 1)
+            addNotification(
+                `User "${userName}" deleted successfully`,
+                "success"
+            )
         } catch (err: any) {
-            alert(`Failed to delete user: ${err.message}`)
+            addNotification(`Failed to delete user: ${err.message}`, "error")
         } finally {
             setDeletingId(null)
         }
@@ -154,12 +158,6 @@ export default function UsersManagePage() {
                     Search
                 </button>
             </form>
-
-            {error && (
-                <div className='p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm'>
-                    {error}
-                </div>
-            )}
 
             {/* Table */}
             <div className='bg-background border border-tertiary/50 rounded-xl overflow-hidden shadow-sm'>

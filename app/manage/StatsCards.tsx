@@ -7,10 +7,11 @@ import {
     DatabaseIcon,
     HardDriveIcon,
     CoffeeIcon,
-    AlertCircleIcon,
     ServerIcon,
+    Loader2,
 } from "lucide-react"
 import { getSystemStats, SystemStats } from "@/app/api/actions/admin-stats"
+import { useNotification } from "@/components/NotificationProvider"
 
 function formatBytes(bytes: number): string {
     if (bytes === 0) return "0 B"
@@ -21,9 +22,9 @@ function formatBytes(bytes: number): string {
 }
 
 export default function StatsCards() {
+    const { addNotification } = useNotification()
     const [stats, setStats] = useState<SystemStats | null>(null)
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -32,10 +33,13 @@ export default function StatsCards() {
                 if (result.success && result.data) {
                     setStats(result.data)
                 } else {
-                    setError(result.error || "Failed to load stats")
+                    addNotification(
+                        result.error || "Failed to load stats",
+                        "error"
+                    )
                 }
             } catch (err) {
-                setError("An unexpected error occurred")
+                addNotification("An unexpected error occurred", "error")
                 console.error(err)
             } finally {
                 setLoading(false)
@@ -43,26 +47,19 @@ export default function StatsCards() {
         }
 
         fetchStats()
-    }, [])
+    }, [addNotification])
 
     if (loading) {
         return (
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse'>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                 {[...Array(4)].map((_, i) => (
                     <div
                         key={i}
-                        className='h-32 bg-text/5 rounded-xl'
-                    ></div>
+                        className='h-32 bg-text/5 rounded-xl flex items-center justify-center'
+                    >
+                        <Loader2 className='w-6 h-6 animate-spin text-text/30' />
+                    </div>
                 ))}
-            </div>
-        )
-    }
-
-    if (error) {
-        return (
-            <div className='p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-2'>
-                <AlertCircleIcon className='w-5 h-5' />
-                <span>{error}</span>
             </div>
         )
     }

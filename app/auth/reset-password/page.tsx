@@ -4,25 +4,25 @@ import { authClient } from "@/lib/auth-client"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useState } from "react"
+import { useNotification } from "@/components/NotificationProvider"
 
 export default function ResetPasswordPage() {
+    const { addNotification } = useNotification()
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setError(null)
 
         if (password !== confirmPassword) {
-            setError("Passwords do not match")
+            addNotification("Passwords do not match", "error")
             return
         }
 
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters")
+        if (password.length < 12) {
+            addNotification("Password must be at least 12 characters", "error")
             return
         }
 
@@ -44,13 +44,15 @@ export default function ResetPasswordPage() {
             }
 
             setSuccess(true)
+            addNotification("Password updated successfully!", "success")
             // Redirect to login after 2 seconds
             setTimeout(() => {
                 window.location.href = "/auth"
             }, 2000)
         } catch (err: unknown) {
-            setError(
-                err instanceof Error ? err.message : "Failed to reset password"
+            addNotification(
+                err instanceof Error ? err.message : "Failed to reset password",
+                "error"
             )
         } finally {
             setIsLoading(false)
@@ -82,14 +84,7 @@ export default function ResetPasswordPage() {
                         Set New Password
                     </h2>
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className='bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm'>
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Success Message */}
+                    {/* Success Message - keep this inline since it controls form visibility */}
                     {success ? (
                         <div className='bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg mb-4 text-sm'>
                             Password updated successfully! Redirecting to
@@ -111,7 +106,7 @@ export default function ResetPasswordPage() {
                                     className='w-full px-4 py-3 rounded-xl border border-secondary/30 bg-tertiary/50 text-text placeholder:text-text/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all'
                                     disabled={isLoading}
                                     required
-                                    minLength={6}
+                                    minLength={12}
                                 />
                             </div>
                             <div>
@@ -125,7 +120,7 @@ export default function ResetPasswordPage() {
                                     className='w-full px-4 py-3 rounded-xl border border-secondary/30 bg-tertiary/50 text-text placeholder:text-text/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all'
                                     disabled={isLoading}
                                     required
-                                    minLength={6}
+                                    minLength={12}
                                 />
                             </div>
                             <button
