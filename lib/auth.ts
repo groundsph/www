@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { db } from "@/db"
 import { headers } from "next/headers"
-import { admin, anonymous, phoneNumber } from "better-auth/plugins"
+import { admin } from "better-auth/plugins"
 import { passkey } from "@better-auth/passkey"
 import bcrypt from "bcrypt"
 
@@ -18,7 +18,7 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: false,
-        minPasswordLength: 6,
+        minPasswordLength: 12,
         password: {
             hash: async (password) => {
                 return await bcrypt.hash(password, 10);
@@ -46,8 +46,6 @@ export const auth = betterAuth({
         admin({
             adminUserIds: process.env.ADMIN_USER_IDS?.split(",") || [],
         }),
-        anonymous(),
-        phoneNumber(),
         passkey()
     ],
     user: {

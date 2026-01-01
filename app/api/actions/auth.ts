@@ -15,8 +15,9 @@ export type LinkedAccount = {
  * Get all accounts linked to the verified user
  */
 export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
+    const hdrs = await headers()
     const session = await auth.api.getSession({
-        headers: await headers(),
+        headers: hdrs,
     })
 
     if (!session?.user) {
@@ -41,8 +42,9 @@ export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
  * Check if the user has a password set (credential account)
  */
 export async function hasPassword(): Promise<boolean> {
+    const hdrs = await headers()
     const session = await auth.api.getSession({
-        headers: await headers(),
+        headers: hdrs,
     })
 
     if (!session?.user) {
@@ -65,8 +67,9 @@ export async function hasPassword(): Promise<boolean> {
  * If they have a password, they should use the changePassword flow which requires current password.
  */
 export async function setPassword(password: string): Promise<{ success: boolean; error?: string }> {
+    const hdrs = await headers()
     const session = await auth.api.getSession({
-        headers: await headers(),
+        headers: hdrs,
     })
 
     if (!session?.user) {
@@ -78,7 +81,7 @@ export async function setPassword(password: string): Promise<{ success: boolean;
             body: {
                 newPassword: password,
             },
-            headers: await headers()
+            headers: hdrs
         })
 
         return { success: true }

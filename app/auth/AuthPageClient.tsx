@@ -115,13 +115,13 @@ export default function AuthPageClient() {
 
     // Conditional UI (Passkey Autofill)
     useEffect(() => {
-        if (mode === "signin") {
-            if (
-                !PublicKeyCredential.isConditionalMediationAvailable ||
-                !PublicKeyCredential.isConditionalMediationAvailable()
-            ) {
-                return
-            }
+        if (mode !== "signin") return
+
+        const initPasskeyAutofill = async () => {
+            // Check if conditional mediation (autofill) is available
+            const isAvailable =
+                await PublicKeyCredential.isConditionalMediationAvailable?.()
+            if (!isAvailable) return
 
             authClient.signIn
                 .passkey({
@@ -140,17 +140,14 @@ export default function AuthPageClient() {
                                 )
                             }
                         },
-                        onSuccess: () =>
-                            addNotification(
-                                "Passkey autofill successful",
-                                "success"
-                            ),
                     },
                 })
                 .catch(() => {
                     // Ignore initial abort errors or failures when conditional UI starts
                 })
         }
+
+        initPasskeyAutofill()
     }, [mode, addNotification])
 
     // Functions
