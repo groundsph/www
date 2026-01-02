@@ -74,7 +74,9 @@ export const userBadges = pgTable("user_badges", {
         .references(() => badgeDefinitions.id, { onDelete: "cascade" }),
     awardedAt: timestamp("awarded_at", { withTimezone: true }).defaultNow(),
     evidenceUrl: text("evidence_url"),
-})
+}, (t) => ({
+    userIdBadgeIdIdx: uniqueIndex("user_badges_user_id_badge_id_unique").on(t.userId, t.badgeId),
+}))
 
 // ============================================================================
 // CAFE TABLES

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "user_badges_user_id_badge_id_unique" ON "user_badges" USING btree ("user_id","badge_id");
