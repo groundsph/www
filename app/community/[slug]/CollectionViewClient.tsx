@@ -108,7 +108,7 @@ export default function CollectionViewClient({
             <div className='border-b border-secondary/20 bg-background'>
                 <div className='max-w-7xl mx-auto px-6 py-4'>
                     <Link
-                        href='/cafes'
+                        href='/community'
                         className='inline-flex items-center gap-2 text-sm font-medium text-text/60 hover:text-text transition-colors'
                     >
                         <ArrowLeft className='w-4 h-4' />
@@ -119,9 +119,9 @@ export default function CollectionViewClient({
 
             {/* Collection Header - Side by Side Layout */}
             <div className='max-w-5xl mx-auto px-6 py-8'>
-                <div className='flex flex-col md:flex-row gap-6 md:gap-8'>
+                <div className='flex flex-row gap-4 md:gap-8'>
                     {/* Cover Image - Square */}
-                    <div className='relative w-full md:w-64 aspect-square shrink-0 rounded-2xl overflow-hidden bg-secondary/10'>
+                    <div className='relative w-24 md:w-64 aspect-square shrink-0 rounded-xl md:rounded-2xl overflow-hidden bg-secondary/10'>
                         {collection.coverImage ? (
                             <Image
                                 src={collection.coverImage}
@@ -132,25 +132,27 @@ export default function CollectionViewClient({
                             />
                         ) : (
                             <div className='w-full h-full bg-linear-to-br from-primary/30 via-accent/20 to-secondary/30 flex items-center justify-center'>
-                                <Coffee className='w-16 h-16 text-primary/40' />
+                                <Coffee className='w-8 md:w-16 h-8 md:h-16 text-primary/40' />
                             </div>
                         )}
                         {!collection.isPublic && (
-                            <div className='absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 bg-text/80 text-background text-xs font-medium rounded-full'>
-                                <Lock className='w-3 h-3' />
-                                Private
+                            <div className='absolute top-2 right-2 md:top-3 md:right-3 flex items-center gap-1 px-2 py-0.5 md:px-2.5 md:py-1 bg-text/80 text-background text-[10px] md:text-xs font-medium rounded-full'>
+                                <Lock className='w-2.5 h-2.5 md:w-3 md:h-3' />
+                                <span className='hidden md:inline'>
+                                    Private
+                                </span>
                             </div>
                         )}
                     </div>
 
                     {/* Collection Details */}
-                    <div className='flex-1 flex flex-col'>
-                        <h1 className='font-serif text-3xl md:text-4xl font-bold text-text mb-3'>
+                    <div className='flex-1 flex flex-col min-w-0'>
+                        <h1 className='font-serif text-xl md:text-4xl font-bold text-text mb-1 md:mb-3 line-clamp-2'>
                             {collection.title}
                         </h1>
 
                         {collection.description && (
-                            <p className='text-text/70 text-lg mb-4'>
+                            <p className='text-text/70 text-sm md:text-lg mb-2 md:mb-4 line-clamp-2 md:line-clamp-none'>
                                 {collection.description}
                             </p>
                         )}
@@ -158,7 +160,7 @@ export default function CollectionViewClient({
                         {/* Author */}
                         <Link
                             href={`/profile/${collection.author.username}`}
-                            className='inline-flex items-center gap-3 group mb-4'
+                            className='inline-flex items-center gap-2 md:gap-3 group mb-2 md:mb-4'
                         >
                             {collection.author.avatarUrl ? (
                                 <Image
@@ -166,72 +168,107 @@ export default function CollectionViewClient({
                                     alt={collection.author.displayName}
                                     width={36}
                                     height={36}
-                                    className='rounded-full'
+                                    className='rounded-full w-7 h-7 md:w-9 md:h-9'
                                 />
                             ) : (
-                                <div className='w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center'>
-                                    <User className='w-4 h-4 text-primary' />
+                                <div className='w-7 h-7 md:w-9 md:h-9 rounded-full bg-primary/20 flex items-center justify-center'>
+                                    <User className='w-3.5 h-3.5 md:w-4 md:h-4 text-primary' />
                                 </div>
                             )}
                             <div>
-                                <p className='font-medium text-text group-hover:text-primary transition-colors'>
+                                <p className='font-medium text-sm md:text-base text-text group-hover:text-primary transition-colors'>
                                     {collection.author.displayName}
                                 </p>
-                                <p className='text-sm text-text/50'>
+                                <p className='text-xs md:text-sm text-text/50'>
                                     @{collection.author.username}
                                 </p>
                             </div>
                         </Link>
 
-                        {/* Stats and Actions */}
-                        <div className='mt-auto pt-4 flex flex-wrap items-center gap-4'>
-                            <div className='flex items-center gap-4 text-text/60'>
-                                <span className='flex items-center gap-1.5 text-sm'>
-                                    <Coffee className='w-4 h-4' />
-                                    {collection.itemCount ?? 0} cafes
-                                </span>
-                                <span className='flex items-center gap-1.5 text-sm'>
-                                    <Eye className='w-4 h-4' />
-                                    {collection.viewsCount ?? 0} views
-                                </span>
-                            </div>
-
-                            <div className='flex items-center gap-2 ml-auto'>
-                                {collection.isOwner && (
-                                    <Link
-                                        href={`/profile/collections/${collection.id}/edit`}
-                                        className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
-                                    >
-                                        <Pencil className='w-4 h-4' />
-                                        Edit
-                                    </Link>
-                                )}
-
-                                <button
-                                    onClick={handleShare}
-                                    className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
-                                >
-                                    <Share2 className='w-4 h-4' />
-                                    {copied ? "Copied!" : "Share"}
-                                </button>
-
-                                <button
-                                    onClick={handleLike}
-                                    disabled={!user || isLiking}
-                                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all ${
-                                        liked
-                                            ? "bg-primary text-white"
-                                            : "text-text/70 hover:text-primary border border-secondary/30 hover:border-primary/50"
-                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                    <Heart
-                                        className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
-                                    />
-                                    <span>{likesCount}</span>
-                                </button>
-                            </div>
+                        {/* Stats - Mobile compact, Desktop full */}
+                        <div className='flex items-center gap-3 md:gap-4 text-text/60 text-xs md:text-sm'>
+                            <span className='flex items-center gap-1 md:gap-1.5'>
+                                <Coffee className='w-3.5 h-3.5 md:w-4 md:h-4' />
+                                {collection.itemCount ?? 0} cafes
+                            </span>
+                            <span className='flex items-center gap-1 md:gap-1.5'>
+                                <Eye className='w-3.5 h-3.5 md:w-4 md:h-4' />
+                                {collection.viewsCount ?? 0} views
+                            </span>
                         </div>
                     </div>
+                </div>
+
+                {/* Actions - Full width row below on mobile, inline on desktop */}
+                <div className='flex items-center gap-2 mt-4 md:mt-0 md:hidden'>
+                    {collection.isOwner && (
+                        <Link
+                            href={`/profile/collections/${collection.id}/edit`}
+                            className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
+                        >
+                            <Pencil className='w-3.5 h-3.5' />
+                            Edit
+                        </Link>
+                    )}
+
+                    <button
+                        onClick={handleShare}
+                        className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
+                    >
+                        <Share2 className='w-3.5 h-3.5' />
+                        {copied ? "Copied!" : "Share"}
+                    </button>
+
+                    <button
+                        onClick={handleLike}
+                        disabled={!user || isLiking}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                            liked
+                                ? "bg-primary text-white"
+                                : "text-text/70 hover:text-primary border border-secondary/30 hover:border-primary/50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        <Heart
+                            className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`}
+                        />
+                        <span>{likesCount}</span>
+                    </button>
+                </div>
+
+                {/* Desktop Actions - Hidden on mobile */}
+                <div className='hidden md:flex items-center gap-2 mt-4'>
+                    {collection.isOwner && (
+                        <Link
+                            href={`/profile/collections/${collection.id}/edit`}
+                            className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
+                        >
+                            <Pencil className='w-4 h-4' />
+                            Edit
+                        </Link>
+                    )}
+
+                    <button
+                        onClick={handleShare}
+                        className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
+                    >
+                        <Share2 className='w-4 h-4' />
+                        {copied ? "Copied!" : "Share"}
+                    </button>
+
+                    <button
+                        onClick={handleLike}
+                        disabled={!user || isLiking}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all ${
+                            liked
+                                ? "bg-primary text-white"
+                                : "text-text/70 hover:text-primary border border-secondary/30 hover:border-primary/50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        <Heart
+                            className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
+                        />
+                        <span>{likesCount}</span>
+                    </button>
                 </div>
             </div>
 

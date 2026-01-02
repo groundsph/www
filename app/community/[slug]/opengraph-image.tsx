@@ -143,13 +143,11 @@ export default async function Image({
                             fontSize: 160,
                             fontWeight: 700,
                         }}
-                    >
-                        ☕
-                    </div>
+                    ></div>
                 )}
 
                 {/* Overlay gradient for readability if needed, but side-by-side is cleaner */}
-                <div
+                {/* <div
                     style={{
                         position: "absolute",
                         top: 0,
@@ -158,7 +156,7 @@ export default async function Image({
                         width: "20%",
                         background: `linear-gradient(90deg, transparent 0%, ${colors.background} 100%)`,
                     }}
-                />
+                /> */}
             </div>
 
             {/* Right Side: Details */}
