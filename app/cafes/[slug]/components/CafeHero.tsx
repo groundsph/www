@@ -92,7 +92,7 @@ export default function CafeHero({
                 ...defaults,
                 particleCount: 50,
                 scalar: 2,
-                shapes: ["heart"] as any,
+                shapes: ["heart"] as unknown as confetti.Shape[],
                 colors: ["#F9A8D4", "#F472B6", "#EC4899"], // Pink hearts
                 origin: { y: 1, x: 0.5 },
                 drift: 0,
@@ -102,7 +102,7 @@ export default function CafeHero({
                 ...defaults,
                 particleCount: 25,
                 scalar: 3,
-                shapes: ["heart"] as any,
+                shapes: ["heart"] as unknown as confetti.Shape[],
                 colors: ["#EF4444", "#DC2626"], // Red hearts
                 origin: { y: 1, x: 0.5 },
                 drift: 0,
@@ -124,33 +124,32 @@ export default function CafeHero({
                 origin: { y: 1 }, // Start from bottom
             }
 
-            const randomInRange = (min: number, max: number) => {
-                return Math.random() * (max - min) + min
-            }
+            const interval: ReturnType<typeof setInterval> = setInterval(
+                function () {
+                    const timeLeft = animationEnd - Date.now()
 
-            const interval: any = setInterval(function () {
-                const timeLeft = animationEnd - Date.now()
+                    if (timeLeft <= 0) {
+                        return clearInterval(interval)
+                    }
 
-                if (timeLeft <= 0) {
-                    return clearInterval(interval)
-                }
+                    const particleCount = 50 * (timeLeft / duration)
 
-                const particleCount = 50 * (timeLeft / duration)
-
-                // Cannon style from bottom corners
-                confetti({
-                    ...defaults,
-                    particleCount,
-                    angle: 60,
-                    origin: { x: 0, y: 1 },
-                })
-                confetti({
-                    ...defaults,
-                    particleCount,
-                    angle: 120,
-                    origin: { x: 1, y: 1 },
-                })
-            }, 250)
+                    // Cannon style from bottom corners
+                    confetti({
+                        ...defaults,
+                        particleCount,
+                        angle: 60,
+                        origin: { x: 0, y: 1 },
+                    })
+                    confetti({
+                        ...defaults,
+                        particleCount,
+                        angle: 120,
+                        origin: { x: 1, y: 1 },
+                    })
+                },
+                250
+            )
         }
         onToggleVisited()
     }

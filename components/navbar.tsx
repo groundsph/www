@@ -3,13 +3,7 @@
 import { useAuth } from "@/components/AuthProvider"
 import { routes } from "@/utils/routes"
 import { AnimatePresence, motion } from "motion/react"
-import {
-    ChevronRightIcon,
-    LogOutIcon,
-    MenuIcon,
-    UserRoundIcon,
-    XIcon,
-} from "lucide-react"
+import { LogOutIcon, MenuIcon, UserRoundIcon, XIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -26,7 +20,7 @@ export default function Navbar() {
 
     // Close mobile menu on path change
     useEffect(() => {
-        setIsMobileMenuOpen(false)
+        setTimeout(() => setIsMobileMenuOpen(false), 0)
     }, [curPath])
 
     // Prevent scrolling when mobile menu is open
