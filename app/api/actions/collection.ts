@@ -375,6 +375,112 @@ export async function getCollectionForEdit(id: string) {
 }
 
 // =============================================================================
+// ADD CAFE TO COLLECTION
+// =============================================================================
+export async function addCafeToCollection(collectionId: string, cafeId: string, note?: string) {
+    const user = await getCurrentUser()
+    if (!user) throw new Error("You must be logged in")
+
+    // Verify ownership
+    const existing = await db
+        .select({ userId: collections.userId, items: collections.items, slug: collections.slug })
+        .from(collections)
+        .where(eq(collections.id, collectionId))
+        .limit(1)
+
+    if (existing.length === 0) throw new Error("Collection not found")
+    if (existing[0].userId !== user.id) throw new Error("You do not own this collection")
+
+    const currentItems = (existing[0].items as { cafeId: string; note?: string }[]) || []
+
+    // Check if cafe already in collection
+    if (currentItems.some(item => item.cafeId === cafeId)) {
+        return { success: true, alreadyExists: true }
+    }
+
+    const newItems = [...currentItems, { cafeId, note }]
+
+    await db.update(collections).set({
+        items: newItems,
+        itemCount: newItems.length,
+        updatedAt: new Date(),
+    }).where(eq(collections.id, collectionId))
+
+    revalidatePath("/profile/collections")
+    revalidatePath(`/community/${existing[0].slug}`)
+
+    return { success: true, alreadyExists: false }
+}
+
+// =============================================================================
+// REMOVE CAFE FROM COLLECTION
+// =============================================================================
+export async function removeCafeFromCollection(collectionId: string, cafeId: string) {
+    const user = await getCurrentUser()
+    if (!user) throw new Error("You must be logged in")
+
+    // Verify ownership
+    const existing = await db
+        .select({ userId: collections.userId, items: collections.items, slug: collections.slug })
+        .from(collections)
+        .where(eq(collections.id, collectionId))
+        .limit(1)
+
+    if (existing.length === 0) throw new Error("Collection not found")
+    if (existing[0].userId !== user.id) throw new Error("You do not own this collection")
+
+    const currentItems = (existing[0].items as { cafeId: string; note?: string }[]) || []
+    const newItems = currentItems.filter(item => item.cafeId !== cafeId)
+
+    await db.update(collections).set({
+        items: newItems,
+        itemCount: newItems.length,
+        updatedAt: new Date(),
+    }).where(eq(collections.id, collectionId))
+
+    revalidatePath("/profile/collections")
+    revalidatePath(`/community/${existing[0].slug}`)
+
+    return { success: true }
+}
+
+// =============================================================================
+// GET USER COLLECTIONS WITH CAFE STATUS
+// =============================================================================
+export async function getCollectionsWithCafeStatus(cafeId: string) {
+    const user = await getCurrentUser()
+    if (!user) return []
+
+    const result = await db
+        .select({
+            id: collections.id,
+            title: collections.title,
+            slug: collections.slug,
+            coverImage: collections.coverImage,
+            itemCount: collections.itemCount,
+            isPublic: collections.isPublic,
+            items: collections.items,
+        })
+        .from(collections)
+        .where(eq(collections.userId, user.id))
+        .orderBy(desc(collections.createdAt))
+
+    return result.map((c) => {
+        const items = (c.items as { cafeId: string; note?: string }[]) || []
+        const hasCafe = items.some(item => item.cafeId === cafeId)
+        return {
+            id: c.id,
+            title: c.title,
+            slug: c.slug,
+            coverImage: c.coverImage,
+            itemCount: c.itemCount,
+            isPublic: c.isPublic,
+            hasCafe,
+        }
+    })
+}
+
+// =============================================================================
 // SEARCH CAFES FOR ADDING TO COLLECTION
 // =============================================================================
 export async function searchCafesForCollection(query: string) {
@@ -395,3 +501,4 @@ export async function searchCafesForCollection(query: string) {
 
     return result
 }
+

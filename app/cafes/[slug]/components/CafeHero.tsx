@@ -15,6 +15,7 @@ import {
     Share2,
     Store,
     Gem,
+    ListPlus,
 } from "lucide-react"
 import { useState } from "react"
 import { getCafeThumbnailUrl, isOpenNow } from "@/utils/extras"
@@ -32,6 +33,7 @@ interface CafeHeroProps {
     onToggleFavorite: () => void
     onToggleWishlist: () => void
     onOpenClaim?: () => void
+    onOpenAddToCollection?: () => void
 }
 
 export default function CafeHero({
@@ -44,6 +46,7 @@ export default function CafeHero({
     onToggleFavorite,
     onToggleWishlist,
     onOpenClaim,
+    onOpenAddToCollection,
 }: CafeHeroProps) {
     const openStatus = isOpenNow(cafe.operating_hours)
     const [isCopied, setIsCopied] = useState(false)
@@ -283,6 +286,17 @@ export default function CafeHero({
                                         }`}
                                     />
                                 </button>
+
+                                {/* Add to Collection Button */}
+                                {onOpenAddToCollection && (
+                                    <button
+                                        onClick={onOpenAddToCollection}
+                                        className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
+                                        title='Add to Collection'
+                                    >
+                                        <ListPlus className='w-6 h-6 text-white group-hover:text-primary transition-colors' />
+                                    </button>
+                                )}
                             </>
                         )}
                     </motion.div>

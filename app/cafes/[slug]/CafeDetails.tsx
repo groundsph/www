@@ -22,6 +22,7 @@ import MarkdownRender from "@/components/MarkdownRender"
 import ImageLightbox from "@/components/ImageLightbox"
 import ClaimCafeModal from "@/components/ClaimCafeModal"
 import ContributionHistoryModal from "@/components/history/ContributionHistoryModal"
+import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
@@ -93,6 +94,9 @@ export default function CafeDetails({
 
     // History Modal State
     const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+
+    // Add to Collection Modal State
+    const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false)
 
     // Computed
     const story = cafe.story
@@ -211,6 +215,7 @@ export default function CafeDetails({
                 onToggleFavorite={toggleFavorite}
                 onToggleWishlist={toggleWishlist}
                 onOpenClaim={() => setIsClaimOpen(true)}
+                onOpenAddToCollection={() => setIsAddToCollectionOpen(true)}
             />
 
             {/* Mobile Layout (< md) */}
@@ -564,6 +569,14 @@ export default function CafeDetails({
             <ContributionHistoryModal
                 isOpen={isHistoryOpen}
                 onClose={() => setIsHistoryOpen(false)}
+                cafeId={cafe.id}
+                cafeName={cafe.name}
+            />
+
+            {/* Add to Collection Modal */}
+            <AddToCollectionModal
+                isOpen={isAddToCollectionOpen}
+                onClose={() => setIsAddToCollectionOpen(false)}
                 cafeId={cafe.id}
                 cafeName={cafe.name}
             />
