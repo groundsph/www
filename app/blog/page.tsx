@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ArrowRight, Coffee, MapPin, BookOpen } from "lucide-react"
 
 export const metadata = {
-    title: "Blog | Grounds PH",
+    title: "Blog",
     description:
         "Coffee stories, brewing guides, and news from the Philippine coffee community",
 }

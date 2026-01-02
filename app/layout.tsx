@@ -23,8 +23,8 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
     metadataBase: new URL("https://grounds.ph"),
     title: {
-        default: "Grounds - Discover the Best Cafes in the Philippines",
-        template: "%s | Grounds",
+        default: "Grounds PH - Discover the Best Cafes in the Philippines",
+        template: "%s | Grounds PH",
     },
     alternates: {
         canonical: "https://grounds.ph",
@@ -45,9 +45,9 @@ export const metadata: Metadata = {
         "cafe guide Philippines",
         "coffee community",
     ],
-    authors: [{ name: "Grounds" }],
-    creator: "Grounds",
-    publisher: "Grounds",
+    authors: [{ name: "Grounds PH" }],
+    creator: "Grounds PH",
+    publisher: "Grounds PH",
     formatDetection: {
         email: false,
         address: false,
@@ -57,8 +57,8 @@ export const metadata: Metadata = {
         type: "website",
         locale: "en_PH",
         url: "https://grounds.ph",
-        siteName: "Grounds",
-        title: "Grounds",
+        siteName: "Grounds PH",
+        title: "Grounds PH",
         description:
             "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
         images: [
@@ -66,13 +66,13 @@ export const metadata: Metadata = {
                 url: "/og-image.jpg",
                 width: 1200,
                 height: 630,
-                alt: "Grounds - Discover the Philippines' Best Cafes",
+                alt: "Grounds PH - Discover the Philippines' Best Cafes",
             },
         ],
     },
     twitter: {
         card: "summary_large_image",
-        title: "Grounds",
+        title: "Grounds PH",
         description:
             "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
         images: ["/og-image.jpg"],
@@ -88,51 +88,6 @@ export const metadata: Metadata = {
             "max-image-preview": "large",
             "max-snippet": -1,
         },
-    },
-    icons: {
-        icon: [
-            { url: "/favicon.ico" },
-            { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-            { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-            { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
-        ],
-        apple: [
-            { url: "/apple-icon-57x57.png", sizes: "57x57", type: "image/png" },
-            { url: "/apple-icon-60x60.png", sizes: "60x60", type: "image/png" },
-            { url: "/apple-icon-72x72.png", sizes: "72x72", type: "image/png" },
-            { url: "/apple-icon-76x76.png", sizes: "76x76", type: "image/png" },
-            {
-                url: "/apple-icon-114x114.png",
-                sizes: "114x114",
-                type: "image/png",
-            },
-            {
-                url: "/apple-icon-120x120.png",
-                sizes: "120x120",
-                type: "image/png",
-            },
-            {
-                url: "/apple-icon-144x144.png",
-                sizes: "144x144",
-                type: "image/png",
-            },
-            {
-                url: "/apple-icon-152x152.png",
-                sizes: "152x152",
-                type: "image/png",
-            },
-            {
-                url: "/apple-icon-180x180.png",
-                sizes: "180x180",
-                type: "image/png",
-            },
-        ],
-        other: [
-            {
-                rel: "apple-touch-icon-precomposed",
-                url: "/apple-icon-precomposed.png",
-            },
-        ],
     },
     manifest: "/manifest.webmanifest",
     category: "food and drink",
