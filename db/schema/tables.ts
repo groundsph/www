@@ -111,6 +111,7 @@ export const cafes = pgTable(
         websiteUrl: text("website_url"),
         paymentMethods: text("payment_methods"),
         hasWifi: boolean("has_wifi"),
+        hasSmoking: boolean("has_smoking"),
         hasSockets: boolean("has_sockets"),
         hasAircon: boolean("has_aircon"),
         hasParking: boolean("has_parking"),

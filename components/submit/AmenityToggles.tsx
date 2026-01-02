@@ -14,6 +14,7 @@ import {
     Droplet,
     MilkOff,
     Coffee,
+    Cigarette,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 
@@ -25,6 +26,7 @@ interface AmenityOption {
 
 const AMENITY_OPTIONS: AmenityOption[] = [
     { key: "has_wifi", label: "WiFi", icon: WifiIcon },
+    { key: "has_smoking", label: "Smoking Area", icon: Cigarette },
     { key: "has_sockets", label: "Power Outlets", icon: PlugIcon },
     { key: "has_parking", label: "Parking", icon: CarIcon },
     { key: "has_aircon", label: "Air Conditioning", icon: SnowflakeIcon },

@@ -60,6 +60,7 @@ export interface EventFilters {
 // Override operating_hours and socials from Json to their proper types
 // Exclude search_vector as it's a database-internal field for full-text search
 export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials' | 'search_vector'> & {
+    has_smoking: boolean | null;
     operating_hours: OperatingHours | null;
     socials: CafeSocial[] | null;
     average_rating: number | null;
@@ -85,6 +86,7 @@ export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials
 // 3. Define the custom Filter interface for your UI
 export interface CafeFilters {
     has_wifi?: boolean;
+    has_smoking?: boolean;
     has_sockets?: boolean;
     has_parking?: boolean;
     has_aircon?: boolean;
@@ -158,6 +160,7 @@ export interface CafeSubmission {
 
     // Step 3: Amenities & Features
     has_wifi: boolean;
+    has_smoking: boolean;
     has_sockets: boolean;
     has_parking: boolean;
     has_aircon: boolean;
@@ -212,6 +215,7 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     lat: null,
     lng: null,
     has_wifi: false,
+    has_smoking: false,
     has_sockets: false,
     has_parking: false,
     has_aircon: false,

@@ -18,6 +18,8 @@ const fieldMapping: Record<string, string> = {
     address_display: 'addressDisplay',
     website_url: 'websiteUrl',
     has_wifi: 'hasWifi',
+    has_smoking: 'hasSmoking',
+
     has_sockets: 'hasSockets',
     has_parking: 'hasParking',
     has_aircon: 'hasAircon',

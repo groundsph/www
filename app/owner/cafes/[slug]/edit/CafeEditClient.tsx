@@ -87,7 +87,9 @@ export default function CafeEditClient({
             lat: cafe.lat || undefined,
             lng: cafe.lng || undefined,
             has_wifi: cafe.has_wifi || false,
+            has_smoking: cafe.has_smoking || false,
             has_sockets: cafe.has_sockets || false,
+
             has_parking: cafe.has_parking || false,
             has_aircon: cafe.has_aircon || false,
             is_pet_friendly: cafe.is_pet_friendly || false,

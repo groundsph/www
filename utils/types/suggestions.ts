@@ -13,6 +13,8 @@ export interface SuggestableFields {
     email?: string;
     website_url?: string;
     has_wifi?: boolean;
+    has_smoking?: boolean;
+
     has_sockets?: boolean;
     has_parking?: boolean;
     has_aircon?: boolean;

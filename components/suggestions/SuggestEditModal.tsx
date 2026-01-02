@@ -9,6 +9,7 @@ import {
     ChevronDown,
     ChevronUp,
     Wifi,
+    Cigarette,
     Plug,
     Car,
     Snowflake,
@@ -24,7 +25,11 @@ import {
     Check,
     Trash2,
     Upload,
+    Store,
+    Sparkles,
+    Phone,
 } from "lucide-react"
+
 import { submitEditSuggestion } from "@/app/api/actions/suggestions"
 import {
     SuggestableFields,
@@ -57,7 +62,9 @@ interface SuggestEditModalProps {
 // Field categories for the UI
 const AMENITY_FIELDS = [
     { key: "has_wifi", label: "WiFi", icon: Wifi },
+    { key: "has_smoking", label: "Smoking Area", icon: Cigarette },
     { key: "has_sockets", label: "Power Outlets", icon: Plug },
+
     { key: "has_parking", label: "Parking", icon: Car },
     { key: "has_aircon", label: "Air Conditioning", icon: Snowflake },
     { key: "is_pet_friendly", label: "Pet Friendly", icon: PawPrint },
@@ -500,7 +507,8 @@ export default function SuggestEditModal({
                                             }
                                             className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
                                         >
-                                            <span className='font-medium'>
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <Store className='w-4 h-4' />
                                                 Basic Information
                                             </span>
                                             {expandedSections.has("basic") ? (
@@ -847,7 +855,8 @@ export default function SuggestEditModal({
                                             }
                                             className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
                                         >
-                                            <span className='font-medium'>
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <Sparkles className='w-4 h-4' />
                                                 Amenities
                                             </span>
                                             {expandedSections.has(
@@ -1526,7 +1535,8 @@ export default function SuggestEditModal({
                                             }
                                             className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
                                         >
-                                            <span className='font-medium'>
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <Phone className='w-4 h-4' />
                                                 Contact Information
                                             </span>
                                             {expandedSections.has("contact") ? (

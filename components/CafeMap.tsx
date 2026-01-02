@@ -24,7 +24,9 @@ import {
     Sun,
     Armchair,
     Laptop,
+    Cigarette,
 } from "lucide-react"
+
 import MarkerClusterGroup from "react-leaflet-cluster"
 import { trackMapUsage } from "@/utils/badges/badge-logic"
 import { getCafeThumbnailUrl } from "@/utils/extras"
@@ -346,6 +348,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
 
                                         {/* Amenities icons */}
                                         {(cafe.has_wifi ||
+                                            cafe.has_smoking ||
                                             cafe.has_sockets ||
                                             cafe.has_parking ||
                                             cafe.has_aircon ||
@@ -360,6 +363,14 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                                         title='WiFi'
                                                     >
                                                         <Wifi className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_smoking && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Smoking Area'
+                                                    >
+                                                        <Cigarette className='w-3.5 h-3.5' />
                                                     </div>
                                                 )}
                                                 {cafe.has_sockets && (

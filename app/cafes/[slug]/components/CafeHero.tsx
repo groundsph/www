@@ -18,6 +18,7 @@ import {
     Store,
     Gem,
     ListPlus,
+    Cigarette,
 } from "lucide-react"
 import { useState } from "react"
 import { getCafeThumbnailUrl, isOpenNow } from "@/utils/extras"
@@ -275,6 +276,14 @@ export default function CafeHero({
                             <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-blue-500/20 text-blue-300 backdrop-blur-sm'>
                                 <WifiIcon className='w-3.5 h-3.5' />
                                 WiFi
+                            </div>
+                        )}
+
+                        {/* Smoking Indicator */}
+                        {cafe.has_smoking && (
+                            <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-zinc-500/20 text-zinc-300 backdrop-blur-sm'>
+                                <Cigarette className='w-3.5 h-3.5' />
+                                Smoking Area
                             </div>
                         )}
 

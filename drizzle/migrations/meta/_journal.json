@@ -8,6 +8,13 @@
       "when": 1767154295000,
       "tag": "0000_careful_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767347676381,
+      "tag": "0001_smart_nova",
+      "breakpoints": true
     }
   ]
 }

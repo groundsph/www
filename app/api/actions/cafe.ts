@@ -35,6 +35,8 @@ function mapCafeToSnakeCase(c: {
     websiteUrl: string | null
     paymentMethods: string | null
     hasWifi: boolean | null
+    hasSmoking: boolean | null
+
     hasSockets: boolean | null
     hasAircon: boolean | null
     hasParking: boolean | null
@@ -89,6 +91,8 @@ function mapCafeToSnakeCase(c: {
         website_url: c.websiteUrl,
         payment_methods: c.paymentMethods,
         has_wifi: c.hasWifi,
+        has_smoking: c.hasSmoking,
+
         has_sockets: c.hasSockets,
         has_aircon: c.hasAircon,
         has_parking: c.hasParking,
@@ -155,6 +159,7 @@ export async function getCafeBySlug(slug: string) {
             websiteUrl: cafes.websiteUrl,
             paymentMethods: cafes.paymentMethods,
             hasWifi: cafes.hasWifi,
+            hasSmoking: cafes.hasSmoking,
             hasSockets: cafes.hasSockets,
             hasAircon: cafes.hasAircon,
             hasParking: cafes.hasParking,
@@ -263,7 +268,10 @@ export async function getDailyFeatured() {
                 websiteUrl: cafes.websiteUrl,
                 paymentMethods: cafes.paymentMethods,
                 hasWifi: cafes.hasWifi,
+                hasSmoking: cafes.hasSmoking,
                 hasSockets: cafes.hasSockets,
+
+
                 hasAircon: cafes.hasAircon,
                 hasParking: cafes.hasParking,
                 hasOutdoorSeating: cafes.hasOutdoorSeating,
@@ -327,7 +335,9 @@ export async function getDailyFeatured() {
             websiteUrl: cafes.websiteUrl,
             paymentMethods: cafes.paymentMethods,
             hasWifi: cafes.hasWifi,
+            hasSmoking: cafes.hasSmoking,
             hasSockets: cafes.hasSockets,
+
             hasAircon: cafes.hasAircon,
             hasParking: cafes.hasParking,
             hasOutdoorSeating: cafes.hasOutdoorSeating,
@@ -411,7 +421,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                     specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
                     operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
                     email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
-                    hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
+                    hasWifi: cafes.hasWifi, hasSmoking: cafes.hasSmoking, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
                     hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
                     hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
                     hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
@@ -442,7 +452,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
                 operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
                 email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
-                hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
+                hasWifi: cafes.hasWifi, hasSmoking: cafes.hasSmoking, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
                 hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
                 hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
                 hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
@@ -474,7 +484,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
                 operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
                 email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
-                hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
+                hasWifi: cafes.hasWifi, hasSmoking: cafes.hasSmoking, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
                 hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
                 hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
                 hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
@@ -519,6 +529,8 @@ export async function getAllCafes(
     // Build query conditions
     const conditions = [eq(cafes.isPublished, true)]
     if (filters.has_wifi) conditions.push(eq(cafes.hasWifi, true))
+    if (filters.has_smoking) conditions.push(eq(cafes.hasSmoking, true))
+
     if (filters.has_sockets) conditions.push(eq(cafes.hasSockets, true))
     if (filters.has_parking) conditions.push(eq(cafes.hasParking, true))
     if (filters.has_aircon) conditions.push(eq(cafes.hasAircon, true))
@@ -562,7 +574,7 @@ export async function getAllCafes(
             specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
             operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
             email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
-            hasWifi: cafes.hasWifi, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
+            hasWifi: cafes.hasWifi, hasSmoking: cafes.hasSmoking, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
             hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
             hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
             hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,

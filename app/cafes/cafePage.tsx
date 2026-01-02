@@ -22,6 +22,7 @@ import {
     MilkOff,
     Coffee,
     Gem,
+    Cigarette,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
@@ -57,7 +58,9 @@ export default function CafesPageClient({
     const [sortBy, setSortBy] = useState("recommended")
     const [filters, setFilters] = useState({
         has_wifi: false,
+        has_smoking: false,
         has_sockets: false,
+
         has_parking: false,
         has_aircon: false,
         is_pet_friendly: false,
@@ -128,7 +131,9 @@ export default function CafesPageClient({
                 const fetchedCafes = await getAllCafes(1, 40, {
                     search,
                     has_wifi: filters.has_wifi,
+                    has_smoking: filters.has_smoking,
                     has_sockets: filters.has_sockets,
+
                     has_parking: filters.has_parking,
                     has_aircon: filters.has_aircon,
                     is_pet_friendly: filters.is_pet_friendly,
@@ -203,7 +208,13 @@ export default function CafesPageClient({
         { key: "open_now", label: "Open Now", icon: null },
         { key: "has_wifi", label: "WiFi", icon: <Wifi className='w-4 h-4' /> },
         {
+            key: "has_smoking",
+            label: "Smoking Area",
+            icon: <Cigarette className='w-4 h-4' />,
+        },
+        {
             key: "has_sockets",
+
             label: "Sockets",
             icon: <Plug className='w-4 h-4' />,
         },
@@ -347,7 +358,9 @@ export default function CafesPageClient({
                                             onClick={() => {
                                                 setFilters({
                                                     has_wifi: false,
+                                                    has_smoking: false,
                                                     has_sockets: false,
+
                                                     has_parking: false,
                                                     has_aircon: false,
                                                     is_pet_friendly: false,
@@ -698,6 +711,14 @@ export default function CafesPageClient({
                                                     <Wifi className='w-4 h-4' />
                                                 </div>
                                             )}
+                                            {cafe.has_smoking && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Smoking Area'
+                                                >
+                                                    <Cigarette className='w-4 h-4' />
+                                                </div>
+                                            )}
                                             {cafe.has_sockets && (
                                                 <div
                                                     className='text-text/70 hover:text-text transition-colors'
@@ -830,7 +851,9 @@ export default function CafesPageClient({
                                     setSearch("")
                                     setFilters({
                                         has_wifi: false,
+                                        has_smoking: false,
                                         has_sockets: false,
+
                                         has_parking: false,
                                         has_aircon: false,
                                         is_pet_friendly: false,

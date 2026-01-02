@@ -120,7 +120,9 @@ export async function submitCafe(
 
             // Amenities
             hasWifi: formData.has_wifi,
+            hasSmoking: formData.has_smoking,
             hasSockets: formData.has_sockets,
+
             hasParking: formData.has_parking,
             hasAircon: formData.has_aircon,
             isPetFriendly: formData.is_pet_friendly,

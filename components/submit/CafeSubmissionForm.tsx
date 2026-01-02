@@ -32,9 +32,13 @@ import {
     Droplet,
     MilkOff,
     Gem,
+    Cigarette,
 } from "lucide-react"
+
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
+import { OperatingHour } from "@/utils/types/cafe"
+
 import {
     PHILIPPINES_LOCATIONS,
     getProvincesForRegion,
@@ -261,6 +265,62 @@ export default function CafeSubmissionForm({
             !formData.name.trim()
         ) {
             updateFormData("name", preSearchQuery.trim())
+        }
+
+        // Auto-fill default operating hours if empty when moving from step 4 (Hours)
+        if (currentStep === 4 && formData.operating_hours.length === 0) {
+            const defaultHours: OperatingHour[] = [
+                {
+                    day: "mon",
+                    open: "08:00",
+                    close: "20:00",
+                    is_closed: false,
+                    is_24_hours: false,
+                },
+                {
+                    day: "tue",
+                    open: "08:00",
+                    close: "20:00",
+                    is_closed: false,
+                    is_24_hours: false,
+                },
+                {
+                    day: "wed",
+                    open: "08:00",
+                    close: "20:00",
+                    is_closed: false,
+                    is_24_hours: false,
+                },
+                {
+                    day: "thu",
+                    open: "08:00",
+                    close: "20:00",
+                    is_closed: false,
+                    is_24_hours: false,
+                },
+                {
+                    day: "fri",
+                    open: "08:00",
+                    close: "20:00",
+                    is_closed: false,
+                    is_24_hours: false,
+                },
+                {
+                    day: "sat",
+                    open: "08:00",
+                    close: "20:00",
+                    is_closed: false,
+                    is_24_hours: false,
+                },
+                {
+                    day: "sun",
+                    open: "08:00",
+                    close: "20:00",
+                    is_closed: false,
+                    is_24_hours: false,
+                },
+            ]
+            updateFormData("operating_hours", defaultHours)
         }
 
         setCurrentStep((prev) => Math.min(prev + 1, STEPS[STEPS.length - 1].id))
@@ -1809,6 +1869,7 @@ export default function CafeSubmissionForm({
 
                                         {/* Amenities */}
                                         {(formData.has_wifi ||
+                                            formData.has_smoking ||
                                             formData.has_sockets ||
                                             formData.has_parking ||
                                             formData.has_aircon ||
@@ -1829,6 +1890,12 @@ export default function CafeSubmissionForm({
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
                                                             <Wifi className='w-4 h-4 text-primary' />{" "}
                                                             WiFi
+                                                        </span>
+                                                    )}
+                                                    {formData.has_smoking && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            <Cigarette className='w-4 h-4 text-primary' />{" "}
+                                                            Smoking Area
                                                         </span>
                                                     )}
                                                     {formData.has_sockets && (

@@ -231,7 +231,9 @@ export async function getCafeForOwnerManagement(cafeId: string): Promise<CafeWit
         website_url: cafe.websiteUrl,
         payment_methods: cafe.paymentMethods,
         has_wifi: cafe.hasWifi,
+        has_smoking: cafe.hasSmoking,
         has_sockets: cafe.hasSockets,
+
         has_aircon: cafe.hasAircon,
         has_parking: cafe.hasParking,
         has_outdoor_seating: cafe.hasOutdoorSeating,
@@ -320,7 +322,9 @@ export async function updateCafeAsOwner(
         lat: number
         lng: number
         has_wifi: boolean
+        has_smoking: boolean
         has_sockets: boolean
+
         has_parking: boolean
         has_aircon: boolean
         is_pet_friendly: boolean
@@ -377,7 +381,9 @@ export async function updateCafeAsOwner(
     const fieldMap: Record<string, string> = {
         address_display: 'addressDisplay',
         has_wifi: 'hasWifi',
+        has_smoking: 'hasSmoking',
         has_sockets: 'hasSockets',
+
         has_parking: 'hasParking',
         has_aircon: 'hasAircon',
         is_pet_friendly: 'isPetFriendly',
