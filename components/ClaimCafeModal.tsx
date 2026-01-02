@@ -188,7 +188,9 @@ export default function ClaimCafeModal({
                                             To claim ownership of this cafe,
                                             please provide proof that you are
                                             the owner or an authorized
-                                            representative.
+                                            representative. It is completely
+                                            free to claim and manage your
+                                            business on Grounds.
                                         </p>
 
                                         <label className='block text-sm font-medium mb-2'>
