@@ -121,7 +121,7 @@ export default function CollectionViewClient({
             <div className='max-w-5xl mx-auto px-6 py-8'>
                 <div className='flex flex-row gap-4 md:gap-8'>
                     {/* Cover Image - Square */}
-                    <div className='relative w-24 md:w-64 aspect-square shrink-0 rounded-xl md:rounded-2xl overflow-hidden bg-secondary/10'>
+                    <div className='relative w-24 h-24 md:w-64 md:h-64 shrink-0 rounded-xl md:rounded-2xl overflow-hidden bg-secondary/10'>
                         {collection.coverImage ? (
                             <Image
                                 src={collection.coverImage}
@@ -201,10 +201,18 @@ export default function CollectionViewClient({
 
                 {/* Actions - Full width row below on mobile, inline on desktop */}
                 <div className='flex items-center gap-2 mt-4 md:mt-0 md:hidden'>
+                    <button
+                        onClick={handleShare}
+                        className='flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
+                    >
+                        <Share2 className='w-3.5 h-3.5' />
+                        {copied ? "Copied!" : "Share"}
+                    </button>
+
                     {collection.isOwner && (
                         <Link
                             href={`/profile/collections/${collection.id}/edit`}
-                            className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
+                            className='flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
                         >
                             <Pencil className='w-3.5 h-3.5' />
                             Edit
@@ -212,17 +220,9 @@ export default function CollectionViewClient({
                     )}
 
                     <button
-                        onClick={handleShare}
-                        className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors'
-                    >
-                        <Share2 className='w-3.5 h-3.5' />
-                        {copied ? "Copied!" : "Share"}
-                    </button>
-
-                    <button
                         onClick={handleLike}
                         disabled={!user || isLiking}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
                             liked
                                 ? "bg-primary text-white"
                                 : "text-text/70 hover:text-primary border border-secondary/30 hover:border-primary/50"
@@ -273,7 +273,7 @@ export default function CollectionViewClient({
             </div>
 
             {/* Cafes List */}
-            <div className='max-w-5xl mx-auto px-6 pb-8'>
+            <div className='max-w-5xl mx-auto px-4 md:px-6 pb-8'>
                 {validCafes.length === 0 ? (
                     <div className='text-center py-16'>
                         <Coffee className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
@@ -285,22 +285,22 @@ export default function CollectionViewClient({
                         </p>
                     </div>
                 ) : (
-                    <div className='space-y-4'>
+                    <div className='space-y-3 md:space-y-4'>
                         {validCafes.map((cafe, index) => (
                             <Link
                                 key={cafe.id}
                                 href={`/cafes/${cafe.slug}`}
-                                className='flex gap-4 p-4 bg-background border border-secondary/20 hover:border-secondary/40 rounded-xl transition-all group shadow-sm hover:shadow-md'
+                                className='flex gap-3 md:gap-4 p-3 md:p-4 bg-background border border-secondary/20 hover:border-secondary/40 rounded-xl transition-all group shadow-sm hover:shadow-md'
                             >
-                                {/* Index */}
-                                <div className='shrink-0 w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center'>
+                                {/* Desktop Index - Hidden on Mobile */}
+                                <div className='hidden md:flex shrink-0 w-8 h-8 rounded-full bg-secondary/10 items-center justify-center'>
                                     <span className='text-sm font-medium text-text/50'>
                                         {index + 1}
                                     </span>
                                 </div>
 
                                 {/* Thumbnail */}
-                                <div className='relative w-auto h-20 md:h-24 shrink-0 rounded-lg overflow-hidden bg-secondary/10 aspect-video'>
+                                <div className='relative w-20 h-20 md:w-auto md:h-24 shrink-0 rounded-lg overflow-hidden bg-secondary/10 aspect-square md:aspect-video'>
                                     {cafe.thumbnail ? (
                                         <Image
                                             src={getCafeThumbnailUrl(
@@ -309,43 +309,48 @@ export default function CollectionViewClient({
                                             alt={cafe.name}
                                             fill
                                             className='object-cover'
-                                            sizes='96px'
+                                            sizes='(max-width: 768px) 80px, 160px'
                                         />
                                     ) : (
-                                        <div className='w-full h-full flex items-center justify-center aspect-video'>
-                                            <Coffee className='w-8 h-8 text-secondary/40' />
+                                        <div className='w-full h-full flex items-center justify-center'>
+                                            <Coffee className='w-6 h-6 md:w-8 md:h-8 text-secondary/40' />
                                         </div>
                                     )}
+
+                                    {/* Mobile Index Overlay */}
+                                    <div className='md:hidden absolute top-1 left-1 w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-xs'>
+                                        <span className='text-[10px] font-bold text-text'>
+                                            {index + 1}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Info */}
-                                <div className='flex-1 min-w-0'>
-                                    <h3 className='font-serif font-semibold text-lg text-text group-hover:text-primary transition-colors line-clamp-1'>
+                                <div className='flex-1 min-w-0 flex flex-col justify-center'>
+                                    <h3 className='font-serif font-semibold text-base md:text-lg text-text group-hover:text-primary transition-colors line-clamp-1'>
                                         {cafe.name}
                                     </h3>
-                                    <div className='flex items-center gap-1.5 text-text/60 text-sm mt-1'>
-                                        <MapPin className='w-3.5 h-3.5' />
+                                    <div className='flex items-center gap-1.5 text-text/60 text-xs md:text-sm mt-0.5 md:mt-1'>
+                                        <MapPin className='w-3 h-3 md:w-3.5 md:h-3.5 shrink-0' />
                                         <span className='line-clamp-1'>
-                                            {cafe.cityMunicipality},{" "}
-                                            {cafe.region}
+                                            {cafe.cityMunicipality}
                                         </span>
                                     </div>
                                     {cafe.averageRating && (
-                                        <div className='flex items-center gap-1 mt-2'>
-                                            <Star className='w-4 h-4 text-amber-500 fill-amber-500' />
-                                            <span className='text-sm font-medium text-text'>
+                                        <div className='flex items-center gap-1 mt-1.5 md:mt-2'>
+                                            <Star className='w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500 fill-amber-500' />
+                                            <span className='text-xs md:text-sm font-medium text-text'>
                                                 {cafe.averageRating.toFixed(1)}
                                             </span>
                                             {cafe.totalReviews && (
-                                                <span className='text-sm text-text/50'>
-                                                    ({cafe.totalReviews}{" "}
-                                                    reviews)
+                                                <span className='text-xs md:text-sm text-text/50'>
+                                                    ({cafe.totalReviews})
                                                 </span>
                                             )}
                                         </div>
                                     )}
                                     {cafe.note && (
-                                        <p className='text-sm text-text/60 mt-2 italic line-clamp-2'>
+                                        <p className='text-xs md:text-sm text-text/60 mt-1.5 md:mt-2 italic line-clamp-1 md:line-clamp-2'>
                                             &quot;{cafe.note}&quot;
                                         </p>
                                     )}
