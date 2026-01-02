@@ -3410,3 +3410,144 @@ export async function deleteUserAsAdmin(userId: string): Promise<AdminActionResu
         return { success: false, error: "Failed to delete user" }
     }
 }
+
+// ============================================
+// Profile Management Functions
+// ============================================
+
+export type ProfileSortField = "created_at" | "username" | "display_name" | "role" | "total_contribution"
+export type ProfileSortDirection = "asc" | "desc"
+
+export interface ProfileForAdmin {
+    id: string
+    username: string
+    displayName: string
+    avatarUrl: string | null
+    role: string | null
+    isSupporter: boolean | null
+    totalContribution: number | null
+    createdAt: string | null
+}
+
+export interface GetProfilesResult {
+    profiles: ProfileForAdmin[]
+    total: number
+    totalSupporters: number
+    totalContribution: number
+}
+
+/**
+ * Get all profiles for admin user management
+ * Supports pagination, search, and sorting
+ */
+export async function getProfilesForAdmin(options: {
+    limit?: number
+    offset?: number
+    search?: string
+    sortField?: ProfileSortField
+    sortDirection?: ProfileSortDirection
+}): Promise<GetProfilesResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { profiles: [], total: 0, totalSupporters: 0, totalContribution: 0 }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { profiles: [], total: 0, totalSupporters: 0, totalContribution: 0 }
+    }
+
+    const {
+        limit = 20,
+        offset = 0,
+        search = "",
+        sortField = "created_at",
+        sortDirection = "desc",
+    } = options
+
+    // Build search condition
+    const searchCondition = search.trim()
+        ? or(
+            ilike(profiles.username, `%${search.trim()}%`),
+            ilike(profiles.displayName, `%${search.trim()}%`)
+        )
+        : undefined
+
+    // Build order by based on sort field
+    const orderFn = sortDirection === "asc" ? asc : desc
+    const orderByColumn = {
+        created_at: profiles.createdAt,
+        username: profiles.username,
+        display_name: profiles.displayName,
+        role: profiles.role,
+        total_contribution: profiles.createdAt, // Sort by date when sorting by contribution since we count separately
+    }[sortField]
+
+    // Get profiles with pagination
+    const profilesResult = await db
+        .select({
+            id: profiles.id,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+            role: profiles.role,
+            isSupporter: profiles.isSupporter,
+            createdAt: profiles.createdAt,
+            contributionCount: sql<number>`(SELECT COUNT(*) FROM contribution_logs WHERE contribution_logs.user_id = profiles.id AND (contribution_logs.details->>'source' IS NULL OR contribution_logs.details->>'source' != 'admin_edit'))`,
+        })
+        .from(profiles)
+        .where(searchCondition)
+        .orderBy(
+            sortField === "total_contribution"
+                ? sortDirection === "asc"
+                    ? sql`(SELECT COUNT(*) FROM contribution_logs WHERE contribution_logs.user_id = profiles.id AND (contribution_logs.details->>'source' IS NULL OR contribution_logs.details->>'source' != 'admin_edit')) ASC`
+                    : sql`(SELECT COUNT(*) FROM contribution_logs WHERE contribution_logs.user_id = profiles.id AND (contribution_logs.details->>'source' IS NULL OR contribution_logs.details->>'source' != 'admin_edit')) DESC`
+                : orderFn(orderByColumn)
+        )
+        .limit(limit)
+        .offset(offset)
+
+
+    // Get total count (for current search)
+    const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(profiles)
+        .where(searchCondition)
+
+    // Get aggregate stats (all profiles, not filtered)
+    const statsResult = await db
+        .select({
+            total: sql<number>`count(*)`,
+            totalSupporters: sql<number>`count(*) filter (where ${profiles.isSupporter} = true)`,
+        })
+        .from(profiles)
+
+    // Get total contribution logs count
+    const contributionCountResult = await db
+        .select({
+            totalContribution: sql<number>`count(*) filter (where details->>'source' IS NULL OR details->>'source' != 'admin_edit')`,
+        })
+        .from(contributionLogs)
+
+    const stats = statsResult[0] || { total: 0, totalSupporters: 0 }
+    const totalContribution = Number(contributionCountResult[0]?.totalContribution ?? 0)
+
+    return {
+        profiles: profilesResult.map((p) => ({
+            id: p.id,
+            username: p.username,
+            displayName: p.displayName,
+            avatarUrl: p.avatarUrl,
+            role: p.role,
+            isSupporter: p.isSupporter,
+            totalContribution: Number(p.contributionCount ?? 0),
+            createdAt: p.createdAt?.toISOString() ?? null,
+        })),
+        total: Number(countResult[0]?.count ?? 0),
+        totalSupporters: Number(stats.totalSupporters),
+        totalContribution,
+    }
+}
