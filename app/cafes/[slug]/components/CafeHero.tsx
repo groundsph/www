@@ -1,5 +1,7 @@
 "use client"
 
+import confetti from "canvas-confetti"
+
 import { CafeWithRatings } from "@/utils/types/extra"
 import Image from "next/image"
 import { motion } from "motion/react"
@@ -73,6 +75,86 @@ export default function CafeHero({
         }
     }
 
+    const handleFavorite = () => {
+        if (!isFavorite) {
+            // Trigger heart confetti from bottom
+            const defaults = {
+                spread: 360,
+                ticks: 100,
+                gravity: 0.5,
+                decay: 0.94,
+                startVelocity: 50, // Higher velocity to shoot up
+                colors: ["#FFE400", "#FFBD00", "#E89400", "#FFCA6C", "#FDFFB8"],
+            }
+
+            // Shoot from bottom center
+            confetti({
+                ...defaults,
+                particleCount: 50,
+                scalar: 2,
+                shapes: ["heart"] as any,
+                colors: ["#F9A8D4", "#F472B6", "#EC4899"], // Pink hearts
+                origin: { y: 1, x: 0.5 },
+                drift: 0,
+            })
+
+            confetti({
+                ...defaults,
+                particleCount: 25,
+                scalar: 3,
+                shapes: ["heart"] as any,
+                colors: ["#EF4444", "#DC2626"], // Red hearts
+                origin: { y: 1, x: 0.5 },
+                drift: 0,
+            })
+        }
+        onToggleFavorite()
+    }
+
+    const handleVisited = () => {
+        if (!isVisited) {
+            // Trigger fireworks from bottom
+            const duration = 3 * 1000
+            const animationEnd = Date.now() + duration
+            const defaults = {
+                startVelocity: 45,
+                spread: 360,
+                ticks: 60,
+                zIndex: 0,
+                origin: { y: 1 }, // Start from bottom
+            }
+
+            const randomInRange = (min: number, max: number) => {
+                return Math.random() * (max - min) + min
+            }
+
+            const interval: any = setInterval(function () {
+                const timeLeft = animationEnd - Date.now()
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval)
+                }
+
+                const particleCount = 50 * (timeLeft / duration)
+
+                // Cannon style from bottom corners
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    angle: 60,
+                    origin: { x: 0, y: 1 },
+                })
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    angle: 120,
+                    origin: { x: 1, y: 1 },
+                })
+            }, 250)
+        }
+        onToggleVisited()
+    }
+
     return (
         <section
             id='top'
@@ -89,7 +171,7 @@ export default function CafeHero({
                     priority
                     sizes='100vw'
                     placeholder='blur'
-                    blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwEAAhEDEEA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
+                    blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwAAhEDEQA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
                 />
             </div>
 
@@ -214,24 +296,33 @@ export default function CafeHero({
                         className='flex items-center gap-2 w-full max-w-md mt-4'
                     >
                         {/* Share Button */}
-                        <button
+                        <motion.button
+                            whileTap={{ scale: 0.9 }}
                             onClick={handleShare}
                             className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
                             title='Share'
                         >
-                            {isCopied ? (
-                                <Check className='w-6 h-6 text-green-400' />
-                            ) : (
-                                <Share2 className='w-6 h-6 text-white group-hover:text-blue-400 transition-colors' />
-                            )}
-                        </button>
+                            <motion.div
+                                key={isCopied ? "copied" : "share"}
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {isCopied ? (
+                                    <Check className='w-6 h-6 text-green-400' />
+                                ) : (
+                                    <Share2 className='w-6 h-6 text-white group-hover:text-blue-400 transition-colors' />
+                                )}
+                            </motion.div>
+                        </motion.button>
 
                         {/* User Actions */}
                         {user && (
                             <>
                                 {/* Visited Button */}
-                                <button
-                                    onClick={onToggleVisited}
+                                <motion.button
+                                    whileTap={{ scale: 0.97 }}
+                                    onClick={handleVisited}
                                     className='p-2 flex-1 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer flex flex-row text-nowrap items-center gap-2 justify-center font-bold'
                                     title={
                                         isVisited
@@ -239,19 +330,43 @@ export default function CafeHero({
                                             : "Mark as Visited"
                                     }
                                 >
-                                    {isVisited ? (
-                                        <CheckCircle className='w-5 h-5 text-white' />
-                                    ) : (
-                                        <MapPin className='w-5 h-5 text-white' />
-                                    )}
-                                    {isVisited
-                                        ? "Remove from Visited"
-                                        : "Mark as Visited"}
-                                </button>
+                                    <div className='relative w-5 h-5'>
+                                        <motion.div
+                                            initial={false}
+                                            animate={{
+                                                opacity: isVisited ? 1 : 0,
+                                                scale: isVisited ? 1 : 0,
+                                                rotate: isVisited ? 0 : -90,
+                                            }}
+                                            transition={{ duration: 0.2 }}
+                                            className='absolute inset-0'
+                                        >
+                                            <CheckCircle className='w-5 h-5 text-white' />
+                                        </motion.div>
+                                        <motion.div
+                                            initial={false}
+                                            animate={{
+                                                opacity: isVisited ? 0 : 1,
+                                                scale: isVisited ? 0 : 1,
+                                                rotate: isVisited ? 90 : 0,
+                                            }}
+                                            transition={{ duration: 0.2 }}
+                                            className='absolute inset-0'
+                                        >
+                                            <MapPin className='w-5 h-5 text-white' />
+                                        </motion.div>
+                                    </div>
+                                    <span className='min-w-[140px] text-center'>
+                                        {isVisited
+                                            ? "Remove from Visited"
+                                            : "Mark as Visited"}
+                                    </span>
+                                </motion.button>
 
                                 {/* Favorite Button */}
-                                <button
-                                    onClick={onToggleFavorite}
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={handleFavorite}
                                     className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
                                     title={
                                         isFavorite
@@ -259,17 +374,26 @@ export default function CafeHero({
                                             : "Add to Favorites"
                                     }
                                 >
-                                    <Heart
-                                        className={`w-6 h-6 transition-colors ${
-                                            isFavorite
-                                                ? "fill-red-500 text-red-500"
-                                                : "text-white group-hover:text-red-400"
-                                        }`}
-                                    />
-                                </button>
+                                    <motion.div
+                                        initial={false}
+                                        animate={{
+                                            scale: isFavorite ? [1, 1.4, 1] : 1,
+                                        }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <Heart
+                                            className={`w-6 h-6 transition-colors ${
+                                                isFavorite
+                                                    ? "fill-red-500 text-red-500"
+                                                    : "text-white group-hover:text-red-400"
+                                            }`}
+                                        />
+                                    </motion.div>
+                                </motion.button>
 
                                 {/* Wishlist Button */}
-                                <button
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
                                     onClick={onToggleWishlist}
                                     className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
                                     title={
@@ -278,24 +402,35 @@ export default function CafeHero({
                                             : "Add to Wishlist"
                                     }
                                 >
-                                    <Bookmark
-                                        className={`w-6 h-6 transition-colors ${
-                                            isInWishlist
-                                                ? "fill-secondary text-secondary"
-                                                : "text-white group-hover:text-secondary"
-                                        }`}
-                                    />
-                                </button>
+                                    <motion.div
+                                        initial={false}
+                                        animate={{
+                                            scale: isInWishlist
+                                                ? [1, 1.2, 1]
+                                                : 1,
+                                        }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <Bookmark
+                                            className={`w-6 h-6 transition-colors ${
+                                                isInWishlist
+                                                    ? "fill-secondary text-secondary"
+                                                    : "text-white group-hover:text-secondary"
+                                            }`}
+                                        />
+                                    </motion.div>
+                                </motion.button>
 
                                 {/* Add to Collection Button */}
                                 {onOpenAddToCollection && (
-                                    <button
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
                                         onClick={onOpenAddToCollection}
                                         className='p-2 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer'
                                         title='Add to Collection'
                                     >
                                         <ListPlus className='w-6 h-6 text-white group-hover:text-primary transition-colors' />
-                                    </button>
+                                    </motion.button>
                                 )}
                             </>
                         )}

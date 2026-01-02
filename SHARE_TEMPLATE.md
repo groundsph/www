@@ -16,13 +16,13 @@ I've been working on **Grounds** — a community-powered platform to help Filipi
 
 **✨ What's Already Available:**
 
-- 🔑 **Smart Login** — Sign in with Google, Discord, or Passkeys (no passwords!)
-- 🔍 **Advanced Filters** — Search by Decaf, 3rd Wave, and Vibe-based preferences
-- 💎 **Hidden Gems** — Discover underrated "low-key" spots the community loves
+- ⭐ **Daily Featured Cafe** — Every day we spotlight a different cafe on the homepage (even location-based if you share your location!)
+- 🗺️ **Interactive Map** — Find spots near you with clustering and directions
 - 📸 **Photo Menus** — See real menu photos before you visit
 - 📂 **Collections** — Save and organize cafes into shareable lists
-- 🗺️ **Interactive Map** — Find spots near you with clustering and directions
-- ⭐ **Daily Featured Cafe** — Every day we spotlight a different cafe on the homepage (even location-based if you share your location!)
+- 💎 **Hidden Gems** — Discover underrated "low-key" spots the community loves
+- 🔍 **Advanced Filters** — Search by Decaf, 3rd Wave, and Vibe-based preferences
+- 🔑 **Smart Login** — Sign in with Google, Discord, or Passkeys (no passwords!)
 
 **🚀 Coming Soon:**
 
