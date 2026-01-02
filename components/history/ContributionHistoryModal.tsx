@@ -158,7 +158,17 @@ export default function ContributionHistoryModal({
                     ) : (
                         <div className='space-y-3'>
                             {contributions
-                                .filter((log) => log.action_type !== "SUGGEST")
+                                .filter((log) => {
+                                    // Hide suggestions and admin edits
+                                    if (log.action_type === "SUGGEST")
+                                        return false
+                                    const details = log.details as {
+                                        source?: string
+                                    } | null
+                                    if (details?.source === "admin_edit")
+                                        return false
+                                    return true
+                                })
                                 .map((log) => {
                                     const Icon =
                                         ACTION_ICONS[log.action_type] || Pencil
