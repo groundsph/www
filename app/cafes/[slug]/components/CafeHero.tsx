@@ -293,7 +293,7 @@ export default function CafeHero({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5, delay: 0.25 }}
-                        className='flex items-center gap-2 w-full max-w-md mt-4'
+                        className='flex items-center gap-2 w-full max-w-md mt-4 flex-wrap'
                     >
                         {/* Share Button */}
                         <motion.button

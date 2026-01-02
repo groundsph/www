@@ -32,6 +32,28 @@ import MarkdownRender from "@/components/MarkdownRender"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
 import ImageLightbox from "@/components/ImageLightbox"
 import Link from "next/link"
+import { motion } from "motion/react"
+
+// Animation variants
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05,
+        },
+    },
+}
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 10, scale: 0.95 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: { duration: 0.2 },
+    },
+}
 
 // Day mapping
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -385,63 +407,108 @@ export function DetailsTabContent({
             {/* Amenities */}
             <div className='bg-text/5 rounded-xl p-4'>
                 <h3 className='font-semibold font-serif mb-3'>Amenities</h3>
-                <div className='flex flex-wrap gap-2'>
+                <motion.div
+                    className='flex flex-wrap gap-2'
+                    variants={containerVariants}
+                    initial='hidden'
+                    animate='visible'
+                >
                     {cafe.has_wifi && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <WifiIcon className='w-4 h-4' />
                             WiFi
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_sockets && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <PlugIcon className='w-4 h-4' />
                             Power Outlets
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_parking && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <CarIcon className='w-4 h-4' />
                             Parking
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_aircon && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <SnowflakeIcon className='w-4 h-4' />
                             AC
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.is_pet_friendly && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <PawPrintIcon className='w-4 h-4' />
                             Pet Friendly
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_outdoor_seating && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <SunIcon className='w-4 h-4' />
                             Outdoor
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_indoor_seating && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <Armchair className='w-4 h-4' />
                             Indoor Seating
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_restroom && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <Toilet className='w-4 h-4' />
                             Restroom
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_bidet && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <Droplet className='w-4 h-4' />
                             Bidet
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.has_non_dairy && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <MilkOff className='w-4 h-4' />
                             Non-Dairy Milk
                             {cafe.milk_options &&
@@ -450,13 +517,17 @@ export function DetailsTabContent({
                                         ({cafe.milk_options.join(", ")})
                                     </span>
                                 )}
-                        </span>
+                        </motion.span>
                     )}
                     {cafe.is_work_friendly && (
-                        <span className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full'>
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
                             <BriefcaseIcon className='w-4 h-4' />
                             Work Friendly
-                        </span>
+                        </motion.span>
                     )}
                     {!cafe.has_wifi &&
                         !cafe.has_sockets &&
@@ -473,7 +544,7 @@ export function DetailsTabContent({
                                 No amenities listed
                             </span>
                         )}
-                </div>
+                </motion.div>
             </div>
 
             {/* Payment Methods */}
@@ -528,16 +599,23 @@ export function DetailsTabContent({
                                     <CoffeeIcon className='w-3 h-3' />
                                     Brew Methods
                                 </p>
-                                <div className='flex flex-wrap gap-1.5'>
+                                <motion.div
+                                    className='flex flex-wrap gap-1.5'
+                                    variants={containerVariants}
+                                    initial='hidden'
+                                    animate='visible'
+                                >
                                     {cafe.brew_methods.map((method) => (
-                                        <span
+                                        <motion.span
                                             key={method}
-                                            className='text-xs bg-amber-500/20 text-amber-700 px-2 py-1 rounded-full capitalize'
+                                            variants={itemVariants}
+                                            whileTap={{ scale: 0.95 }}
+                                            className='text-xs bg-amber-500/20 text-amber-700 px-2 py-1 rounded-full capitalize cursor-default'
                                         >
                                             {method.split("_").join(" ")}
-                                        </span>
+                                        </motion.span>
                                     ))}
-                                </div>
+                                </motion.div>
                             </div>
                         )}
                         {cafe.specialty && cafe.specialty.length > 0 && (
@@ -545,16 +623,23 @@ export function DetailsTabContent({
                                 <p className='text-xs text-text/60 mb-1'>
                                     Specialties
                                 </p>
-                                <div className='flex flex-wrap gap-1.5'>
+                                <motion.div
+                                    className='flex flex-wrap gap-1.5'
+                                    variants={containerVariants}
+                                    initial='hidden'
+                                    animate='visible'
+                                >
                                     {cafe.specialty.map((item) => (
-                                        <span
+                                        <motion.span
                                             key={item}
-                                            className='text-xs bg-primary/20 px-2 py-1 rounded-full capitalize text-nowrap'
+                                            variants={itemVariants}
+                                            whileTap={{ scale: 0.95 }}
+                                            className='text-xs bg-primary/20 px-2 py-1 rounded-full capitalize text-nowrap cursor-default'
                                         >
                                             {item.split("_").join(" ")}
-                                        </span>
+                                        </motion.span>
                                     ))}
-                                </div>
+                                </motion.div>
                             </div>
                         )}
                         {cafe.tags && cafe.tags.length > 0 && (
@@ -562,16 +647,23 @@ export function DetailsTabContent({
                                 <p className='text-xs text-text/60 mb-1'>
                                     Vibe
                                 </p>
-                                <div className='flex flex-wrap gap-1.5'>
+                                <motion.div
+                                    className='flex flex-wrap gap-1.5'
+                                    variants={containerVariants}
+                                    initial='hidden'
+                                    animate='visible'
+                                >
                                     {cafe.tags.map((tag) => (
-                                        <span
+                                        <motion.span
                                             key={tag}
-                                            className='text-xs bg-text/10 px-2 py-1 rounded-full capitalize'
+                                            variants={itemVariants}
+                                            whileTap={{ scale: 0.95 }}
+                                            className='text-xs bg-text/10 px-2 py-1 rounded-full capitalize cursor-default'
                                         >
                                             {tag.split("_").join(" ")}
-                                        </span>
+                                        </motion.span>
                                     ))}
-                                </div>
+                                </motion.div>
                             </div>
                         )}
                     </div>
@@ -595,13 +687,20 @@ export function DetailsTabContent({
                             )}
                         </span>
                         {onOpenHistory && (
-                            <button
+                            <motion.button
                                 onClick={onOpenHistory}
                                 className='ml-auto flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer'
+                                whileHover={{ scale: 1.05, x: 3 }}
+                                whileTap={{ scale: 0.95 }}
                             >
-                                <History className='w-3.5 h-3.5' />
+                                <motion.div
+                                    whileHover={{ rotate: -20 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <History className='w-3.5 h-3.5' />
+                                </motion.div>
                                 View history
-                            </button>
+                            </motion.button>
                         )}
                     </div>
                 )}

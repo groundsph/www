@@ -25,6 +25,28 @@ import dynamic from "next/dynamic"
 import Link from "next/link"
 import RatingDistribution from "./RatingDistribution"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
+import { motion } from "motion/react"
+
+// Animation variants
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05,
+        },
+    },
+}
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 10, scale: 0.95 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: { duration: 0.2 },
+    },
+}
 
 // Day mapping and order
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -305,63 +327,108 @@ export default function CafeSidebar({
             <div className='font-semibold text-lg font-serif text-text'>
                 Amenities
             </div>
-            <ul className='flex flex-row flex-wrap items-center gap-2 text-sm font-semibold'>
+            <motion.ul
+                className='flex flex-row flex-wrap items-center gap-2 text-sm font-semibold'
+                variants={containerVariants}
+                initial='hidden'
+                animate='visible'
+            >
                 {cafe.has_wifi && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <WifiIcon className='w-4 h-4' />
                         WiFi
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_sockets && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <PlugIcon className='w-4 h-4' />
                         Power Outlets
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_parking && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <CarIcon className='w-4 h-4' />
                         Parking
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_aircon && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <SnowflakeIcon className='w-4 h-4' />
                         Air Conditioning
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.is_pet_friendly && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <PawPrintIcon className='w-4 h-4' />
                         Pet Friendly
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_outdoor_seating && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <SunIcon className='w-4 h-4' />
                         Outdoor Seating
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_indoor_seating && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <Armchair className='w-4 h-4' />
                         Indoor Seating
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_restroom && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <Toilet className='w-4 h-4' />
                         Restroom
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_bidet && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <Droplet className='w-4 h-4' />
                         Bidet
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.has_non_dairy && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <MilkOff className='w-4 h-4' />
                         Non-Dairy Milk
                         {cafe.milk_options && cafe.milk_options.length > 0 && (
@@ -369,13 +436,17 @@ export default function CafeSidebar({
                                 ({cafe.milk_options.join(", ")})
                             </span>
                         )}
-                    </li>
+                    </motion.li>
                 )}
                 {cafe.is_work_friendly && (
-                    <li className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1'>
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
                         <BriefcaseIcon className='w-4 h-4' />
                         Work Friendly
-                    </li>
+                    </motion.li>
                 )}
                 {!cafe.has_wifi &&
                     !cafe.has_sockets &&
@@ -390,7 +461,7 @@ export default function CafeSidebar({
                     !cafe.is_work_friendly && (
                         <li className='text-text/50'>No amenities listed</li>
                     )}
-            </ul>
+            </motion.ul>
 
             <div className='border-b border-text/10 my-3' />
 
@@ -410,16 +481,23 @@ export default function CafeSidebar({
                             <CoffeeIcon className='w-3.5 h-3.5' />
                             Brew Methods
                         </p>
-                        <ul className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'>
+                        <motion.ul
+                            className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'
+                            variants={containerVariants}
+                            initial='hidden'
+                            animate='visible'
+                        >
                             {cafe.brew_methods.map((method) => (
-                                <li
+                                <motion.li
                                     key={method}
-                                    className='text-amber-700 bg-amber-500/20 px-2 py-1 rounded-full capitalize'
+                                    variants={itemVariants}
+                                    whileHover={{ scale: 1.05 }}
+                                    className='text-amber-700 bg-amber-500/20 px-2 py-1 rounded-full capitalize cursor-default'
                                 >
                                     {method.split("_").join(" ")}
-                                </li>
+                                </motion.li>
                             ))}
-                        </ul>
+                        </motion.ul>
                     </>
                 )}
                 {cafe.specialty && cafe.specialty.length > 0 && (
@@ -427,16 +505,23 @@ export default function CafeSidebar({
                         <p className='text-sm font-semibold text-text/60'>
                             Specialties
                         </p>
-                        <ul className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'>
+                        <motion.ul
+                            className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'
+                            variants={containerVariants}
+                            initial='hidden'
+                            animate='visible'
+                        >
                             {cafe.specialty.map((item) => (
-                                <li
+                                <motion.li
                                     key={item}
-                                    className='text-text bg-primary/20 px-2 py-1 rounded-full capitalize text-nowrap'
+                                    variants={itemVariants}
+                                    whileHover={{ scale: 1.05 }}
+                                    className='text-text bg-primary/20 px-2 py-1 rounded-full capitalize text-nowrap cursor-default'
                                 >
                                     {item.split("_").join(" ")}
-                                </li>
+                                </motion.li>
                             ))}
-                        </ul>
+                        </motion.ul>
                     </>
                 )}
                 {cafe.tags && cafe.tags.length > 0 && (
@@ -444,16 +529,23 @@ export default function CafeSidebar({
                         <p className='text-sm font-semibold text-text/60'>
                             Vibe
                         </p>
-                        <ul className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'>
+                        <motion.ul
+                            className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'
+                            variants={containerVariants}
+                            initial='hidden'
+                            animate='visible'
+                        >
                             {cafe.tags.map((tag) => (
-                                <li
+                                <motion.li
                                     key={tag}
-                                    className='text-text/80 bg-text/10 px-2 py-1 rounded-full capitalize'
+                                    variants={itemVariants}
+                                    whileHover={{ scale: 1.05 }}
+                                    className='text-text/80 bg-text/10 px-2 py-1 rounded-full capitalize cursor-default'
                                 >
                                     {tag.split("_").join(" ")}
-                                </li>
+                                </motion.li>
                             ))}
-                        </ul>
+                        </motion.ul>
                     </>
                 )}
                 {!cafe.serves_food &&
@@ -548,13 +640,20 @@ export default function CafeSidebar({
                             )}
                         </span>
                         {onOpenHistory && (
-                            <button
+                            <motion.button
                                 onClick={onOpenHistory}
                                 className='ml-auto flex items-center gap-1 text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer'
+                                whileHover={{ scale: 1.05, x: 3 }}
+                                whileTap={{ scale: 0.95 }}
                             >
-                                <History className='w-3.5 h-3.5' />
+                                <motion.div
+                                    whileHover={{ rotate: -20 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <History className='w-3.5 h-3.5' />
+                                </motion.div>
                                 View history
-                            </button>
+                            </motion.button>
                         )}
                     </div>
                 )}
