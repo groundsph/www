@@ -83,7 +83,7 @@ export default function AnnouncementBanner() {
                 </p>
                 <button
                     onClick={handleDismiss}
-                    className='absolute right-2 md:right-4 p-1 hover:bg-background/20 rounded transition-colors'
+                    className='md:absolute md:right-2 lg:right-4 md:p-1 hover:bg-background/20 rounded transition-colors'
                     aria-label='Dismiss announcement'
                 >
                     <X className='h-4 w-4' />
