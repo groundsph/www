@@ -60,10 +60,13 @@ export default function CafeDetails({
     cafe,
     reviews = [],
     menuItems = [],
+    heroImage,
 }: {
     cafe: CafeWithRatings
     reviews?: Review[]
     menuItems?: CafeMenuItem[]
+    /** Server-rendered hero image for better LCP */
+    heroImage?: React.ReactNode
 }) {
     // Auth
     const authUser = useAuth().user
@@ -216,6 +219,7 @@ export default function CafeDetails({
                 onToggleWishlist={toggleWishlist}
                 onOpenClaim={() => setIsClaimOpen(true)}
                 onOpenAddToCollection={() => setIsAddToCollectionOpen(true)}
+                heroImage={heroImage}
             />
 
             {/* Mobile Layout (< md) */}

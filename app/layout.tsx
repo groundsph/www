@@ -103,6 +103,17 @@ export default function RootLayout({
             lang='en'
             className=''
         >
+            <head>
+                {/* Preconnect to CDN for faster image loading */}
+                <link
+                    rel='preconnect'
+                    href='https://cdn.grounds.ph'
+                />
+                <link
+                    rel='dns-prefetch'
+                    href='https://cdn.grounds.ph'
+                />
+            </head>
             <body
                 className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen [&_button]:cursor-pointer`}
             >

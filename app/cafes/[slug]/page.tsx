@@ -1,4 +1,5 @@
 import CafeDetails from "@/app/cafes/[slug]/CafeDetails"
+import CafeHeroImage from "@/app/cafes/[slug]/components/CafeHeroImage"
 import Link from "next/link"
 import type { Metadata } from "next"
 import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"
@@ -205,6 +206,11 @@ export default async function CafePage({
                 cafe={cafe}
                 reviews={reviews}
                 menuItems={menuItems}
+                heroImage={
+                    <CafeHeroImage
+                        thumbnail={cafe.thumbnail ?? "placeholder"}
+                    />
+                }
             />
         </>
     )

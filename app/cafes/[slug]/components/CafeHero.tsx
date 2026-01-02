@@ -35,6 +35,8 @@ interface CafeHeroProps {
     onToggleWishlist: () => void
     onOpenClaim?: () => void
     onOpenAddToCollection?: () => void
+    /** Server-rendered hero image component for better LCP */
+    heroImage?: React.ReactNode
 }
 
 export default function CafeHero({
@@ -48,6 +50,7 @@ export default function CafeHero({
     onToggleWishlist,
     onOpenClaim,
     onOpenAddToCollection,
+    heroImage,
 }: CafeHeroProps) {
     const openStatus = isOpenNow(cafe.operating_hours)
     const [isCopied, setIsCopied] = useState(false)
@@ -164,21 +167,23 @@ export default function CafeHero({
             id='top'
             className='w-full min-h-[calc(100vh-20rem)] flex flex-col relative'
         >
-            {/* Background Image */}
-            <div className='absolute w-full h-full bg-linear-to-r from-black/70 to-transparent select-none'>
-                <Image
-                    src={getCafeThumbnailUrl(cafe.thumbnail)}
-                    alt=''
-                    fill
-                    className='object-cover object-center -z-1'
-                    draggable={false}
-                    priority
-                    fetchPriority='high'
-                    sizes='100vw'
-                    placeholder='blur'
-                    blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwAAhEDEQA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
-                />
-            </div>
+            {/* Background Image - use server-rendered heroImage if provided */}
+            {heroImage ?? (
+                <div className='absolute w-full h-full bg-linear-to-r from-black/70 to-transparent select-none'>
+                    <Image
+                        src={getCafeThumbnailUrl(cafe.thumbnail)}
+                        alt=''
+                        fill
+                        className='object-cover object-center -z-1'
+                        draggable={false}
+                        priority
+                        fetchPriority='high'
+                        sizes='100vw'
+                        placeholder='blur'
+                        blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwAAhEDEQA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
+                    />
+                </div>
+            )}
 
             {/* Content */}
             <div className='z-1 w-full h-full flex flex-col px-4 py-10 items-center text-background'>
