@@ -36,7 +36,6 @@ function mapCafeToSnakeCase(c: {
     paymentMethods: string | null
     hasWifi: boolean | null
     hasSmoking: boolean | null
-
     hasSockets: boolean | null
     hasAircon: boolean | null
     hasParking: boolean | null
@@ -515,12 +514,99 @@ export async function getAllCafes(
 ) {
     const offset = (page - 1) * limit
 
-    // Use RPC for Full-Text Search if query exists
+    // Use RPC for Full-Text Search if query exists, with ILIKE fallback
     if (filters.search) {
+        // First try full-text search
         const searchResults = await db.execute(sql`SELECT * FROM search_cafes(${filters.search})`)
-        const rows = searchResults.rows as { id: string; name: string; slug: string; thumbnail: string; city_municipality: string; region: string; address_display: string; price_level: string }[]
-        return rows.slice(offset, offset + limit).map(c => ({
-            ...c,
+        const rows = searchResults.rows as Record<string, unknown>[]
+
+        // If full-text search returns no results, fallback to ILIKE search on name
+        if (rows.length === 0) {
+            const ilikeTerm = `%${filters.search}%`
+            const fallbackResults = await db
+                .select({
+                    id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail,
+                    description: cafes.description, addressDisplay: cafes.addressDisplay, area: cafes.area,
+                    cityMunicipality: cafes.cityMunicipality, province: cafes.province, region: cafes.region,
+                    lat: cafes.lat, lng: cafes.lng, priceLevel: cafes.priceLevel, coffeeStyle: cafes.coffeeStyle,
+                    membershipTier: cafes.membershipTier, roaster: cafes.roaster, brewMethods: cafes.brewMethods,
+                    specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
+                    operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
+                    email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
+                    hasWifi: cafes.hasWifi, hasSmoking: cafes.hasSmoking, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
+                    hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
+                    hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
+                    hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
+                    isWorkFriendly: cafes.isWorkFriendly, servesFood: cafes.servesFood, isActive: cafes.isActive,
+                    isPublished: cafes.isPublished, isVerified: cafes.isVerified, isClaimed: cafes.isClaimed,
+                    ownerIds: cafes.ownerIds, contributorId: cafes.contributorId, featuredUntil: cafes.featuredUntil,
+                    isHiddenGem: cafes.isHiddenGem, findingHint: cafes.findingHint,
+                    createdAt: cafes.createdAt, updatedAt: cafes.updatedAt,
+                    averageRating: cafeRatingStats.averageRating, totalReviews: cafeRatingStats.totalReviews,
+                })
+                .from(cafes)
+                .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
+                .where(and(eq(cafes.isPublished, true), ilike(cafes.name, ilikeTerm)))
+                .orderBy(desc(cafes.membershipTier), desc(cafes.createdAt))
+                .limit(limit)
+                .offset(offset)
+
+            return fallbackResults.map(c => mapCafeToSnakeCase(c))
+        }
+
+        // Map full-text search results to snake_case format
+        return rows.slice(offset, offset + limit).map(row => ({
+            id: row.id as string,
+            name: row.name as string,
+            slug: row.slug as string,
+            thumbnail: row.thumbnail as string,
+            description: row.description as string | null,
+            address_display: row.address_display as string,
+            area: row.area as string | null,
+            city_municipality: row.city_municipality as string,
+            province: row.province as string,
+            region: row.region as string,
+            lat: row.lat as number | null,
+            lng: row.lng as number | null,
+            price_level: row.price_level as string | null,
+            coffee_style: row.coffee_style as string | null,
+            membership_tier: row.membership_tier as string | null,
+            roaster: row.roaster as string | null,
+            brew_methods: row.brew_methods as string[] | null,
+            specialty: row.specialty as string[] | null,
+            milk_options: row.milk_options as string[] | null,
+            tags: row.tags as string[] | null,
+            operating_hours: row.operating_hours as unknown,
+            socials: row.socials as unknown,
+            phone: row.phone as string | null,
+            email: row.email as string | null,
+            website_url: row.website_url as string | null,
+            payment_methods: row.payment_methods as string | null,
+            has_wifi: row.has_wifi as boolean | null,
+            has_smoking: row.has_smoking as boolean | null,
+            has_sockets: row.has_sockets as boolean | null,
+            has_aircon: row.has_aircon as boolean | null,
+            has_parking: row.has_parking as boolean | null,
+            has_outdoor_seating: row.has_outdoor_seating as boolean | null,
+            has_indoor_seating: row.has_indoor_seating as boolean | null,
+            has_restroom: row.has_restroom as boolean | null,
+            has_bidet: row.has_bidet as boolean | null,
+            has_non_dairy: row.has_non_dairy as boolean | null,
+            has_decaf: row.has_decaf as boolean | null,
+            is_pet_friendly: row.is_pet_friendly as boolean | null,
+            is_work_friendly: row.is_work_friendly as boolean | null,
+            serves_food: row.serves_food as boolean | null,
+            is_active: row.is_active as boolean | null,
+            is_published: row.is_published as boolean | null,
+            is_verified: row.is_verified as boolean | null,
+            is_claimed: row.is_claimed as boolean | null,
+            owner_ids: row.owner_ids as string[] | null,
+            contributor_id: row.contributor_id as string | null,
+            featured_until: row.featured_until as string | null,
+            is_hidden_gem: row.is_hidden_gem as boolean | null,
+            finding_hint: row.finding_hint as string | null,
+            created_at: row.created_at as string | null,
+            updated_at: row.updated_at as string | null,
             average_rating: null,
             total_reviews: null,
         })) as CafeWithRatings[]

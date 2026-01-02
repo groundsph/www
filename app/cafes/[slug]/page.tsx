@@ -28,6 +28,9 @@ export async function generateMetadata({
     const thumbnailUrl =
         thumbnail && thumbnail !== "placeholder" ? thumbnail : undefined
 
+    // Get the actual image URL for preloading (including placeholder fallback)
+    const heroImageUrl = getCafeThumbnailUrl(thumbnail ?? "placeholder")
+
     const metaDescription =
         description ||
         `Visit ${name} at ${address_display}. Find the perfect spot for your next coffee break or work session.`
@@ -58,6 +61,10 @@ export async function generateMetadata({
             title: name,
             description: metaDescription,
             images: thumbnailUrl ? [thumbnailUrl] : undefined,
+        },
+        // Preload the hero image for faster LCP
+        other: {
+            link: `<${heroImageUrl}>; rel=preload; as=image`,
         },
     }
 }

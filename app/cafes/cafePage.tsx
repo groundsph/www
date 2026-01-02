@@ -33,6 +33,7 @@ import {
     CAFE_VIBE_TAGS,
 } from "@/utils/data/philippines"
 import { useEffect, useState, useTransition } from "react"
+import { useDebounce } from "@/utils/hooks/useDebounce"
 
 interface CafesPageClientProps {
     initialCafes?: CafeWithRatings[]
@@ -55,6 +56,7 @@ export default function CafesPageClient({
 
     // Search & Filter State
     const [search, setSearch] = useState("")
+    const debouncedSearch = useDebounce(search, 300)
     const [sortBy, setSortBy] = useState("recommended")
     const [filters, setFilters] = useState({
         has_wifi: false,
@@ -124,43 +126,34 @@ export default function CafesPageClient({
         )
     }, [])
 
-    // Filter Logic
+    // Filter Logic - uses debouncedSearch for search queries
     useEffect(() => {
-        const fetchCafes = async () => {
-            startTransition(async () => {
-                const fetchedCafes = await getAllCafes(1, 40, {
-                    search,
-                    has_wifi: filters.has_wifi,
-                    has_smoking: filters.has_smoking,
-                    has_sockets: filters.has_sockets,
-
-                    has_parking: filters.has_parking,
-                    has_aircon: filters.has_aircon,
-                    is_pet_friendly: filters.is_pet_friendly,
-                    has_outdoor_seating: filters.has_outdoor_seating,
-                    has_indoor_seating: filters.has_indoor_seating,
-                    has_restroom: filters.has_restroom,
-                    has_bidet: filters.has_bidet,
-                    has_non_dairy: filters.has_non_dairy,
-                    has_decaf: filters.has_decaf,
-                    is_work_friendly: filters.is_work_friendly,
-                    price_level: filters.price_level || undefined,
-                    coffee_style: filters.coffee_style || undefined,
-                    region: filters.region || undefined,
-                    tags: filters.tags.length > 0 ? filters.tags : undefined,
-                    sortBy: sortBy as "recommended" | "rating" | "reviews",
-                })
-                setCafes(fetchedCafes)
-                setLoading(false)
+        startTransition(async () => {
+            const fetchedCafes = await getAllCafes(1, 40, {
+                search: debouncedSearch,
+                has_wifi: filters.has_wifi,
+                has_smoking: filters.has_smoking,
+                has_sockets: filters.has_sockets,
+                has_parking: filters.has_parking,
+                has_aircon: filters.has_aircon,
+                is_pet_friendly: filters.is_pet_friendly,
+                has_outdoor_seating: filters.has_outdoor_seating,
+                has_indoor_seating: filters.has_indoor_seating,
+                has_restroom: filters.has_restroom,
+                has_bidet: filters.has_bidet,
+                has_non_dairy: filters.has_non_dairy,
+                has_decaf: filters.has_decaf,
+                is_work_friendly: filters.is_work_friendly,
+                price_level: filters.price_level || undefined,
+                coffee_style: filters.coffee_style || undefined,
+                region: filters.region || undefined,
+                tags: filters.tags.length > 0 ? filters.tags : undefined,
+                sortBy: sortBy as "recommended" | "rating" | "reviews",
             })
-        }
-
-        const timeoutId = setTimeout(() => {
-            fetchCafes()
-        }, 500)
-
-        return () => clearTimeout(timeoutId)
-    }, [search, sortBy, filters])
+            setCafes(fetchedCafes)
+            setLoading(false)
+        })
+    }, [debouncedSearch, sortBy, filters])
 
     // Client-side filtering for open_now and near_me
     const filteredCafes = cafes.filter((cafe) => {

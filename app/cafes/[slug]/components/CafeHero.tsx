@@ -1,7 +1,5 @@
 "use client"
 
-import confetti from "canvas-confetti"
-
 import { CafeWithRatings } from "@/utils/types/extra"
 import Image from "next/image"
 import { motion } from "motion/react"
@@ -76,8 +74,11 @@ export default function CafeHero({
         }
     }
 
-    const handleFavorite = () => {
+    const handleFavorite = async () => {
         if (!isFavorite) {
+            // Dynamically import confetti for performance
+            const confetti = (await import("canvas-confetti")).default
+
             // Trigger heart confetti from bottom
             const defaults = {
                 spread: 360,
@@ -112,8 +113,11 @@ export default function CafeHero({
         onToggleFavorite()
     }
 
-    const handleVisited = () => {
+    const handleVisited = async () => {
         if (!isVisited) {
+            // Dynamically import confetti for performance
+            const confetti = (await import("canvas-confetti")).default
+
             // Trigger fireworks from bottom
             const duration = 3 * 1000
             const animationEnd = Date.now() + duration
@@ -169,6 +173,7 @@ export default function CafeHero({
                     className='object-cover object-center -z-1'
                     draggable={false}
                     priority
+                    fetchPriority='high'
                     sizes='100vw'
                     placeholder='blur'
                     blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwAAhEDEQA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
