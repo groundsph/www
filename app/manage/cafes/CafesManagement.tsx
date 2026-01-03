@@ -57,6 +57,7 @@ import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
 import ImageLightbox from "@/components/ImageLightbox"
 import SubscriptionsTable from "./components/SubscriptionsTable"
+import RejectCafeModal from "@/components/admin/RejectCafeModal"
 import { CreditCard } from "lucide-react"
 
 interface CafesManagementProps {
@@ -118,6 +119,13 @@ export default function CafesManagement({
     const [expandedClaim, setExpandedClaim] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
+
+    // Reject modal state
+    const [rejectModalOpen, setRejectModalOpen] = useState(false)
+    const [cafeToReject, setCafeToReject] = useState<{
+        id: string
+        name: string
+    } | null>(null)
     const [provinceFilter, setProvinceFilter] = useState<string>("")
     const [cityFilter, setCityFilter] = useState<string>("")
     const [sortBy, setSortBy] = useState<"name" | "date" | "city" | "province">(
@@ -284,18 +292,21 @@ export default function CafesManagement({
         setProcessing(null)
     }
 
-    const handleReject = async (cafeId: string) => {
-        if (
-            !confirm(
-                "Are you sure you want to reject and delete this cafe submission?"
-            )
-        ) {
-            return
-        }
-        setProcessing(cafeId)
-        const result = await rejectCafe(cafeId)
+    const openRejectModal = (cafe: { id: string; name: string }) => {
+        setCafeToReject(cafe)
+        setRejectModalOpen(true)
+    }
+
+    const handleReject = async (reason?: string) => {
+        if (!cafeToReject) return
+        setProcessing(cafeToReject.id)
+        const result = await rejectCafe(cafeToReject.id, reason)
         if (result.success) {
-            setPendingCafes((prev) => prev.filter((c) => c.id !== cafeId))
+            setPendingCafes((prev) =>
+                prev.filter((c) => c.id !== cafeToReject.id)
+            )
+            setRejectModalOpen(false)
+            setCafeToReject(null)
         } else {
             alert(result.error || "Failed to reject cafe")
         }
@@ -738,8 +749,11 @@ export default function CafesManagement({
                                                         </button>
                                                         <button
                                                             onClick={() =>
-                                                                handleReject(
-                                                                    cafe.id
+                                                                openRejectModal(
+                                                                    {
+                                                                        id: cafe.id,
+                                                                        name: cafe.name,
+                                                                    }
                                                                 )
                                                             }
                                                             disabled={
@@ -1439,6 +1453,17 @@ export default function CafesManagement({
                     suggestionLightboxImages.length > 0
                 }
                 onClose={() => setShowSuggestionLightbox(false)}
+            />
+
+            {/* Reject Cafe Modal */}
+            <RejectCafeModal
+                isOpen={rejectModalOpen}
+                onClose={() => {
+                    setRejectModalOpen(false)
+                    setCafeToReject(null)
+                }}
+                cafeName={cafeToReject?.name || ""}
+                onConfirm={handleReject}
             />
         </div>
     )

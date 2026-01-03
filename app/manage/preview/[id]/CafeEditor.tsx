@@ -52,6 +52,7 @@ import {
     HoursSection,
 } from "@/components/cafe-editor"
 import { useMenuItems } from "@/utils/hooks/useMenuItems"
+import RejectCafeModal from "@/components/admin/RejectCafeModal"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
@@ -93,6 +94,9 @@ export default function CafeEditor({
     )
     const [storyHasChanges, setStoryHasChanges] = useState(false)
     const [savingStory, setSavingStory] = useState(false)
+
+    // Reject modal state
+    const [rejectModalOpen, setRejectModalOpen] = useState(false)
 
     // Owner management state
     const [owners, setOwners] = useState<
@@ -199,11 +203,10 @@ export default function CafeEditor({
         }
     }
 
-    const handleReject = async () => {
-        if (!confirm("Are you sure you want to reject and delete this cafe?"))
-            return
-        const result = await rejectCafe(cafe.id)
+    const handleReject = async (reason?: string) => {
+        const result = await rejectCafe(cafe.id, reason)
         if (result.success) {
+            setRejectModalOpen(false)
             router.push("/admin")
         } else {
             alert(result.error || "Failed to reject")
@@ -342,7 +345,7 @@ export default function CafeEditor({
                         // Pending cafe - show Reject and Approve buttons
                         <>
                             <button
-                                onClick={handleReject}
+                                onClick={() => setRejectModalOpen(true)}
                                 className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition'
                             >
                                 <X className='w-4 h-4' />
@@ -968,6 +971,14 @@ export default function CafeEditor({
                 saving={menu.loading}
                 colorScheme='accent'
                 cafeId={cafe.id}
+            />
+
+            {/* Reject Cafe Modal */}
+            <RejectCafeModal
+                isOpen={rejectModalOpen}
+                onClose={() => setRejectModalOpen(false)}
+                cafeName={cafe.name}
+                onConfirm={handleReject}
             />
         </div>
     )
