@@ -454,3 +454,90 @@ export async function notifyDiscordBlogReport(
         }
     }
 }
+
+/**
+ * Notify Discord about a new community event submission
+ */
+export async function notifyDiscordEventSubmission(
+    eventInfo: { title: string; location: string; startDate: string },
+    submitterName?: string
+): Promise<NotifyResult> {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn('Discord webhook URL not configured')
+        return { success: false, message: 'Webhook not configured' }
+    }
+
+    try {
+        const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/manage/community`
+
+        const formattedDate = new Date(eventInfo.startDate).toLocaleDateString('en-PH', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        })
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: "📅 New Event Submission",
+                    description: "A community event has been submitted for review.",
+                    color: 0xf59e0b, // Orange/amber color for events
+                    fields: [
+                        {
+                            name: "Event",
+                            value: eventInfo.title,
+                            inline: true
+                        },
+                        {
+                            name: "Location",
+                            value: eventInfo.location,
+                            inline: true
+                        },
+                        {
+                            name: "Date",
+                            value: formattedDate,
+                            inline: false
+                        },
+                        {
+                            name: "Submitted By",
+                            value: submitterName || "Anonymous User",
+                            inline: true
+                        },
+                        {
+                            name: "Action Required",
+                            value: `[Review in Community Management](${adminUrl})`,
+                            inline: false
+                        },
+                    ],
+                    footer: {
+                        text: "Grounds • Event Submission"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            }),
+        })
+
+        if (!response.ok) {
+            console.error('Discord webhook failed:', response.status)
+            return {
+                success: false,
+                message: 'Failed to notify Discord',
+            }
+        }
+
+        return {
+            success: true,
+            message: 'Event Submission Notified',
+        }
+    } catch (error) {
+        console.error('Discord notification error:', error)
+        return {
+            success: false,
+            message: 'Error sending notification',
+        }
+    }
+}

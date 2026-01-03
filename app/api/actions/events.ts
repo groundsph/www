@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { events, cafes, profiles, cafeSubscriptions } from "@/db/schema"
+import { events, cafes, profiles, cafeSubscriptions, user } from "@/db/schema"
 import { eq, and, gte, lt, lte, desc, asc, count, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
@@ -690,6 +690,24 @@ export async function submitCommunityEvent(input: CommunityEventInput): Promise<
 
     if (!inserted) return { success: false, error: "Failed to submit event" }
 
+    // Get submitter name for notification
+    const submitterResult = await db.select({ displayName: profiles.displayName })
+        .from(profiles)
+        .where(eq(profiles.id, userId))
+        .limit(1)
+    const submitterName = submitterResult[0]?.displayName
+
+    // Notify Discord about the new submission
+    const { notifyDiscordEventSubmission } = await import("@/app/api/actions/notify")
+    await notifyDiscordEventSubmission(
+        {
+            title: input.title.trim(),
+            location: `${input.location_name.trim()}${input.city ? `, ${input.city}` : ""}`,
+            startDate: input.start_date,
+        },
+        submitterName
+    )
+
     const fullEvent = await getEvent(inserted.id)
     return { success: true, event: fullEvent || undefined }
 }
@@ -744,20 +762,33 @@ export async function approveCommunityEvent(eventId: string): Promise<EventActio
     let submitterEmail: string | undefined
     let submitterName: string | undefined
     if (existingEvent.createdBy) {
-        // We need to join with auth users to get email - use profiles for now
-        const profileResult = await db.select({ displayName: profiles.displayName })
-            .from(profiles)
-            .where(eq(profiles.id, existingEvent.createdBy))
-            .limit(1)
+        const [profileResult, userResult] = await Promise.all([
+            db.select({ displayName: profiles.displayName })
+                .from(profiles)
+                .where(eq(profiles.id, existingEvent.createdBy))
+                .limit(1),
+            db.select({ email: user.email })
+                .from(user)
+                .where(eq(user.id, existingEvent.createdBy))
+                .limit(1)
+        ])
         submitterName = profileResult[0]?.displayName
+        submitterEmail = userResult[0]?.email
     }
 
     await db.update(events).set({ status: "published", updatedAt: new Date() }).where(eq(events.id, eventId))
+
+    // Send approval email
+    if (submitterEmail) {
+        const { sendEventApprovedEmail } = await import("@/utils/email")
+        await sendEventApprovedEmail(submitterEmail, existingEvent.title, submitterName)
+    }
 
     const fullEvent = await getEvent(eventId)
     return {
         success: true,
         event: fullEvent || undefined,
+        submitterEmail,
         submitterName,
         eventTitle: existingEvent.title
     }
@@ -766,7 +797,7 @@ export async function approveCommunityEvent(eventId: string): Promise<EventActio
 /**
  * Reject a pending community event (admin/moderator only)
  */
-export async function rejectCommunityEvent(eventId: string, reason?: string): Promise<EventActionResult & { submitterName?: string; eventTitle?: string }> {
+export async function rejectCommunityEvent(eventId: string, reason?: string): Promise<EventActionResult & { submitterEmail?: string; submitterName?: string; eventTitle?: string }> {
     if (!(await isAdminOrModerator())) {
         return { success: false, error: "You don't have permission to reject events" }
     }
@@ -780,22 +811,37 @@ export async function rejectCommunityEvent(eventId: string, reason?: string): Pr
     }
 
     // Get submitter info for email
+    let submitterEmail: string | undefined
     let submitterName: string | undefined
     if (existingEvent.createdBy) {
-        const profileResult = await db.select({ displayName: profiles.displayName })
-            .from(profiles)
-            .where(eq(profiles.id, existingEvent.createdBy))
-            .limit(1)
+        const [profileResult, userResult] = await Promise.all([
+            db.select({ displayName: profiles.displayName })
+                .from(profiles)
+                .where(eq(profiles.id, existingEvent.createdBy))
+                .limit(1),
+            db.select({ email: user.email })
+                .from(user)
+                .where(eq(user.id, existingEvent.createdBy))
+                .limit(1)
+        ])
         submitterName = profileResult[0]?.displayName
+        submitterEmail = userResult[0]?.email
     }
 
     const eventTitle = existingEvent.title
+
+    // Send rejection email before deleting
+    if (submitterEmail) {
+        const { sendEventRejectedEmail } = await import("@/utils/email")
+        await sendEventRejectedEmail(submitterEmail, eventTitle, submitterName, reason)
+    }
 
     // Delete the rejected event
     await db.delete(events).where(eq(events.id, eventId))
 
     return {
         success: true,
+        submitterEmail,
         submitterName,
         eventTitle
     }

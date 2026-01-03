@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import Link from "next/link"
 import {
     CalendarIcon,
     ListIcon,
@@ -8,6 +9,7 @@ import {
     GlobeIcon,
     Loader2Icon,
     Coffee,
+    Plus,
 } from "lucide-react"
 import { useUserLocation } from "@/hooks/useUserLocation"
 import { getEvents, getEventsForMonth } from "@/app/api/actions/events"
@@ -221,9 +223,9 @@ export default function EventsPageClient({
 
             {/* Controls */}
             <section
-                className={`${embedded ? "" : "sticky top-0"} z-20 bg-background/95 backdrop-blur-sm border-b border-text/10`}
+                className={`${embedded ? "" : "sticky top-0"} z-20 bg-background/95 backdrop-blur-sm`}
             >
-                <div className='max-w-6xl mx-auto px-6 py-4'>
+                <div className='max-w-7xl mx-auto px-6 py-4'>
                     <div className='flex flex-wrap items-center justify-between gap-4'>
                         {/* Scope Toggle */}
                         <div className='flex bg-text/5 rounded-lg p-1'>
@@ -249,28 +251,38 @@ export default function EventsPageClient({
                             </button>
                         </div>
 
-                        {/* View Toggle */}
-                        <div className='flex bg-text/5 rounded-lg p-1'>
-                            <button
-                                onClick={() => setViewMode("list")}
-                                className={`
+                        <div className='flex flex-row gap-4 flex-wrap items-center'>
+                            {/* View Toggle */}
+                            <div className='flex bg-text/5 rounded-lg p-1'>
+                                <button
+                                    onClick={() => setViewMode("list")}
+                                    className={`
                                     flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
                                     ${viewMode === "list" ? "bg-background shadow-sm text-text" : "text-text/60 hover:text-text"}
                                 `}
-                            >
-                                <ListIcon className='w-4 h-4' />
-                                List
-                            </button>
-                            <button
-                                onClick={() => setViewMode("calendar")}
-                                className={`
+                                >
+                                    <ListIcon className='w-4 h-4' />
+                                    List
+                                </button>
+                                <button
+                                    onClick={() => setViewMode("calendar")}
+                                    className={`
                                     flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
                                     ${viewMode === "calendar" ? "bg-background shadow-sm text-text" : "text-text/60 hover:text-text"}
                                 `}
+                                >
+                                    <CalendarIcon className='w-4 h-4' />
+                                    Calendar
+                                </button>
+                            </div>
+                            {/* Submit Event Link */}
+                            <Link
+                                href='/community/submit-event'
+                                className='flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors'
                             >
-                                <CalendarIcon className='w-4 h-4' />
-                                Calendar
-                            </button>
+                                <Plus className='w-4 h-4' />
+                                Submit Event
+                            </Link>
                         </div>
                     </div>
                 </div>

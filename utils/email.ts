@@ -6,6 +6,8 @@ import SuggestionApprovedEmail from "@/emails/SuggestionApprovedEmail"
 import SuggestionRejectedEmail from "@/emails/SuggestionRejectedEmail"
 import SubscriptionApprovedEmail from "@/emails/SubscriptionApprovedEmail"
 import SubscriptionRejectedEmail from "@/emails/SubscriptionRejectedEmail"
+import EventApprovedEmail from "@/emails/EventApprovedEmail"
+import EventRejectedEmail from "@/emails/EventRejectedEmail"
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -234,3 +236,65 @@ export async function sendSubscriptionRejectedEmail(
     }
 }
 
+/**
+ * Send an event approval notification email
+ */
+export async function sendEventApprovedEmail(
+    to: string,
+    eventTitle: string,
+    submitterName?: string
+) {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `🎉 Your event "${eventTitle}" has been approved!`,
+            react: EventApprovedEmail({ eventTitle, submitterName }),
+        })
+
+        if (error) {
+            console.error("Failed to send event approved email:", error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, messageId: data?.id }
+    } catch (err) {
+        console.error("Error sending event approved email:", err)
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+        }
+    }
+}
+
+/**
+ * Send an event rejection notification email
+ */
+export async function sendEventRejectedEmail(
+    to: string,
+    eventTitle: string,
+    submitterName?: string,
+    reason?: string
+) {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `Update on your event submission "${eventTitle}"`,
+            react: EventRejectedEmail({ eventTitle, submitterName, reason }),
+        })
+
+        if (error) {
+            console.error("Failed to send event rejected email:", error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, messageId: data?.id }
+    } catch (err) {
+        console.error("Error sending event rejected email:", err)
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+        }
+    }
+}
