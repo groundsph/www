@@ -501,3 +501,22 @@ export const collectionLikes = pgTable("collection_likes", {
         .references(() => profiles.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
+
+// ============================================================================
+// REPORTING TABLES
+// ============================================================================
+
+export const cafeReports = pgTable("cafe_reports", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cafeId: uuid("cafe_id")
+        .notNull()
+        .references(() => cafes.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(), // "permanently_closed", "does_not_exist", "other"
+    details: text("details"),
+    status: text("status").default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+

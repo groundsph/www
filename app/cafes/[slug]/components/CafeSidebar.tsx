@@ -25,7 +25,9 @@ import dynamic from "next/dynamic"
 import Link from "next/link"
 import RatingDistribution from "./RatingDistribution"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
+import ReportCafeModal from "@/components/ReportCafeModal"
 import { motion } from "motion/react"
+import { useState } from "react"
 
 // Animation variants
 const containerVariants = {
@@ -92,6 +94,7 @@ export default function CafeSidebar({
 }: CafeSidebarProps) {
     const openStatus = isOpenNow(cafe.operating_hours)
     const socials = (cafe.socials as unknown as CafeSocial[]) ?? []
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 
     return (
         <div className='w-full max-w-96 h-fit flex flex-col gap-3 sticky top-4'>
@@ -675,12 +678,25 @@ export default function CafeSidebar({
             <div className='border-b border-text/10 my-3' />
 
             {/* Suggest Edit */}
-            <div className='flex justify-center'>
+            {/* Suggest Edit & Report */}
+            <div className='flex flex-col items-center gap-2'>
                 <SuggestEditButton
                     cafe={cafe}
                     variant='compact'
                 />
+                <button
+                    onClick={() => setIsReportModalOpen(true)}
+                    className='text-xs text-text/40 hover:text-red-500 transition-colors font-medium'
+                >
+                    Report Issue
+                </button>
             </div>
+
+            <ReportCafeModal
+                cafeId={cafe.id}
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+            />
         </div>
     )
 }

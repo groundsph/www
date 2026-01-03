@@ -30,6 +30,7 @@ import dynamic from "next/dynamic"
 import RatingDistribution from "./RatingDistribution"
 import MarkdownRender from "@/components/MarkdownRender"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
+import ReportCafeModal from "@/components/ReportCafeModal"
 import ImageLightbox from "@/components/ImageLightbox"
 import Link from "next/link"
 import { motion } from "motion/react"
@@ -104,6 +105,7 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
     // Lightbox state
     const [isLightboxOpen, setIsLightboxOpen] = useState(false)
     const [lightboxIndex, setLightboxIndex] = useState(0)
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 
     return (
         <div className='flex flex-col gap-4'>
@@ -369,6 +371,8 @@ export function DetailsTabContent({
     reviews = [],
     onOpenHistory,
 }: CafeMobileContentProps) {
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+
     return (
         <div className='flex flex-col gap-4'>
             {/* Price & Rating */}
@@ -722,13 +726,26 @@ export function DetailsTabContent({
                 )}
             </div>
 
-            {/* Suggest Edit */}
-            <div className='flex justify-center pt-2'>
+            {/* Suggest Edit & Report */}
+            <div className='flex flex-col items-center gap-2 pt-2'>
                 <SuggestEditButton
                     cafe={cafe}
                     variant='compact'
                 />
+                <button
+                    onClick={() => setIsReportModalOpen(true)}
+                    className='text-xs text-text/40 hover:text-red-500 transition-colors font-medium'
+                    type='button'
+                >
+                    Report Issue
+                </button>
             </div>
+
+            <ReportCafeModal
+                cafeId={cafe.id}
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+            />
         </div>
     )
 }
