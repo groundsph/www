@@ -130,7 +130,7 @@ export default function Passport({
                                             {/* Stamp Visual */}
                                             <div className='absolute inset-0 flex flex-col items-center justify-center p-4 text-center transform -rotate-12 group-hover:rotate-0 group-hover:scale-105 transition-all duration-300'>
                                                 <Coffee className='w-6 h-6 text-primary/50 mb-1' />
-                                                <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight'>
+                                                <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight max-w-4/5'>
                                                     {cafe.name}
                                                 </span>
                                                 <span className='text-[10px] text-primary/40 mt-1 font-mono'>
