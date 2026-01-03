@@ -29,6 +29,13 @@
       "when": 1767413905219,
       "tag": "0003_lame_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1767432746231,
+      "tag": "0004_add-cafe-visits-table",
+      "breakpoints": true
     }
   ]
 }

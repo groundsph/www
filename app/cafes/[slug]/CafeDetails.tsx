@@ -77,6 +77,10 @@ export default function CafeDetails({
         isVisited,
         isFavorite,
         isInWishlist,
+        visitCount,
+        visitedToday,
+        isCheckingIn,
+        checkIn,
         toggleVisited,
         toggleFavorite,
         toggleWishlist,
@@ -214,6 +218,10 @@ export default function CafeDetails({
                 isVisited={isVisited}
                 isFavorite={isFavorite}
                 isInWishlist={isInWishlist}
+                visitCount={visitCount}
+                visitedToday={visitedToday}
+                isCheckingIn={isCheckingIn}
+                onCheckIn={checkIn}
                 onToggleVisited={toggleVisited}
                 onToggleFavorite={toggleFavorite}
                 onToggleWishlist={toggleWishlist}

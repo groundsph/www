@@ -212,6 +212,20 @@ export const cafePageViews = pgTable("cafe_page_views", {
     country: text("country"),
 })
 
+// User visits to cafes (check-in system)
+// Tracks each visit with timestamp, allows multiple visits per cafe (one per day max)
+export const cafeVisits = pgTable("cafe_visits", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    cafeId: uuid("cafe_id")
+        .notNull()
+        .references(() => cafes.id, { onDelete: "cascade" }),
+    visitedAt: timestamp("visited_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
 export const cafeClaims = pgTable("cafe_claims", {
     id: uuid("id").primaryKey().defaultRandom(),
     cafeId: uuid("cafe_id")

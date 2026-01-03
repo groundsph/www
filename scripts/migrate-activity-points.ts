@@ -8,8 +8,8 @@
  */
 
 import { db } from "@/db"
-import { profiles, cafes, reviews, contributionLogs } from "@/db/schema"
-import { eq, and, or, count as drizzleCount } from "drizzle-orm"
+import { profiles, cafes, reviews, cafeEditSuggestions } from "@/db/schema"
+import { eq, and, count as drizzleCount } from "drizzle-orm"
 
 // Activity point values (must match admin.ts)
 const ACTIVITY_POINTS = {
@@ -79,17 +79,13 @@ async function migrateActivityPoints() {
                 .where(eq(reviews.userId, profile.id))
             const totalReviews = reviewCountResult[0]?.count ?? 0
 
-            // Count contribution logs (edits)
+            // Count only APPROVED edit suggestions (not pending/rejected)
             const editCountResult = await db
                 .select({ count: drizzleCount() })
-                .from(contributionLogs)
+                .from(cafeEditSuggestions)
                 .where(and(
-                    eq(contributionLogs.userId, profile.id),
-                    or(
-                        eq(contributionLogs.actionType, 'UPDATE'),
-                        eq(contributionLogs.actionType, 'SUGGEST'),
-                        eq(contributionLogs.actionType, 'MEDIA')
-                    )
+                    eq(cafeEditSuggestions.userId, profile.id),
+                    eq(cafeEditSuggestions.status, 'approved')
                 ))
             const totalEdits = editCountResult[0]?.count ?? 0
 

@@ -30,6 +30,21 @@ interface CafeHeroProps {
     isVisited: boolean
     isFavorite: boolean
     isInWishlist: boolean
+    // New visit count props
+    visitCount?: number
+    visitedToday?: boolean
+    isCheckingIn?: boolean
+    onCheckIn?: () => Promise<
+        | {
+              success: boolean
+              visitCount: number
+              isFirstVisit: boolean
+              alreadyVisitedToday?: boolean
+              error?: string
+          }
+        | undefined
+    >
+    // Legacy toggle (kept for backward compatibility)
     onToggleVisited: () => void
     onToggleFavorite: () => void
     onToggleWishlist: () => void
@@ -45,6 +60,10 @@ export default function CafeHero({
     isVisited,
     isFavorite,
     isInWishlist,
+    visitCount = 0,
+    visitedToday = false,
+    isCheckingIn = false,
+    onCheckIn,
     onToggleVisited,
     onToggleFavorite,
     onToggleWishlist,
@@ -116,9 +135,16 @@ export default function CafeHero({
         onToggleFavorite()
     }
 
-    const handleVisited = async () => {
-        if (!isVisited) {
-            // Dynamically import confetti for performance
+    const handleCheckIn = async () => {
+        // If already visited today, show feedback but don't block the confetti for first-time visitors
+        if (visitedToday) {
+            // Could show a toast here, but for now just return
+            return
+        }
+
+        // Use new check-in if available, otherwise fall back to toggle
+        if (onCheckIn) {
+            // Trigger confetti on successful check-in
             const confetti = (await import("canvas-confetti")).default
 
             // Trigger fireworks from bottom
@@ -129,7 +155,7 @@ export default function CafeHero({
                 spread: 360,
                 ticks: 60,
                 zIndex: 0,
-                origin: { y: 1 }, // Start from bottom
+                origin: { y: 1 },
             }
 
             const interval: ReturnType<typeof setInterval> = setInterval(
@@ -142,7 +168,6 @@ export default function CafeHero({
 
                     const particleCount = 50 * (timeLeft / duration)
 
-                    // Cannon style from bottom corners
                     confetti({
                         ...defaults,
                         particleCount,
@@ -158,8 +183,50 @@ export default function CafeHero({
                 },
                 250
             )
+
+            await onCheckIn()
+        } else {
+            // Legacy fallback
+            if (!isVisited) {
+                const confetti = (await import("canvas-confetti")).default
+                const duration = 3 * 1000
+                const animationEnd = Date.now() + duration
+                const defaults = {
+                    startVelocity: 45,
+                    spread: 360,
+                    ticks: 60,
+                    zIndex: 0,
+                    origin: { y: 1 },
+                }
+
+                const interval: ReturnType<typeof setInterval> = setInterval(
+                    function () {
+                        const timeLeft = animationEnd - Date.now()
+
+                        if (timeLeft <= 0) {
+                            return clearInterval(interval)
+                        }
+
+                        const particleCount = 50 * (timeLeft / duration)
+
+                        confetti({
+                            ...defaults,
+                            particleCount,
+                            angle: 60,
+                            origin: { x: 0, y: 1 },
+                        })
+                        confetti({
+                            ...defaults,
+                            particleCount,
+                            angle: 120,
+                            origin: { x: 1, y: 1 },
+                        })
+                    },
+                    250
+                )
+            }
+            onToggleVisited()
         }
-        onToggleVisited()
     }
 
     return (
@@ -346,24 +413,38 @@ export default function CafeHero({
                         {/* User Actions */}
                         {user && (
                             <>
-                                {/* Visited Button */}
+                                {/* Check-In Button */}
                                 <motion.button
                                     whileTap={{ scale: 0.97 }}
-                                    onClick={handleVisited}
-                                    className='p-2 flex-1 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all group cursor-pointer flex flex-row text-nowrap items-center gap-2 justify-center font-bold'
+                                    onClick={handleCheckIn}
+                                    disabled={isCheckingIn || visitedToday}
+                                    className={`p-2 flex-1 rounded-lg backdrop-blur-sm transition-all group flex flex-row text-nowrap items-center gap-2 justify-center font-bold ${
+                                        visitedToday
+                                            ? "bg-green-500/30 text-green-200 cursor-default"
+                                            : "bg-white/10 hover:bg-white/20 cursor-pointer"
+                                    } ${isCheckingIn ? "opacity-70" : ""}`}
                                     title={
-                                        isVisited
-                                            ? "Remove from Visited"
-                                            : "Mark as Visited"
+                                        visitedToday
+                                            ? "Already checked in today"
+                                            : "Check In"
                                     }
                                 >
                                     <div className='relative w-5 h-5'>
                                         <motion.div
                                             initial={false}
                                             animate={{
-                                                opacity: isVisited ? 1 : 0,
-                                                scale: isVisited ? 1 : 0,
-                                                rotate: isVisited ? 0 : -90,
+                                                opacity:
+                                                    isVisited || visitedToday
+                                                        ? 1
+                                                        : 0,
+                                                scale:
+                                                    isVisited || visitedToday
+                                                        ? 1
+                                                        : 0,
+                                                rotate:
+                                                    isVisited || visitedToday
+                                                        ? 0
+                                                        : -90,
                                             }}
                                             transition={{ duration: 0.2 }}
                                             className='absolute inset-0'
@@ -373,9 +454,18 @@ export default function CafeHero({
                                         <motion.div
                                             initial={false}
                                             animate={{
-                                                opacity: isVisited ? 0 : 1,
-                                                scale: isVisited ? 0 : 1,
-                                                rotate: isVisited ? 90 : 0,
+                                                opacity:
+                                                    isVisited || visitedToday
+                                                        ? 0
+                                                        : 1,
+                                                scale:
+                                                    isVisited || visitedToday
+                                                        ? 0
+                                                        : 1,
+                                                rotate:
+                                                    isVisited || visitedToday
+                                                        ? 90
+                                                        : 0,
                                             }}
                                             transition={{ duration: 0.2 }}
                                             className='absolute inset-0'
@@ -383,10 +473,14 @@ export default function CafeHero({
                                             <MapPin className='w-5 h-5 text-white' />
                                         </motion.div>
                                     </div>
-                                    <span className='min-w-[140px] text-center'>
-                                        {isVisited
-                                            ? "Remove from Visited"
-                                            : "Mark as Visited"}
+                                    <span className='min-w-[100px] text-center'>
+                                        {isCheckingIn
+                                            ? "Checking in..."
+                                            : visitedToday
+                                              ? `Visited Today${visitCount > 1 ? ` • ${visitCount} visits` : ""}`
+                                              : visitCount > 0
+                                                ? `Check In • ${visitCount} visit${visitCount === 1 ? "" : "s"}`
+                                                : "Check In"}
                                     </span>
                                 </motion.button>
 

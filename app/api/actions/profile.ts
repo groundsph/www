@@ -1,8 +1,8 @@
 "use server"
 
 import { db } from "@/db"
-import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions } from "@/db/schema"
-import { eq, and, ne, desc, inArray, arrayContains } from "drizzle-orm"
+import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits } from "@/db/schema"
+import { eq, and, ne, desc, inArray, arrayContains, count, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
 
@@ -897,5 +897,244 @@ export async function toggleFavorite(cafeId: string): Promise<{ favorited: boole
     } catch (error) {
         console.error("Error toggling favorite:", error)
         return { favorited: false, error: "Failed to update favorites" }
+    }
+}
+
+// ============================================================================
+// VISIT TRACKING (Check-In System)
+// ============================================================================
+
+/**
+ * Record a visit (check-in) to a cafe.
+ * Limits to one visit per cafe per day.
+ */
+export async function recordVisit(cafeId: string): Promise<{
+    success: boolean
+    visitCount: number
+    isFirstVisit: boolean
+    alreadyVisitedToday?: boolean
+    error?: string
+}> {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, visitCount: 0, isFirstVisit: false, error: "Unauthorized" }
+
+    try {
+        // Check if user already visited this cafe today
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const existingTodayVisit = await db
+            .select({ id: cafeVisits.id })
+            .from(cafeVisits)
+            .where(
+                and(
+                    eq(cafeVisits.userId, user.id),
+                    eq(cafeVisits.cafeId, cafeId),
+                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                )
+            )
+            .limit(1)
+
+        if (existingTodayVisit.length > 0) {
+            // Already visited today, just return current count
+            const countResult = await db
+                .select({ count: count() })
+                .from(cafeVisits)
+                .where(and(eq(cafeVisits.userId, user.id), eq(cafeVisits.cafeId, cafeId)))
+
+            return {
+                success: false,
+                visitCount: countResult[0]?.count ?? 0,
+                isFirstVisit: false,
+                alreadyVisitedToday: true,
+            }
+        }
+
+        // Check if this is the user's first ever visit to this cafe
+        const existingVisits = await db
+            .select({ count: count() })
+            .from(cafeVisits)
+            .where(and(eq(cafeVisits.userId, user.id), eq(cafeVisits.cafeId, cafeId)))
+
+        const isFirstVisit = (existingVisits[0]?.count ?? 0) === 0
+
+        // Record the new visit
+        await db.insert(cafeVisits).values({
+            userId: user.id,
+            cafeId: cafeId,
+            visitedAt: new Date(),
+        })
+
+        // Also update passport for backward compatibility (add to visited_ids if not present)
+        if (isFirstVisit) {
+            const profileResult = await db
+                .select({ passport: profiles.passport })
+                .from(profiles)
+                .where(eq(profiles.id, user.id))
+                .limit(1)
+
+            const passport = (profileResult[0]?.passport as ProfilePassport) || {
+                visited_ids: [],
+                visits: [],
+                wishlist_ids: [],
+                favorite_ids: [],
+            }
+
+            if (!passport.visited_ids.includes(cafeId)) {
+                const updatedVisits = [...(passport.visits || []), { cafe_id: cafeId, visited_at: new Date().toISOString() }]
+                await db
+                    .update(profiles)
+                    .set({
+                        passport: {
+                            ...passport,
+                            visited_ids: [...passport.visited_ids, cafeId],
+                            visits: updatedVisits,
+                        },
+                    })
+                    .where(eq(profiles.id, user.id))
+
+                // Update activity points for first visit
+                const { updateUserActivityStats } = await import("./admin")
+                await updateUserActivityStats(user.id)
+            }
+        }
+
+        const newCount = (existingVisits[0]?.count ?? 0) + 1
+
+        return { success: true, visitCount: newCount, isFirstVisit }
+    } catch (error) {
+        console.error("Error recording visit:", error)
+        return { success: false, visitCount: 0, isFirstVisit: false, error: "Failed to record visit" }
+    }
+}
+
+/**
+ * Get the user's visit count for a specific cafe
+ */
+export async function getVisitCount(cafeId: string): Promise<{ count: number; lastVisit: string | null }> {
+    const user = await getCurrentUser()
+    if (!user) return { count: 0, lastVisit: null }
+
+    try {
+        const result = await db
+            .select({ count: count(), lastVisit: sql<string>`MAX(${cafeVisits.visitedAt})` })
+            .from(cafeVisits)
+            .where(and(eq(cafeVisits.userId, user.id), eq(cafeVisits.cafeId, cafeId)))
+
+        return {
+            count: result[0]?.count ?? 0,
+            lastVisit: result[0]?.lastVisit ?? null,
+        }
+    } catch (error) {
+        console.error("Error getting visit count:", error)
+        return { count: 0, lastVisit: null }
+    }
+}
+
+/**
+ * Get visit statistics for a cafe (total visits, unique visitors)
+ */
+export async function getCafeVisitStats(cafeId: string): Promise<{
+    totalVisits: number
+    uniqueVisitors: number
+}> {
+    try {
+        const [totalResult, uniqueResult] = await Promise.all([
+            db.select({ count: count() }).from(cafeVisits).where(eq(cafeVisits.cafeId, cafeId)),
+            db.select({ count: sql<number>`COUNT(DISTINCT ${cafeVisits.userId})` }).from(cafeVisits).where(eq(cafeVisits.cafeId, cafeId)),
+        ])
+
+        return {
+            totalVisits: totalResult[0]?.count ?? 0,
+            uniqueVisitors: uniqueResult[0]?.count ?? 0,
+        }
+    } catch (error) {
+        console.error("Error getting cafe visit stats:", error)
+        return { totalVisits: 0, uniqueVisitors: 0 }
+    }
+}
+
+/**
+ * Get all visits for a user (for visit history display)
+ */
+export async function getUserVisitHistory(): Promise<{
+    visits: {
+        cafeId: string
+        cafeName: string
+        cafeSlug: string
+        cafeThumbnail: string | null
+        visitCount: number
+        lastVisit: string
+    }[]
+}> {
+    const user = await getCurrentUser()
+    if (!user) return { visits: [] }
+
+    try {
+        // Get aggregated visits grouped by cafe
+        const result = await db
+            .select({
+                cafeId: cafeVisits.cafeId,
+                cafeName: cafes.name,
+                cafeSlug: cafes.slug,
+                cafeThumbnail: cafes.thumbnail,
+                visitCount: count(),
+                lastVisit: sql<string>`MAX(${cafeVisits.visitedAt})`,
+            })
+            .from(cafeVisits)
+            .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+            .where(eq(cafeVisits.userId, user.id))
+            .groupBy(cafeVisits.cafeId, cafes.id, cafes.name, cafes.slug, cafes.thumbnail)
+            .orderBy(sql`MAX(${cafeVisits.visitedAt}) DESC`)
+
+        return {
+            visits: result.map((r) => ({
+                cafeId: r.cafeId,
+                cafeName: r.cafeName,
+                cafeSlug: r.cafeSlug,
+                cafeThumbnail: r.cafeThumbnail,
+                visitCount: r.visitCount,
+                lastVisit: r.lastVisit,
+            })),
+        }
+    } catch (error) {
+        console.error("Error getting user visit history:", error)
+        return { visits: [] }
+    }
+}
+
+/**
+ * Check if user has already visited a cafe today
+ */
+export async function hasVisitedToday(cafeId: string): Promise<boolean> {
+    const user = await getCurrentUser()
+    if (!user) return false
+
+    try {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const result = await db
+            .select({ id: cafeVisits.id })
+            .from(cafeVisits)
+            .where(
+                and(
+                    eq(cafeVisits.userId, user.id),
+                    eq(cafeVisits.cafeId, cafeId),
+                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                )
+            )
+            .limit(1)
+
+        return result.length > 0
+    } catch (error) {
+        console.error("Error checking today's visit:", error)
+        return false
     }
 }

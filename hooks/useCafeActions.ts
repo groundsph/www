@@ -4,7 +4,7 @@ import { useAuth } from "@/components/AuthProvider"
 import { useEffect, useState, useCallback } from "react"
 
 /**
- * Custom hook to manage cafe passport actions (favorite, wishlist, visited)
+ * Custom hook to manage cafe passport actions (favorite, wishlist, visited/check-in)
  * Consolidates the duplicated toggle logic from CafeDetails
  */
 export function useCafeActions(cafeId: string) {
@@ -14,8 +14,12 @@ export function useCafeActions(cafeId: string) {
     const [isVisited, setIsVisited] = useState(false)
     const [isFavorite, setIsFavorite] = useState(false)
     const [isInWishlist, setIsInWishlist] = useState(false)
+    // Visit count tracking
+    const [visitCount, setVisitCount] = useState(0)
+    const [visitedToday, setVisitedToday] = useState(false)
+    const [isCheckingIn, setIsCheckingIn] = useState(false)
 
-    // Initialize from passport
+    // Initialize from passport and fetch visit count
     useEffect(() => {
         if (profile?.passport) {
             const passport = profile.passport as {
@@ -27,9 +31,60 @@ export function useCafeActions(cafeId: string) {
             setIsFavorite(passport.favorite_ids?.includes(cafeId) ?? false)
             setIsInWishlist(passport.wishlist_ids?.includes(cafeId) ?? false)
         }
-    }, [profile, cafeId])
 
-    // Toggle handlers with optimistic updates
+        // Fetch visit count from the new table
+        if (user) {
+            fetchVisitData()
+        }
+    }, [profile, cafeId, user])
+
+    // Fetch visit count and today status
+    const fetchVisitData = useCallback(async () => {
+        try {
+            const [{ getVisitCount }, { hasVisitedToday }] = await Promise.all([
+                import("@/app/api/actions/profile"),
+                import("@/app/api/actions/profile"),
+            ])
+            const [countResult, todayResult] = await Promise.all([
+                getVisitCount(cafeId),
+                hasVisitedToday(cafeId),
+            ])
+            setVisitCount(countResult.count)
+            setVisitedToday(todayResult)
+        } catch (error) {
+            console.error("Failed to fetch visit data", error)
+        }
+    }, [cafeId])
+
+    // Check-in handler (new additive visit behavior)
+    const checkIn = useCallback(async () => {
+        if (!user || isCheckingIn) return
+
+        setIsCheckingIn(true)
+
+        try {
+            const { recordVisit } = await import("@/app/api/actions/profile")
+            const result = await recordVisit(cafeId)
+
+            if (result.success) {
+                setVisitCount(result.visitCount)
+                setVisitedToday(true)
+                setIsVisited(true)
+                refreshProfile()
+            } else if (result.alreadyVisitedToday) {
+                setVisitedToday(true)
+            }
+
+            return result
+        } catch (error) {
+            console.error("Check-in failed", error)
+            return { success: false, visitCount, isFirstVisit: false, error: "Check-in failed" }
+        } finally {
+            setIsCheckingIn(false)
+        }
+    }, [user, isCheckingIn, cafeId, visitCount, refreshProfile])
+
+    // Legacy toggle handler (kept for backward compatibility)
     const toggleVisited = useCallback(async () => {
         if (!user) return
 
@@ -42,11 +97,13 @@ export function useCafeActions(cafeId: string) {
             )
             await toggleVisitedAction(cafeId)
             refreshProfile()
+            // Refresh visit count after toggle
+            fetchVisitData()
         } catch (error) {
             console.error("Visited toggle failed", error)
             setIsVisited(!newState)
         }
-    }, [user, isVisited, cafeId, refreshProfile])
+    }, [user, isVisited, cafeId, refreshProfile, fetchVisitData])
 
     const toggleFavorite = useCallback(async () => {
         if (!user) return
@@ -89,6 +146,12 @@ export function useCafeActions(cafeId: string) {
         isVisited,
         isFavorite,
         isInWishlist,
+        // New visit count properties
+        visitCount,
+        visitedToday,
+        isCheckingIn,
+        // Actions
+        checkIn,
         toggleVisited,
         toggleFavorite,
         toggleWishlist,
