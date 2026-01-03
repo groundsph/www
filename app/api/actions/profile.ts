@@ -1004,6 +1004,10 @@ export async function recordVisit(cafeId: string): Promise<{
 
         const newCount = (existingVisits[0]?.count ?? 0) + 1
 
+        // Check for visit-based badges (Regular at 5, Loyal Customer at 10)
+        const { checkAndAwardBadges } = await import("@/utils/badges/badge-logic")
+        await checkAndAwardBadges(user.id, { visits: true, cafeId })
+
         return { success: true, visitCount: newCount, isFirstVisit }
     } catch (error) {
         console.error("Error recording visit:", error)

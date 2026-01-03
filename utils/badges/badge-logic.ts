@@ -7,6 +7,7 @@ import {
     reviews,
     badgeDefinitions,
     userBadges,
+    cafeVisits,
 } from "@/db/schema"
 import { eq, and, count } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
@@ -66,6 +67,9 @@ const BADGE_NAMES = {
     KAPE_NG_PAMBANSA: "Kape-ng Pambansa",
     EYE_SPY: "Eye Spy",
     GROUNDS_SUPPORTER: "Grounds Supporter",
+    // Visit badges
+    REGULAR: "Regular",
+    LOYAL_CUSTOMER: "Loyal Customer",
 } as const
 
 // ============================================
@@ -256,6 +260,54 @@ async function checkSupporterBadge(userId: string): Promise<string[]> {
     return awardedBadges
 }
 
+/**
+ * Check visit badges (Regular, Loyal Customer)
+ * Based on number of visits to the same cafe
+ * @param userId - The user ID to check
+ * @param cafeId - Optional specific cafe ID to check (for targeted checks after check-in)
+ */
+async function checkVisitBadges(userId: string, cafeId?: string): Promise<string[]> {
+    const awardedBadges: string[] = []
+
+    // Get visit counts per cafe for this user
+    // If cafeId is provided, only check that cafe (more efficient for check-in flow)
+    const query = cafeId
+        ? db
+            .select({ cafeId: cafeVisits.cafeId, visitCount: count() })
+            .from(cafeVisits)
+            .where(and(eq(cafeVisits.userId, userId), eq(cafeVisits.cafeId, cafeId)))
+            .groupBy(cafeVisits.cafeId)
+        : db
+            .select({ cafeId: cafeVisits.cafeId, visitCount: count() })
+            .from(cafeVisits)
+            .where(eq(cafeVisits.userId, userId))
+            .groupBy(cafeVisits.cafeId)
+
+    const visitCounts = await query
+
+    // Define thresholds
+    const visitThresholds = [
+        { count: 5, badge: BADGE_NAMES.REGULAR },
+        { count: 10, badge: BADGE_NAMES.LOYAL_CUSTOMER },
+    ]
+
+    for (const threshold of visitThresholds) {
+        // Check if any cafe has enough visits
+        const qualifies = visitCounts.some(vc => vc.visitCount >= threshold.count)
+
+        if (qualifies) {
+            const badgeId = await getBadgeIdByName(threshold.badge)
+            if (badgeId && !(await userHasBadge(userId, badgeId))) {
+                if (await awardBadge(userId, badgeId)) {
+                    awardedBadges.push(threshold.badge)
+                }
+            }
+        }
+    }
+
+    return awardedBadges
+}
+
 // ============================================
 // Main Badge Check Function
 // ============================================
@@ -266,6 +318,8 @@ export interface BadgeTriggers {
     geographic?: boolean
     supporter?: boolean
     map?: boolean
+    visits?: boolean
+    cafeId?: string // Optional: specific cafe to check for visit badges
 }
 
 /**
@@ -312,6 +366,12 @@ export async function checkAndAwardBadges(
         if (shouldCheckMap) {
             // Map badge is handled separately via trackMapUsage()
             // This is just a placeholder for future expansion
+        }
+
+        // Check visit badges
+        if (triggers?.visits) {
+            const badges = await checkVisitBadges(userId, triggers.cafeId)
+            awardedBadges.push(...badges)
         }
 
         if (awardedBadges.length > 0) {

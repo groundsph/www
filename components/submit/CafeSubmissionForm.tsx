@@ -948,11 +948,14 @@ export default function CafeSubmissionForm({
                                                 *
                                             </span>
                                             <span className='block text-xs font-normal text-text/50 mt-1'>
-                                                For branches, use:{" "}
+                                                For chain branches, add the
+                                                location:{" "}
                                                 <span className='font-medium'>
-                                                    Cafe Name - Location
+                                                    Brand - Branch
                                                 </span>{" "}
-                                                (e.g. Starbucks - Ayala Center)
+                                                (e.g. "Bo&apos;s Coffee - IT
+                                                Park"). Independent cafes
+                                                don&apos;t need this.
                                             </span>
                                         </label>
                                         <input
@@ -1105,13 +1108,14 @@ export default function CafeSubmissionForm({
                                         <label className='block text-sm font-medium mb-1'>
                                             Cover Photo{" "}
                                             <span className='text-text/50 font-normal'>
-                                                (Optional)
+                                                (Optional but recommended)
                                             </span>
                                         </label>
                                         <p className='text-xs text-text/50 mb-2'>
-                                            Cafes without a cover photo
-                                            won&apos;t be featured on the
-                                            homepage.
+                                            A good cover photo helps your
+                                            submission get approved faster.
+                                            Cafes without photos won&apos;t
+                                            appear in featured sections.
                                         </p>
                                         {thumbnailFile ? (
                                             <div className='relative w-full aspect-video rounded-xl overflow-hidden border-2 border-text/20 bg-text/5'>
@@ -1455,11 +1459,13 @@ export default function CafeSubmissionForm({
                                                     Submit as Hidden Gem
                                                 </span>
                                                 <p className='text-sm text-amber-700 mt-1'>
-                                                    Hidden Gems are cafes with
-                                                    approximate locations only.
-                                                    Perfect for cafes you want
-                                                    to share but keep a bit
-                                                    mysterious!
+                                                    Check this if you don&apos;t
+                                                    know the exact address or
+                                                    want to keep the location
+                                                    private. Hidden Gems show
+                                                    only the city/area —
+                                                    visitors will need to
+                                                    explore to find it!
                                                 </p>
                                             </div>
                                         </label>
@@ -1482,14 +1488,21 @@ export default function CafeSubmissionForm({
                                             <div className='flex-1'>
                                                 <span className='font-medium text-orange-800 flex items-center gap-2'>
                                                     <Store className='w-4 h-4' />
-                                                    This is a Chain Cafe
+                                                    This is a Large Chain
                                                 </span>
                                                 <p className='text-sm text-orange-700 mt-1'>
-                                                    Chain cafes (e.g.,
-                                                    Starbucks, Bo&apos;s Coffee)
-                                                    are hidden from search by
-                                                    default but remain
-                                                    accessible via direct link.
+                                                    Only check this for big
+                                                    national/international
+                                                    franchises (Starbucks,
+                                                    Bo&apos;s Coffee, CBTL,
+                                                    etc). Local cafes with 2-3
+                                                    branches don&apos;t count —
+                                                    we want to support them!
+                                                    Chain cafes are not shown by
+                                                    default in search results to
+                                                    prioritize local independent
+                                                    cafes, but can still be
+                                                    accessed via direct links.
                                                 </p>
                                             </div>
                                         </label>
@@ -1573,30 +1586,49 @@ export default function CafeSubmissionForm({
                                     <label className='block text-sm font-medium mb-2'>
                                         Price Level
                                     </label>
+                                    <p className='text-xs text-text/50 mb-3'>
+                                        Based on average drink prices (coffee,
+                                        specialty drinks)
+                                    </p>
                                     <div className='flex gap-3'>
-                                        {(
-                                            ["low", "medium", "high"] as const
-                                        ).map((level) => (
+                                        {[
+                                            {
+                                                value: "low" as const,
+                                                symbol: "₱",
+                                                desc: "Under ₱120",
+                                            },
+                                            {
+                                                value: "medium" as const,
+                                                symbol: "₱₱",
+                                                desc: "₱120-200",
+                                            },
+                                            {
+                                                value: "high" as const,
+                                                symbol: "₱₱₱",
+                                                desc: "Above ₱200",
+                                            },
+                                        ].map(({ value, symbol, desc }) => (
                                             <button
-                                                key={level}
+                                                key={value}
                                                 type='button'
                                                 onClick={() =>
                                                     updateFormData(
                                                         "price_level",
-                                                        level
+                                                        value
                                                     )
                                                 }
                                                 className={cn(
-                                                    "flex-1 py-3 rounded-xl border-2 font-medium transition-all cursor-pointer",
+                                                    "flex-1 py-3 rounded-xl border-2 font-medium transition-all cursor-pointer text-center",
                                                     formData.price_level ===
-                                                        level
+                                                        value
                                                         ? "border-primary bg-primary/10 text-primary"
                                                         : "border-text/10 text-text/60 hover:border-text/30"
                                                 )}
                                             >
-                                                {level === "low" && "₱"}
-                                                {level === "medium" && "₱₱"}
-                                                {level === "high" && "₱₱₱"}
+                                                <div>{symbol}</div>
+                                                <div className='text-xs opacity-70 mt-0.5'>
+                                                    {desc}
+                                                </div>
                                             </button>
                                         ))}
                                     </div>
@@ -1611,8 +1643,8 @@ export default function CafeSubmissionForm({
                                         </span>
                                     </label>
                                     <p className='text-xs text-text/50 mb-3'>
-                                        Classic = traditional espresso bar •
-                                        Artisan = craft/specialty focus
+                                        How would you describe their coffee
+                                        approach?
                                     </p>
                                     <div className='flex gap-3'>
                                         {COFFEE_STYLES.map(
@@ -2214,9 +2246,12 @@ export default function CafeSubmissionForm({
                                                 </span>
                                             </div>
                                             <p className='text-xs text-text/60'>
-                                                By checking this, you request to
-                                                claim management rights for this
-                                                cafe page.
+                                                Check this only if you own or
+                                                manage this cafe. You&apos;ll
+                                                need to upload proof documents
+                                                (free verification). Skip this
+                                                if you&apos;re just a customer
+                                                recommending a cafe.
                                             </p>
                                         </div>
                                     </div>
