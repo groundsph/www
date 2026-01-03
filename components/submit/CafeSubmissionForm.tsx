@@ -1214,7 +1214,7 @@ export default function CafeSubmissionForm({
                                                     )
                                                 )
                                             }
-                                            maxImages={0}
+                                            maxImages={5}
                                             progress={
                                                 // Convert "gallery-i" keys to numeric index keys for ImageUpload
                                                 Object.entries(uploadProgress)
