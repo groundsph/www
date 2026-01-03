@@ -180,6 +180,9 @@ export async function getCafeBySlug(slug: string) {
             ownerIds: cafes.ownerIds,
             contributorId: cafes.contributorId,
             featuredUntil: cafes.featuredUntil,
+            isHiddenGem: cafes.isHiddenGem,
+            findingHint: cafes.findingHint,
+            isChain: cafes.isChain,
             createdAt: cafes.createdAt,
             updatedAt: cafes.updatedAt,
             averageRating: cafeRatingStats.averageRating,
@@ -298,7 +301,7 @@ export async function getDailyFeatured() {
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(eq(cafes.id, scheduledResult[0].cafeId))
+            .where(and(eq(cafes.id, scheduledResult[0].cafeId), or(eq(cafes.isChain, false), isNull(cafes.isChain))))
             .limit(1)
 
         if (cafeResult[0]) {
@@ -434,7 +437,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 })
                 .from(cafes)
                 .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-                .where(eq(cafes.id, scheduledResult[0].cafeId))
+                .where(and(eq(cafes.id, scheduledResult[0].cafeId), or(eq(cafes.isChain, false), isNull(cafes.isChain))))
                 .limit(1)
 
             if (cafeResult[0]) return mapCafeToSnakeCase(cafeResult[0])
