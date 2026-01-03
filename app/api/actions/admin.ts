@@ -10,7 +10,7 @@ import {
     profiles,
     user,
 } from "@/db/schema"
-import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount } from "drizzle-orm"
+import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
 import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedEmail, sendSubscriptionRejectedEmail } from "@/utils/email"
@@ -180,6 +180,7 @@ function mapCafeToCafeWithRatings(cafe: any, contributor?: any, ratings?: any): 
         rating_distribution: ratings?.ratingDistribution ?? null,
         is_hidden_gem: cafe.isHiddenGem ?? false,
         finding_hint: cafe.findingHint ?? null,
+        is_chain: cafe.isChain ?? false,
         contributor: contributor ? {
             id: contributor.id,
             username: contributor.username,
@@ -563,6 +564,7 @@ export async function updateCafe(
         owner_ids: string[] | null
         is_hidden_gem: boolean
         finding_hint: string | null
+        is_chain: boolean
     }>
 ): Promise<AdminActionResult> {
     const currentUser = await getCurrentUser()
@@ -614,6 +616,7 @@ export async function updateCafe(
         owner_ids: 'ownerIds',
         is_hidden_gem: 'isHiddenGem',
         finding_hint: 'findingHint',
+        is_chain: 'isChain',
     }
 
     const drizzleUpdates: Record<string, unknown> = { updatedAt: new Date() }
@@ -729,6 +732,7 @@ export interface CafePaginationParams {
     sortBy?: 'name' | 'date' | 'city' | 'province'
     sortOrder?: 'asc' | 'desc'
     isPublished: boolean
+    chainFilter?: 'all' | 'chains_only' | 'exclude_chains'
 }
 
 export interface PaginatedCafesResult {
@@ -788,6 +792,13 @@ export async function getPaginatedCafes(params: CafePaginationParams): Promise<P
             ilike(cafes.cityMunicipality, searchTerm),
             ilike(cafes.province, searchTerm)
         )!)
+    }
+
+    // Chain filter
+    if (params.chainFilter === 'chains_only') {
+        conditions.push(eq(cafes.isChain, true))
+    } else if (params.chainFilter === 'exclude_chains') {
+        conditions.push(or(eq(cafes.isChain, false), isNull(cafes.isChain))!)
     }
 
     const whereClause = and(...conditions)

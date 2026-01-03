@@ -620,6 +620,7 @@ export type Database = {
           is_active: boolean | null
           is_claimed: boolean | null
           is_hidden_gem: boolean | null
+          is_chain: boolean | null
           is_pet_friendly: boolean | null
           is_published: boolean | null
           is_verified: boolean | null

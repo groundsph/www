@@ -131,6 +131,7 @@ export const cafes = pgTable(
         isVerified: boolean("is_verified").default(false),
         isClaimed: boolean("is_claimed").default(false),
         isHiddenGem: boolean("is_hidden_gem").default(false),
+        isChain: boolean("is_chain").default(false),
         findingHint: text("finding_hint"),
         ownerIds: uuid("owner_ids").array(),
         contributorId: uuid("contributor_id").references(() => profiles.id, { onDelete: "set null" }),

@@ -643,6 +643,86 @@ export default function SuggestEditModal({
                                         )}
                                     </div>
 
+                                    {/* Chain Cafe Toggle */}
+                                    <div className='border border-text/10 rounded-lg overflow-hidden'>
+                                        <button
+                                            onClick={() =>
+                                                toggleSection("chain")
+                                            }
+                                            className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                                        >
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <Store className='w-4 h-4' />
+                                                Chain Status
+                                            </span>
+                                            {expandedSections.has("chain") ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                            ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                            )}
+                                        </button>
+
+                                        {expandedSections.has("chain") && (
+                                            <div className='p-4 space-y-4'>
+                                                <div className='flex items-center justify-between'>
+                                                    <div className='flex items-center gap-3'>
+                                                        <Store
+                                                            className={`w-5 h-5 ${
+                                                                (changes.is_chain ??
+                                                                cafe.is_chain)
+                                                                    ? "text-orange-500"
+                                                                    : "text-text/40"
+                                                            }`}
+                                                        />
+                                                        <div>
+                                                            <p className='font-medium'>
+                                                                Chain Cafe
+                                                            </p>
+                                                            <p className='text-sm text-text/60'>
+                                                                Is this a
+                                                                national/international
+                                                                chain like
+                                                                Starbucks or
+                                                                Bo&apos;s
+                                                                Coffee?
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() =>
+                                                            updateChange(
+                                                                "is_chain",
+                                                                !(
+                                                                    changes.is_chain ??
+                                                                    cafe.is_chain
+                                                                )
+                                                            )
+                                                        }
+                                                        className={`relative inline-flex h-6 min-w-11 items-center rounded-full transition-colors cursor-pointer ${
+                                                            (changes.is_chain ??
+                                                            cafe.is_chain)
+                                                                ? hasChange(
+                                                                      "is_chain"
+                                                                  )
+                                                                    ? "bg-orange-500 ring-2 ring-primary/50"
+                                                                    : "bg-orange-500"
+                                                                : "bg-text/20"
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                                (changes.is_chain ??
+                                                                cafe.is_chain)
+                                                                    ? "translate-x-6"
+                                                                    : "translate-x-1"
+                                                            }`}
+                                                        />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Details Section */}
                                     <div className='border border-text/10 rounded-lg overflow-hidden'>
                                         <button

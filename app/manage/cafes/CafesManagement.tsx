@@ -123,6 +123,9 @@ export default function CafesManagement({
     const [sortBy, setSortBy] = useState<"name" | "date" | "city" | "province">(
         "name"
     )
+    const [chainFilter, setChainFilter] = useState<
+        "all" | "chains_only" | "exclude_chains"
+    >("all")
 
     // Image lightbox state
     const [suggestionLightboxImages, setSuggestionLightboxImages] = useState<
@@ -179,6 +182,7 @@ export default function CafesManagement({
             city: cityFilter || undefined,
             search: searchQuery || undefined,
             sortBy,
+            chainFilter,
         })
 
         if (isPublished) {
@@ -254,7 +258,7 @@ export default function CafesManagement({
             applyFilters()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [provinceFilter, cityFilter, sortBy, activeTab])
+    }, [provinceFilter, cityFilter, sortBy, chainFilter, activeTab])
 
     // Current cafes for display
     const currentCafes = activeTab === "pending" ? pendingCafes : publishedCafes
@@ -576,12 +580,36 @@ export default function CafesManagement({
                             <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
                         </div>
 
+                        {/* Chain filter */}
+                        <div className='relative'>
+                            <Store className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <select
+                                value={chainFilter}
+                                onChange={(e) =>
+                                    setChainFilter(
+                                        e.target.value as typeof chainFilter
+                                    )
+                                }
+                                className='appearance-none pl-9 pr-8 py-2 bg-background shadow-sm border border-tertiary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer text-sm'
+                            >
+                                <option value='all'>All Cafes</option>
+                                <option value='chains_only'>Chains Only</option>
+                                <option value='exclude_chains'>
+                                    Exclude Chains
+                                </option>
+                            </select>
+                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                        </div>
+
                         {/* Clear filters */}
-                        {(provinceFilter || cityFilter) && (
+                        {(provinceFilter ||
+                            cityFilter ||
+                            chainFilter !== "all") && (
                             <button
                                 onClick={() => {
                                     setProvinceFilter("")
                                     setCityFilter("")
+                                    setChainFilter("all")
                                 }}
                                 className='px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded-lg transition flex items-center gap-1'
                             >
@@ -657,9 +685,17 @@ export default function CafesManagement({
 
                                             {/* Info */}
                                             <div className='flex-1 min-w-0'>
-                                                <h3 className='font-semibold text-lg truncate'>
-                                                    {cafe.name}
-                                                </h3>
+                                                <div className='flex items-center gap-2'>
+                                                    <h3 className='font-semibold text-lg truncate'>
+                                                        {cafe.name}
+                                                    </h3>
+                                                    {cafe.is_chain && (
+                                                        <span className='inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded-full shrink-0'>
+                                                            <Store className='w-3 h-3' />
+                                                            Chain
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className='text-text/60 text-sm truncate'>
                                                     <MapPin className='inline w-3 h-3 mr-1' />
                                                     {cafe.city_municipality},{" "}

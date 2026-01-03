@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteractions, ownerReviewResponses, featuredSchedules } from "@/db/schema"
-import { eq, and, desc, gte, lte, ne, isNull, ilike, count, sql, inArray } from "drizzle-orm"
+import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray } from "drizzle-orm"
 import { getDayOfYear } from "@/utils/featured"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 
@@ -57,6 +57,7 @@ function mapCafeToSnakeCase(c: {
     featuredUntil: Date | null
     isHiddenGem?: boolean | null
     findingHint?: string | null
+    isChain?: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
     averageRating?: number | null
@@ -113,6 +114,7 @@ function mapCafeToSnakeCase(c: {
         featured_until: c.featuredUntil?.toISOString() ?? null,
         is_hidden_gem: c.isHiddenGem ?? false,
         finding_hint: c.findingHint ?? null,
+        is_chain: c.isChain ?? false,
         created_at: c.createdAt?.toISOString() ?? null,
         updated_at: c.updatedAt?.toISOString() ?? null,
         average_rating: c.averageRating ?? null,
@@ -362,7 +364,7 @@ export async function getDailyFeatured() {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), ne(cafes.thumbnail, "placeholder")))
+        .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder")))
         .orderBy(desc(cafeRatingStats.averageRating))
         .limit(10)
 
@@ -463,7 +465,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`)))
+            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`)))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -495,7 +497,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`)))
+            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`)))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -518,11 +520,28 @@ export async function getAllCafes(
     if (filters.search) {
         // First try full-text search
         const searchResults = await db.execute(sql`SELECT * FROM search_cafes(${filters.search})`)
-        const rows = searchResults.rows as Record<string, unknown>[]
+        let rows = searchResults.rows as Record<string, unknown>[]
+
+        // Filter out chains unless include_chains is true
+        if (!filters.include_chains) {
+            rows = rows.filter(row => row.is_chain !== true)
+        }
 
         // If full-text search returns no results, fallback to ILIKE search on name
         if (rows.length === 0) {
             const ilikeTerm = `%${filters.search}%`
+
+            // Build conditions for ILIKE fallback - include chain filtering
+            const ilikConditions = [
+                eq(cafes.isPublished, true),
+                ilike(cafes.name, ilikeTerm)
+            ]
+
+            // Exclude chains unless include_chains is true
+            if (!filters.include_chains) {
+                ilikConditions.push(or(eq(cafes.isChain, false), isNull(cafes.isChain))!)
+            }
+
             const fallbackResults = await db
                 .select({
                     id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail,
@@ -546,7 +565,7 @@ export async function getAllCafes(
                 })
                 .from(cafes)
                 .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-                .where(and(eq(cafes.isPublished, true), ilike(cafes.name, ilikeTerm)))
+                .where(and(...ilikConditions))
                 .orderBy(desc(cafes.membershipTier), desc(cafes.createdAt))
                 .limit(limit)
                 .offset(offset)
@@ -605,6 +624,7 @@ export async function getAllCafes(
             featured_until: row.featured_until as string | null,
             is_hidden_gem: row.is_hidden_gem as boolean | null,
             finding_hint: row.finding_hint as string | null,
+            is_chain: row.is_chain as boolean | null,
             created_at: row.created_at as string | null,
             updated_at: row.updated_at as string | null,
             average_rating: null,
@@ -636,6 +656,11 @@ export async function getAllCafes(
         conditions.push(sql`${cafes.tags} && ARRAY[${sql.join(filters.tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
     }
     if (filters.exclude_hidden_gems) conditions.push(eq(cafes.isHiddenGem, false))
+    // Exclude chains by default unless include_chains is true
+    // Treat NULL as non-chain (include cafes where is_chain is false OR null)
+    if (!filters.include_chains) {
+        conditions.push(or(eq(cafes.isChain, false), isNull(cafes.isChain))!)
+    }
 
     // Determine ordering
     let orderBy

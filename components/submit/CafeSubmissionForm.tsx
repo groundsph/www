@@ -33,6 +33,7 @@ import {
     MilkOff,
     Gem,
     Cigarette,
+    Store,
 } from "lucide-react"
 
 import { cn } from "@/utils/cn"
@@ -1459,6 +1460,36 @@ export default function CafeSubmissionForm({
                                                     Perfect for cafes you want
                                                     to share but keep a bit
                                                     mysterious!
+                                                </p>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    {/* Chain Cafe Toggle */}
+                                    <div className='mb-4 p-4 bg-orange-50 border border-orange-200 rounded-xl'>
+                                        <label className='flex items-start gap-3 cursor-pointer'>
+                                            <input
+                                                type='checkbox'
+                                                checked={formData.is_chain}
+                                                onChange={(e) => {
+                                                    updateFormData(
+                                                        "is_chain",
+                                                        e.target.checked
+                                                    )
+                                                }}
+                                                className='w-5 h-5 rounded border-orange-300 text-orange-600 focus:ring-orange-500 mt-0.5'
+                                            />
+                                            <div className='flex-1'>
+                                                <span className='font-medium text-orange-800 flex items-center gap-2'>
+                                                    <Store className='w-4 h-4' />
+                                                    This is a Chain Cafe
+                                                </span>
+                                                <p className='text-sm text-orange-700 mt-1'>
+                                                    Chain cafes (e.g.,
+                                                    Starbucks, Bo&apos;s Coffee)
+                                                    are hidden from search by
+                                                    default but remain
+                                                    accessible via direct link.
                                                 </p>
                                             </div>
                                         </label>

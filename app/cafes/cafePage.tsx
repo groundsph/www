@@ -23,6 +23,7 @@ import {
     Coffee,
     Gem,
     Cigarette,
+    Store,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
@@ -79,6 +80,7 @@ export default function CafesPageClient({
         region: "",
         near_me: false,
         tags: [] as string[],
+        include_chains: false,
     })
 
     // Location Detection - reuse cache from landing page
@@ -149,6 +151,7 @@ export default function CafesPageClient({
                 region: filters.region || undefined,
                 tags: filters.tags.length > 0 ? filters.tags : undefined,
                 sortBy: sortBy as "recommended" | "rating" | "reviews",
+                include_chains: filters.include_chains || undefined,
             })
             setCafes(fetchedCafes)
             setLoading(false)
@@ -370,6 +373,7 @@ export default function CafesPageClient({
                                                     region: "",
                                                     near_me: false,
                                                     tags: [],
+                                                    include_chains: false,
                                                 })
                                             }}
                                             className='text-xs text-text/60 hover:text-text cursor-pointer'
@@ -551,6 +555,31 @@ export default function CafesPageClient({
                                             )
                                         })}
                                     </div>
+                                </div>
+
+                                {/* Show Chain Cafes Toggle */}
+                                <div className='mt-3 pt-3 border-t border-text/10'>
+                                    <button
+                                        onClick={() =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                include_chains:
+                                                    !prev.include_chains,
+                                            }))
+                                        }
+                                        className={`flex flex-row items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                            filters.include_chains
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                        }`}
+                                    >
+                                        <Store className='w-4 h-4' />
+                                        Show Chain Cafes
+                                    </button>
+                                    <p className='text-[10px] text-text/40 mt-1.5'>
+                                        Chain cafes (e.g., Starbucks) are hidden
+                                        by default
+                                    </p>
                                 </div>
                             </div>
                         </motion.div>
@@ -863,6 +892,7 @@ export default function CafesPageClient({
                                         region: "",
                                         near_me: false,
                                         tags: [],
+                                        include_chains: false,
                                     })
                                 }}
                                 className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'

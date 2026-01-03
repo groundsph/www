@@ -161,6 +161,7 @@ export async function submitCafe(
             isClaimed: false,
             isHiddenGem: formData.is_hidden_gem || false,
             findingHint: formData.finding_hint?.trim() || null,
+            isChain: formData.is_chain || false,
             ownerIds: null,
         }).returning({ id: cafes.id, slug: cafes.slug })
 

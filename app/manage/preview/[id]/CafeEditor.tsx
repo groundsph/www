@@ -23,6 +23,7 @@ import {
     Search,
     ImagePlus,
     Gem,
+    Store,
 } from "lucide-react"
 import {
     approveCafe,
@@ -176,6 +177,7 @@ export default function CafeEditor({
             owner_ids: cafe.owner_ids || null,
             is_hidden_gem: cafe.is_hidden_gem || false,
             finding_hint: cafe.finding_hint || null,
+            is_chain: cafe.is_chain || false,
         })
         setSaving(false)
         if (result.success) {
@@ -500,6 +502,40 @@ export default function CafeEditor({
                                     />
                                 </div>
                             )}
+                        </div>
+
+                        {/* Chain Cafe Status Toggle */}
+                        <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'>
+                            <div className='flex items-center gap-3'>
+                                <Store
+                                    className={`w-5 h-5 ${cafe.is_chain ? "text-orange-500" : "text-text/40"}`}
+                                />
+                                <div>
+                                    <p className='font-medium'>Chain Cafe</p>
+                                    <p className='text-sm text-text/60'>
+                                        Chain cafes are hidden from search and
+                                        maps by default
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() =>
+                                    updateField("is_chain", !cafe.is_chain)
+                                }
+                                className={`relative inline-flex h-6 min-w-11 items-center rounded-full transition-colors cursor-pointer ${
+                                    cafe.is_chain
+                                        ? "bg-orange-500"
+                                        : "bg-text/20"
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                        cafe.is_chain
+                                            ? "translate-x-6"
+                                            : "translate-x-1"
+                                    }`}
+                                />
+                            </button>
                         </div>
                         <div>
                             <label className='block text-sm font-medium text-text/60 mb-2'>

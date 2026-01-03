@@ -39,6 +39,7 @@ export interface SuggestableFields {
     socials?: CafeSocial[];
     is_hidden_gem?: boolean;
     finding_hint?: string;
+    is_chain?: boolean;
 }
 
 export interface SuggestedImageChanges {

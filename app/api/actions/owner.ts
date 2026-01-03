@@ -259,6 +259,7 @@ export async function getCafeForOwnerManagement(cafeId: string): Promise<CafeWit
         rating_distribution: ratings?.ratingDistribution as CafeWithRatings['rating_distribution'] ?? null,
         is_hidden_gem: cafe.isHiddenGem ?? false,
         finding_hint: cafe.findingHint ?? null,
+        is_chain: cafe.isChain ?? false,
     }
 }
 

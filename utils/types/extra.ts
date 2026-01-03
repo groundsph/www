@@ -105,6 +105,7 @@ export interface CafeFilters {
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";
     exclude_hidden_gems?: boolean; // Exclude Hidden Gems from results
+    include_chains?: boolean; // Include chain cafes (hidden by default)
 }
 
 // Profile Stats JSON structure
@@ -196,6 +197,9 @@ export interface CafeSubmission {
     // Hidden Gem fields
     is_hidden_gem: boolean;
     finding_hint: string;
+
+    // Chain cafe field
+    is_chain: boolean;
 }
 
 // Serializable version of CafeSubmission for server actions (excludes File objects)
@@ -245,4 +249,5 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     ownership_proof_files: [],
     is_hidden_gem: false,
     finding_hint: '',
+    is_chain: false,
 };

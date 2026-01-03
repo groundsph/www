@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { cafes, cafeRatingStats } from "@/db/schema"
-import { eq, and, gte, lte } from "drizzle-orm"
+import { eq, and, or, gte, lte, isNull } from "drizzle-orm"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 export interface MapBounds {
@@ -10,6 +10,7 @@ export interface MapBounds {
     swLng: number
     neLat: number
     neLng: number
+    includeChains?: boolean
 }
 
 export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatings[]> {
@@ -44,6 +45,7 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
             websiteUrl: cafes.websiteUrl,
             paymentMethods: cafes.paymentMethods,
             hasWifi: cafes.hasWifi,
+            hasSmoking: cafes.hasSmoking,
             hasSockets: cafes.hasSockets,
             hasAircon: cafes.hasAircon,
             hasParking: cafes.hasParking,
@@ -61,6 +63,8 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
             isVerified: cafes.isVerified,
             isClaimed: cafes.isClaimed,
             isHiddenGem: cafes.isHiddenGem,
+            findingHint: cafes.findingHint,
+            isChain: cafes.isChain,
             ownerIds: cafes.ownerIds,
             contributorId: cafes.contributorId,
             featuredUntil: cafes.featuredUntil,
@@ -76,6 +80,9 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
             and(
                 eq(cafes.isPublished, true),
                 eq(cafes.isHiddenGem, false),
+                // Exclude chains by default unless includeChains is true
+                // Treat NULL as non-chain (include cafes where is_chain is false OR null)
+                ...(bounds.includeChains ? [] : [or(eq(cafes.isChain, false), isNull(cafes.isChain))]),
                 gte(cafes.lat, bounds.swLat),
                 lte(cafes.lat, bounds.neLat),
                 gte(cafes.lng, bounds.swLng),
@@ -114,6 +121,7 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
         website_url: r.websiteUrl,
         payment_methods: r.paymentMethods,
         has_wifi: r.hasWifi,
+        has_smoking: r.hasSmoking,
         has_sockets: r.hasSockets,
         has_aircon: r.hasAircon,
         has_parking: r.hasParking,
@@ -131,6 +139,8 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
         is_verified: r.isVerified,
         is_claimed: r.isClaimed,
         is_hidden_gem: r.isHiddenGem,
+        finding_hint: r.findingHint,
+        is_chain: r.isChain,
         owner_ids: r.ownerIds,
         contributor_id: r.contributorId,
         featured_until: r.featuredUntil,
