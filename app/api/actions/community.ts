@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { collections, profiles } from "@/db/schema"
-import { eq, desc, or, sql, inArray } from "drizzle-orm"
+import { eq, desc, or, sql, inArray, ilike, and } from "drizzle-orm"
 
 // =============================================================================
 // PUBLIC COLLECTIONS
@@ -32,13 +32,21 @@ interface PublicCollection {
 export async function getPublicCollections(
     page: number = 1,
     pageSize: number = 12,
-    sortBy: "recent" | "popular" = "recent"
+    sortBy: "recent" | "popular" = "recent",
+    search?: string
 ): Promise<{ collections: PublicCollection[]; total: number }> {
     const offset = (page - 1) * pageSize
 
     const orderBy = sortBy === "popular"
         ? desc(collections.likesCount)
         : desc(collections.createdAt)
+
+    const searchFilter = search
+        ? or(
+            ilike(collections.title, `%${search}%`),
+            ilike(collections.description, `%${search}%`)
+        )
+        : undefined
 
     const results = await db
         .select({
@@ -54,7 +62,11 @@ export async function getPublicCollections(
             userId: collections.userId,
         })
         .from(collections)
-        .where(eq(collections.isPublic, true))
+        .where(
+            searchFilter
+                ? and(eq(collections.isPublic, true), searchFilter)
+                : eq(collections.isPublic, true)
+        )
         .orderBy(orderBy)
         .limit(pageSize)
         .offset(offset)
@@ -63,7 +75,11 @@ export async function getPublicCollections(
     const countResult = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(collections)
-        .where(eq(collections.isPublic, true))
+        .where(
+            searchFilter
+                ? and(eq(collections.isPublic, true), searchFilter)
+                : eq(collections.isPublic, true)
+        )
 
     const total = countResult[0]?.count ?? 0
 

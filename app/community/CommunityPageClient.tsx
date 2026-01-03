@@ -73,15 +73,19 @@ export default function CommunityPageClient({
 
     // Collections state
     const [collections, setCollections] = useState(initialCollections)
-    const [collectionsTotal] = useState(initialCollectionsTotal)
+    const [collectionsTotal, setCollectionsTotal] = useState(
+        initialCollectionsTotal
+    )
     const [collectionsPage, setCollectionsPage] = useState(1)
     const [loadingCollections, setLoadingCollections] = useState(false)
 
-    // People state
-    const [userSearchQuery, setUserSearchQuery] = useState("")
+    // Search state
+    const [searchQuery, setSearchQuery] = useState("")
+    const [isUserSearch, setIsUserSearch] = useState(false)
     const [userResults, setUserResults] = useState<UserResult[]>([])
-    const [featuredUsers] = useState(initialFeaturedUsers)
+    const [featuredUsers] = useState(initialFeaturedUsers) // Keep for reference if needed, though maybe we assume search results only? User didn't say remove featured users, just the tab.
     const [searchingUsers, setSearchingUsers] = useState(false)
+    const [searchingCollections, setSearchingCollections] = useState(false)
 
     // Sync tab with URL
     useEffect(() => {
@@ -96,6 +100,10 @@ export default function CommunityPageClient({
 
     const handleTabChange = (tab: TabType) => {
         setActiveTab(tab)
+        // router.push is better to update URL, but we should clear search if switching tabs?
+        // User didn't specify, but often good UX. For now let's keep search query?
+        // Actually if I switch to Events, search might not apply there.
+        // Let's just update tab.
         router.push(`/community?tab=${tab}`, { scroll: false })
     }
 
@@ -105,8 +113,14 @@ export default function CommunityPageClient({
         setLoadingCollections(true)
         try {
             const nextPage = collectionsPage + 1
-            const data = await getPublicCollections(nextPage, 12, "recent")
+            const data = await getPublicCollections(
+                nextPage,
+                12,
+                "recent",
+                isUserSearch ? undefined : searchQuery
+            )
             setCollections((prev) => [...prev, ...data.collections])
+            setCollectionsTotal(data.total)
             setCollectionsPage(nextPage)
         } catch (err) {
             console.error("Failed to load more collections:", err)
@@ -115,32 +129,91 @@ export default function CommunityPageClient({
         }
     }
 
-    // Debounced user search
+    // Search Effect
     useEffect(() => {
-        if (userSearchQuery.length < 2) {
-            setUserResults([])
-            return
-        }
-
         const timeoutId = setTimeout(async () => {
-            setSearchingUsers(true)
-            try {
-                const results = await searchUsers(userSearchQuery)
-                setUserResults(results)
-            } catch (err) {
-                console.error("Search failed:", err)
-            } finally {
-                setSearchingUsers(false)
+            if (searchQuery.trim().length === 0) {
+                // Reset to initial state or clear search
+                if (isUserSearch) {
+                    setIsUserSearch(false)
+                    setUserResults([])
+                } else {
+                    // Reset collections to initial if we were searching
+                    // Only reset if we were actually filtering.
+                    // Ideally we re-fetch pure recent collections.
+                    setLoadingCollections(true)
+                    try {
+                        const data = await getPublicCollections(1, 12, "recent")
+                        setCollections(data.collections)
+                        setCollectionsTotal(data.total)
+                        setCollectionsPage(1)
+                    } catch (e) {
+                        console.error(e)
+                    } finally {
+                        setLoadingCollections(false)
+                    }
+                }
+                return
+            }
+
+            if (searchQuery.startsWith("@")) {
+                setIsUserSearch(true)
+                // If on another tab, maybe we don't force 'people' tab state but show overlay?
+                // But simplified approach: stick to activeTab logic but render overrides?
+                // Or just show results.
+                setSearchingUsers(true)
+                try {
+                    const query = searchQuery.slice(1)
+                    if (query.length < 1) {
+                        setUserResults([])
+                        return
+                    }
+                    const results = await searchUsers(query)
+                    setUserResults(results)
+                } catch (err) {
+                    console.error("Search failed:", err)
+                } finally {
+                    setSearchingUsers(false)
+                }
+            } else {
+                setIsUserSearch(false)
+                // Switch to collections tab if not already there?
+                // "searching by default searches for collections"
+                if (activeTab !== "collections") {
+                    // setActiveTab('collections') // Optional: force switch?
+                    // User says: "searching by default searches for collections".
+                    // If I am on "Events", I probably expect events search if I didn't switch tabs.
+                    // But if the search bar is "inline with tabs", it looks global.
+                    // Given the request "remove users tab", and "search defaults to collections",
+                    // I will force switch to collections tab so the user sees the results.
+                    setActiveTab("collections")
+                }
+
+                setSearchingCollections(true)
+                try {
+                    const data = await getPublicCollections(
+                        1,
+                        12,
+                        "recent",
+                        searchQuery
+                    )
+                    setCollections(data.collections)
+                    setCollectionsTotal(data.total)
+                    setCollectionsPage(1) // Reset page
+                } catch (err) {
+                    console.error("Collection search failed:", err)
+                } finally {
+                    setSearchingCollections(false)
+                }
             }
         }, 300)
 
         return () => clearTimeout(timeoutId)
-    }, [userSearchQuery])
+    }, [searchQuery])
 
     const tabs = [
         { id: "collections" as TabType, label: "Collections", icon: Layers },
         { id: "events" as TabType, label: "Events", icon: Calendar },
-        { id: "people" as TabType, label: "People", icon: Users },
     ]
 
     return (
@@ -167,139 +240,126 @@ export default function CommunityPageClient({
                 </div>
             </section>
 
-            {/* Tabs */}
+            {/* Tabs & Search */}
             <section className='sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-text/10'>
                 <div className='max-w-7xl mx-auto px-6'>
-                    <div className='flex gap-1 overflow-x-auto py-2'>
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => handleTabChange(tab.id)}
-                                className={`flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
-                                    activeTab === tab.id
-                                        ? "bg-primary text-white"
-                                        : "text-text/60 hover:text-text hover:bg-text/5"
-                                }`}
-                            >
-                                <tab.icon className='w-4 h-4' />
-                                {tab.label}
-                            </button>
-                        ))}
+                    <div className='flex flex-col md:flex-row md:items-center justify-between gap-4 py-2'>
+                        <div className='flex gap-1 overflow-x-auto'>
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => handleTabChange(tab.id)}
+                                    className={`flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
+                                        activeTab === tab.id
+                                            ? "bg-primary text-white"
+                                            : "text-text/60 hover:text-text hover:bg-text/5"
+                                    }`}
+                                >
+                                    <tab.icon className='w-4 h-4' />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Inline Search */}
+                        <div className='relative w-full md:w-72'>
+                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <input
+                                type='text'
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder='Search or start with @ for users...'
+                                className='w-full pl-9 pr-4 py-2 bg-text/5 border border-transparent rounded-lg text-sm text-text placeholder:text-text/40 focus:bg-background focus:border-primary/30 focus:outline-none transition-all'
+                            />
+                            {(searchingUsers || searchingCollections) && (
+                                <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin' />
+                            )}
+                        </div>
                     </div>
                 </div>
             </section>
 
             {/* Tab Content */}
-            {activeTab === "collections" && (
+            {isUserSearch ? (
                 <section className='max-w-7xl mx-auto px-6 py-8'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                        {collections.map((collection) => (
-                            <CollectionCard
-                                key={collection.id}
-                                collection={collection}
-                            />
-                        ))}
-                    </div>
-
-                    {collections.length < collectionsTotal && (
-                        <div className='flex justify-center mt-8'>
-                            <button
-                                onClick={loadMoreCollections}
-                                disabled={loadingCollections}
-                                className='px-6 py-3 bg-text/5 hover:bg-text/10 rounded-full text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer'
-                            >
-                                {loadingCollections ? (
-                                    <span className='flex items-center gap-2'>
-                                        <Loader2 className='w-4 h-4 animate-spin' />
-                                        Loading...
-                                    </span>
-                                ) : (
-                                    "Load More"
-                                )}
-                            </button>
+                    <h3 className='text-lg font-semibold mb-4'>
+                        {searchQuery.length > 1
+                            ? `User Results (${userResults.length})`
+                            : "Search Users"}
+                    </h3>
+                    {userResults.length > 0 ? (
+                        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+                            {userResults.map((user) => (
+                                <UserCard
+                                    key={user.id}
+                                    user={user}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className='text-center py-16 text-text/60'>
+                            {searchingUsers
+                                ? "Searching..."
+                                : "No users found. Try a different username."}
                         </div>
                     )}
+                </section>
+            ) : activeTab === "collections" ? (
+                <section className='max-w-7xl mx-auto px-6 py-8'>
+                    {collections.length > 0 ? (
+                        <>
+                            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                                {collections.map((collection) => (
+                                    <CollectionCard
+                                        key={collection.id}
+                                        collection={collection}
+                                    />
+                                ))}
+                            </div>
 
-                    {collections.length === 0 && (
+                            {collections.length < collectionsTotal &&
+                                !searchQuery && (
+                                    <div className='flex justify-center mt-8'>
+                                        <button
+                                            onClick={loadMoreCollections}
+                                            disabled={loadingCollections}
+                                            className='px-6 py-3 bg-text/5 hover:bg-text/10 rounded-full text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer'
+                                        >
+                                            {loadingCollections ? (
+                                                <span className='flex items-center gap-2'>
+                                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                                    Loading...
+                                                </span>
+                                            ) : (
+                                                "Load More"
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
+                        </>
+                    ) : (
                         <div className='text-center py-16'>
                             <Layers className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
                             <h3 className='text-xl font-serif font-semibold text-text mb-2'>
-                                No collections yet
+                                {searchQuery
+                                    ? "No collections found"
+                                    : "No collections yet"}
                             </h3>
                             <p className='text-text/60'>
-                                Be the first to create a public collection!
+                                {searchQuery
+                                    ? "Try searching for something else."
+                                    : "Be the first to create a public collection!"}
                             </p>
                         </div>
                     )}
                 </section>
-            )}
+            ) : null}
 
-            {activeTab === "events" && (
+            {activeTab === "events" && !isUserSearch && (
                 <EventsPageClient
                     initialEvents={initialEvents}
                     embedded
                 />
-            )}
-
-            {activeTab === "people" && (
-                <section className='max-w-7xl mx-auto px-6 py-8'>
-                    {/* Search */}
-                    <div className='max-w-xl mx-auto mb-8'>
-                        <div className='relative'>
-                            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
-                            <input
-                                type='text'
-                                value={userSearchQuery}
-                                onChange={(e) =>
-                                    setUserSearchQuery(e.target.value)
-                                }
-                                placeholder='Search for coffee enthusiasts...'
-                                className='w-full pl-12 pr-4 py-4 bg-background border border-secondary/30 rounded-2xl text-text placeholder:text-text/40 focus:outline-none focus:border-primary/50 transition-colors'
-                            />
-                            {searchingUsers && (
-                                <Loader2 className='absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin' />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Search Results */}
-                    {userSearchQuery.length >= 2 ? (
-                        <div>
-                            <h3 className='text-lg font-semibold mb-4'>
-                                Search Results ({userResults.length})
-                            </h3>
-                            {userResults.length > 0 ? (
-                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-                                    {userResults.map((user) => (
-                                        <UserCard
-                                            key={user.id}
-                                            user={user}
-                                        />
-                                    ))}
-                                </div>
-                            ) : !searchingUsers ? (
-                                <p className='text-text/60 text-center py-8'>
-                                    No users found matching &quot;
-                                    {userSearchQuery}&quot;
-                                </p>
-                            ) : null}
-                        </div>
-                    ) : (
-                        <div>
-                            <h3 className='text-lg font-semibold mb-4'>
-                                Featured Community Members
-                            </h3>
-                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-                                {featuredUsers.map((user) => (
-                                    <UserCard
-                                        key={user.id}
-                                        user={user}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </section>
             )}
         </div>
     )
