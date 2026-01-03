@@ -181,10 +181,22 @@ export default function CafeAnalyticsPanel() {
             </div>
 
             {/* Stats Summary */}
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-3 text-sm'>
+            <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-sm'>
                 <div className='p-3 bg-text/5 rounded-lg'>
                     <span className='text-text/60'>Total Cafes</span>
                     <div className='text-lg font-bold'>{cafes.length}</div>
+                </div>
+                <div className='p-3 bg-text/5 rounded-lg'>
+                    <span className='text-text/60'>Independent</span>
+                    <div className='text-lg font-bold'>
+                        {cafes.filter((c) => !c.isChain).length}
+                    </div>
+                </div>
+                <div className='p-3 bg-text/5 rounded-lg'>
+                    <span className='text-text/60'>Chains</span>
+                    <div className='text-lg font-bold'>
+                        {cafes.filter((c) => c.isChain).length}
+                    </div>
                 </div>
                 <div className='p-3 bg-text/5 rounded-lg'>
                     <span className='text-text/60'>Total Views</span>

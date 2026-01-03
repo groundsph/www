@@ -53,6 +53,7 @@ export interface CafeAnalyticsSummary {
     uniqueVisitors: number
     viewsLastWeek: number
     trend: "up" | "down" | "stable"
+    isChain: boolean
 }
 
 async function isAdmin(): Promise<boolean> {
@@ -256,6 +257,7 @@ export async function getCafeAnalyticsSummary(): Promise<CafeAnalyticsSummary[]>
             slug: cafes.slug,
             thumbnail: cafes.thumbnail,
             region: cafes.region,
+            isChain: cafes.isChain,
         })
         .from(cafes)
         .where(eq(cafes.isPublished, true))
@@ -319,6 +321,7 @@ export async function getCafeAnalyticsSummary(): Promise<CafeAnalyticsSummary[]>
             uniqueVisitors: stats.visitors.size,
             viewsLastWeek: stats.viewsLastWeek,
             trend,
+            isChain: cafe.isChain ?? false,
         }
     }).sort((a, b) => b.totalViews - a.totalViews)
 }
