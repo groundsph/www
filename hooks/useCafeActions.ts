@@ -19,24 +19,6 @@ export function useCafeActions(cafeId: string) {
     const [visitedToday, setVisitedToday] = useState(false)
     const [isCheckingIn, setIsCheckingIn] = useState(false)
 
-    // Initialize from passport and fetch visit count
-    useEffect(() => {
-        if (profile?.passport) {
-            const passport = profile.passport as {
-                visited_ids?: string[]
-                favorite_ids?: string[]
-                wishlist_ids?: string[]
-            }
-            setIsVisited(passport.visited_ids?.includes(cafeId) ?? false)
-            setIsFavorite(passport.favorite_ids?.includes(cafeId) ?? false)
-            setIsInWishlist(passport.wishlist_ids?.includes(cafeId) ?? false)
-        }
-
-        // Fetch visit count from the new table
-        if (user) {
-            fetchVisitData()
-        }
-    }, [profile, cafeId, user])
 
     // Fetch visit count and today status
     const fetchVisitData = useCallback(async () => {
@@ -55,6 +37,25 @@ export function useCafeActions(cafeId: string) {
             console.error("Failed to fetch visit data", error)
         }
     }, [cafeId])
+
+    // Initialize from passport and fetch visit count
+    useEffect(() => {
+        if (profile?.passport) {
+            const passport = profile.passport as {
+                visited_ids?: string[]
+                favorite_ids?: string[]
+                wishlist_ids?: string[]
+            }
+            setIsVisited(passport.visited_ids?.includes(cafeId) ?? false)
+            setIsFavorite(passport.favorite_ids?.includes(cafeId) ?? false)
+            setIsInWishlist(passport.wishlist_ids?.includes(cafeId) ?? false)
+        }
+
+        // Fetch visit count from the new table
+        if (user) {
+            fetchVisitData()
+        }
+    }, [profile, cafeId, user, fetchVisitData])
 
     // Check-in handler (new additive visit behavior)
     const checkIn = useCallback(async () => {

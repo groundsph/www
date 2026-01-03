@@ -105,7 +105,6 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
     // Lightbox state
     const [isLightboxOpen, setIsLightboxOpen] = useState(false)
     const [lightboxIndex, setLightboxIndex] = useState(0)
-    const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 
     return (
         <div className='flex flex-col gap-4'>

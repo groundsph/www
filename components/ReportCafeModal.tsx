@@ -3,8 +3,6 @@
 import { useState } from "react"
 import { AlertTriangle, X, Check, Loader2 } from "lucide-react"
 import { submitCafeReport, ReportReason } from "@/app/api/actions/report"
-import { useAuth } from "@/components/AuthProvider"
-import { cn } from "@/utils/cn"
 
 interface ReportCafeModalProps {
     cafeId: string
@@ -23,7 +21,6 @@ export default function ReportCafeModal({
     isOpen,
     onClose,
 }: ReportCafeModalProps) {
-    const { user } = useAuth()
     const [reason, setReason] = useState<ReportReason | "">("")
     const [details, setDetails] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -100,8 +97,8 @@ export default function ReportCafeModal({
                                         Report Changes
                                     </h3>
                                     <p className='text-xs text-text/60'>
-                                        Flag this cafe if it's closed or has
-                                        issues
+                                        Flag this cafe if it&apos;s closed or
+                                        has issues
                                     </p>
                                 </div>
                             </div>

@@ -953,9 +953,9 @@ export default function CafeSubmissionForm({
                                                 <span className='font-medium'>
                                                     Brand - Branch
                                                 </span>{" "}
-                                                (e.g. "Bo&apos;s Coffee - IT
-                                                Park"). Independent cafes
-                                                don&apos;t need this.
+                                                (e.g. &quot;Bo&apos;s Coffee -
+                                                IT Park&quot;). Independent
+                                                cafes don&apos;t need this.
                                             </span>
                                         </label>
                                         <input

@@ -10,7 +10,7 @@
 
 import { db } from "@/db"
 import { profiles, cafeVisits, cafes } from "@/db/schema"
-import { eq, inArray } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 
 interface PassportVisit {
     cafe_id: string
