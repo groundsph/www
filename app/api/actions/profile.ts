@@ -839,6 +839,10 @@ export async function toggleVisited(cafeId: string): Promise<{ visited: boolean;
                     },
                 })
                 .where(eq(profiles.id, user.id))
+
+            // Update activity points when adding a visit (not removing)
+            const { updateUserActivityStats } = await import("./admin")
+            await updateUserActivityStats(user.id)
         }
 
         return { visited }

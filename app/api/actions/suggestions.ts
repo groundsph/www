@@ -440,6 +440,10 @@ export async function approveSuggestion(
             cafe_name: cafe.name,
             changed_fields: Object.keys(changesToApply)
         })
+
+        // Update activity points for the suggestion author
+        const { updateUserActivityStats } = await import("./admin")
+        await updateUserActivityStats(suggestion.userId)
     }
 
     return { success: true }

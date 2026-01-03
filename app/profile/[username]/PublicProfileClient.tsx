@@ -31,14 +31,71 @@ import ContributionTimeline from "@/components/profile/ContributionTimeline"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
-// Scout rank display config
+// Scout rank display config with thresholds
 const rankConfig = {
-    novice: { label: "Novice", icon: User, color: "text-text/60" },
-    scout: { label: "Scout", icon: Compass, color: "text-secondary" },
-    explorer: { label: "Explorer", icon: MapPin, color: "text-blue-500" },
-    expert: { label: "Expert", icon: Medal, color: "text-primary" },
-    vanguard: { label: "Vanguard", icon: Shield, color: "text-amber-600" },
-    legend: { label: "Legend", icon: Trophy, color: "text-purple-500" },
+    novice: {
+        label: "Novice",
+        icon: User,
+        color: "text-text/60",
+        minPoints: 0,
+        nextRank: "scout" as const,
+    },
+    scout: {
+        label: "Scout",
+        icon: Compass,
+        color: "text-secondary",
+        minPoints: 10,
+        nextRank: "explorer" as const,
+    },
+    explorer: {
+        label: "Explorer",
+        icon: MapPin,
+        color: "text-blue-500",
+        minPoints: 30,
+        nextRank: "expert" as const,
+    },
+    expert: {
+        label: "Expert",
+        icon: Medal,
+        color: "text-primary",
+        minPoints: 75,
+        nextRank: "vanguard" as const,
+    },
+    vanguard: {
+        label: "Vanguard",
+        icon: Shield,
+        color: "text-amber-600",
+        minPoints: 150,
+        nextRank: "legend" as const,
+    },
+    legend: {
+        label: "Legend",
+        icon: Trophy,
+        color: "text-purple-500",
+        minPoints: 300,
+        nextRank: null,
+    },
+}
+
+// Calculate progress to next rank
+function getProgressToNextRank(
+    currentPoints: number,
+    currentRank: keyof typeof rankConfig
+) {
+    const config = rankConfig[currentRank]
+    if (!config.nextRank)
+        return { progress: 100, pointsNeeded: 0, nextRankLabel: null }
+
+    const nextConfig = rankConfig[config.nextRank]
+    const pointsInCurrentTier = currentPoints - config.minPoints
+    const tierRange = nextConfig.minPoints - config.minPoints
+    const progress = Math.min(
+        100,
+        Math.round((pointsInCurrentTier / tierRange) * 100)
+    )
+    const pointsNeeded = nextConfig.minPoints - currentPoints
+
+    return { progress, pointsNeeded, nextRankLabel: nextConfig.label }
 }
 
 interface PublicProfileClientProps {
@@ -527,22 +584,55 @@ export default function PublicProfileClient({
                         Stats
                     </h2>
                     <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                        {/* Scout Rank */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
-                            <div
-                                className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
-                            >
-                                <RankIcon
-                                    className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text/40"}`}
-                                />
-                            </div>
-                            <span className='text-lg font-bold capitalize'>
-                                {stats?.scout_rank || "Novice"}
-                            </span>
-                            <span className='text-xs text-text/60'>
-                                Scout Rank
-                            </span>
-                        </div>
+                        {/* Scout Rank with Points & Progress */}
+                        {(() => {
+                            const currentRank = stats?.scout_rank || "novice"
+                            const currentPoints = stats?.activity_points ?? 0
+                            const { progress, pointsNeeded, nextRankLabel } =
+                                getProgressToNextRank(
+                                    currentPoints,
+                                    currentRank
+                                )
+
+                            return (
+                                <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                                    <div
+                                        className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
+                                    >
+                                        <RankIcon
+                                            className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text/40"}`}
+                                        />
+                                    </div>
+                                    <span className='text-lg font-bold capitalize'>
+                                        {currentRank}
+                                    </span>
+                                    {nextRankLabel && (
+                                        <div
+                                            className='w-full mt-2'
+                                            title={`Current points: ${currentPoints}`}
+                                        >
+                                            <div className='w-full h-1.5 bg-text/10 rounded-full overflow-hidden'>
+                                                <div
+                                                    className='h-full bg-primary rounded-full transition-all duration-500'
+                                                    style={{
+                                                        width: `${progress}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                            <p className='text-[10px] text-text/50 mt-1'>
+                                                {pointsNeeded} points to{" "}
+                                                {nextRankLabel}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {!nextRankLabel && (
+                                        <span className='text-[10px] text-text/50 mt-1'>
+                                            Max Rank!
+                                        </span>
+                                    )}
+                                </div>
+                            )
+                        })()}
                         {/* Reviews */}
                         <a
                             href='#reviews'

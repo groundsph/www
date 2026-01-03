@@ -68,24 +68,20 @@ async function calculateActivityPoints(userId: string): Promise<{
     const totalScouted = cafeCountResult[0]?.count ?? 0
 
     // Count reviews
-    const { reviews } = await import("@/db/schema")
+    const { reviews, cafeEditSuggestions } = await import("@/db/schema")
     const reviewCountResult = await db
         .select({ count: drizzleCount() })
         .from(reviews)
         .where(eq(reviews.userId, userId))
     const totalReviews = reviewCountResult[0]?.count ?? 0
 
-    // Count contribution logs (edits) - excluding CREATE actions which are cafe submissions
+    // Count only APPROVED edit suggestions (not pending/rejected)
     const editCountResult = await db
         .select({ count: drizzleCount() })
-        .from(contributionLogs)
+        .from(cafeEditSuggestions)
         .where(and(
-            eq(contributionLogs.userId, userId),
-            or(
-                eq(contributionLogs.actionType, 'UPDATE'),
-                eq(contributionLogs.actionType, 'SUGGEST'),
-                eq(contributionLogs.actionType, 'MEDIA')
-            )
+            eq(cafeEditSuggestions.userId, userId),
+            eq(cafeEditSuggestions.status, 'approved')
         ))
     const totalEdits = editCountResult[0]?.count ?? 0
 
