@@ -29,7 +29,7 @@ import { getCafeThumbnailUrl } from "@/utils/extras"
 import { useNotification } from "@/components/NotificationProvider"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { uploadCollectionCover } from "@/utils/storage/client"
-import { resizeImage } from "@/utils/image-processing"
+import { compressCollectionCover } from "@/utils/image-processing"
 
 interface CollectionItem {
     cafeId: string
@@ -270,13 +270,8 @@ export default function CollectionEditorClient({
                 type: "image/jpeg",
             })
 
-            // Compress and resize to max 800x800 for efficiency
-            const file = await resizeImage(rawFile, {
-                maxWidth: 800,
-                maxHeight: 800,
-                quality: 0.85,
-                format: "image/jpeg",
-            })
+            // Compress collection cover (150KB JPEG for OG compatibility)
+            const file = await compressCollectionCover(rawFile)
 
             const result = await uploadCollectionCover(file)
             if (result.success && result.url) {

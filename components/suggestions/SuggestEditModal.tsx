@@ -41,7 +41,10 @@ import { useRouter } from "next/navigation"
 import OperatingHoursEditor from "@/components/submit/OperatingHoursEditor"
 import SocialLinksEditor from "@/components/submit/SocialLinksEditor"
 import { uploadCafeImage } from "@/utils/storage/client"
-import { resizeImage } from "@/utils/image-processing"
+import {
+    compressCoverImage,
+    compressGalleryImage,
+} from "@/utils/image-processing"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import ImageCropper from "@/components/ui/ImageCropper"
 import ImageUpload from "@/components/reviews/ImageUpload"
@@ -169,13 +172,8 @@ export default function SuggestEditModal({
             }
         )
 
-        // Resize final cropped image
-        const finalFile = await resizeImage(file, {
-            maxWidth: 2560,
-            maxHeight: 1440,
-            quality: 0.9,
-            format: "image/webp",
-        })
+        // Compress cover image (250KB WebP)
+        const finalFile = await compressCoverImage(file)
 
         setNewThumbnail(finalFile)
         setThumbnailPreview(URL.createObjectURL(finalFile))
@@ -327,13 +325,9 @@ export default function SuggestEditModal({
 
                 // Upload new thumbnail
                 if (newThumbnail) {
-                    const resized = await resizeImage(newThumbnail, {
-                        maxWidth: 2560,
-                        maxHeight: 1440,
-                        quality: 0.9,
-                        format: "image/webp",
-                    })
-                    const result = await uploadCafeImage(resized)
+                    // Compress cover image (250KB JPEG for Satori OG compatibility)
+                    const compressed = await compressCoverImage(newThumbnail)
+                    const result = await uploadCafeImage(compressed)
                     if (result.success && result.url) {
                         imageChanges.new_thumbnail = result.url
                     } else {
@@ -345,13 +339,9 @@ export default function SuggestEditModal({
                 if (newGalleryFiles.length > 0) {
                     const uploadedUrls: string[] = []
                     for (const file of newGalleryFiles) {
-                        const resized = await resizeImage(file, {
-                            maxWidth: 1024,
-                            maxHeight: 1024,
-                            quality: 0.75,
-                            format: "image/webp",
-                        })
-                        const result = await uploadCafeImage(resized)
+                        // Compress gallery image (120KB WebP)
+                        const compressed = await compressGalleryImage(file)
+                        const result = await uploadCafeImage(compressed)
                         if (result.success && result.url) {
                             uploadedUrls.push(result.url)
                         }

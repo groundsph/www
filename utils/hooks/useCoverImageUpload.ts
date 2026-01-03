@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from "react"
 import { checkAspectRatio } from "./cafe-form"
-import { resizeImage } from "@/utils/image-processing"
+import { compressCoverImage } from "@/utils/image-processing"
 import { uploadCafeImage } from "@/utils/storage/client"
 
 interface UseCoverImageUploadOptions {
@@ -119,13 +119,8 @@ export function useCoverImageUpload(
                 }
             )
 
-            // Resize if needed (max 2560x1440 for cover images)
-            const finalFile = await resizeImage(file, {
-                maxWidth: 2560,
-                maxHeight: 1440,
-                quality: 0.9,
-                format: "image/webp",
-            })
+            // Compress cover image (250KB WebP)
+            const finalFile = await compressCoverImage(file)
 
             setUploading(true)
             const result = await uploadCafeImage(finalFile)

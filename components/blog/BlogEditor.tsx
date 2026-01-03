@@ -24,7 +24,7 @@ import {
 } from "@/utils/types/blog"
 import { createBlogPost, updateBlogPost } from "@/app/api/actions/blog"
 import { uploadBlogImageAction } from "@/utils/storage/actions"
-import { resizeImage } from "@/utils/image-processing"
+import { compressBlogCover } from "@/utils/image-processing"
 import { generateExcerptAction, AIProvider } from "@/app/api/actions/ai"
 import MarkdownRender from "@/components/MarkdownRender"
 
@@ -90,13 +90,8 @@ export default function BlogEditor({
         setError(null)
 
         try {
-            // Compress and resize to max 1920x1080 for efficiency
-            const compressedFile = await resizeImage(file, {
-                maxWidth: 1920,
-                maxHeight: 1080,
-                quality: 0.85,
-                format: "image/jpeg",
-            })
+            // Compress blog cover (200KB JPEG for OG compatibility)
+            const compressedFile = await compressBlogCover(file)
 
             const formData = new FormData()
             formData.append("image", compressedFile)

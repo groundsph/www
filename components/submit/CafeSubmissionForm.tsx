@@ -56,7 +56,10 @@ import { searchCafesSimple } from "@/app/api/actions/cafe"
 import ImageUpload from "@/components/reviews/ImageUpload"
 import SocialLinksEditor from "./SocialLinksEditor"
 import LocationPicker from "./LocationPicker"
-import { cropAndResizeImage, resizeImage } from "@/utils/image-processing"
+import {
+    compressCoverImage,
+    compressGalleryImage,
+} from "@/utils/image-processing"
 import ImageCropper from "@/components/ui/ImageCropper"
 import AmenitiesSection from "@/components/cafe-editor/AmenitiesSection"
 import HoursSection from "@/components/cafe-editor/HoursSection"
@@ -382,13 +385,8 @@ export default function CafeSubmissionForm({
             }
         )
 
-        // Resize final cropped image to max dimensions if needed
-        const finalFile = await resizeImage(file, {
-            maxWidth: 2560,
-            maxHeight: 1440,
-            quality: 0.9,
-            format: "image/webp",
-        })
+        // Compress cover image (250KB WebP)
+        const finalFile = await compressCoverImage(file)
 
         setThumbnailFile(finalFile)
         setThumbnailPreview(URL.createObjectURL(finalFile))
@@ -416,17 +414,10 @@ export default function CafeSubmissionForm({
             // 1. Process Thumbnail (optional)
             let thumbnailUrl: string | null = null
             if (thumbnailFile) {
-                setProcessingStatus("Cropping and compressing thumbnail...")
-                const processedThumbnail = await cropAndResizeImage(
-                    thumbnailFile,
-                    {
-                        targetAspectRatio: 16 / 9,
-                        maxWidth: 2560,
-                        maxHeight: 1440,
-                        quality: 0.9,
-                        format: "image/webp",
-                    }
-                )
+                setProcessingStatus("Compressing cover image...")
+                // Compress cover image (250KB JPEG for Satori OG compatibility)
+                const processedThumbnail =
+                    await compressCoverImage(thumbnailFile)
 
                 setIsProcessing(false)
                 setProcessingStatus("Uploading images...")
@@ -463,12 +454,8 @@ export default function CafeSubmissionForm({
             const processedGalleryFiles: File[] = []
             for (let i = 0; i < galleryFiles.length; i++) {
                 const file = galleryFiles[i]
-                const processed = await resizeImage(file, {
-                    maxWidth: 1024,
-                    maxHeight: 1024,
-                    quality: 0.75,
-                    format: "image/webp",
-                })
+                // Compress gallery image (120KB WebP)
+                const processed = await compressGalleryImage(file)
                 processedGalleryFiles.push(processed)
             }
 

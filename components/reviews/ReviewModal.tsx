@@ -8,7 +8,7 @@ import { createReview, updateReview } from "@/app/api/actions/review"
 import { useRouter } from "next/navigation"
 import ImageUpload from "./ImageUpload"
 import { uploadReviewImage } from "@/utils/storage/client"
-import { resizeImage } from "@/utils/image-processing"
+import { compressReviewImage } from "@/utils/image-processing"
 
 interface ReviewModalProps {
     isOpen: boolean
@@ -67,13 +67,8 @@ export default function ReviewModal({
             // Upload new files (client-side, direct to storage)
             if (newFiles.length > 0) {
                 for (const file of newFiles) {
-                    // Compress and resize for efficiency
-                    const compressedFile = await resizeImage(file, {
-                        maxWidth: 1200,
-                        maxHeight: 1200,
-                        quality: 0.85,
-                        format: "image/jpeg",
-                    })
+                    // Compress review image (150KB WebP)
+                    const compressedFile = await compressReviewImage(file)
 
                     const result = await uploadReviewImage(compressedFile)
 

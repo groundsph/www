@@ -19,7 +19,7 @@ import {
 import { EventWithCafe, EventStatus } from "@/utils/types/extra"
 import { EventInput, createEvent, updateEvent } from "@/app/api/actions/events"
 import { uploadEventImageAction } from "@/utils/storage/actions"
-import { resizeImage } from "@/utils/image-processing"
+import { compressEventCover } from "@/utils/image-processing"
 import {
     PHILIPPINES_LOCATIONS,
     getProvincesForRegion,
@@ -94,13 +94,8 @@ export default function EventEditor({
         setError(null)
 
         try {
-            // Compress and resize to max 1920x1080 for efficiency
-            const compressedFile = await resizeImage(file, {
-                maxWidth: 1920,
-                maxHeight: 1080,
-                quality: 0.85,
-                format: "image/jpeg",
-            })
+            // Compress event cover (200KB JPEG)
+            const compressedFile = await compressEventCover(file)
 
             const formData = new FormData()
             formData.append("image", compressedFile)

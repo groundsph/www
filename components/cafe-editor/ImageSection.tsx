@@ -23,7 +23,7 @@ import {
     moveArrayItem,
 } from "@/utils/hooks/cafe-form"
 import { useCoverImageUpload } from "@/utils/hooks/useCoverImageUpload"
-import { resizeImage } from "@/utils/image-processing"
+import { compressGalleryImage } from "@/utils/image-processing"
 import { uploadCafeImage } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import ImageCropper from "@/components/ui/ImageCropper"
@@ -83,13 +83,8 @@ export default function ImageSection({
         const newUrls: string[] = []
 
         for (const file of files) {
-            // Resize only, allow any aspect ratio for gallery
-            const processedFile = await resizeImage(file, {
-                maxWidth: 1024,
-                maxHeight: 1024,
-                quality: 0.75,
-                format: "image/webp",
-            })
+            // Compress gallery image (120KB WebP)
+            const processedFile = await compressGalleryImage(file)
             const result = await uploadCafeImage(processedFile)
             if (result.success && result.url) {
                 newUrls.push(result.url)
