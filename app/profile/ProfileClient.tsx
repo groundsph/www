@@ -13,9 +13,11 @@ import {
     Check,
     ChevronDown,
     Coffee,
+    Compass,
     Edit2,
     Layers,
     Loader2,
+    MapPin,
     Medal,
     MessageSquare,
     Settings,
@@ -23,6 +25,7 @@ import {
     Shield,
     Sparkles,
     Store,
+    Trophy,
     User,
     X,
 } from "lucide-react"
@@ -41,13 +44,12 @@ type BadgeDefinition = Tables<"badge_definitions">
 
 // Scout rank display config
 const rankConfig = {
-    novice: { label: "Novice Scout", icon: User, color: "text-secondary" },
-    expert: { label: "Expert Scout", icon: Medal, color: "text-primary" },
-    vanguard: {
-        label: "Vanguard Scout",
-        icon: Shield,
-        color: "text-amber-600",
-    },
+    novice: { label: "Novice", icon: User, color: "text-text/60" },
+    scout: { label: "Scout", icon: Compass, color: "text-secondary" },
+    explorer: { label: "Explorer", icon: MapPin, color: "text-blue-500" },
+    expert: { label: "Expert", icon: Medal, color: "text-primary" },
+    vanguard: { label: "Vanguard", icon: Shield, color: "text-amber-600" },
+    legend: { label: "Legend", icon: Trophy, color: "text-purple-500" },
 }
 
 export default function ProfileClient() {

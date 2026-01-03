@@ -9,11 +9,14 @@ import {
     Camera,
     ChevronDown,
     Coffee,
+    Compass,
+    MapPin,
     Medal,
     MessageSquare,
     Share2,
     Shield,
     Sparkles,
+    Trophy,
     User,
 } from "lucide-react"
 import Image from "next/image"
@@ -30,13 +33,12 @@ type BadgeDefinition = Tables<"badge_definitions">
 
 // Scout rank display config
 const rankConfig = {
-    novice: { label: "Novice Scout", icon: User, color: "text-secondary" },
-    expert: { label: "Expert Scout", icon: Medal, color: "text-primary" },
-    vanguard: {
-        label: "Vanguard Scout",
-        icon: Shield,
-        color: "text-amber-600",
-    },
+    novice: { label: "Novice", icon: User, color: "text-text/60" },
+    scout: { label: "Scout", icon: Compass, color: "text-secondary" },
+    explorer: { label: "Explorer", icon: MapPin, color: "text-blue-500" },
+    expert: { label: "Expert", icon: Medal, color: "text-primary" },
+    vanguard: { label: "Vanguard", icon: Shield, color: "text-amber-600" },
+    legend: { label: "Legend", icon: Trophy, color: "text-purple-500" },
 }
 
 interface PublicProfileClientProps {

@@ -111,6 +111,7 @@ export interface CafeFilters {
 // Profile Stats JSON structure
 export interface ProfileStats {
     scout_rank: Database['public']['Enums']['scout_rank'];
+    activity_points: number;
     total_photos: number;
     total_reviews: number;
     total_scouted: number;

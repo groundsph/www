@@ -83,8 +83,11 @@ export const userRoleEnum = pgEnum("user_role", [
 ])
 export const scoutRankEnum = pgEnum("scout_rank", [
     "novice",
+    "scout",
+    "explorer",
     "expert",
     "vanguard",
+    "legend",
 ])
 export const verificationStatusEnum = pgEnum("verification_status", [
     "pending",

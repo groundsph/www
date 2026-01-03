@@ -1600,7 +1600,7 @@ export type Database = {
       membership_tier: "free" | "basic" | "premium"
       price_level: "low" | "medium" | "high"
       review_status: "published" | "hidden" | "flagged"
-      scout_rank: "novice" | "expert" | "vanguard"
+      scout_rank: "novice" | "scout" | "explorer" | "expert" | "vanguard" | "legend"
       slot_type: "hero" | "sidebar" | "collection" | "regional_spotlight"
       subscription_status: "active" | "cancelled" | "past_due" | "trialing"
       user_role: "user" | "writer" | "moderator" | "admin"
@@ -1756,7 +1756,7 @@ export const Constants = {
       membership_tier: ["free", "basic", "premium"],
       price_level: ["low", "medium", "high"],
       review_status: ["published", "hidden", "flagged"],
-      scout_rank: ["novice", "expert", "vanguard"],
+      scout_rank: ["novice", "scout", "explorer", "expert", "vanguard", "legend"],
       slot_type: ["hero", "sidebar", "collection", "regional_spotlight"],
       subscription_status: ["active", "cancelled", "past_due", "trialing"],
       user_role: ["user", "writer", "moderator", "admin"],

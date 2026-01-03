@@ -68,6 +68,7 @@ async function setupProfileTrigger() {
                     ),
                     jsonb_build_object(
                         'scout_rank', 'novice',
+                        'activity_points', 0,
                         'total_photos', 0,
                         'total_reviews', 0,
                         'total_scouted', 0
@@ -161,6 +162,7 @@ async function setupProfileTrigger() {
                         ),
                         jsonb_build_object(
                             'scout_rank', 'novice',
+                            'activity_points', 0,
                             'total_photos', 0,
                             'total_reviews', 0,
                             'total_scouted', 0

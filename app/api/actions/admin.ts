@@ -18,53 +18,127 @@ import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
 
-type ScoutRank = 'novice' | 'expert' | 'vanguard'
+type ScoutRank = 'novice' | 'scout' | 'explorer' | 'expert' | 'vanguard' | 'legend'
+
+// Activity point values
+const ACTIVITY_POINTS = {
+    CAFE_SUBMITTED: 10,  // New cafe submission
+    REVIEW_WRITTEN: 5,   // Review written
+    EDIT_CONTRIBUTION: 3, // Cafe edit contribution
+    CAFE_VISITED: 1,     // Check-in to a cafe
+} as const
+
+// Scout rank thresholds based on activity points
+const RANK_THRESHOLDS: { rank: ScoutRank; minPoints: number }[] = [
+    { rank: 'legend', minPoints: 300 },
+    { rank: 'vanguard', minPoints: 150 },
+    { rank: 'expert', minPoints: 75 },
+    { rank: 'explorer', minPoints: 30 },
+    { rank: 'scout', minPoints: 10 },
+    { rank: 'novice', minPoints: 0 },
+]
 
 /**
- * Calculate scout rank based on total published cafes contributed
+ * Calculate scout rank based on activity points
  */
-function calculateScoutRank(totalScouted: number): ScoutRank {
-    if (totalScouted >= 10) return 'vanguard'
-    if (totalScouted >= 5) return 'expert'
+function calculateScoutRank(activityPoints: number): ScoutRank {
+    for (const { rank, minPoints } of RANK_THRESHOLDS) {
+        if (activityPoints >= minPoints) return rank
+    }
     return 'novice'
 }
 
 /**
- * Update a contributor's scout stats (total_scouted and scout_rank)
- * Called after a cafe is published, unpublished, or deleted
+ * Calculate total activity points for a user based on their contributions
  */
-async function updateContributorScoutStats(contributorId: string): Promise<void> {
-    if (!contributorId) return
+async function calculateActivityPoints(userId: string): Promise<{
+    totalPoints: number
+    totalScouted: number
+    totalReviews: number
+    totalVisits: number
+}> {
+    // Count published cafes
+    const cafeCountResult = await db
+        .select({ count: drizzleCount() })
+        .from(cafes)
+        .where(and(
+            eq(cafes.contributorId, userId),
+            eq(cafes.isPublished, true)
+        ))
+    const totalScouted = cafeCountResult[0]?.count ?? 0
+
+    // Count reviews
+    const { reviews } = await import("@/db/schema")
+    const reviewCountResult = await db
+        .select({ count: drizzleCount() })
+        .from(reviews)
+        .where(eq(reviews.userId, userId))
+    const totalReviews = reviewCountResult[0]?.count ?? 0
+
+    // Count contribution logs (edits) - excluding CREATE actions which are cafe submissions
+    const editCountResult = await db
+        .select({ count: drizzleCount() })
+        .from(contributionLogs)
+        .where(and(
+            eq(contributionLogs.userId, userId),
+            or(
+                eq(contributionLogs.actionType, 'UPDATE'),
+                eq(contributionLogs.actionType, 'SUGGEST'),
+                eq(contributionLogs.actionType, 'MEDIA')
+            )
+        ))
+    const totalEdits = editCountResult[0]?.count ?? 0
+
+    // Count visits from passport
+    const profileResult = await db
+        .select({ passport: profiles.passport })
+        .from(profiles)
+        .where(eq(profiles.id, userId))
+        .limit(1)
+
+    const passport = profileResult[0]?.passport as { visited_ids?: string[]; visits?: { cafe_id: string }[] } | null
+    const visitedIds = passport?.visited_ids ?? []
+    const visits = passport?.visits ?? []
+    const totalVisits = Math.max(visitedIds.length, visits.length)
+
+    // Calculate total points
+    const totalPoints =
+        (totalScouted * ACTIVITY_POINTS.CAFE_SUBMITTED) +
+        (totalReviews * ACTIVITY_POINTS.REVIEW_WRITTEN) +
+        (totalEdits * ACTIVITY_POINTS.EDIT_CONTRIBUTION) +
+        (totalVisits * ACTIVITY_POINTS.CAFE_VISITED)
+
+    return { totalPoints, totalScouted, totalReviews, totalVisits }
+}
+
+/**
+ * Update a user's activity points and scout rank
+ * Called after any activity that affects points (cafe published, review, edit, visit)
+ */
+export async function updateUserActivityStats(userId: string): Promise<void> {
+    if (!userId) return
 
     try {
-        // Count total published cafes for this contributor
-        const countResult = await db
-            .select({ count: drizzleCount() })
-            .from(cafes)
-            .where(and(
-                eq(cafes.contributorId, contributorId),
-                eq(cafes.isPublished, true)
-            ))
-
-        const totalScouted = countResult[0]?.count ?? 0
-        const newRank = calculateScoutRank(totalScouted)
+        const { totalPoints, totalScouted, totalReviews } = await calculateActivityPoints(userId)
+        const newRank = calculateScoutRank(totalPoints)
 
         // Get current profile stats
         const profileResult = await db
             .select({ stats: profiles.stats })
             .from(profiles)
-            .where(eq(profiles.id, contributorId))
+            .where(eq(profiles.id, userId))
             .limit(1)
 
         const profile = profileResult[0]
         if (!profile) {
-            console.error("Error fetching contributor profile: not found")
+            console.error("Error fetching user profile: not found")
             return
         }
 
         // Merge with existing stats
         const currentStats = (profile.stats as ProfileStats | null) ?? {
             scout_rank: 'novice',
+            activity_points: 0,
             total_photos: 0,
             total_reviews: 0,
             total_scouted: 0
@@ -72,17 +146,24 @@ async function updateContributorScoutStats(contributorId: string): Promise<void>
 
         const updatedStats: ProfileStats = {
             ...currentStats,
+            activity_points: totalPoints,
             total_scouted: totalScouted,
+            total_reviews: totalReviews,
             scout_rank: newRank
         }
 
         // Update profile with new stats
         await db.update(profiles)
             .set({ stats: updatedStats })
-            .where(eq(profiles.id, contributorId))
+            .where(eq(profiles.id, userId))
     } catch (error) {
-        console.error("Error updating contributor stats:", error)
+        console.error("Error updating user activity stats:", error)
     }
+}
+
+// Legacy function name for backward compatibility
+async function updateContributorScoutStats(contributorId: string): Promise<void> {
+    return updateUserActivityStats(contributorId)
 }
 
 /**
