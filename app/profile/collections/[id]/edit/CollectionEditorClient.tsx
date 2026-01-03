@@ -29,6 +29,7 @@ import { getCafeThumbnailUrl } from "@/utils/extras"
 import { useNotification } from "@/components/NotificationProvider"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { uploadCollectionCover } from "@/utils/storage/client"
+import { resizeImage } from "@/utils/image-processing"
 
 interface CollectionItem {
     cafeId: string
@@ -264,9 +265,19 @@ export default function CollectionEditorClient({
         setIsUploadingCover(true)
 
         try {
-            const file = new File([croppedBlob], "cover.jpg", {
+            // Create initial file from cropped blob
+            const rawFile = new File([croppedBlob], "cover.jpg", {
                 type: "image/jpeg",
             })
+
+            // Compress and resize to max 800x800 for efficiency
+            const file = await resizeImage(rawFile, {
+                maxWidth: 800,
+                maxHeight: 800,
+                quality: 0.85,
+                format: "image/jpeg",
+            })
+
             const result = await uploadCollectionCover(file)
             if (result.success && result.url) {
                 setCoverImage(result.url)
