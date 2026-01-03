@@ -651,6 +651,43 @@ export async function updateCafe(
 }
 
 /**
+ * Bulk mark cafes as chain (admin only)
+ * Marks multiple cafes as chain or removes chain status
+ */
+export async function bulkMarkAsChain(
+    cafeIds: string[],
+    isChain: boolean
+): Promise<AdminActionResult & { count?: number }> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin') {
+        return { success: false, error: "Only admins can bulk update chain status" }
+    }
+
+    if (!cafeIds.length) {
+        return { success: false, error: "No cafes selected" }
+    }
+
+    try {
+        await db.update(cafes)
+            .set({ isChain, updatedAt: new Date() })
+            .where(inArray(cafes.id, cafeIds))
+
+        return { success: true, count: cafeIds.length }
+    } catch (error) {
+        console.error("Error bulk marking cafes as chain:", error)
+        return { success: false, error: "Failed to update cafes" }
+    }
+}
+
+/**
  * Delete a single cafe image from storage (admin only)
  * Used when admins remove individual images from cafe thumbnail or gallery
  */

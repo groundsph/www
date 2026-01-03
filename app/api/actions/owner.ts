@@ -1256,6 +1256,17 @@ export async function requestFeaturedSlot(
         return { success: false, error: 'Featured slot requests are a Premium feature' }
     }
 
+    // Check if cafe is a chain - chains cannot be featured
+    const cafeResult = await db
+        .select({ isChain: cafes.isChain })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
+
+    if (cafeResult[0]?.isChain === true) {
+        return { success: false, error: 'Chain cafes cannot be featured. Please contact support if you believe this is an error.' }
+    }
+
     // Check if already requested for this month
     const existingResult = await db
         .select({ id: featuredSlotRequests.id, status: featuredSlotRequests.status })

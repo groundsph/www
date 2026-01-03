@@ -655,6 +655,15 @@ export default function CafesPageClient({
                                                             Hidden Gem
                                                         </span>
                                                     )}
+                                                    {cafe.is_chain && (
+                                                        <span
+                                                            className='inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-orange-100 text-orange-700 rounded-full'
+                                                            title='Chain Cafe'
+                                                        >
+                                                            <Store className='w-3 h-3' />
+                                                            Chain
+                                                        </span>
+                                                    )}
                                                 </h3>
                                                 <p className='text-xs md:text-sm font-semibold text-text/60'>
                                                     {cafe.address_display}
