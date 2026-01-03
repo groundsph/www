@@ -9,6 +9,8 @@ import {
     SUBSCRIPTION_TIERS,
     SubscriptionTier,
     canAccessFeature,
+    BETA_FREE_FEATURES,
+    getBetaNoticeText,
 } from "@/utils/types/owner"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -37,6 +39,7 @@ import {
     CalendarIcon,
     Download,
     Copy,
+    Gift,
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
@@ -639,6 +642,23 @@ export default function CafeManagementClient({
                                     )}
                                 </div>
                             </div>
+
+                            {/* Beta Access Notice */}
+                            {BETA_FREE_FEATURES.length > 0 && (
+                                <div className='p-4 bg-amber-50 border border-amber-200 rounded-xl'>
+                                    <div className='flex items-start gap-3'>
+                                        <Gift className='w-5 h-5 text-amber-600 shrink-0 mt-0.5' />
+                                        <div>
+                                            <p className='font-medium text-amber-800'>
+                                                🎉 Beta Access
+                                            </p>
+                                            <p className='text-sm text-amber-700 mt-1'>
+                                                {getBetaNoticeText()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* QR Code to Menu (Pro/Premium only) */}
                             {canAccessFeature(tier, "qr_menu") &&

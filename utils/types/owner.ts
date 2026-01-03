@@ -31,9 +31,9 @@ export const SUBSCRIPTION_TIERS = {
         priceDisplay: '₱0',
         features: [
             'Direct Cafe Editing',
-            'Cafe Menu (5 Item Limit)',
+            'Unlimited Cafe Menu (Beta)',
         ],
-        menuLimit: 5,
+        menuLimit: Infinity, // Unlimited during beta
         enabledFeatures: ['menu'] as TierFeature[],
     },
     pro: {
@@ -93,10 +93,42 @@ export type TierFeature =
     | 'qr_menu'
     | 'direct_support';
 
+// ============================================
+// Beta Free Features Configuration
+// ============================================
+
+/**
+ * Features available for free during beta period.
+ * Premium competitive features (highlighted_pins, featured_slot_request, 
+ * review_pinning, priority_ranking) remain paid to incentivize upgrades.
+ * 
+ * To disable beta mode and enforce subscriptions, set this to an empty array: []
+ */
+export const BETA_FREE_FEATURES: TierFeature[] = [
+    'menu',           // Full menu management (no item limits)
+    'blog',           // Blog posts
+    'analytics',      // Site/cafe analytics
+    'events',         // Events management
+    'verified_badge', // Verified badge display
+    'qr_menu',        // QR code to menu
+    'direct_support', // Direct support channel
+];
+
+/**
+ * Get the beta notice text for UI display
+ */
+export function getBetaNoticeText(): string {
+    return "Most features are free during our beta period. Some premium features (highlighted map pins, featured slots, review pinning, priority ranking) require a subscription. Features may become paid in the future to cover operational costs.";
+}
+
 /**
  * Check if a subscription tier has access to a specific feature
  */
 export function canAccessFeature(tier: SubscriptionTier, feature: TierFeature): boolean {
+    // Check if feature is free during beta
+    if (BETA_FREE_FEATURES.includes(feature)) return true;
+
+    // Otherwise, use normal tier check
     const tierConfig = SUBSCRIPTION_TIERS[tier];
     return (tierConfig.enabledFeatures as readonly TierFeature[]).includes(feature);
 }
