@@ -635,3 +635,168 @@ export async function getCafeEvents(cafeId: string): Promise<EventWithCafe[]> {
 
     return eventsResult.map(e => mapEventToSnakeCase(e, cafe, e.createdBy ? creatorMap.get(e.createdBy) : null))
 }
+
+// ============================================
+// Community Event Submissions
+// ============================================
+
+export interface CommunityEventInput {
+    title: string
+    description: string
+    start_date: string
+    end_date?: string | null
+    location_name: string
+    address: string
+    city?: string | null
+    province?: string | null
+    region: string
+    image_url?: string | null
+    ticket_link: string
+}
+
+/**
+ * Submit a community event (any authenticated user)
+ * Creates event with status "pending" for moderation
+ */
+export async function submitCommunityEvent(input: CommunityEventInput): Promise<EventActionResult> {
+    const userId = await getCurrentUserId()
+    if (!userId) return { success: false, error: "You must be logged in to submit an event" }
+
+    // Validation
+    if (!input.title.trim()) return { success: false, error: "Event title is required" }
+    if (!input.description.trim()) return { success: false, error: "Event description is required" }
+    if (!input.start_date) return { success: false, error: "Start date is required" }
+    if (!input.location_name.trim()) return { success: false, error: "Venue name is required" }
+    if (!input.address.trim()) return { success: false, error: "Address is required" }
+    if (!input.region) return { success: false, error: "Region is required" }
+    if (!input.ticket_link.trim()) return { success: false, error: "Event link is required" }
+
+    const [inserted] = await db.insert(events).values({
+        title: input.title.trim(),
+        description: input.description.trim(),
+        startDate: new Date(input.start_date),
+        endDate: input.end_date ? new Date(input.end_date) : null,
+        locationName: input.location_name.trim(),
+        address: input.address.trim(),
+        city: input.city || null,
+        province: input.province || null,
+        region: input.region,
+        imageUrl: input.image_url || null,
+        ticketLink: input.ticket_link.trim(),
+        isNational: false,
+        status: "pending",
+        createdBy: userId,
+    }).returning()
+
+    if (!inserted) return { success: false, error: "Failed to submit event" }
+
+    const fullEvent = await getEvent(inserted.id)
+    return { success: true, event: fullEvent || undefined }
+}
+
+/**
+ * Get all pending community events for moderation (admin/moderator only)
+ */
+export async function getPendingEvents(): Promise<EventWithCafe[]> {
+    if (!(await isAdminOrModerator())) return []
+
+    const eventsResult = await db.select({
+        id: events.id, title: events.title, description: events.description,
+        startDate: events.startDate, endDate: events.endDate, locationName: events.locationName,
+        address: events.address, city: events.city, province: events.province, region: events.region,
+        cafeId: events.cafeId, imageUrl: events.imageUrl, ticketLink: events.ticketLink,
+        isNational: events.isNational, status: events.status, createdBy: events.createdBy,
+        createdAt: events.createdAt, updatedAt: events.updatedAt,
+    })
+        .from(events)
+        .where(eq(events.status, "pending"))
+        .orderBy(asc(events.createdAt))
+
+    if (eventsResult.length === 0) return []
+
+    const creatorIds = [...new Set(eventsResult.map(e => e.createdBy).filter(Boolean))] as string[]
+    const creatorsResult = creatorIds.length > 0
+        ? await db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
+            .from(profiles).where(inArray(profiles.id, creatorIds))
+        : []
+    const creatorMap = new Map(creatorsResult.map(c => [c.id, c]))
+
+    return eventsResult.map(e => mapEventToSnakeCase(e, null, e.createdBy ? creatorMap.get(e.createdBy) : null))
+}
+
+/**
+ * Approve a pending community event (admin/moderator only)
+ */
+export async function approveCommunityEvent(eventId: string): Promise<EventActionResult & { submitterEmail?: string; submitterName?: string; eventTitle?: string }> {
+    if (!(await isAdminOrModerator())) {
+        return { success: false, error: "You don't have permission to approve events" }
+    }
+
+    const eventResult = await db.select().from(events).where(eq(events.id, eventId)).limit(1)
+    const existingEvent = eventResult[0]
+
+    if (!existingEvent) return { success: false, error: "Event not found" }
+    if (existingEvent.status !== "pending") {
+        return { success: false, error: "Only pending events can be approved" }
+    }
+
+    // Get submitter info for email
+    let submitterEmail: string | undefined
+    let submitterName: string | undefined
+    if (existingEvent.createdBy) {
+        // We need to join with auth users to get email - use profiles for now
+        const profileResult = await db.select({ displayName: profiles.displayName })
+            .from(profiles)
+            .where(eq(profiles.id, existingEvent.createdBy))
+            .limit(1)
+        submitterName = profileResult[0]?.displayName
+    }
+
+    await db.update(events).set({ status: "published", updatedAt: new Date() }).where(eq(events.id, eventId))
+
+    const fullEvent = await getEvent(eventId)
+    return {
+        success: true,
+        event: fullEvent || undefined,
+        submitterName,
+        eventTitle: existingEvent.title
+    }
+}
+
+/**
+ * Reject a pending community event (admin/moderator only)
+ */
+export async function rejectCommunityEvent(eventId: string, reason?: string): Promise<EventActionResult & { submitterName?: string; eventTitle?: string }> {
+    if (!(await isAdminOrModerator())) {
+        return { success: false, error: "You don't have permission to reject events" }
+    }
+
+    const eventResult = await db.select().from(events).where(eq(events.id, eventId)).limit(1)
+    const existingEvent = eventResult[0]
+
+    if (!existingEvent) return { success: false, error: "Event not found" }
+    if (existingEvent.status !== "pending") {
+        return { success: false, error: "Only pending events can be rejected" }
+    }
+
+    // Get submitter info for email
+    let submitterName: string | undefined
+    if (existingEvent.createdBy) {
+        const profileResult = await db.select({ displayName: profiles.displayName })
+            .from(profiles)
+            .where(eq(profiles.id, existingEvent.createdBy))
+            .limit(1)
+        submitterName = profileResult[0]?.displayName
+    }
+
+    const eventTitle = existingEvent.title
+
+    // Delete the rejected event
+    await db.delete(events).where(eq(events.id, eventId))
+
+    return {
+        success: true,
+        submitterName,
+        eventTitle
+    }
+}

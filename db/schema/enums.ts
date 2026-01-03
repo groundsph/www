@@ -53,6 +53,7 @@ export const contributionActionTypeEnum = pgEnum("contribution_action_type", [
 
 // Event
 export const eventStatusEnum = pgEnum("event_status", [
+    "pending",
     "draft",
     "published",
     "cancelled",

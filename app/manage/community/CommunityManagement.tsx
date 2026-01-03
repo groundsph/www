@@ -20,6 +20,8 @@ import {
     Shield,
     ShieldCheck,
     PenTool,
+    Calendar,
+    MapPin,
 } from "lucide-react"
 import {
     moderateReview,
@@ -30,6 +32,13 @@ import {
     updateUserRole,
     getAdminsAndModerators,
 } from "@/app/api/actions/admin"
+import {
+    getPendingEvents,
+    approveCommunityEvent,
+    rejectCommunityEvent,
+} from "@/app/api/actions/events"
+import { EventWithCafe } from "@/utils/types/extra"
+import { format } from "date-fns"
 
 interface CommunityManagementProps {
     userRole: "admin" | "moderator"
@@ -37,7 +46,7 @@ interface CommunityManagementProps {
     isFullAdmin: boolean
 }
 
-type TabType = "reviews" | "team"
+type TabType = "reviews" | "events" | "team"
 
 export default function CommunityManagement({
     reportedReviews: initialReported,
@@ -54,6 +63,13 @@ export default function CommunityManagement({
     const [teamSearchResults, setTeamSearchResults] = useState<TeamMember[]>([])
     const [teamLoading, setTeamLoading] = useState(false)
     const [teamSearchLoading, setTeamSearchLoading] = useState(false)
+
+    // Pending events state
+    const [pendingEvents, setPendingEvents] = useState<EventWithCafe[]>([])
+    const [eventsLoading, setEventsLoading] = useState(false)
+    const [processingEvent, setProcessingEvent] = useState<string | null>(null)
+    const [rejectReason, setRejectReason] = useState("")
+    const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
 
     const toggleReviewExpand = (reviewId: string) => {
         setExpandedReview((prev) => (prev === reviewId ? null : reviewId))
@@ -163,6 +179,49 @@ export default function CommunityManagement({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, isFullAdmin])
 
+    // Pending events handlers
+    const loadPendingEvents = async () => {
+        setEventsLoading(true)
+        const events = await getPendingEvents()
+        setPendingEvents(events)
+        setEventsLoading(false)
+    }
+
+    const handleApproveEvent = async (eventId: string) => {
+        setProcessingEvent(eventId)
+        const result = await approveCommunityEvent(eventId)
+        if (result.success) {
+            setPendingEvents((prev) => prev.filter((e) => e.id !== eventId))
+        } else {
+            alert(result.error || "Failed to approve event")
+        }
+        setProcessingEvent(null)
+    }
+
+    const handleRejectEvent = async (eventId: string) => {
+        setProcessingEvent(eventId)
+        const result = await rejectCommunityEvent(
+            eventId,
+            rejectReason || undefined
+        )
+        if (result.success) {
+            setPendingEvents((prev) => prev.filter((e) => e.id !== eventId))
+            setShowRejectModal(null)
+            setRejectReason("")
+        } else {
+            alert(result.error || "Failed to reject event")
+        }
+        setProcessingEvent(null)
+    }
+
+    // Load pending events when Events tab is selected
+    useEffect(() => {
+        if (activeTab === "events" && pendingEvents.length === 0) {
+            void loadPendingEvents()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab])
+
     return (
         <div className='space-y-6'>
             {/* Header */}
@@ -193,6 +252,22 @@ export default function CommunityManagement({
                     </div>
                     <div className='text-text/60 text-sm'>Reported Reviews</div>
                 </div>
+                <div
+                    className={`bg-background shadow-sm rounded-xl p-4 border ${
+                        pendingEvents.length > 0
+                            ? "border-orange-500/30"
+                            : "border-tertiary/50"
+                    }`}
+                >
+                    <div
+                        className={`text-2xl font-bold ${
+                            pendingEvents.length > 0 ? "text-orange-500" : ""
+                        }`}
+                    >
+                        {pendingEvents.length}
+                    </div>
+                    <div className='text-text/60 text-sm'>Pending Events</div>
+                </div>
                 {isFullAdmin && (
                     <div className='bg-background rounded-xl p-4 shadow-sm border border-tertiary/50'>
                         <div className='text-2xl font-bold'>
@@ -217,6 +292,19 @@ export default function CommunityManagement({
                 >
                     <Flag className='w-4 h-4' />
                     Reviews ({reportedReviews.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab("events")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                        activeTab === "events"
+                            ? "bg-primary text-white"
+                            : pendingEvents.length > 0
+                              ? "bg-orange-500/20 text-orange-700 hover:bg-orange-500/30"
+                              : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
+                    }`}
+                >
+                    <Calendar className='w-4 h-4' />
+                    Events ({pendingEvents.length})
                 </button>
                 {isFullAdmin && (
                     <button
@@ -472,6 +560,188 @@ export default function CommunityManagement({
                                     </div>
                                 )
                             })}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Events Tab */}
+            {activeTab === "events" && (
+                <>
+                    {eventsLoading && pendingEvents.length === 0 ? (
+                        <div className='flex items-center justify-center py-16'>
+                            <Loader2 className='w-8 h-8 animate-spin text-text opacity-40' />
+                        </div>
+                    ) : pendingEvents.length === 0 ? (
+                        <div className='text-center py-16'>
+                            <Check className='w-12 h-12 mx-auto text-green-500 mb-4' />
+                            <p className='text-text/60 text-lg'>
+                                No pending event submissions
+                            </p>
+                            <p className='text-text/40 text-sm mt-1'>
+                                All community event submissions have been
+                                reviewed!
+                            </p>
+                        </div>
+                    ) : (
+                        <div className='space-y-3'>
+                            {pendingEvents.map((event) => {
+                                const isProcessingThis =
+                                    processingEvent === event.id
+
+                                return (
+                                    <div
+                                        key={event.id}
+                                        className='bg-background border border-orange-500/20 rounded-xl overflow-hidden shadow-sm'
+                                    >
+                                        <div className='p-4 flex flex-col sm:flex-row gap-4'>
+                                            {/* Event Image */}
+                                            {event.image_url && (
+                                                <div className='relative w-full sm:w-32 h-24 shrink-0 rounded-lg overflow-hidden bg-tertiary/30'>
+                                                    <Image
+                                                        src={event.image_url}
+                                                        alt={event.title}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* Event Info */}
+                                            <div className='flex-1 min-w-0'>
+                                                <h3 className='font-semibold text-lg'>
+                                                    {event.title}
+                                                </h3>
+                                                <div className='flex items-center gap-2 text-sm text-text/60 mt-1'>
+                                                    <Calendar className='w-4 h-4' />
+                                                    {format(
+                                                        new Date(
+                                                            event.start_date
+                                                        ),
+                                                        "PPP 'at' p"
+                                                    )}
+                                                </div>
+                                                <div className='flex items-center gap-2 text-sm text-text/60 mt-1'>
+                                                    <MapPin className='w-4 h-4' />
+                                                    {event.location_name}
+                                                    {event.city &&
+                                                        `, ${event.city}`}
+                                                </div>
+                                                {event.description && (
+                                                    <p className='text-sm text-text/70 mt-2 line-clamp-2'>
+                                                        {event.description}
+                                                    </p>
+                                                )}
+                                                <div className='flex items-center gap-2 mt-2'>
+                                                    {event.creator && (
+                                                        <span className='text-xs text-text/50'>
+                                                            Submitted by @
+                                                            {
+                                                                event.creator
+                                                                    .display_name
+                                                            }
+                                                        </span>
+                                                    )}
+                                                    {event.ticket_link && (
+                                                        <Link
+                                                            href={
+                                                                event.ticket_link
+                                                            }
+                                                            target='_blank'
+                                                            className='text-xs text-primary hover:underline inline-flex items-center gap-1'
+                                                        >
+                                                            View Link{" "}
+                                                            <ExternalLink className='w-3 h-3' />
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Actions */}
+                                            <div className='flex items-center gap-2 shrink-0 self-end sm:self-center'>
+                                                <button
+                                                    onClick={() =>
+                                                        handleApproveEvent(
+                                                            event.id
+                                                        )
+                                                    }
+                                                    disabled={isProcessingThis}
+                                                    className='p-2 bg-green-500/20 text-green-600 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
+                                                    title='Approve Event'
+                                                >
+                                                    {isProcessingThis ? (
+                                                        <Loader2 className='w-5 h-5 animate-spin' />
+                                                    ) : (
+                                                        <Check className='w-5 h-5' />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        setShowRejectModal(
+                                                            event.id
+                                                        )
+                                                    }
+                                                    disabled={isProcessingThis}
+                                                    className='p-2 bg-red-500/20 text-red-600 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                                                    title='Reject Event'
+                                                >
+                                                    <X className='w-5 h-5' />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+
+                    {/* Reject Modal */}
+                    {showRejectModal && (
+                        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
+                            <div className='bg-background rounded-2xl p-6 max-w-md w-full'>
+                                <h3 className='text-lg font-semibold mb-4'>
+                                    Reject Event
+                                </h3>
+                                <p className='text-sm text-text/60 mb-4'>
+                                    Optionally provide a reason for rejection.
+                                    This will be sent to the submitter.
+                                </p>
+                                <textarea
+                                    value={rejectReason}
+                                    onChange={(e) =>
+                                        setRejectReason(e.target.value)
+                                    }
+                                    placeholder='Reason for rejection (optional)...'
+                                    rows={3}
+                                    className='w-full px-4 py-3 rounded-xl border border-text/20 focus:border-primary outline-none resize-none mb-4'
+                                />
+                                <div className='flex gap-3 justify-end'>
+                                    <button
+                                        onClick={() => {
+                                            setShowRejectModal(null)
+                                            setRejectReason("")
+                                        }}
+                                        className='px-4 py-2 rounded-lg bg-tertiary/30 hover:bg-tertiary transition'
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            handleRejectEvent(showRejectModal)
+                                        }
+                                        disabled={
+                                            processingEvent === showRejectModal
+                                        }
+                                        className='px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition disabled:opacity-50 flex items-center gap-2'
+                                    >
+                                        {processingEvent ===
+                                            showRejectModal && (
+                                            <Loader2 className='w-4 h-4 animate-spin' />
+                                        )}
+                                        Reject Event
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </>

@@ -5,11 +5,11 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { motion } from "motion/react"
 import { BlogPost } from "@/utils/types/blog"
-import { Tables } from "@/utils/types/extra"
+import { Event } from "@/utils/types/extra"
 
 interface StoriesEventsSectionProps {
     latestPosts: BlogPost[]
-    upcomingEvents: Tables<"events">[]
+    upcomingEvents: Event[]
 }
 
 const containerVariants = {

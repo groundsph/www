@@ -7,7 +7,7 @@ export type Tables<T extends keyof Database['public']['Tables']> = Database['pub
 export type Views<T extends keyof Database['public']['Views']> = Database['public']['Views'][T]['Row'];
 
 // Event status enum type
-export type EventStatus = 'draft' | 'published' | 'cancelled';
+export type EventStatus = 'pending' | 'draft' | 'published' | 'cancelled';
 
 // Event type (matches events table)
 export interface Event {
