@@ -464,9 +464,9 @@ export default function CafeSubmissionForm({
             for (let i = 0; i < galleryFiles.length; i++) {
                 const file = galleryFiles[i]
                 const processed = await resizeImage(file, {
-                    maxWidth: 1920,
-                    maxHeight: 1920,
-                    quality: 0.85,
+                    maxWidth: 1024,
+                    maxHeight: 1024,
+                    quality: 0.75,
                     format: "image/webp",
                 })
                 processedGalleryFiles.push(processed)

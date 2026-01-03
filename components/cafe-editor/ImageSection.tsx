@@ -85,9 +85,9 @@ export default function ImageSection({
         for (const file of files) {
             // Resize only, allow any aspect ratio for gallery
             const processedFile = await resizeImage(file, {
-                maxWidth: 1920,
-                maxHeight: 1920,
-                quality: 0.85,
+                maxWidth: 1024,
+                maxHeight: 1024,
+                quality: 0.75,
                 format: "image/webp",
             })
             const result = await uploadCafeImage(processedFile)

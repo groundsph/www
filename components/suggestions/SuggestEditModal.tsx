@@ -346,9 +346,9 @@ export default function SuggestEditModal({
                     const uploadedUrls: string[] = []
                     for (const file of newGalleryFiles) {
                         const resized = await resizeImage(file, {
-                            maxWidth: 1920,
-                            maxHeight: 1920,
-                            quality: 0.85,
+                            maxWidth: 1024,
+                            maxHeight: 1024,
+                            quality: 0.75,
                             format: "image/webp",
                         })
                         const result = await uploadCafeImage(resized)
