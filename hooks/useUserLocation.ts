@@ -77,12 +77,23 @@ export function useUserLocation(): UseUserLocationReturn {
                 }
             },
             (err) => {
-                console.log("Location access denied:", err.message)
-                setError(
-                    err.code === 1
-                        ? "Location access denied"
-                        : "Failed to get location"
+                let errorMessage = "Unknown location error"
+                switch (err.code) {
+                    case err.PERMISSION_DENIED:
+                        errorMessage = "Location access denied by user"
+                        break
+                    case err.POSITION_UNAVAILABLE:
+                        errorMessage = "Location position unavailable"
+                        break
+                    case err.TIMEOUT:
+                        errorMessage = "Location request timed out"
+                        break
+                }
+                console.log(
+                    `${errorMessage}:`,
+                    err.message
                 )
+                setError(errorMessage)
                 setLoading(false)
             },
             {

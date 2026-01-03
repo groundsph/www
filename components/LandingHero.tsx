@@ -97,13 +97,30 @@ export default function LandingHero({
                         )
                     }
                 },
-                () => {
+                (error) => {
                     // User denied location or error - silently use default featured
+                    let errorMessage = "Unknown location error"
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = "Location access denied by user"
+                            break
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = "Location position unavailable"
+                            break
+                        case error.TIMEOUT:
+                            errorMessage = "Location request timed out"
+                            break
+                    }
                     console.log(
-                        "Location access denied, using default featured"
+                        `${errorMessage}, using default featured:`,
+                        error.message
                     )
                 },
-                { timeout: 10000, maximumAge: 300000 } // 10s timeout, cache for 5 min
+                {
+                    timeout: 10000,
+                    maximumAge: 300000,
+                    enableHighAccuracy: true,
+                } // 10s timeout, cache for 5 min
             )
         }, 1500) // 1.5s delay to prioritize initial content paint
 
