@@ -2,7 +2,7 @@
 
 import { getLocationFeatured } from "@/app/api/actions/cafe"
 import { CafeWithRatings } from "@/utils/types/extra"
-import { MapPinIcon, StarIcon } from "lucide-react"
+import { MapPinIcon, StarIcon, InfoIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
@@ -14,6 +14,36 @@ interface LandingHeroProps {
 
 const MotionLink = motion(Link)
 
+/**
+ * Fallback: Get location from IP address using ip-api.com
+ */
+async function getLocationFromIP(): Promise<{
+    city: string | null
+    region: string | null
+    lat: number
+    lng: number
+} | null> {
+    try {
+        const response = await fetch(
+            "http://ip-api.com/json/?fields=city,regionName,lat,lon,status"
+        )
+        const data = await response.json()
+
+        if (data.status === "success") {
+            return {
+                city: data.city || null,
+                region: data.regionName || null,
+                lat: data.lat,
+                lng: data.lon,
+            }
+        }
+        return null
+    } catch (err) {
+        console.error("Failed to get location from IP:", err)
+        return null
+    }
+}
+
 export default function LandingHero({
     featured: initialFeatured,
 }: LandingHeroProps) {
@@ -22,6 +52,7 @@ export default function LandingHero({
     )
     const [isLocalFeatured, setIsLocalFeatured] = useState(false)
     const [locationName, setLocationName] = useState<string | null>(null)
+    const [isEstimate, setIsEstimate] = useState(false)
 
     useEffect(() => {
         // Check sessionStorage cache first
@@ -32,12 +63,14 @@ export default function LandingHero({
                     city,
                     region,
                     featured: cachedFeatured,
+                    isEstimate: cachedIsEstimate,
                 } = JSON.parse(cachedLocation)
                 if (cachedFeatured) {
                     // eslint-disable-next-line react-hooks/set-state-in-effect
                     setFeatured(cachedFeatured)
                     setIsLocalFeatured(true)
                     setLocationName(city || region || null)
+                    setIsEstimate(cachedIsEstimate || false)
                     return
                 }
             } catch {
@@ -45,9 +78,40 @@ export default function LandingHero({
             }
         }
 
+        // Helper function to get location from IP
+        const tryIPFallback = async () => {
+            console.log("Trying IP-based location fallback...")
+            const ipLocation = await getLocationFromIP()
+            if (ipLocation && (ipLocation.city || ipLocation.region)) {
+                const { city, region } = ipLocation
+                console.log("IP fallback location:", city, region)
+
+                const localFeatured = await getLocationFeatured(
+                    city ?? undefined,
+                    region ?? undefined
+                )
+                if (localFeatured) {
+                    setFeatured(localFeatured)
+                    setIsLocalFeatured(true)
+                    setLocationName(city || region || null)
+                    setIsEstimate(true)
+                    sessionStorage.setItem(
+                        "grounds_location",
+                        JSON.stringify({
+                            city,
+                            region,
+                            featured: localFeatured,
+                            isEstimate: true,
+                        })
+                    )
+                }
+            }
+        }
+
         // Skip if geolocation not supported
         if (typeof window === "undefined" || !navigator.geolocation) {
-            console.log("Geolocation not supported")
+            console.log("Geolocation not supported, trying IP fallback")
+            tryIPFallback()
             return
         }
 
@@ -58,6 +122,7 @@ export default function LandingHero({
                     position.coords.latitude,
                     position.coords.longitude
                 )
+
                 // Reverse geocode using Nominatim (OpenStreetMap)
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&addressdetails=1`,
@@ -73,7 +138,7 @@ export default function LandingHero({
                     data.address?.village
                 const region = data.address?.state || data.address?.region
 
-                console.log("Reverse geocoded:", city, region)
+                console.log("Location:", city, region)
 
                 if (city || region) {
                     const localFeatured = await getLocationFeatured(
@@ -84,18 +149,22 @@ export default function LandingHero({
                         setFeatured(localFeatured)
                         setIsLocalFeatured(true)
                         setLocationName(city || region || null)
+                        setIsEstimate(false)
                         sessionStorage.setItem(
                             "grounds_location",
                             JSON.stringify({
                                 city,
                                 region,
                                 featured: localFeatured,
+                                isEstimate: false,
                             })
                         )
                     }
                 }
             } catch (error) {
-                console.error("Failed to reverse geocode:", error)
+                console.error("Failed to process location:", error)
+                // Try IP fallback on reverse geocoding failure
+                await tryIPFallback()
             }
         }
 
@@ -103,8 +172,24 @@ export default function LandingHero({
         let watchId: number | null = null
         let hasPosition = false
 
-        const startWatching = () => {
+        const startWatching = async () => {
             console.log("Starting geolocation watch...")
+
+            // Check permission first
+            if (navigator.permissions) {
+                try {
+                    const permission = await navigator.permissions.query({
+                        name: "geolocation",
+                    })
+                    if (permission.state === "denied") {
+                        console.log("Permission denied, trying IP fallback")
+                        await tryIPFallback()
+                        return
+                    }
+                } catch {
+                    // Permissions API not available, continue
+                }
+            }
 
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
@@ -121,18 +206,32 @@ export default function LandingHero({
                         navigator.geolocation.clearWatch(watchId)
                     }
                 },
-                (error) => {
+                async (error) => {
                     console.log("Watch error:", error.code, error.message)
                     if (error.code === error.PERMISSION_DENIED) {
-                        console.log("User denied location permission")
+                        console.log(
+                            "User denied location permission, trying IP fallback"
+                        )
                         if (watchId !== null) {
                             navigator.geolocation.clearWatch(watchId)
                         }
+                        await tryIPFallback()
+                    } else if (
+                        error.code === error.POSITION_UNAVAILABLE ||
+                        error.code === error.TIMEOUT
+                    ) {
+                        // Position unavailable or timeout, try IP fallback
+                        console.log(
+                            "Position unavailable/timeout, trying IP fallback"
+                        )
+                        if (watchId !== null) {
+                            navigator.geolocation.clearWatch(watchId)
+                        }
+                        await tryIPFallback()
                     }
-                    // For POSITION_UNAVAILABLE, keep watching - it might become available
                 },
                 {
-                    timeout: 30000,
+                    timeout: 15000,
                     maximumAge: 60000,
                     enableHighAccuracy: false,
                 }
@@ -248,12 +347,23 @@ export default function LandingHero({
                                                     },
                                                 },
                                             }}
-                                            className='flex flex-row items-center gap-1 text-sm text-text/60'
+                                            className='flex flex-col gap-1'
                                         >
-                                            <MapPinIcon className='w-4 h-4' />
-                                            <span>
-                                                Featured near {locationName}
-                                            </span>
+                                            <div className='flex flex-row items-center gap-1 text-sm text-text/60'>
+                                                <MapPinIcon className='w-4 h-4' />
+                                                <span>
+                                                    Featured near {locationName}
+                                                </span>
+                                            </div>
+                                            {isEstimate && (
+                                                <div className='flex flex-row items-center gap-1 text-xs text-text/40 italic'>
+                                                    <InfoIcon className='w-3 h-3' />
+                                                    <span>
+                                                        Location estimated from
+                                                        IP address
+                                                    </span>
+                                                </div>
+                                            )}
                                         </motion.div>
                                     )}
                                 </div>

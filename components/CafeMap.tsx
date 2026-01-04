@@ -213,8 +213,8 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
         })
     }
 
-    // Default center (Cebu City)
-    const defaultCenter: [number, number] = [10.3157, 123.8854]
+    // Default center (Philippines)
+    const defaultCenter: [number, number] = [12.8797, 121.774]
 
     // Force re-render on mount to avoid map initialization issues
     const [mapKey, setMapKey] = useState("map-init")
@@ -237,7 +237,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
         <MapContainer
             key={mapKey}
             center={defaultCenter}
-            zoom={12}
+            zoom={6}
             scrollWheelZoom={true}
             dragging={true}
             touchZoom={true}
