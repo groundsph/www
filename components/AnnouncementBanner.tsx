@@ -16,17 +16,7 @@ interface Announcement {
     link?: { href: string; label: string }
 }
 
-const CURRENT_ANNOUNCEMENT: Announcement | null = {
-    id: "macos-location-issue-2026",
-    message: (
-        <>
-            <span className='font-bold'>Location Issue</span> Location features
-            may not work on desktop currently.
-        </>
-    ),
-    expiresAt: new Date("2026-01-31T23:59:59"), // Show until end of January
-    icon: Megaphone,
-}
+const CURRENT_ANNOUNCEMENT: Announcement | null = null
 
 // ============================================================
 // COMPONENT
@@ -91,6 +81,3 @@ export default function AnnouncementBanner() {
         </div>
     )
 }
-
-// Re-export with old name for backwards compatibility
-export { AnnouncementBanner as BetaBanner }
