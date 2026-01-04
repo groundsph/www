@@ -714,8 +714,8 @@ export default function CafeSubmissionForm({
                                         Before We Begin
                                     </h3>
                                     <p className='text-text/60 text-sm'>
-                                        Please read through these guidelines
-                                        before submitting
+                                        Please check if the cafe exists first
+                                        and review the guidelines below
                                     </p>
                                 </div>
 
@@ -788,11 +788,12 @@ export default function CafeSubmissionForm({
                                         </div>
                                         <div>
                                             <h4 className='font-semibold text-lg'>
-                                                Check if the cafe already exists
+                                                Search for the cafe first
                                             </h4>
                                             <p className='text-text/60 text-sm'>
-                                                Search below to avoid submitting
-                                                duplicates
+                                                You must search to confirm the
+                                                cafe doesn&apos;t already exist
+                                                before proceeding
                                             </p>
                                         </div>
                                     </div>

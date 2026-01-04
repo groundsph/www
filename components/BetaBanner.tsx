@@ -17,16 +17,15 @@ interface Announcement {
 }
 
 const CURRENT_ANNOUNCEMENT: Announcement | null = {
-    id: "new-year-2026",
+    id: "macos-location-issue-2026",
     message: (
         <>
-            <span className='font-bold'>Happy New Year 2026! 🎉</span> Wishing
-            you a year full of great coffee and cozy cafe moments.
+            <span className='font-bold'>Location Issue</span> Location features
+            may not work on desktop currently.
         </>
     ),
-    expiresAt: new Date("2026-01-07T23:59:59"), // Show for the first week of January
-    icon: PartyPopper,
-    link: { href: "/roadmap", label: "See what's brewing" },
+    expiresAt: new Date("2026-01-31T23:59:59"), // Show until end of January
+    icon: Megaphone,
 }
 
 // ============================================================

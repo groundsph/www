@@ -24,9 +24,6 @@ export default function LandingHero({
     const [locationName, setLocationName] = useState<string | null>(null)
 
     useEffect(() => {
-        // Skip if geolocation not supported
-        if (!navigator.geolocation) return
-
         // Check sessionStorage cache first
         const cachedLocation = sessionStorage.getItem("grounds_location")
         if (cachedLocation) {
@@ -48,83 +45,108 @@ export default function LandingHero({
             }
         }
 
-        // Delay geolocation request to prioritize initial paint
-        const timeoutId = setTimeout(() => {
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    try {
-                        // Reverse geocode using Nominatim (OpenStreetMap)
-                        const response = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&addressdetails=1`,
-                            { headers: { "User-Agent": "Grounds Coffee App" } }
-                        )
-                        const data = await response.json()
+        // Skip if geolocation not supported
+        if (typeof window === "undefined" || !navigator.geolocation) {
+            console.log("Geolocation not supported")
+            return
+        }
 
-                        // Extract city and region from response
-                        const city =
-                            data.address?.city ||
-                            data.address?.town ||
-                            data.address?.municipality ||
-                            data.address?.village
-                        const region =
-                            data.address?.state || data.address?.region
+        const handlePosition = async (position: GeolocationPosition) => {
+            try {
+                console.log(
+                    "Got position:",
+                    position.coords.latitude,
+                    position.coords.longitude
+                )
+                // Reverse geocode using Nominatim (OpenStreetMap)
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&addressdetails=1`,
+                    { headers: { "User-Agent": "Grounds Coffee App" } }
+                )
+                const data = await response.json()
 
-                        if (city || region) {
-                            // Fetch location-based featured cafe
-                            const localFeatured = await getLocationFeatured(
+                // Extract city and region from response
+                const city =
+                    data.address?.city ||
+                    data.address?.town ||
+                    data.address?.municipality ||
+                    data.address?.village
+                const region = data.address?.state || data.address?.region
+
+                console.log("Reverse geocoded:", city, region)
+
+                if (city || region) {
+                    const localFeatured = await getLocationFeatured(
+                        city,
+                        region
+                    )
+                    if (localFeatured) {
+                        setFeatured(localFeatured)
+                        setIsLocalFeatured(true)
+                        setLocationName(city || region || null)
+                        sessionStorage.setItem(
+                            "grounds_location",
+                            JSON.stringify({
                                 city,
-                                region
-                            )
-                            if (localFeatured) {
-                                setFeatured(localFeatured)
-                                setIsLocalFeatured(true)
-                                setLocationName(city || region || null)
-                                // Cache in sessionStorage
-                                sessionStorage.setItem(
-                                    "grounds_location",
-                                    JSON.stringify({
-                                        city,
-                                        region,
-                                        featured: localFeatured,
-                                    })
-                                )
-                            }
-                        }
-                    } catch (error) {
-                        console.error(
-                            "Failed to get location-based featured:",
-                            error
+                                region,
+                                featured: localFeatured,
+                            })
                         )
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to reverse geocode:", error)
+            }
+        }
+
+        // Use watchPosition which sometimes works when getCurrentPosition fails
+        let watchId: number | null = null
+        let hasPosition = false
+
+        const startWatching = () => {
+            console.log("Starting geolocation watch...")
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    if (hasPosition) return // Already got a position
+                    hasPosition = true
+                    console.log(
+                        "Watch got position:",
+                        position.coords.latitude,
+                        position.coords.longitude
+                    )
+                    handlePosition(position)
+                    // Stop watching after getting position
+                    if (watchId !== null) {
+                        navigator.geolocation.clearWatch(watchId)
                     }
                 },
                 (error) => {
-                    // User denied location or error - silently use default featured
-                    let errorMessage = "Unknown location error"
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage = "Location access denied by user"
-                            break
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage = "Location position unavailable"
-                            break
-                        case error.TIMEOUT:
-                            errorMessage = "Location request timed out"
-                            break
+                    console.log("Watch error:", error.code, error.message)
+                    if (error.code === error.PERMISSION_DENIED) {
+                        console.log("User denied location permission")
+                        if (watchId !== null) {
+                            navigator.geolocation.clearWatch(watchId)
+                        }
                     }
-                    console.log(
-                        `${errorMessage}, using default featured:`,
-                        error.message
-                    )
+                    // For POSITION_UNAVAILABLE, keep watching - it might become available
                 },
                 {
-                    timeout: 10000,
-                    maximumAge: 300000,
-                    enableHighAccuracy: true,
-                } // 10s timeout, cache for 5 min
+                    timeout: 30000,
+                    maximumAge: 60000,
+                    enableHighAccuracy: false,
+                }
             )
-        }, 1500) // 1.5s delay to prioritize initial content paint
+        }
 
-        return () => clearTimeout(timeoutId)
+        // Delay to prioritize initial paint
+        const timeoutId = setTimeout(() => startWatching(), 1500)
+        return () => {
+            clearTimeout(timeoutId)
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId)
+            }
+        }
     }, [])
 
     return (
