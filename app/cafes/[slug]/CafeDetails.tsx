@@ -23,6 +23,7 @@ import ImageLightbox from "@/components/ImageLightbox"
 import ClaimCafeModal from "@/components/ClaimCafeModal"
 import ContributionHistoryModal from "@/components/history/ContributionHistoryModal"
 import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
+import MilestoneCelebration from "@/components/MilestoneCelebration"
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
@@ -104,6 +105,19 @@ export default function CafeDetails({
 
     // Add to Collection Modal State
     const [isAddToCollectionOpen, setIsAddToCollectionOpen] = useState(false)
+
+    // Milestone celebration state
+    const [milestone, setMilestone] = useState<number | null>(null)
+
+    // Check-in handler with milestone celebration
+    const handleCheckIn = async () => {
+        const result = await checkIn()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- milestone is added dynamically
+        if ((result as any)?.milestone) {
+            setMilestone((result as any).milestone)
+        }
+        return result
+    }
 
     // Computed
     const story = cafe.story
@@ -221,7 +235,7 @@ export default function CafeDetails({
                 visitCount={visitCount}
                 visitedToday={visitedToday}
                 isCheckingIn={isCheckingIn}
-                onCheckIn={checkIn}
+                onCheckIn={handleCheckIn}
                 onToggleVisited={toggleVisited}
                 onToggleFavorite={toggleFavorite}
                 onToggleWishlist={toggleWishlist}
@@ -592,6 +606,13 @@ export default function CafeDetails({
                 onClose={() => setIsAddToCollectionOpen(false)}
                 cafeId={cafe.id}
                 cafeName={cafe.name}
+            />
+
+            {/* Milestone Celebration */}
+            <MilestoneCelebration
+                milestone={milestone}
+                cafeName={cafe.name}
+                onClose={() => setMilestone(null)}
             />
         </>
     )

@@ -929,11 +929,12 @@ export async function recordVisit(cafeId: string): Promise<{
     success: boolean
     visitCount: number
     isFirstVisit: boolean
+    milestone?: number | null
     alreadyVisitedToday?: boolean
     error?: string
 }> {
     const user = await getCurrentUser()
-    if (!user) return { success: false, visitCount: 0, isFirstVisit: false, error: "Unauthorized" }
+    if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
 
     try {
         // Check if user already visited this cafe today
@@ -966,6 +967,7 @@ export async function recordVisit(cafeId: string): Promise<{
                 success: false,
                 visitCount: countResult[0]?.count ?? 0,
                 isFirstVisit: false,
+                milestone: null,
                 alreadyVisitedToday: true,
             }
         }
@@ -1025,10 +1027,14 @@ export async function recordVisit(cafeId: string): Promise<{
         const { checkAndAwardBadges } = await import("@/utils/badges/badge-logic")
         await checkAndAwardBadges(user.id, { visits: true, cafeId })
 
-        return { success: true, visitCount: newCount, isFirstVisit }
+        // Check for milestone (celebrate at 5, 10, 25, 50, 100 visits)
+        const milestones = [5, 10, 25, 50, 100]
+        const milestone = milestones.includes(newCount) ? newCount : null
+
+        return { success: true, visitCount: newCount, isFirstVisit, milestone }
     } catch (error) {
         console.error("Error recording visit:", error)
-        return { success: false, visitCount: 0, isFirstVisit: false, error: "Failed to record visit" }
+        return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Failed to record visit" }
     }
 }
 
@@ -1157,5 +1163,196 @@ export async function hasVisitedToday(cafeId: string): Promise<boolean> {
     } catch (error) {
         console.error("Error checking today's visit:", error)
         return false
+    }
+}
+
+/**
+ * Get user's preferred region based on most-visited cafes
+ */
+export async function getUserPreferredRegion(): Promise<string | null> {
+    const user = await getCurrentUser()
+    if (!user) return null
+
+    try {
+        // Get the region with most visits
+        const result = await db
+            .select({
+                region: cafes.region,
+                visitCount: count(),
+            })
+            .from(cafeVisits)
+            .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+            .where(eq(cafeVisits.userId, user.id))
+            .groupBy(cafes.region)
+            .orderBy(desc(count()))
+            .limit(1)
+
+        return result[0]?.region || null
+    } catch (error) {
+        console.error("Error getting user preferred region:", error)
+        return null
+    }
+}
+
+/**
+ * Get monthly leaderboard of top visitors
+ * @param region - Optional region filter (e.g., "NCR", "Region IV-A")
+ * @param limit - Number of results to return (default 20)
+ */
+export async function getMonthlyLeaderboard(
+    region?: string | null,
+    limit: number = 20
+): Promise<{
+    leaderboard: {
+        rank: number
+        userId: string
+        username: string
+        displayName: string
+        avatarUrl: string | null
+        visitCount: number
+    }[]
+    userRank: number | null
+    region: string | null
+}> {
+    const user = await getCurrentUser()
+
+    try {
+        // Get start of current month
+        const now = new Date()
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+        // Build base query
+        let query = db
+            .select({
+                userId: cafeVisits.userId,
+                username: profiles.username,
+                displayName: profiles.displayName,
+                avatarUrl: profiles.avatarUrl,
+                visitCount: count(),
+            })
+            .from(cafeVisits)
+            .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
+            .where(sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`)
+
+        // Add region filter if specified
+        if (region) {
+            query = db
+                .select({
+                    userId: cafeVisits.userId,
+                    username: profiles.username,
+                    displayName: profiles.displayName,
+                    avatarUrl: profiles.avatarUrl,
+                    visitCount: count(),
+                })
+                .from(cafeVisits)
+                .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
+                .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+                .where(
+                    and(
+                        sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`,
+                        eq(cafes.region, region)
+                    )
+                )
+        }
+
+        const results = await query
+            .groupBy(cafeVisits.userId, profiles.id, profiles.username, profiles.displayName, profiles.avatarUrl)
+            .orderBy(desc(count()))
+            .limit(limit)
+
+        // Build leaderboard with ranks
+        const leaderboard = results.map((r, i) => ({
+            rank: i + 1,
+            userId: r.userId,
+            username: r.username,
+            displayName: r.displayName,
+            avatarUrl: r.avatarUrl,
+            visitCount: r.visitCount,
+        }))
+
+        // Find current user's rank if logged in
+        let userRank: number | null = null
+        if (user) {
+            const userEntry = leaderboard.find((e) => e.userId === user.id)
+            userRank = userEntry?.rank || null
+
+            // If user not in top results, query their rank
+            if (!userRank) {
+                // Count users with more visits than current user
+                const userVisitCountQuery = region
+                    ? db
+                        .select({ visitCount: count() })
+                        .from(cafeVisits)
+                        .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+                        .where(
+                            and(
+                                eq(cafeVisits.userId, user.id),
+                                sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`,
+                                eq(cafes.region, region)
+                            )
+                        )
+                    : db
+                        .select({ visitCount: count() })
+                        .from(cafeVisits)
+                        .where(
+                            and(
+                                eq(cafeVisits.userId, user.id),
+                                sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`
+                            )
+                        )
+
+                const userVisitResult = await userVisitCountQuery
+                const userVisitCount = userVisitResult[0]?.visitCount || 0
+
+                if (userVisitCount > 0) {
+                    // Count users with more visits
+                    const higherRanksQuery = region
+                        ? db
+                            .select({ count: count() })
+                            .from(
+                                db
+                                    .select({ userId: cafeVisits.userId, total: count() })
+                                    .from(cafeVisits)
+                                    .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+                                    .where(
+                                        and(
+                                            sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`,
+                                            eq(cafes.region, region)
+                                        )
+                                    )
+                                    .groupBy(cafeVisits.userId)
+                                    .having(sql`count(*) > ${userVisitCount}`)
+                                    .as("higher")
+                            )
+                        : db
+                            .select({ count: count() })
+                            .from(
+                                db
+                                    .select({ userId: cafeVisits.userId, total: count() })
+                                    .from(cafeVisits)
+                                    .where(sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`)
+                                    .groupBy(cafeVisits.userId)
+                                    .having(sql`count(*) > ${userVisitCount}`)
+                                    .as("higher")
+                            )
+
+                    const higherResult = await higherRanksQuery
+                    userRank = (higherResult[0]?.count || 0) + 1
+                }
+            }
+        }
+
+        return {
+            leaderboard,
+            userRank,
+            region: region || null,
+        }
+    } catch (error) {
+        console.error("Error getting monthly leaderboard:", error)
+        return {
+            leaderboard: [],
+            userRank: null,
+            region: region || null,
+        }
     }
 }

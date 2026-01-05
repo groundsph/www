@@ -15,12 +15,14 @@ import {
     User,
     Loader2,
     Star,
+    Trophy,
 } from "lucide-react"
 import { getPublicCollections, searchUsers } from "@/app/api/actions/community"
 import EventsPageClient from "@/components/events/EventsPageClient"
+import MonthlyLeaderboard from "@/components/community/MonthlyLeaderboard"
 import { EventWithCafe } from "@/utils/types/extra"
 
-type TabType = "collections" | "events" | "people"
+type TabType = "collections" | "events" | "leaderboard"
 
 interface PublicCollection {
     id: string
@@ -91,7 +93,7 @@ export default function CommunityPageClient({
         const tabParam = searchParamsHook.get("tab")
         if (
             tabParam &&
-            ["collections", "events", "people"].includes(tabParam)
+            ["collections", "events", "leaderboard"].includes(tabParam)
         ) {
             setActiveTab(tabParam as TabType)
         }
@@ -214,6 +216,7 @@ export default function CommunityPageClient({
     const tabs = [
         { id: "collections" as TabType, label: "Collections", icon: Layers },
         { id: "events" as TabType, label: "Events", icon: Calendar },
+        { id: "leaderboard" as TabType, label: "Leaderboard", icon: Trophy },
     ]
 
     return (
@@ -352,6 +355,10 @@ export default function CommunityPageClient({
                             </p>
                         </div>
                     )}
+                </section>
+            ) : activeTab === "leaderboard" && !isUserSearch ? (
+                <section className='max-w-7xl mx-auto px-6 py-8'>
+                    <MonthlyLeaderboard />
                 </section>
             ) : null}
 

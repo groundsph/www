@@ -79,7 +79,7 @@ export function useCafeActions(cafeId: string) {
             return result
         } catch (error) {
             console.error("Check-in failed", error)
-            return { success: false, visitCount, isFirstVisit: false, error: "Check-in failed" }
+            return { success: false, visitCount, isFirstVisit: false, milestone: null, error: "Check-in failed" }
         } finally {
             setIsCheckingIn(false)
         }
