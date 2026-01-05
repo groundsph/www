@@ -28,6 +28,7 @@ import {
     Store,
     Sparkles,
     Phone,
+    MapPin,
 } from "lucide-react"
 
 import { submitEditSuggestion } from "@/app/api/actions/suggestions"
@@ -55,6 +56,18 @@ import {
     COFFEE_STYLES,
 } from "@/utils/data/philippines"
 import React from "react"
+import dynamic from "next/dynamic"
+
+// Dynamic import for LocationPickerInner (uses Leaflet which requires window)
+const LocationPickerInner = dynamic(
+    () => import("@/components/submit/LocationPickerInner"),
+    {
+        ssr: false,
+        loading: () => (
+            <div className='aspect-video bg-text/5 rounded-xl animate-pulse' />
+        ),
+    }
+)
 
 interface SuggestEditModalProps {
     isOpen: boolean
@@ -629,6 +642,169 @@ export default function SuggestEditModal({
                                                         }`}
                                                     />
                                                 </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Location Section */}
+                                    <div className='border border-text/10 rounded-lg overflow-hidden'>
+                                        <button
+                                            onClick={() =>
+                                                toggleSection("location")
+                                            }
+                                            className='w-full flex items-center justify-between p-3 bg-text/5 hover:bg-text/10 transition-colors cursor-pointer'
+                                        >
+                                            <span className='font-medium flex items-center gap-2'>
+                                                <MapPin className='w-4 h-4' />
+                                                Location Coordinates
+                                                {(hasChange("lat") ||
+                                                    hasChange("lng")) && (
+                                                    <span className='text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full'>
+                                                        Changed
+                                                    </span>
+                                                )}
+                                            </span>
+                                            {expandedSections.has(
+                                                "location"
+                                            ) ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                            ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                            )}
+                                        </button>
+
+                                        {expandedSections.has("location") && (
+                                            <div className='p-4 space-y-3'>
+                                                {cafe.is_hidden_gem ? (
+                                                    // Hidden gem: don't reveal exact coordinates
+                                                    <>
+                                                        <div className='flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700'>
+                                                            <Sparkles className='w-4 h-4 shrink-0' />
+                                                            <span>
+                                                                This is a hidden
+                                                                gem. Location
+                                                                coordinates are
+                                                                kept private.
+                                                            </span>
+                                                        </div>
+                                                        {cafe.lat &&
+                                                        cafe.lng ? (
+                                                            <p className='text-xs text-text/60 flex items-center gap-1.5'>
+                                                                <Check className='w-3.5 h-3.5 text-green-500' />
+                                                                Location already
+                                                                submitted
+                                                            </p>
+                                                        ) : (
+                                                            <p className='text-xs text-text/60'>
+                                                                No location set
+                                                                yet. You can
+                                                                submit one
+                                                                below.
+                                                            </p>
+                                                        )}
+                                                        <LocationPickerInner
+                                                            lat={
+                                                                changes.lat ??
+                                                                null
+                                                            }
+                                                            lng={
+                                                                changes.lng ??
+                                                                null
+                                                            }
+                                                            onChange={(
+                                                                newLat,
+                                                                newLng
+                                                            ) => {
+                                                                updateChange(
+                                                                    "lat",
+                                                                    newLat
+                                                                )
+                                                                updateChange(
+                                                                    "lng",
+                                                                    newLng
+                                                                )
+                                                            }}
+                                                        />
+                                                    </>
+                                                ) : (
+                                                    // Regular cafe: show current location and allow editing
+                                                    <>
+                                                        <p className='text-xs text-text/60'>
+                                                            Click on the map or
+                                                            use the tools below
+                                                            to update the
+                                                            cafe&apos;s exact
+                                                            location.
+                                                        </p>
+                                                        <LocationPickerInner
+                                                            lat={
+                                                                changes.lat ??
+                                                                cafe.lat ??
+                                                                null
+                                                            }
+                                                            lng={
+                                                                changes.lng ??
+                                                                cafe.lng ??
+                                                                null
+                                                            }
+                                                            onChange={(
+                                                                newLat,
+                                                                newLng
+                                                            ) => {
+                                                                const currentLat =
+                                                                    cafe.lat
+                                                                const currentLng =
+                                                                    cafe.lng
+
+                                                                if (
+                                                                    newLat !==
+                                                                    currentLat
+                                                                ) {
+                                                                    updateChange(
+                                                                        "lat",
+                                                                        newLat
+                                                                    )
+                                                                } else {
+                                                                    setChanges(
+                                                                        (
+                                                                            prev
+                                                                        ) => {
+                                                                            const rest =
+                                                                                {
+                                                                                    ...prev,
+                                                                                }
+                                                                            delete rest.lat
+                                                                            return rest
+                                                                        }
+                                                                    )
+                                                                }
+
+                                                                if (
+                                                                    newLng !==
+                                                                    currentLng
+                                                                ) {
+                                                                    updateChange(
+                                                                        "lng",
+                                                                        newLng
+                                                                    )
+                                                                } else {
+                                                                    setChanges(
+                                                                        (
+                                                                            prev
+                                                                        ) => {
+                                                                            const rest =
+                                                                                {
+                                                                                    ...prev,
+                                                                                }
+                                                                            delete rest.lng
+                                                                            return rest
+                                                                        }
+                                                                    )
+                                                                }
+                                                            }}
+                                                        />
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                     </div>

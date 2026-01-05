@@ -9,6 +9,8 @@ export interface SuggestableFields {
     description?: string;
     address_display?: string;
     area?: string;
+    lat?: number;
+    lng?: number;
     phone?: string;
     email?: string;
     website_url?: string;
