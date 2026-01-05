@@ -12,6 +12,7 @@ interface VisitHistoryCafe {
     slug: string
     thumbnail: string | null
     visited_at: string | null
+    visitCount?: number // Optional visit count from new system
 }
 
 interface VisitHistoryProps {
@@ -189,10 +190,16 @@ export default function VisitHistory({
                 <h2 className='text-lg sm:text-xl font-semibold font-serif'>
                     Visit History
                 </h2>
-                <span className='ml-auto bg-primary/15 text-primary text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full'>
+                <span className='bg-primary/15 text-primary text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full'>
                     {sortedVisits.length}{" "}
-                    {sortedVisits.length === 1 ? "visit" : "visits"}
+                    {sortedVisits.length === 1 ? "cafe" : "cafes"}
                 </span>
+                <Link
+                    href='/profile/visits'
+                    className='ml-auto text-xs sm:text-sm text-primary hover:text-primary/80 font-medium transition-colors'
+                >
+                    View All →
+                </Link>
             </div>
 
             {/* Fixed wrapper for visual box (background & border) */}
@@ -396,17 +403,21 @@ export default function VisitHistory({
 
                                         {/* Date below name */}
                                         <span className='text-[9px] sm:text-[10px] text-text/40 font-medium whitespace-nowrap'>
-                                            {cafe.visited_at
-                                                ? new Date(
-                                                      cafe.visited_at
-                                                  ).toLocaleDateString(
-                                                      "en-US",
-                                                      {
-                                                          month: "short",
-                                                          day: "numeric",
-                                                      }
-                                                  )
-                                                : "—"}
+                                            {cafe.visitCount &&
+                                            cafe.visitCount > 1 ? (
+                                                <span className='text-primary font-semibold'>
+                                                    {cafe.visitCount}× visited
+                                                </span>
+                                            ) : cafe.visited_at ? (
+                                                new Date(
+                                                    cafe.visited_at
+                                                ).toLocaleDateString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                })
+                                            ) : (
+                                                "—"
+                                            )}
                                         </span>
                                     </Link>
                                 </motion.div>

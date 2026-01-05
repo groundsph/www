@@ -151,6 +151,7 @@ export default function ProfileClient() {
             slug: string
             thumbnail: string | null
             visited_at: string | null
+            visitCount?: number
         }[]
     >([])
     const [favoriteCafes, setFavoriteCafes] = useState<
@@ -1125,6 +1126,68 @@ export default function ProfileClient() {
                         </div>
                     </div>
                 </section>
+
+                {/* Favorite Spots - Top 5 most visited cafes */}
+                {visitedCafes.some((c) => (c.visitCount ?? 0) > 1) && (
+                    <section className='mt-10'>
+                        <div className='flex items-center gap-2 mb-4'>
+                            <Coffee className='w-5 h-5' />
+                            <h2 className='text-xl font-semibold font-serif'>
+                                Favorite Spots
+                            </h2>
+                            <span className='text-xs text-text/50'>
+                                Your most visited cafes
+                            </span>
+                        </div>
+
+                        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3'>
+                            {[...visitedCafes]
+                                .sort(
+                                    (a, b) =>
+                                        (b.visitCount ?? 0) -
+                                        (a.visitCount ?? 0)
+                                )
+                                .slice(0, 5)
+                                .filter((c) => (c.visitCount ?? 0) > 1)
+                                .map((cafe) => (
+                                    <Link
+                                        key={cafe.slug}
+                                        href={`/cafes/${cafe.slug}`}
+                                        className='group relative flex flex-col items-center p-4 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-colors'
+                                    >
+                                        {/* Visit count badge */}
+                                        <span className='absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
+                                            {cafe.visitCount}×
+                                        </span>
+
+                                        {/* Cafe thumbnail */}
+                                        <div className='w-14 h-14 rounded-full overflow-hidden bg-text/10 mb-2'>
+                                            {cafe.thumbnail ? (
+                                                <Image
+                                                    src={getCafeThumbnailUrl(
+                                                        cafe.thumbnail
+                                                    )}
+                                                    alt={cafe.name}
+                                                    width={56}
+                                                    height={56}
+                                                    className='w-full h-full object-cover'
+                                                />
+                                            ) : (
+                                                <div className='w-full h-full flex items-center justify-center'>
+                                                    <Coffee className='w-6 h-6 text-text/30' />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Cafe name */}
+                                        <span className='text-sm font-medium text-center line-clamp-2 group-hover:text-primary transition-colors'>
+                                            {cafe.name}
+                                        </span>
+                                    </Link>
+                                ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* Visit History Section */}
                 <section className='mt-10'>

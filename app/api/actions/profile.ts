@@ -133,7 +133,7 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
 
     // 4. Get passport cafes
     const passport = profile.passport as ProfilePassport | null
-    let visitedCafes: { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[] = []
+    let visitedCafes: { name: string; slug: string; thumbnail: string | null; visited_at: string | null; visitCount?: number }[] = []
     let favoriteCafes: { name: string; slug: string }[] = []
     let wishlistCafes: { name: string; slug: string }[] = []
 
@@ -161,8 +161,24 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
                 }
             }
 
+            // Fetch visit counts from cafe_visits table
+            const visitedIds = passport.visited_ids || []
+            let visitCountMap = new Map<string, number>()
+            if (visitedIds.length > 0) {
+                const visitCountsResult = await db
+                    .select({
+                        cafeId: cafeVisits.cafeId,
+                        visitCount: count(),
+                    })
+                    .from(cafeVisits)
+                    .where(and(eq(cafeVisits.userId, userId), inArray(cafeVisits.cafeId, visitedIds)))
+                    .groupBy(cafeVisits.cafeId)
+
+                visitCountMap = new Map(visitCountsResult.map((v) => [v.cafeId, v.visitCount]))
+            }
+
             // Build visited cafes array and sort by date (oldest first for left-to-right display)
-            visitedCafes = (passport.visited_ids || [])
+            visitedCafes = visitedIds
                 .map((id) => {
                     const cafe = cafeMap.get(id)
                     if (!cafe) return null
@@ -171,9 +187,10 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
                         slug: cafe.slug,
                         thumbnail: cafe.thumbnail,
                         visited_at: visitDatesMap.get(id) || null,
+                        visitCount: visitCountMap.get(id) || 1,
                     }
                 })
-                .filter(Boolean) as { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
+                .filter(Boolean) as { name: string; slug: string; thumbnail: string | null; visited_at: string | null; visitCount?: number }[]
 
             // Sort: entries with dates first (oldest to newest), then entries without dates
             visitedCafes.sort((a, b) => {
