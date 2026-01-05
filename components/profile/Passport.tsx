@@ -147,7 +147,7 @@ export default function Passport({
                                 </div>
                             ) : (
                                 <div className='flex flex-col items-center justify-center py-20 text-center opacity-60'>
-                                    <Stamp className='w-16 h-16 text-text/20 mb-4' />
+                                    <Stamp className='w-16 h-16 text-text opacity-30 mb-4' />
                                     <p className='text-lg font-medium'>
                                         No stamps yet
                                     </p>
@@ -202,7 +202,7 @@ export default function Passport({
                                 </div>
                             ) : (
                                 <div className='flex flex-col items-center justify-center py-20 text-center opacity-60'>
-                                    <Heart className='w-16 h-16 text-text/20 mb-4' />
+                                    <Heart className='w-16 h-16 text-text opacity-30 mb-4' />
                                     <p className='text-lg font-medium'>
                                         No favorites yet
                                     </p>
@@ -257,7 +257,7 @@ export default function Passport({
                                 </div>
                             ) : (
                                 <div className='flex flex-col items-center justify-center py-20 text-center opacity-60'>
-                                    <Bookmark className='w-16 h-16 text-text/20 mb-4' />
+                                    <Bookmark className='w-16 h-16 text-text opacity-30 mb-4' />
                                     <p className='text-lg font-medium'>
                                         Wishlist is empty
                                     </p>

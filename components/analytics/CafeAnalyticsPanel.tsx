@@ -128,7 +128,7 @@ export default function CafeAnalyticsPanel() {
             case "down":
                 return <TrendingDown className='w-4 h-4 text-red-500' />
             default:
-                return <Minus className='w-4 h-4 text-text/30' />
+                return <Minus className='w-4 h-4 text-text opacity-30' />
         }
     }
 
@@ -307,7 +307,7 @@ export default function CafeAnalyticsPanel() {
                                                         />
                                                     ) : (
                                                         <div className='w-full h-full flex items-center justify-center'>
-                                                            <CoffeeIcon className='w-5 h-5 text-text/30' />
+                                                            <CoffeeIcon className='w-5 h-5 text-text opacity-30' />
                                                         </div>
                                                     )}
                                                 </div>

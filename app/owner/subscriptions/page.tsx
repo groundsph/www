@@ -151,7 +151,7 @@ function SubscriptionsContent() {
     if (cafes.length === 0) {
         return (
             <div className='max-w-4xl mx-auto py-8 px-4 text-center'>
-                <Building2 className='w-16 h-16 mx-auto mb-4 text-text/30' />
+                <Building2 className='w-16 h-16 mx-auto mb-4 text-text opacity-30' />
                 <h1 className='text-2xl font-serif font-bold mb-2'>
                     No Cafes Found
                 </h1>

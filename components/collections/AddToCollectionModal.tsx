@@ -149,7 +149,7 @@ export default function AddToCollectionModal({
                                 </div>
                             ) : collections.length === 0 && !showCreateForm ? (
                                 <div className='text-center py-8'>
-                                    <FolderPlus className='w-12 h-12 mx-auto text-text/30 mb-3' />
+                                    <FolderPlus className='w-12 h-12 mx-auto text-text opacity-30 mb-3' />
                                     <p className='text-text/60 mb-4'>
                                         You don&apos;t have any collections yet
                                     </p>
@@ -189,7 +189,7 @@ export default function AddToCollectionModal({
                                                         className='w-full h-full object-cover'
                                                     />
                                                 ) : (
-                                                    <div className='w-full h-full flex items-center justify-center text-text/30'>
+                                                    <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
                                                         <FolderPlus className='w-5 h-5' />
                                                     </div>
                                                 )}

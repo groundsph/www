@@ -95,7 +95,7 @@ export default async function VisitsPage() {
                                                     />
                                                 ) : (
                                                     <div className='w-full h-full flex items-center justify-center'>
-                                                        <Coffee className='w-6 h-6 text-text/30' />
+                                                        <Coffee className='w-6 h-6 text-text opacity-30' />
                                                     </div>
                                                 )}
                                             </div>

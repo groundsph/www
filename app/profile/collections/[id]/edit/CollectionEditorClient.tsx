@@ -557,7 +557,7 @@ export default function CollectionEditorClient({
                                             >
                                                 {/* Drag Handle & Index */}
                                                 <div className='flex flex-col items-center gap-1 pt-1'>
-                                                    <GripVertical className='w-4 h-4 text-text/30' />
+                                                    <GripVertical className='w-4 h-4 text-text opacity-30' />
                                                     <span className='text-xs text-text/40 font-medium'>
                                                         {index + 1}
                                                     </span>

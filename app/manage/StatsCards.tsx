@@ -57,7 +57,7 @@ export default function StatsCards() {
                         key={i}
                         className='h-32 bg-text/5 rounded-xl flex items-center justify-center'
                     >
-                        <Loader2 className='w-6 h-6 animate-spin text-text/30' />
+                        <Loader2 className='w-6 h-6 animate-spin text-text opacity-30' />
                     </div>
                 ))}
             </div>
