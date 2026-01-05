@@ -168,6 +168,9 @@ export default function ProfileClient() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OwnedCafe type from owner actions
     const [ownedCafes, setOwnedCafes] = useState<any[]>([])
 
+    // Rank Details Toggle
+    const [showRankDetails, setShowRankDetails] = useState(false)
+
     // Collections
     const [collections, setCollections] = useState<
         {
@@ -1124,6 +1127,129 @@ export default function ProfileClient() {
                                 Scouted
                             </span>
                         </div>
+                    </div>
+
+                    {/* Rank Hierarchy Toggle */}
+                    <div className='mt-6 flex flex-col items-center'>
+                        <button
+                            onClick={() => setShowRankDetails(!showRankDetails)}
+                            className='flex items-center gap-2 text-sm text-text/60 hover:text-text transition-colors cursor-pointer px-4 py-2 hover:bg-text/5 rounded-full'
+                        >
+                            {showRankDetails
+                                ? "Hide Rank Hierarchy"
+                                : "View Rank Hierarchy & Values"}
+                            <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-300 ${showRankDetails ? "rotate-180" : ""}`}
+                            />
+                        </button>
+
+                        <AnimatePresence>
+                            {showRankDetails && (
+                                <motion.div
+                                    initial={{
+                                        opacity: 0,
+                                        height: 0,
+                                        marginTop: 0,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        height: "auto",
+                                        marginTop: 24,
+                                    }}
+                                    exit={{
+                                        opacity: 0,
+                                        height: 0,
+                                        marginTop: 0,
+                                    }}
+                                    className='w-full overflow-hidden'
+                                >
+                                    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                        {(
+                                            Object.entries(rankConfig) as [
+                                                keyof typeof rankConfig,
+                                                typeof rankConfig.novice,
+                                            ][]
+                                        )
+                                            .sort(
+                                                (a, b) =>
+                                                    a[1].minPoints -
+                                                    b[1].minPoints
+                                            )
+                                            .map(([key, config]) => {
+                                                const currentRank =
+                                                    stats?.scout_rank ||
+                                                    "novice"
+                                                const isCurrent =
+                                                    key === currentRank
+                                                const isUnlocked =
+                                                    (stats?.activity_points ??
+                                                        0) >= config.minPoints
+                                                const RankIconComponent =
+                                                    config.icon
+
+                                                return (
+                                                    <div
+                                                        key={key}
+                                                        className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+                                                            isCurrent
+                                                                ? "bg-primary/5 border-primary/30"
+                                                                : isUnlocked
+                                                                  ? "bg-text/5 border-text/10"
+                                                                  : "bg-transparent border-text/5 opacity-60"
+                                                        }`}
+                                                    >
+                                                        <div
+                                                            className={`p-3 rounded-lg ${
+                                                                isCurrent
+                                                                    ? "bg-primary/10"
+                                                                    : isUnlocked
+                                                                      ? "bg-text/10"
+                                                                      : "bg-text/5"
+                                                            }`}
+                                                        >
+                                                            <RankIconComponent
+                                                                className={`w-6 h-6 ${
+                                                                    isCurrent ||
+                                                                    isUnlocked
+                                                                        ? config.color
+                                                                        : "text-text/30"
+                                                                }`}
+                                                            />
+                                                        </div>
+                                                        <div className='flex-1'>
+                                                            <div className='flex items-center justify-between'>
+                                                                <h3
+                                                                    className={`font-bold ${isCurrent ? "text-primary" : "text-text"}`}
+                                                                >
+                                                                    {
+                                                                        config.label
+                                                                    }
+                                                                </h3>
+                                                                {isCurrent && (
+                                                                    <span className='text-[10px] font-bold bg-primary text-white px-2 py-0.5 rounded-full'>
+                                                                        YOU
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className='text-sm text-text/60'>
+                                                                {
+                                                                    config.minPoints
+                                                                }{" "}
+                                                                points
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                    </div>
+                                    <p className='text-center text-xs text-text/40 mt-6 max-w-lg mx-auto'>
+                                        Earn points by visiting cafes, leaving
+                                        reviews, adding photos, and suggesting
+                                        new spots.
+                                    </p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </section>
 
