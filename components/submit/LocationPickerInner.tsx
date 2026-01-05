@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { MapPin, Search, Crosshair } from "lucide-react"
+import { MapPin, Search, Crosshair, Link } from "lucide-react"
+import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
 import {
     MapContainer,
     TileLayer,
@@ -104,6 +105,10 @@ export default function LocationPickerInner({
     const [manualLng, setManualLng] = useState(lng?.toString() || "")
     // Search bias viewbox: minLon, maxLat, maxLon, minLat
     const [viewbox, setViewbox] = useState("")
+    // Google Maps URL parsing
+    const [googleMapsUrl, setGoogleMapsUrl] = useState("")
+    const [isParsingUrl, setIsParsingUrl] = useState(false)
+    const [urlError, setUrlError] = useState<string | null>(null)
 
     // Default center (Philippines)
     const defaultCenter: [number, number] = [12.8797, 121.774]
@@ -129,6 +134,28 @@ export default function LocationPickerInner({
             ) {
                 onChange(parsedLat, parsedLng)
             }
+        }
+    }
+
+    const handleGoogleMapsUrl = async () => {
+        if (!googleMapsUrl.trim()) return
+
+        setIsParsingUrl(true)
+        setUrlError(null)
+
+        try {
+            const coords = await extractCoordsFromGoogleMapsUrl(googleMapsUrl)
+            if (coords) {
+                onChange(coords.lat, coords.lng)
+                setGoogleMapsUrl("") // Clear on success
+            } else {
+                setUrlError("Could not extract coordinates from this URL")
+            }
+        } catch (error) {
+            console.error("Google Maps URL parsing error:", error)
+            setUrlError("Failed to parse URL")
+        } finally {
+            setIsParsingUrl(false)
         }
     }
 
@@ -349,7 +376,54 @@ export default function LocationPickerInner({
                             </div>
                         </div>
 
-                        {/* Divider */}
+                        {/* Divider - Google Maps */}
+                        <div className='flex items-center gap-3'>
+                            <div className='flex-1 h-px bg-text/10' />
+                            <span className='text-xs text-text/40'>
+                                or paste a Google Maps link
+                            </span>
+                            <div className='flex-1 h-px bg-text/10' />
+                        </div>
+
+                        {/* Google Maps URL input */}
+                        <div>
+                            <div className='flex gap-2'>
+                                <div className='flex-1 relative'>
+                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                    <input
+                                        type='text'
+                                        value={googleMapsUrl}
+                                        onChange={(e) => {
+                                            setGoogleMapsUrl(e.target.value)
+                                            setUrlError(null)
+                                        }}
+                                        onKeyDown={(e) =>
+                                            e.key === "Enter" &&
+                                            handleGoogleMapsUrl()
+                                        }
+                                        placeholder='https://maps.app.goo.gl/...'
+                                        className='w-full pl-10 pr-4 py-2.5 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                    />
+                                </div>
+                                <button
+                                    type='button'
+                                    onClick={handleGoogleMapsUrl}
+                                    disabled={
+                                        isParsingUrl || !googleMapsUrl.trim()
+                                    }
+                                    className='px-4 py-2 bg-primary text-white rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer'
+                                >
+                                    {isParsingUrl ? "..." : "Get"}
+                                </button>
+                            </div>
+                            {urlError && (
+                                <p className='text-xs text-red-500 mt-1.5'>
+                                    {urlError}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Divider - Coordinates */}
                         <div className='flex items-center gap-3'>
                             <div className='flex-1 h-px bg-text/10' />
                             <span className='text-xs text-text/40'>
