@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/AuthProvider"
 import { useEffect, useState, useCallback } from "react"
+import type { CheckInResult } from "@/app/api/actions/profile"
 
 /**
  * Custom hook to manage cafe passport actions (favorite, wishlist, visited/check-in)
@@ -58,7 +59,7 @@ export function useCafeActions(cafeId: string) {
     }, [profile, cafeId, user, fetchVisitData])
 
     // Check-in handler (new additive visit behavior)
-    const checkIn = useCallback(async () => {
+    const checkIn = useCallback(async (): Promise<CheckInResult | undefined> => {
         if (!user || isCheckingIn) return
 
         setIsCheckingIn(true)

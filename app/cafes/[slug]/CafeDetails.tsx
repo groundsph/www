@@ -112,9 +112,8 @@ export default function CafeDetails({
     // Check-in handler with milestone celebration
     const handleCheckIn = async () => {
         const result = await checkIn()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- milestone is added dynamically
-        if ((result as any)?.milestone) {
-            setMilestone((result as any).milestone)
+        if (result?.milestone) {
+            setMilestone(result.milestone)
         }
         return result
     }

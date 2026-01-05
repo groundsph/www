@@ -921,18 +921,21 @@ export async function toggleFavorite(cafeId: string): Promise<{ favorited: boole
 // VISIT TRACKING (Check-In System)
 // ============================================================================
 
-/**
- * Record a visit (check-in) to a cafe.
- * Limits to one visit per cafe per day.
- */
-export async function recordVisit(cafeId: string): Promise<{
+
+export interface CheckInResult {
     success: boolean
     visitCount: number
     isFirstVisit: boolean
     milestone?: number | null
     alreadyVisitedToday?: boolean
     error?: string
-}> {
+}
+
+/**
+ * Record a visit (check-in) to a cafe.
+ * Limits to one visit per cafe per day.
+ */
+export async function recordVisit(cafeId: string): Promise<CheckInResult> {
     const user = await getCurrentUser()
     if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
 

@@ -31,7 +31,9 @@ export default function MilestoneCelebration({
 
     useEffect(() => {
         if (milestone) {
-            setIsVisible(true)
+            // Delay visibility to avoid synchronous render warning and allow animation
+            const showTimer = setTimeout(() => setIsVisible(true), 100)
+
             // Trigger confetti
             confetti({
                 particleCount: 100,
@@ -41,12 +43,15 @@ export default function MilestoneCelebration({
             })
 
             // Auto-close after 4 seconds
-            const timer = setTimeout(() => {
+            const hideTimer = setTimeout(() => {
                 setIsVisible(false)
                 setTimeout(onClose, 300) // Wait for exit animation
             }, 4000)
 
-            return () => clearTimeout(timer)
+            return () => {
+                clearTimeout(showTimer)
+                clearTimeout(hideTimer)
+            }
         }
     }, [milestone, onClose])
 
