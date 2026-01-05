@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, PartyPopper, Megaphone, type LucideIcon } from "lucide-react"
+import { X, Megaphone, type LucideIcon } from "lucide-react"
 
 // ============================================================
 // ANNOUNCEMENT CONFIGURATION

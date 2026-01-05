@@ -62,7 +62,6 @@ export default function CommunityPageClient({
     initialCollections,
     initialCollectionsTotal,
     initialEvents,
-    initialFeaturedUsers,
 }: CommunityPageClientProps) {
     const router = useRouter()
     const searchParamsHook = useSearchParams()
@@ -83,7 +82,7 @@ export default function CommunityPageClient({
     const [searchQuery, setSearchQuery] = useState("")
     const [isUserSearch, setIsUserSearch] = useState(false)
     const [userResults, setUserResults] = useState<UserResult[]>([])
-    const [featuredUsers] = useState(initialFeaturedUsers) // Keep for reference if needed, though maybe we assume search results only? User didn't say remove featured users, just the tab.
+
     const [searchingUsers, setSearchingUsers] = useState(false)
     const [searchingCollections, setSearchingCollections] = useState(false)
 
@@ -209,6 +208,7 @@ export default function CommunityPageClient({
         }, 300)
 
         return () => clearTimeout(timeoutId)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery])
 
     const tabs = [

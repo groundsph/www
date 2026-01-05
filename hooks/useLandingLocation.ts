@@ -6,7 +6,6 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import {
     useUserLocation,
     GeolocationError,
-    UserLocation,
 } from "@/hooks/useUserLocation"
 import { useNotification } from "@/components/NotificationProvider"
 
@@ -84,7 +83,6 @@ export function useLandingLocation(
         location,
         loading: locationLoading,
         isEstimate: locationIsEstimate,
-        source,
     } = useUserLocation({
         onError: handleLocationError,
     })
@@ -97,6 +95,7 @@ export function useLandingLocation(
                 const parsed: CachedLocationData = JSON.parse(cachedData)
                 // Check if cache is still valid
                 if (Date.now() - parsed.timestamp < CACHE_MAX_AGE) {
+                    // eslint-disable-next-line react-hooks/set-state-in-effect -- intended to run on mount to avoiding hydration mismatch
                     setFeatured(parsed.featured)
                     setIsLocalFeatured(true)
                     setLocationName(parsed.city || parsed.region || null)
