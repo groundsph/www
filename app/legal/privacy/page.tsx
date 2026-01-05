@@ -23,7 +23,7 @@ export default function PrivacyPage() {
                 Privacy Policy
             </h1>
             <p className='text-text/50 text-sm mb-8'>
-                Last updated: December 27, 2024
+                Last updated: January 5, 2026
             </p>
 
             <div className='prose prose-neutral max-w-none space-y-8'>

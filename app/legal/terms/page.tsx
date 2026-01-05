@@ -22,7 +22,7 @@ export default function TermsPage() {
                 Terms of Service
             </h1>
             <p className='text-text/50 text-sm mb-8'>
-                Last updated: December 29, 2024
+                Last updated: January 5, 2026
             </p>
 
             <div className='prose prose-neutral max-w-none space-y-8'>
