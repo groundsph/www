@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
 import Image from "next/image"
@@ -24,6 +24,7 @@ import {
     Droplet,
     MilkOff,
     Armchair,
+    Users,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -34,6 +35,7 @@ import ReportCafeModal from "@/components/ReportCafeModal"
 import ImageLightbox from "@/components/ImageLightbox"
 import Link from "next/link"
 import { motion } from "motion/react"
+import { getCafeVisitStats, getTodayVisitors } from "@/app/api/actions/profile"
 
 // Animation variants
 const containerVariants = {
@@ -372,6 +374,42 @@ export function DetailsTabContent({
 }: CafeMobileContentProps) {
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 
+    // Visitor stats state
+    const [visitStats, setVisitStats] = useState<{
+        totalVisits: number
+        uniqueVisitors: number
+    } | null>(null)
+    const [todayVisitors, setTodayVisitors] = useState<
+        {
+            userId: string
+            username: string
+            displayName: string
+            avatarUrl: string | null
+            visitedAt: string
+        }[]
+    >([])
+    const [visitorsLoading, setVisitorsLoading] = useState(true)
+
+    // Fetch visitor data on mount
+    useEffect(() => {
+        const fetchVisitorData = async () => {
+            setVisitorsLoading(true)
+            try {
+                const [stats, visitors] = await Promise.all([
+                    getCafeVisitStats(cafe.id),
+                    getTodayVisitors(cafe.id),
+                ])
+                setVisitStats(stats)
+                setTodayVisitors(visitors.visitors)
+            } catch (error) {
+                console.error("Error fetching visitor data:", error)
+            } finally {
+                setVisitorsLoading(false)
+            }
+        }
+        fetchVisitorData()
+    }, [cafe.id])
+
     return (
         <div className='flex flex-col gap-4'>
             {/* Price & Rating */}
@@ -409,6 +447,93 @@ export function DetailsTabContent({
 
             {/* Rating Distribution */}
             <RatingDistribution reviews={reviews} />
+
+            {/* Visitors Section */}
+            <div className='bg-text/5 rounded-xl p-4'>
+                <h3 className='font-semibold font-serif mb-3 flex items-center gap-2'>
+                    <Users className='w-4 h-4' />
+                    Visitors
+                    {!visitorsLoading && (
+                        <span className='text-xs font-normal text-text/60'>
+                            ({visitStats?.uniqueVisitors ?? 0} unique)
+                        </span>
+                    )}
+                </h3>
+
+                {/* Visit Stats */}
+                <div className='flex gap-4 mb-3'>
+                    <div className='flex flex-col'>
+                        <span className='font-bold text-lg text-text'>
+                            {visitorsLoading
+                                ? "..."
+                                : (visitStats?.totalVisits ?? 0)}
+                        </span>
+                        <span className='text-text/60 text-xs'>Check-ins</span>
+                    </div>
+                    <div className='flex flex-col'>
+                        <span className='font-bold text-lg text-text'>
+                            {visitorsLoading
+                                ? "..."
+                                : (visitStats?.uniqueVisitors ?? 0)}
+                        </span>
+                        <span className='text-text/60 text-xs'>Unique</span>
+                    </div>
+                </div>
+
+                {/* Visitors Today */}
+                <div>
+                    <p className='text-xs text-text/60 mb-2 flex items-center gap-1'>
+                        <MapPin className='w-3 h-3' />
+                        Checked in today
+                    </p>
+                    {visitorsLoading ? (
+                        <div className='flex gap-2'>
+                            {[1, 2, 3].map((i) => (
+                                <div
+                                    key={i}
+                                    className='w-8 h-8 rounded-full bg-secondary/40 animate-pulse'
+                                />
+                            ))}
+                        </div>
+                    ) : todayVisitors.length > 0 ? (
+                        <div className='flex flex-wrap gap-2'>
+                            {todayVisitors.slice(0, 5).map((visitor) => (
+                                <Link
+                                    key={visitor.userId}
+                                    href={`/profile/${visitor.username}`}
+                                    className='group flex items-center gap-1.5 bg-secondary/30 hover:bg-secondary/50 rounded-full pr-2 transition-colors'
+                                >
+                                    {visitor.avatarUrl ? (
+                                        <Image
+                                            src={visitor.avatarUrl}
+                                            alt={visitor.displayName}
+                                            width={28}
+                                            height={28}
+                                            className='w-7 h-7 rounded-full object-cover'
+                                        />
+                                    ) : (
+                                        <div className='w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center'>
+                                            <UserIcon className='w-4 h-4 text-primary' />
+                                        </div>
+                                    )}
+                                    <span className='text-xs font-medium text-text group-hover:text-primary transition-colors truncate max-w-[60px]'>
+                                        {visitor.displayName}
+                                    </span>
+                                </Link>
+                            ))}
+                            {todayVisitors.length > 5 && (
+                                <span className='text-xs text-text/50 self-center'>
+                                    +{todayVisitors.length - 5} more
+                                </span>
+                            )}
+                        </div>
+                    ) : (
+                        <p className='text-xs text-text/50 italic'>
+                            No visitors yet today
+                        </p>
+                    )}
+                </div>
+            </div>
 
             {/* Amenities */}
             <div className='bg-text/5 rounded-xl p-4'>
