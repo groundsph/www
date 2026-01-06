@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
 import { useLandingLocation } from "@/hooks/useLandingLocation"
+import RandomCafeButton from "@/components/RandomCafeButton"
 
 interface LandingHeroProps {
     featured: CafeWithRatings | null
@@ -197,6 +198,8 @@ export default function LandingHero({
                                             <span className='relative inline-flex rounded-full h-2 w-2 bg-green-500'></span>
                                         </span>
                                     </MotionLink>
+                                    <span className='text-text/60'>or</span>
+                                    <RandomCafeButton variant='hero' />
                                 </motion.div>
                             </>
                         )}

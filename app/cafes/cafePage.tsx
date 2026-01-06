@@ -35,6 +35,7 @@ import {
 } from "@/utils/data/philippines"
 import { useEffect, useState, useTransition } from "react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
+import RandomCafeButton from "@/components/RandomCafeButton"
 
 interface CafesPageClientProps {
     initialCafes?: CafeWithRatings[]
@@ -313,6 +314,8 @@ export default function CafesPageClient({
                         <option value='rating'>Highest Rated</option>
                         <option value='reviews'>Most Reviewed</option>
                     </select>
+                    {/* Random Cafe Button */}
+                    <RandomCafeButton cafes={cafes} />
                     {/* Location Badge */}
                     {userLocation && (
                         <motion.div
