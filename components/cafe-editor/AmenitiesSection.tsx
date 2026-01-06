@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import {
     CAFE_VIBE_TAGS,
@@ -25,6 +25,18 @@ export default function AmenitiesSection({
     const [customSpecialties, setCustomSpecialties] = useState("")
     const [customTags, setCustomTags] = useState("")
     const [customPaymentMethods, setCustomPaymentMethods] = useState("")
+
+    // Buffer for milk options input to allow free typing (commas, spaces)
+    const [milkInput, setMilkInput] = useState(
+        (cafe.milk_options || []).join(", ")
+    )
+    const milkInputFocused = useRef(false)
+
+    // Sync local buffer when prop changes, but only if not focused
+    useEffect(() => {
+        if (milkInputFocused.current) return
+        setMilkInput((cafe.milk_options || []).join(", "))
+    }, [cafe.milk_options])
 
     // Helper to convert snake_case to Title Case
     const formatLabel = (s: string) =>
@@ -113,9 +125,14 @@ export default function AmenitiesSection({
                     </label>
                     <input
                         type='text'
-                        value={(cafe.milk_options || []).join(", ")}
-                        onChange={(e) => {
-                            const options = e.target.value
+                        value={milkInput}
+                        onChange={(e) => setMilkInput(e.target.value)}
+                        onFocus={() => {
+                            milkInputFocused.current = true
+                        }}
+                        onBlur={() => {
+                            milkInputFocused.current = false
+                            const options = milkInput
                                 .split(",")
                                 .map((s) => s.trim())
                                 .filter(Boolean)

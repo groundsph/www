@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
 import {
@@ -132,6 +132,20 @@ export default function SuggestEditModal({
     // Cover photo cropper state
     const [croppingImage, setCroppingImage] = useState<File | null>(null)
     const [cropperOpen, setCropperOpen] = useState(false)
+
+    // Buffer for milk options input
+    const [milkInput, setMilkInput] = useState("")
+    const milkInputFocused = useRef(false)
+
+    // Sync milk input buffer only when not focused (prevents overwriting user input)
+    useEffect(() => {
+        if (milkInputFocused.current) return
+        const currentOptions =
+            changes.milk_options !== undefined
+                ? changes.milk_options
+                : cafe.milk_options || []
+        setMilkInput((currentOptions as string[]).join(", "))
+    }, [changes.milk_options, cafe.milk_options])
 
     useEffect(() => {
         if (isOpen) {
@@ -1184,24 +1198,20 @@ export default function SuggestEditModal({
                                                         </label>
                                                         <input
                                                             type='text'
-                                                            value={
-                                                                changes.milk_options !==
-                                                                undefined
-                                                                    ? (
-                                                                          changes.milk_options as string[]
-                                                                      ).join(
-                                                                          ", "
-                                                                      )
-                                                                    : (
-                                                                          cafe.milk_options ??
-                                                                          []
-                                                                      ).join(
-                                                                          ", "
-                                                                      )
+                                                            value={milkInput}
+                                                            onChange={(e) =>
+                                                                setMilkInput(
+                                                                    e.target
+                                                                        .value
+                                                                )
                                                             }
-                                                            onChange={(e) => {
+                                                            onFocus={() => {
+                                                                milkInputFocused.current = true
+                                                            }}
+                                                            onBlur={() => {
+                                                                milkInputFocused.current = false
                                                                 const options =
-                                                                    e.target.value
+                                                                    milkInput
                                                                         .split(
                                                                             ","
                                                                         )
