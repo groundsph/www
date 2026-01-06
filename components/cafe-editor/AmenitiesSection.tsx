@@ -33,8 +33,10 @@ export default function AmenitiesSection({
     const milkInputFocused = useRef(false)
 
     // Sync local buffer when prop changes, but only if not focused
+    // This is a valid pattern for syncing derived state with props
     useEffect(() => {
         if (milkInputFocused.current) return
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMilkInput((cafe.milk_options || []).join(", "))
     }, [cafe.milk_options])
 
