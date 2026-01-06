@@ -1088,6 +1088,59 @@ export async function getCafeVisitStats(cafeId: string): Promise<{
 }
 
 /**
+ * Get users who visited a cafe today (for "Visitors Today" display)
+ */
+export async function getTodayVisitors(cafeId: string): Promise<{
+    visitors: {
+        userId: string
+        username: string
+        displayName: string
+        avatarUrl: string | null
+        visitedAt: string
+    }[]
+}> {
+    try {
+        // Get start and end of today (UTC+8 Philippine Time)
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const result = await db
+            .select({
+                userId: cafeVisits.userId,
+                username: profiles.username,
+                displayName: profiles.displayName,
+                avatarUrl: profiles.avatarUrl,
+                visitedAt: cafeVisits.visitedAt,
+            })
+            .from(cafeVisits)
+            .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
+            .where(
+                and(
+                    eq(cafeVisits.cafeId, cafeId),
+                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                )
+            )
+            .orderBy(desc(cafeVisits.visitedAt))
+
+        return {
+            visitors: result.map((r) => ({
+                userId: r.userId,
+                username: r.username,
+                displayName: r.displayName,
+                avatarUrl: r.avatarUrl,
+                visitedAt: r.visitedAt?.toISOString() ?? new Date().toISOString(),
+            })),
+        }
+    } catch (error) {
+        console.error("Error getting today's visitors:", error)
+        return { visitors: [] }
+    }
+}
+
+/**
  * Get all visits for a user (for visit history display)
  */
 export async function getUserVisitHistory(): Promise<{
