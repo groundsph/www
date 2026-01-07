@@ -760,10 +760,11 @@ export default function CafeSubmissionForm({
                                             <AlertCircle className='w-5 h-5 text-orange-500 shrink-0 mt-0.5' />
                                             <span className='text-sm'>
                                                 <strong>
-                                                    Not kiosks or counters
+                                                    Not kiosks or stalls
                                                 </strong>{" "}
-                                                — Grab-and-go stands, mall
-                                                kiosks, or takeout-only counters
+                                                — Mall kiosks, grab-and-go
+                                                stalls, or counters with
+                                                shared/borrowed seating
                                                 don&apos;t qualify
                                             </span>
                                         </li>
