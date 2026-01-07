@@ -35,6 +35,8 @@ export default function RandomCafeButton({
         location,
         loading: locationLoading,
         error: locationError,
+        permissionState,
+        refresh: refreshLocation,
     } = useUserLocation()
     const [isOpen, setIsOpen] = useState(false)
     const [selectedCafe, setSelectedCafe] = useState<CafeWithDistance | null>(
@@ -90,6 +92,10 @@ export default function RandomCafeButton({
     const handleClick = () => {
         setIsOpen(true)
         fetchCafesIfNeeded()
+        // If no location yet and permission isn't denied, try to get it
+        if (!location.lat && !location.lng && permissionState !== "denied") {
+            refreshLocation()
+        }
     }
 
     const handleReroll = () => {
@@ -172,13 +178,15 @@ export default function RandomCafeButton({
                                     <div className='flex flex-col items-center justify-center py-12 text-center'>
                                         <Loader2 className='w-8 h-8 animate-spin text-secondary mb-3' />
                                         <p className='text-text/60'>
-                                            Getting your location...
+                                            {!hasLocation
+                                                ? "Getting your location..."
+                                                : "Loading cafes..."}
                                         </p>
                                     </div>
                                 )}
 
                                 {/* No Location */}
-                                {!locationLoading && !hasLocation && (
+                                {!isLoading && !hasLocation && (
                                     <div className='flex flex-col items-center justify-center py-12 text-center'>
                                         <MapPin className='w-12 h-12 text-text/30 mb-3' />
                                         <p className='font-medium mb-1'>
@@ -193,8 +201,9 @@ export default function RandomCafeButton({
                                 )}
 
                                 {/* No Nearby Cafes */}
-                                {!locationLoading &&
+                                {!isLoading &&
                                     hasLocation &&
+                                    cafes.length > 0 &&
                                     !hasNearbyCafes && (
                                         <div className='flex flex-col items-center justify-center py-12 text-center'>
                                             <Navigation className='w-12 h-12 text-text/30 mb-3' />
