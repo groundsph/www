@@ -89,9 +89,10 @@ export default function CafeRejectedEmail({
 
                             <Text className='text-text text-base leading-relaxed'>
                                 This could be due to incomplete information,
-                                duplicate entries, or the cafe not meeting our
-                                listing criteria. We encourage you to review the
-                                submission guidelines and try again.
+                                duplicate entries, or the submission not meeting
+                                our listing criteria (e.g., kiosks or stalls
+                                without dedicated seating). We encourage you to
+                                review the submission guidelines and try again.
                             </Text>
 
                             <Section className='text-center my-8'>

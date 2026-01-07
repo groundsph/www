@@ -14,6 +14,7 @@ const REJECTION_REASONS = [
     { value: "", label: "Select a reason (optional)" },
     { value: "duplicate", label: "Duplicate entry" },
     { value: "not_cafe", label: "Not a cafe" },
+    { value: "kiosk_stall", label: "Kiosk or stall (no dedicated seating)" },
     { value: "insufficient_info", label: "Insufficient information" },
     { value: "inappropriate", label: "Inappropriate content" },
     { value: "other", label: "Other" },
