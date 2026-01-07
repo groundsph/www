@@ -131,6 +131,9 @@ export const cafes = pgTable(
         isVerified: boolean("is_verified").default(false),
         isClaimed: boolean("is_claimed").default(false),
         isHiddenGem: boolean("is_hidden_gem").default(false),
+        hiddenGemSince: timestamp("hidden_gem_since", { withTimezone: true }),
+        hiddenGemLastEvaluatedPeriod: text("hidden_gem_last_evaluated_period"), // e.g., "2026-01"
+        hiddenGemGraduatedAt: timestamp("hidden_gem_graduated_at", { withTimezone: true }),
         isChain: boolean("is_chain").default(false),
         findingHint: text("finding_hint"),
         ownerIds: uuid("owner_ids").array(),

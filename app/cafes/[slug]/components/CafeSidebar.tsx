@@ -165,7 +165,7 @@ export default function CafeSidebar({
                         {cafe.address_display}
                     </a>
                 </>
-            ) : (
+            ) : cafe.is_hidden_gem ? (
                 /* Hidden Gem - Show finding hint instead of map */
                 <div className='w-full bg-amber-50 border border-amber-200 rounded-xl p-4'>
                     <div className='flex items-center gap-2 mb-2'>
@@ -181,6 +181,23 @@ export default function CafeSidebar({
                             💡 Hint: {cafe.finding_hint}
                         </p>
                     )}
+                </div>
+            ) : (
+                /* Graduated from hidden gem but no coordinates yet */
+                <div className='w-full bg-blue-50 border border-blue-200 rounded-xl p-4'>
+                    <div className='flex items-center gap-2 mb-2'>
+                        <MapPin className='w-4 h-4 text-blue-600' />
+                        <span className='font-semibold text-blue-800'>
+                            Location Pending
+                        </span>
+                    </div>
+                    <p className='text-sm text-blue-700'>
+                        {cafe.address_display || "Address not yet provided"}
+                    </p>
+                    <p className='text-xs text-blue-600 mt-2'>
+                        📍 This cafe needs its exact coordinates added. If you
+                        know the location, suggest an edit!
+                    </p>
                 </div>
             )}
 
