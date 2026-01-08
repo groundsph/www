@@ -327,7 +327,7 @@ export const blogPosts = pgTable(
         authorId: uuid("author_id")
             .notNull()
             .references(() => profiles.id),
-        cafeId: uuid("cafe_id").references(() => cafes.id),
+        cafeId: uuid("cafe_id").references(() => cafes.id, { onDelete: "set null" }),
         title: text("title").notNull(),
         slug: text("slug").notNull().unique(),
         content: text("content").notNull(),

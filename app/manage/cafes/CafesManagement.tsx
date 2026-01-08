@@ -16,6 +16,7 @@ import {
     Utensils,
     Briefcase,
     ExternalLink,
+    Trash2,
     ChevronDown,
     ChevronUp,
     AlertCircle,
@@ -39,6 +40,7 @@ import {
     approveCafe,
     rejectCafe,
     unpublishCafe,
+    deleteCafe,
     getPaginatedCafes,
     type CafeFilterOptions,
 } from "@/app/api/actions/admin"
@@ -129,7 +131,7 @@ export default function CafesManagement({
     const [provinceFilter, setProvinceFilter] = useState<string>("")
     const [cityFilter, setCityFilter] = useState<string>("")
     const [sortBy, setSortBy] = useState<"name" | "date" | "city" | "province">(
-        "name"
+        "date"
     )
     const [chainFilter, setChainFilter] = useState<
         "all" | "chains_only" | "exclude_chains"
@@ -334,6 +336,26 @@ export default function CafesManagement({
             }
         } else {
             alert(result.error || "Failed to unpublish cafe")
+        }
+        setProcessing(null)
+    }
+
+    const handleDeleteCafe = async (cafeId: string, cafeName: string) => {
+        if (
+            !confirm(
+                `Are you sure you want to PERMANENTLY DELETE "${cafeName}"? This action cannot be undone and will remove all associated reviews, visits, and other data.`
+            )
+        ) {
+            return
+        }
+        setProcessing(cafeId)
+        const result = await deleteCafe(cafeId)
+        if (result.success) {
+            setPublishedCafes((prev) => prev.filter((c) => c.id !== cafeId))
+            setPendingCafes((prev) => prev.filter((c) => c.id !== cafeId))
+            setPublishedTotal((prev) => prev - 1)
+        } else {
+            alert(result.error || "Failed to delete cafe")
         }
         setProcessing(null)
     }
@@ -766,20 +788,37 @@ export default function CafesManagement({
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <button
-                                                        onClick={() =>
-                                                            handleUnpublish(
-                                                                cafe.id
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            isProcessingThis
-                                                        }
-                                                        className='p-2 bg-orange-500/20 text-orange-600 rounded-lg hover:bg-orange-500/30 transition disabled:opacity-50'
-                                                        title='Unpublish'
-                                                    >
-                                                        <EyeOff className='w-5 h-5' />
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleUnpublish(
+                                                                    cafe.id
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                isProcessingThis
+                                                            }
+                                                            className='p-2 bg-orange-500/20 text-orange-600 rounded-lg hover:bg-orange-500/30 transition disabled:opacity-50'
+                                                            title='Unpublish'
+                                                        >
+                                                            <EyeOff className='w-5 h-5' />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleDeleteCafe(
+                                                                    cafe.id,
+                                                                    cafe.name
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                isProcessingThis
+                                                            }
+                                                            className='p-2 bg-red-500/20 text-red-600 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                                                            title='Delete Permanently'
+                                                        >
+                                                            <Trash2 className='w-5 h-5' />
+                                                        </button>
+                                                    </>
                                                 )}
                                                 <button
                                                     onClick={() =>

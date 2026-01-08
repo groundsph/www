@@ -24,12 +24,14 @@ import {
     ImagePlus,
     Gem,
     Store,
+    Trash2,
 } from "lucide-react"
 import {
     approveCafe,
     rejectCafe,
     updateCafe,
     unpublishCafe,
+    deleteCafe,
     upsertCafeStory,
     deleteCafeStory,
     adminDeleteCafeImage,
@@ -226,6 +228,21 @@ export default function CafeEditor({
         }
     }
 
+    const handleDelete = async () => {
+        if (
+            !confirm(
+                `Are you sure you want to PERMANENTLY DELETE "${cafe.name}"? This action cannot be undone and will remove all associated reviews, visits, and other data.`
+            )
+        )
+            return
+        const result = await deleteCafe(cafe.id)
+        if (result.success) {
+            router.push("/manage/cafes")
+        } else {
+            alert(result.error || "Failed to delete cafe")
+        }
+    }
+
     // Owner search handler with debounce
     const handleOwnerSearch = async (query: string) => {
         setOwnerSearchQuery(query)
@@ -333,14 +350,23 @@ export default function CafeEditor({
                         </button>
                     )}
                     {cafe.is_published ? (
-                        // Published cafe - show Unpublish button
-                        <button
-                            onClick={handleUnpublish}
-                            className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition'
-                        >
-                            <EyeOff className='w-4 h-4' />
-                            Unpublish
-                        </button>
+                        // Published cafe - show Unpublish and Delete buttons
+                        <>
+                            <button
+                                onClick={handleUnpublish}
+                                className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition'
+                            >
+                                <EyeOff className='w-4 h-4' />
+                                Unpublish
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition'
+                            >
+                                <Trash2 className='w-4 h-4' />
+                                Delete
+                            </button>
+                        </>
                     ) : (
                         // Pending cafe - show Reject and Approve buttons
                         <>

@@ -545,6 +545,76 @@ export async function rejectCafe(cafeId: string, reason?: string): Promise<Admin
 }
 
 /**
+ * Permanently delete a cafe (published or pending)
+ * Unlike rejectCafe, this does NOT send a rejection email
+ * Used for removing accepted cafes that need to be completely deleted
+ */
+export async function deleteCafe(cafeId: string): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    // Fetch cafe to get image URLs and contributor info before deletion
+    const cafeResult = await db
+        .select({
+            name: cafes.name,
+            thumbnail: cafes.thumbnail,
+            gallery: cafes.gallery,
+            contributorId: cafes.contributorId,
+            isPublished: cafes.isPublished,
+        })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
+
+    const cafe = cafeResult[0]
+    if (!cafe) {
+        return { success: false, error: "Cafe not found" }
+    }
+
+    const contributorId = cafe.contributorId
+    const wasPublished = cafe.isPublished
+
+    // Delete images from storage
+    await deleteCafeImagesAction(cafe.thumbnail, cafe.gallery)
+
+    // Delete related records in correct order to avoid trigger conflicts
+    // The reviews table has a trigger that updates cafe_rating_stats, so we need to:
+    // 1. Delete reviews first (trigger runs but cafe still exists)
+    // 2. Delete cafe_rating_stats
+    // 3. Then delete the cafe
+    try {
+        // Delete reviews first (trigger will update rating stats while cafe exists)
+        await db.delete(reviews).where(eq(reviews.cafeId, cafeId))
+
+        // Delete cafe rating stats
+        await db.delete(cafeRatingStats).where(eq(cafeRatingStats.cafeId, cafeId))
+
+        // Now delete the cafe (cascade handles remaining related records)
+        await db.delete(cafes).where(eq(cafes.id, cafeId))
+    } catch (error) {
+        console.error("Error deleting cafe:", error)
+        return { success: false, error: "Failed to delete cafe. There may be related records preventing deletion." }
+    }
+
+    // Update contributor's scout stats if cafe was published
+    if (wasPublished && contributorId) {
+        await updateContributorScoutStats(contributorId)
+    }
+
+    return { success: true }
+}
+
+/**
  * Get a single cafe by ID (for admin preview/edit)
  */
 export async function getCafeById(cafeId: string): Promise<CafeWithRatings | null> {
