@@ -928,14 +928,17 @@ export interface CheckInResult {
     isFirstVisit: boolean
     milestone?: number | null
     alreadyVisitedToday?: boolean
+    companions?: string[] // IDs of companions added to the check-in
     error?: string
 }
 
 /**
  * Record a visit (check-in) to a cafe.
  * Limits to one visit per cafe per day.
+ * @param cafeId - The cafe to check in to
+ * @param companionIds - Optional array of user IDs to tag as companions
  */
-export async function recordVisit(cafeId: string): Promise<CheckInResult> {
+export async function recordVisit(cafeId: string, companionIds?: string[]): Promise<CheckInResult> {
     const user = await getCurrentUser()
     if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
 
@@ -975,6 +978,22 @@ export async function recordVisit(cafeId: string): Promise<CheckInResult> {
             }
         }
 
+        // Validate companion IDs if provided (must exist and not be the current user)
+        let validCompanions: string[] = []
+        if (companionIds && companionIds.length > 0) {
+            // Limit to max 5 companions
+            const limitedIds = companionIds.slice(0, 5).filter(id => id !== user.id)
+
+            if (limitedIds.length > 0) {
+                const existingProfiles = await db
+                    .select({ id: profiles.id })
+                    .from(profiles)
+                    .where(inArray(profiles.id, limitedIds))
+
+                validCompanions = existingProfiles.map(p => p.id)
+            }
+        }
+
         // Check if this is the user's first ever visit to this cafe
         const existingVisits = await db
             .select({ count: count() })
@@ -983,11 +1002,12 @@ export async function recordVisit(cafeId: string): Promise<CheckInResult> {
 
         const isFirstVisit = (existingVisits[0]?.count ?? 0) === 0
 
-        // Record the new visit
+        // Record the new visit with companions
         await db.insert(cafeVisits).values({
             userId: user.id,
             cafeId: cafeId,
             visitedAt: new Date(),
+            companions: validCompanions.length > 0 ? validCompanions : null,
         })
 
         // Also update passport for backward compatibility (add to visited_ids if not present)
@@ -1034,12 +1054,13 @@ export async function recordVisit(cafeId: string): Promise<CheckInResult> {
         const milestones = [5, 10, 25, 50, 100]
         const milestone = milestones.includes(newCount) ? newCount : null
 
-        return { success: true, visitCount: newCount, isFirstVisit, milestone }
+        return { success: true, visitCount: newCount, isFirstVisit, milestone, companions: validCompanions }
     } catch (error) {
         console.error("Error recording visit:", error)
         return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Failed to record visit" }
     }
 }
+
 
 /**
  * Get the user's visit count for a specific cafe

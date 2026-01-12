@@ -24,6 +24,7 @@ import ClaimCafeModal from "@/components/ClaimCafeModal"
 import ContributionHistoryModal from "@/components/history/ContributionHistoryModal"
 import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
 import MilestoneCelebration from "@/components/MilestoneCelebration"
+import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
@@ -109,13 +110,23 @@ export default function CafeDetails({
     // Milestone celebration state
     const [milestone, setMilestone] = useState<number | null>(null)
 
-    // Check-in handler with milestone celebration
-    const handleCheckIn = async () => {
-        const result = await checkIn()
+    // Group Check-in Modal State
+    const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false)
+
+    // Check-in handler with milestone celebration (called from modal)
+    const handleCheckIn = async (companionIds?: string[]) => {
+        const result = await checkIn(companionIds)
         if (result?.milestone) {
             setMilestone(result.milestone)
         }
         return result
+    }
+
+    // Open the check-in modal instead of direct check-in
+    const handleCheckInClick = () => {
+        if (!visitedToday) {
+            setIsCheckInModalOpen(true)
+        }
     }
 
     // Computed
@@ -234,7 +245,7 @@ export default function CafeDetails({
                 visitCount={visitCount}
                 visitedToday={visitedToday}
                 isCheckingIn={isCheckingIn}
-                onCheckIn={handleCheckIn}
+                onCheckIn={handleCheckInClick}
                 onToggleVisited={toggleVisited}
                 onToggleFavorite={toggleFavorite}
                 onToggleWishlist={toggleWishlist}
@@ -612,6 +623,16 @@ export default function CafeDetails({
                 milestone={milestone}
                 cafeName={cafe.name}
                 onClose={() => setMilestone(null)}
+            />
+
+            {/* Group Check-in Modal */}
+            <GroupCheckInModal
+                isOpen={isCheckInModalOpen}
+                onClose={() => setIsCheckInModalOpen(false)}
+                cafeName={cafe.name}
+                onCheckIn={handleCheckIn}
+                visitedToday={visitedToday}
+                visitCount={visitCount}
             />
         </>
     )

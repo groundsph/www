@@ -58,15 +58,15 @@ export function useCafeActions(cafeId: string) {
         }
     }, [profile, cafeId, user, fetchVisitData])
 
-    // Check-in handler (new additive visit behavior)
-    const checkIn = useCallback(async (): Promise<CheckInResult | undefined> => {
+    // Check-in handler (supports group check-ins with companions)
+    const checkIn = useCallback(async (companionIds?: string[]): Promise<CheckInResult | undefined> => {
         if (!user || isCheckingIn) return
 
         setIsCheckingIn(true)
 
         try {
             const { recordVisit } = await import("@/app/api/actions/profile")
-            const result = await recordVisit(cafeId)
+            const result = await recordVisit(cafeId, companionIds)
 
             if (result.success) {
                 setVisitCount(result.visitCount)

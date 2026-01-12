@@ -50,6 +50,13 @@
       "when": 1767773450414,
       "tag": "0006_steady_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1768235629450,
+      "tag": "0007_stormy_black_tarantula",
+      "breakpoints": true
     }
   ]
 }

@@ -28,6 +28,8 @@ import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ContributionTimeline from "@/components/profile/ContributionTimeline"
+import FollowButton from "@/components/social/FollowButton"
+import FollowCounts from "@/components/social/FollowCounts"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -131,6 +133,9 @@ export default function PublicProfileClient({
     // Badge display
     const [showAllBadges, setShowAllBadges] = useState(false)
 
+    // Follow status
+    const [isFollowingUser, setIsFollowingUser] = useState(false)
+
     // Fetch all data in one call
     useEffect(() => {
         const fetchData = async () => {
@@ -150,6 +155,21 @@ export default function PublicProfileClient({
 
         fetchData()
     }, [profile, user])
+
+    // Check if current user follows this profile
+    useEffect(() => {
+        const checkFollowStatus = async () => {
+            if (!user || user.id === profile.id) return
+            try {
+                const { isFollowing } = await import("@/app/api/actions/social")
+                const following = await isFollowing(profile.id)
+                setIsFollowingUser(following)
+            } catch (error) {
+                console.error("Error checking follow status:", error)
+            }
+        }
+        checkFollowStatus()
+    }, [user, profile.id])
 
     const stats = profile.stats
     const earnedBadgeIds = new Set(profile.badges.map((b) => b.badge_id))
@@ -278,6 +298,28 @@ export default function PublicProfileClient({
                                 </span>
                             )}
                         </div>
+
+                        {/* Follow Counts */}
+                        <div className='mt-3'>
+                            <FollowCounts
+                                userId={profile.id}
+                                username={profile.username}
+                            />
+                        </div>
+
+                        {/* Follow Button (only show if viewing another user's profile) */}
+                        {user && user.id !== profile.id && (
+                            <div className='mt-3'>
+                                <FollowButton
+                                    targetUserId={profile.id}
+                                    initialIsFollowing={isFollowingUser}
+                                    size='md'
+                                    onFollowChange={(following) =>
+                                        setIsFollowingUser(following)
+                                    }
+                                />
+                            </div>
+                        )}
                     </div>
                 </section>
 

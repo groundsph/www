@@ -34,7 +34,7 @@ interface CafeHeroProps {
     visitCount?: number
     visitedToday?: boolean
     isCheckingIn?: boolean
-    onCheckIn?: () => Promise<
+    onCheckIn?: () => void | Promise<
         | {
               success: boolean
               visitCount: number

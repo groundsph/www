@@ -217,6 +217,7 @@ export const cafePageViews = pgTable("cafe_page_views", {
 
 // User visits to cafes (check-in system)
 // Tracks each visit with timestamp, allows multiple visits per cafe (one per day max)
+// Companions: array of user IDs who joined this check-in (group check-ins)
 export const cafeVisits = pgTable("cafe_visits", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
@@ -226,6 +227,7 @@ export const cafeVisits = pgTable("cafe_visits", {
         .notNull()
         .references(() => cafes.id, { onDelete: "cascade" }),
     visitedAt: timestamp("visited_at", { withTimezone: true }).defaultNow().notNull(),
+    companions: uuid("companions").array(), // Array of user IDs who joined this check-in
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
 
@@ -537,3 +539,21 @@ export const cafeReports = pgTable("cafe_reports", {
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
 
+// ============================================================================
+// SOCIAL TABLES
+// ============================================================================
+
+// User follows for social connections
+export const userFollows = pgTable("user_follows", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    followerId: uuid("follower_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    followingId: uuid("following_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (t) => ({
+    // Prevent duplicate follows
+    uniqueFollowIdx: uniqueIndex("user_follows_follower_following_unique").on(t.followerId, t.followingId),
+}))

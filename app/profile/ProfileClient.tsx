@@ -27,6 +27,7 @@ import {
     Store,
     Trophy,
     User,
+    Users,
     X,
 } from "lucide-react"
 import Image from "next/image"
@@ -39,6 +40,7 @@ import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { getUserCollections } from "@/app/api/actions/collection"
+import FollowCounts from "@/components/social/FollowCounts"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -672,6 +674,21 @@ export default function ProfileClient() {
                                     })}
                                 </span>
                             )}
+                        </div>
+
+                        {/* Follow Counts and Activity Feed */}
+                        <div className='flex flex-row flex-wrap gap-4 mt-3 items-center'>
+                            <FollowCounts
+                                userId={user.id}
+                                username={profileData.username}
+                            />
+                            <Link
+                                href='/profile/activity'
+                                className='flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors text-sm font-medium'
+                            >
+                                <Users className='w-4 h-4' />
+                                Activity Feed
+                            </Link>
                         </div>
                     </div>
                 </section>
