@@ -4,7 +4,7 @@ import { MapPinIcon, Coffee } from "lucide-react"
 import Link from "next/link"
 import { motion } from "motion/react"
 
-const MotionLink = motion(Link)
+const MotionLink = motion.create(Link)
 
 export default function SubmitCafeSection({
     cafeCount,

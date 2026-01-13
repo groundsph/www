@@ -12,7 +12,7 @@ interface LandingHeroProps {
     featured: CafeWithRatings | null
 }
 
-const MotionLink = motion(Link)
+const MotionLink = motion.create(Link)
 
 export default function LandingHero({
     featured: initialFeatured,
