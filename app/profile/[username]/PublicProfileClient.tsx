@@ -30,6 +30,7 @@ import { getLucideIcon } from "@/components/badges/iconUtils"
 import ContributionTimeline from "@/components/profile/ContributionTimeline"
 import FollowButton from "@/components/social/FollowButton"
 import FollowCounts from "@/components/social/FollowCounts"
+import FollowListModal from "@/components/social/FollowListModal"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -135,8 +136,17 @@ export default function PublicProfileClient({
 
     // Follow status
     const [isFollowingUser, setIsFollowingUser] = useState(false)
+    const [followersCount, setFollowersCount] = useState(0)
+    const [followingCount, setFollowingCount] = useState(0)
+
+    // Modal state
+    const [isFollowModalOpen, setIsFollowModalOpen] = useState(false)
+    const [followModalType, setFollowModalType] = useState<
+        "followers" | "following"
+    >("followers")
 
     // Fetch all data in one call
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -304,6 +314,20 @@ export default function PublicProfileClient({
                             <FollowCounts
                                 userId={profile.id}
                                 username={profile.username}
+                                followersCount={followersCount}
+                                followingCount={followingCount}
+                                onCountsChange={(followers, following) => {
+                                    setFollowersCount(followers)
+                                    setFollowingCount(following)
+                                }}
+                                onFollowersClick={() => {
+                                    setFollowModalType("followers")
+                                    setIsFollowModalOpen(true)
+                                }}
+                                onFollowingClick={() => {
+                                    setFollowModalType("following")
+                                    setIsFollowModalOpen(true)
+                                }}
                             />
                         </div>
 
@@ -314,9 +338,12 @@ export default function PublicProfileClient({
                                     targetUserId={profile.id}
                                     initialIsFollowing={isFollowingUser}
                                     size='md'
-                                    onFollowChange={(following) =>
+                                    onFollowChange={(following) => {
                                         setIsFollowingUser(following)
-                                    }
+                                        setFollowersCount((prev) =>
+                                            following ? prev + 1 : prev - 1
+                                        )
+                                    }}
                                 />
                             </div>
                         )}
@@ -797,7 +824,6 @@ export default function PublicProfileClient({
                                         </div>
                                     </div>
 
-                                    {/* Use ReviewItem for the actual content */}
                                     <ReviewItem
                                         review={{
                                             ...review,
@@ -828,6 +854,15 @@ export default function PublicProfileClient({
                     )}
                 </section>
             </motion.div>
+
+            <FollowListModal
+                isOpen={isFollowModalOpen}
+                onClose={() => setIsFollowModalOpen(false)}
+                userId={profile.id}
+                username={profile.username}
+                initialType={followModalType}
+                currentUserId={user?.id}
+            />
         </main>
     )
 }

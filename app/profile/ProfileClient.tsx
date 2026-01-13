@@ -41,6 +41,8 @@ import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { getUserCollections } from "@/app/api/actions/collection"
 import FollowCounts from "@/components/social/FollowCounts"
+import FollowListModal from "@/components/social/FollowListModal"
+import FollowButton from "@/components/social/FollowButton"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -172,6 +174,15 @@ export default function ProfileClient() {
 
     // Rank Details Toggle
     const [showRankDetails, setShowRankDetails] = useState(false)
+
+    // Follow counts state
+    const [followersCount, setFollowersCount] = useState(0)
+    const [followingCount, setFollowingCount] = useState(0)
+    // Modal state
+    const [isFollowModalOpen, setIsFollowModalOpen] = useState(false)
+    const [followModalType, setFollowModalType] = useState<
+        "followers" | "following"
+    >("followers")
 
     // Collections
     const [collections, setCollections] = useState<
@@ -427,6 +438,7 @@ export default function ProfileClient() {
                 <section className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
                     {/* Avatar */}
                     <div className='relative'>
+                        {/* Hidden input for Avatar Upload */}
                         <input
                             ref={fileInputRef}
                             type='file'
@@ -681,6 +693,20 @@ export default function ProfileClient() {
                             <FollowCounts
                                 userId={user.id}
                                 username={profileData.username}
+                                followersCount={followersCount}
+                                followingCount={followingCount}
+                                onCountsChange={(followers, following) => {
+                                    setFollowersCount(followers)
+                                    setFollowingCount(following)
+                                }}
+                                onFollowersClick={() => {
+                                    setFollowModalType("followers")
+                                    setIsFollowModalOpen(true)
+                                }}
+                                onFollowingClick={() => {
+                                    setFollowModalType("following")
+                                    setIsFollowModalOpen(true)
+                                }}
                             />
                             <Link
                                 href='/profile/activity'
@@ -1517,6 +1543,17 @@ export default function ProfileClient() {
                     )}
                 </section>
             </motion.div>
+
+            {profileData && (
+                <FollowListModal
+                    isOpen={isFollowModalOpen}
+                    onClose={() => setIsFollowModalOpen(false)}
+                    userId={profileData.id}
+                    username={profileData.username}
+                    initialType={followModalType}
+                    currentUserId={user?.id}
+                />
+            )}
 
             {/* Avatar Image Cropper */}
             <ImageCropper

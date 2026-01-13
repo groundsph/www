@@ -8,7 +8,11 @@ interface FollowCountsProps {
     username: string
     initialFollowers?: number
     initialFollowing?: number
+    followersCount?: number
+    followingCount?: number
     onCountsChange?: (followers: number, following: number) => void
+    onFollowersClick?: () => void
+    onFollowingClick?: () => void
 }
 
 export default function FollowCounts({
@@ -16,10 +20,19 @@ export default function FollowCounts({
     username,
     initialFollowers = 0,
     initialFollowing = 0,
+    followersCount,
+    followingCount,
     onCountsChange,
+    onFollowersClick,
+    onFollowingClick,
 }: FollowCountsProps) {
-    const [followers, setFollowers] = useState(initialFollowers)
-    const [following, setFollowing] = useState(initialFollowing)
+    const [localFollowers, setLocalFollowers] = useState(initialFollowers)
+    const [localFollowing, setLocalFollowing] = useState(initialFollowing)
+
+    // Use controlled props if available, otherwise local state
+    const displayFollowers = followersCount ?? localFollowers
+    const displayFollowing = followingCount ?? localFollowing
+
     const [isLoading, setIsLoading] = useState(false)
 
     // Fetch actual counts on mount
@@ -30,8 +43,8 @@ export default function FollowCounts({
                 const { getFollowCounts } =
                     await import("@/app/api/actions/social")
                 const counts = await getFollowCounts(userId)
-                setFollowers(counts.followers)
-                setFollowing(counts.following)
+                setLocalFollowers(counts.followers)
+                setLocalFollowing(counts.following)
                 onCountsChange?.(counts.followers, counts.following)
             } catch (error) {
                 console.error("Failed to fetch follow counts:", error)
@@ -45,8 +58,8 @@ export default function FollowCounts({
 
     // Sync with prop changes (when parent refreshes)
     useEffect(() => {
-        setFollowers(initialFollowers)
-        setFollowing(initialFollowing)
+        setLocalFollowers(initialFollowers)
+        setLocalFollowing(initialFollowing)
     }, [initialFollowers, initialFollowing])
 
     const formatCount = (count: number) => {
@@ -59,31 +72,65 @@ export default function FollowCounts({
         return count.toString()
     }
 
+    // Helper to render content
+    const renderContent = (
+        type: "followers" | "following",
+        count: number,
+        label: string
+    ) => (
+        <span className='flex items-center gap-1 group cursor-pointer'>
+            <span className={`font-bold ${isLoading ? "opacity-50" : ""}`}>
+                {formatCount(count)}
+            </span>{" "}
+            <span className='text-text/60 group-hover:text-text/80 transition-colors'>
+                {label}
+            </span>
+        </span>
+    )
+
     return (
         <div className='flex items-center gap-4 text-sm'>
-            <Link
-                href={`/profile/${username}/followers`}
-                className='hover:underline transition-colors group'
-            >
-                <span className={`font-bold ${isLoading ? "opacity-50" : ""}`}>
-                    {formatCount(followers)}
-                </span>{" "}
-                <span className='text-text/60 group-hover:text-text/80'>
-                    {followers === 1 ? "Follower" : "Followers"}
-                </span>
-            </Link>
+            {onFollowersClick ? (
+                <button
+                    onClick={onFollowersClick}
+                    className='hover:underline transition-colors focus:outline-none'
+                >
+                    {renderContent(
+                        "followers",
+                        displayFollowers,
+                        displayFollowers === 1 ? "Follower" : "Followers"
+                    )}
+                </button>
+            ) : (
+                <Link
+                    href={`/profile/${username}/followers`}
+                    className='hover:underline transition-colors group'
+                >
+                    {renderContent(
+                        "followers",
+                        displayFollowers,
+                        displayFollowers === 1 ? "Follower" : "Followers"
+                    )}
+                </Link>
+            )}
+
             <span className='text-text/30'>•</span>
-            <Link
-                href={`/profile/${username}/following`}
-                className='hover:underline transition-colors group'
-            >
-                <span className={`font-bold ${isLoading ? "opacity-50" : ""}`}>
-                    {formatCount(following)}
-                </span>{" "}
-                <span className='text-text/60 group-hover:text-text/80'>
-                    Following
-                </span>
-            </Link>
+
+            {onFollowingClick ? (
+                <button
+                    onClick={onFollowingClick}
+                    className='hover:underline transition-colors focus:outline-none'
+                >
+                    {renderContent("following", displayFollowing, "Following")}
+                </button>
+            ) : (
+                <Link
+                    href={`/profile/${username}/following`}
+                    className='hover:underline transition-colors group'
+                >
+                    {renderContent("following", displayFollowing, "Following")}
+                </Link>
+            )}
         </div>
     )
 }
