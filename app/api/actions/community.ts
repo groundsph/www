@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { collections, profiles } from "@/db/schema"
-import { eq, desc, or, sql, inArray, ilike, and } from "drizzle-orm"
+import { eq, desc, or, sql, inArray, ilike, and, gt } from "drizzle-orm"
 
 // =============================================================================
 // PUBLIC COLLECTIONS
@@ -63,9 +63,11 @@ export async function getPublicCollections(
         })
         .from(collections)
         .where(
-            searchFilter
-                ? and(eq(collections.isPublic, true), searchFilter)
-                : eq(collections.isPublic, true)
+            and(
+                eq(collections.isPublic, true),
+                gt(collections.itemCount, 0),
+                searchFilter
+            )
         )
         .orderBy(orderBy)
         .limit(pageSize)
@@ -76,9 +78,11 @@ export async function getPublicCollections(
         .select({ count: sql<number>`count(*)::int` })
         .from(collections)
         .where(
-            searchFilter
-                ? and(eq(collections.isPublic, true), searchFilter)
-                : eq(collections.isPublic, true)
+            and(
+                eq(collections.isPublic, true),
+                gt(collections.itemCount, 0),
+                searchFilter
+            )
         )
 
     const total = countResult[0]?.count ?? 0
