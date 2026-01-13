@@ -1,5 +1,6 @@
 "use server"
 
+import { getPHTime, getPHTodayStart } from "@/utils/featured"
 import { db } from "@/db"
 import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits } from "@/db/schema"
 import { eq, and, ne, desc, inArray, arrayContains, count, sql } from "drizzle-orm"
@@ -945,9 +946,8 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
     if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
 
     try {
-        // Check if user already visited this cafe today
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
+        // Check if user already visited this cafe today (PH time)
+        const today = getPHTodayStart()
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
 
@@ -1212,8 +1212,7 @@ export async function getTodayVisitors(cafeId: string): Promise<{
 }> {
     try {
         // Get start and end of today (UTC+8 Philippine Time)
-        const now = new Date()
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const today = getPHTodayStart()
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
 
@@ -1308,8 +1307,7 @@ export async function hasVisitedToday(cafeId: string): Promise<boolean> {
     if (!user) return false
 
     try {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
+        const today = getPHTodayStart()
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
 
@@ -1384,8 +1382,8 @@ export async function getMonthlyLeaderboard(
     const user = await getCurrentUser()
 
     try {
-        // Get start of current month
-        const now = new Date()
+        // Get start of current month in PH time
+        const now = getPHTime()
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
         // Build base query

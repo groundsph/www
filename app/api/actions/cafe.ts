@@ -3,7 +3,7 @@
 import { db } from "@/db"
 import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteractions, ownerReviewResponses, featuredSchedules } from "@/db/schema"
 import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray } from "drizzle-orm"
-import { getDayOfYear } from "@/utils/featured"
+import { getDayOfYear, getPHTime } from "@/utils/featured"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 
 // Helper to map Drizzle result to snake_case CafeWithRatings
@@ -223,7 +223,7 @@ export async function getCafeBySlug(slug: string) {
 }
 
 export async function getDailyFeatured() {
-    const now = new Date()
+    const now = getPHTime()
 
     // 1. Priority: Manual Schedule
     const scheduledResult = await db
@@ -373,7 +373,7 @@ export async function getDailyFeatured() {
 
     if (!cafesResult.length) return null
 
-    const dayOfYear = getDayOfYear(new Date())
+    const dayOfYear = getDayOfYear()
     const selected = cafesResult[dayOfYear % cafesResult.length]
 
     return mapCafeToSnakeCase(selected)
@@ -385,8 +385,8 @@ export async function getDailyFeatured() {
 export async function getLocationFeatured(city?: string, region?: string): Promise<CafeWithRatings | null> {
     if (!city && !region) return null
 
-    const now = new Date()
-    const dayOfYear = getDayOfYear(new Date())
+    const now = getPHTime()
+    const dayOfYear = getDayOfYear()
 
     // Check schedules in order: city, region, global
     const scheduleConditions = []
