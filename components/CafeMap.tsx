@@ -25,6 +25,11 @@ import {
     Armchair,
     Laptop,
     Cigarette,
+    Toilet,
+    Droplet,
+    MilkOff,
+    Coffee,
+    Utensils,
 } from "lucide-react"
 
 import MarkerClusterGroup from "react-leaflet-cluster"
@@ -355,6 +360,11 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                             cafe.is_pet_friendly ||
                                             cafe.has_outdoor_seating ||
                                             cafe.has_indoor_seating ||
+                                            cafe.has_restroom ||
+                                            cafe.has_bidet ||
+                                            cafe.has_non_dairy ||
+                                            cafe.has_decaf ||
+                                            cafe.serves_food ||
                                             cafe.is_work_friendly) && (
                                             <div className='flex flex-wrap gap-2'>
                                                 {cafe.has_wifi && (
@@ -419,6 +429,46 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                                         title='Indoor Seating'
                                                     >
                                                         <Armchair className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_restroom && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Restroom'
+                                                    >
+                                                        <Toilet className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_bidet && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Bidet'
+                                                    >
+                                                        <Droplet className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_non_dairy && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Non-Dairy Milk'
+                                                    >
+                                                        <MilkOff className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.has_decaf && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Decaf Options'
+                                                    >
+                                                        <Coffee className='w-3.5 h-3.5' />
+                                                    </div>
+                                                )}
+                                                {cafe.serves_food && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
+                                                        title='Serves Food'
+                                                    >
+                                                        <Utensils className='w-3.5 h-3.5' />
                                                     </div>
                                                 )}
                                                 {cafe.is_work_friendly && (

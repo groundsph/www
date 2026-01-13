@@ -21,6 +21,8 @@ import {
     Armchair,
     Users,
     MapPin,
+    Cigarette,
+    Coffee,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -497,6 +499,16 @@ export default function CafeSidebar({
                         WiFi
                     </motion.li>
                 )}
+                {cafe.has_smoking && (
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
+                        <Cigarette className='w-4 h-4' />
+                        Smoking Area
+                    </motion.li>
+                )}
                 {cafe.has_sockets && (
                     <motion.li
                         variants={itemVariants}
@@ -592,6 +604,16 @@ export default function CafeSidebar({
                         )}
                     </motion.li>
                 )}
+                {cafe.has_decaf && (
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
+                        <Coffee className='w-4 h-4' />
+                        Decaf Options
+                    </motion.li>
+                )}
                 {cafe.is_work_friendly && (
                     <motion.li
                         variants={itemVariants}
@@ -603,6 +625,7 @@ export default function CafeSidebar({
                     </motion.li>
                 )}
                 {!cafe.has_wifi &&
+                    !cafe.has_smoking &&
                     !cafe.has_sockets &&
                     !cafe.has_parking &&
                     !cafe.has_aircon &&
@@ -612,6 +635,7 @@ export default function CafeSidebar({
                     !cafe.has_restroom &&
                     !cafe.has_bidet &&
                     !cafe.has_non_dairy &&
+                    !cafe.has_decaf &&
                     !cafe.is_work_friendly && (
                         <li className='text-text/50'>No amenities listed</li>
                     )}

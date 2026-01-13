@@ -25,6 +25,8 @@ import {
     MilkOff,
     Armchair,
     Users,
+    Cigarette,
+    Coffee,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -540,6 +542,16 @@ export function DetailsTabContent({
                             WiFi
                         </motion.span>
                     )}
+                    {cafe.has_smoking && (
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
+                            <Cigarette className='w-4 h-4' />
+                            Smoking Area
+                        </motion.span>
+                    )}
                     {cafe.has_sockets && (
                         <motion.span
                             variants={itemVariants}
@@ -636,6 +648,16 @@ export function DetailsTabContent({
                                 )}
                         </motion.span>
                     )}
+                    {cafe.has_decaf && (
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
+                            <Coffee className='w-4 h-4' />
+                            Decaf Options
+                        </motion.span>
+                    )}
                     {cafe.is_work_friendly && (
                         <motion.span
                             variants={itemVariants}
@@ -647,6 +669,7 @@ export function DetailsTabContent({
                         </motion.span>
                     )}
                     {!cafe.has_wifi &&
+                        !cafe.has_smoking &&
                         !cafe.has_sockets &&
                         !cafe.has_parking &&
                         !cafe.has_aircon &&
@@ -656,6 +679,7 @@ export function DetailsTabContent({
                         !cafe.has_restroom &&
                         !cafe.has_bidet &&
                         !cafe.has_non_dairy &&
+                        !cafe.has_decaf &&
                         !cafe.is_work_friendly && (
                             <span className='text-sm text-text/50'>
                                 No amenities listed

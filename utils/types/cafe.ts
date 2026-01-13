@@ -41,6 +41,9 @@ export interface Cafe {
     has_restroom: boolean;
     has_bidet: boolean;
     has_non_dairy: boolean;
+    has_smoking: boolean;
+    has_decaf: boolean;
+    is_work_friendly: boolean;
     milk_options?: string[];
     serves_food: boolean;
     specialty?: string[];

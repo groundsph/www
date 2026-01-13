@@ -793,6 +793,46 @@ export default function CafesPageClient({
                                                     <TreePine className='w-4 h-4' />
                                                 </div>
                                             )}
+                                            {cafe.has_indoor_seating && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Indoor Seating'
+                                                >
+                                                    <Armchair className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.has_restroom && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Restroom'
+                                                >
+                                                    <Toilet className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.has_bidet && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Bidet'
+                                                >
+                                                    <Droplet className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.has_non_dairy && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Non-Dairy Milk'
+                                                >
+                                                    <MilkOff className='w-4 h-4' />
+                                                </div>
+                                            )}
+                                            {cafe.has_decaf && (
+                                                <div
+                                                    className='text-text/70 hover:text-text transition-colors'
+                                                    title='Decaf Options'
+                                                >
+                                                    <Coffee className='w-4 h-4' />
+                                                </div>
+                                            )}
                                             {cafe.is_work_friendly && (
                                                 <div
                                                     className='text-text/70 hover:text-text transition-colors'
