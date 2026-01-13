@@ -1,7 +1,17 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { X, MapPin, Users, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
+import {
+    X,
+    MapPin,
+    Users,
+    ChevronDown,
+    ChevronUp,
+    Loader2,
+    Coffee,
+    Sparkles,
+    Trophy,
+} from "lucide-react"
 import CompanionSelector from "./CompanionSelector"
 import type { CheckInResult } from "@/app/api/actions/profile"
 
@@ -87,9 +97,9 @@ export default function GroupCheckInModal({
             />
 
             {/* Modal */}
-            <div className='relative bg-background rounded-2xl shadow-xl w-full max-w-md overflow-hidden'>
+            <div className='relative bg-background rounded-2xl shadow-xl w-full max-w-md'>
                 {/* Header */}
-                <div className='flex items-center justify-between px-5 py-4 border-b border-text/10'>
+                <div className='flex items-center justify-between px-5 py-4 border-b border-text/10 rounded-t-2xl'>
                     <div className='flex items-center gap-3'>
                         <div className='w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center'>
                             <MapPin className='w-5 h-5 text-primary' />
@@ -126,7 +136,7 @@ export default function GroupCheckInModal({
                         <div className='text-center py-2'>
                             {/* Success icon */}
                             <div className='w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center'>
-                                <span className='text-3xl'>☕</span>
+                                <Coffee className='w-8 h-8 text-primary' />
                             </div>
 
                             {/* Main message */}
@@ -140,15 +150,16 @@ export default function GroupCheckInModal({
                             {/* Additional info badges */}
                             <div className='flex flex-wrap justify-center gap-2 mt-4'>
                                 {result.isFirstVisit && (
-                                    <span className='inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm font-medium rounded-full'>
-                                        ✨ First visit
+                                    <span className='inline-flex items-center gap-1 px-3 py-1.5 bg-primary/20 text-primary text-sm font-medium rounded-full'>
+                                        <Sparkles className='w-3.5 h-3.5' />{" "}
+                                        First visit
                                     </span>
                                 )}
                                 {result.companions &&
                                     result.companions.length > 0 && (
                                         <span className='inline-flex items-center gap-1 px-3 py-1.5 bg-secondary/40 text-text text-sm font-medium rounded-full'>
-                                            👥 {result.companions.length}{" "}
-                                            companion
+                                            <Users className='w-3.5 h-3.5' />{" "}
+                                            {result.companions.length} companion
                                             {result.companions.length > 1
                                                 ? "s"
                                                 : ""}
@@ -156,7 +167,8 @@ export default function GroupCheckInModal({
                                     )}
                                 {result.milestone && (
                                     <span className='inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full'>
-                                        🏆 {result.milestone} visits!
+                                        <Trophy className='w-3.5 h-3.5' />{" "}
+                                        {result.milestone} visits!
                                     </span>
                                 )}
                             </div>
@@ -174,7 +186,7 @@ export default function GroupCheckInModal({
                             )}
 
                             {/* Companions section (collapsible) */}
-                            <div className='border border-text/10 rounded-lg overflow-hidden'>
+                            <div className='border border-text/10 rounded-lg'>
                                 <button
                                     type='button'
                                     onClick={() =>
@@ -218,7 +230,7 @@ export default function GroupCheckInModal({
                 </div>
 
                 {/* Footer */}
-                <div className='px-5 py-4 border-t border-text/10 bg-text/5'>
+                <div className='px-5 py-4 border-t border-text/10 bg-text/5 rounded-b-2xl'>
                     {!result ? (
                         <button
                             onClick={handleCheckIn}
