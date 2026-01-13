@@ -11,6 +11,7 @@ import RecentlyAddedSection from "@/components/RecentlyAddedSection"
 import SubmitCafeSection from "@/components/SubmitCafeSection"
 import StoriesEventsSection from "@/components/StoriesEventsSection"
 import RecentReviewsSection from "@/components/RecentReviewsSection"
+import ActivityFeedWrapper from "@/components/ActivityFeedWrapper"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 // Dynamic rendering for Dokploy build compatibility
@@ -84,6 +85,9 @@ export default async function Home() {
 
             {/* Recently Added */}
             <RecentlyAddedSection cafes={recentlyAdded} />
+
+            {/* Activity Feed - Only shows for authenticated users with follows */}
+            <ActivityFeedWrapper />
 
             {/* Recent Reviews */}
             <RecentReviewsSection reviews={recentReviews} />

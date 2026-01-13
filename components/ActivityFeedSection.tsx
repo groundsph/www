@@ -1,0 +1,174 @@
+import Link from "next/link"
+import Image from "next/image"
+import { ArrowRightIcon, Coffee } from "lucide-react"
+import { getCafeThumbnailUrl } from "@/utils/extras"
+
+export interface FeedCheckIn {
+    id: string
+    userId: string
+    username: string
+    displayName: string
+    avatarUrl: string | null
+    cafeId: string
+    cafeName: string
+    cafeSlug: string
+    cafeThumbnail: string | null
+    visitedAt: string
+    companions: {
+        id: string
+        username: string
+        displayName: string
+        avatarUrl: string | null
+    }[]
+}
+
+interface ActivityFeedSectionProps {
+    checkIns: FeedCheckIn[]
+}
+
+export default function ActivityFeedSection({
+    checkIns,
+}: ActivityFeedSectionProps) {
+    if (checkIns.length === 0) return null
+
+    return (
+        <section className='w-full min-h-max flex flex-col mt-4'>
+            <div className='flex items-center justify-between px-6 mb-2 flex-wrap'>
+                <h2 className='font-semibold font-serif text-2xl'>
+                    Activity Feed
+                </h2>
+                <div className='flex items-center gap-3'>
+                    <p className='text-sm text-text/60'>
+                        From people you follow
+                    </p>
+                    <Link
+                        href='/profile/activity'
+                        className='text-sm text-primary hover:text-primary/80 transition-colors font-medium'
+                    >
+                        View all
+                    </Link>
+                </div>
+            </div>
+
+            {/* Horizontal scrollable container */}
+            <div className='flex flex-row gap-4 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory scroll-px-4'>
+                {checkIns.map((checkIn) => (
+                    <div
+                        key={checkIn.id}
+                        className='group shrink-0 w-[320px] max-w-[85svw] bg-text/5 rounded-xl p-4 hover:bg-text/10 transition-colors border border-text/5 hover:border-text/10 snap-start flex flex-col gap-3'
+                    >
+                        {/* User info row */}
+                        <div className='flex items-center gap-2'>
+                            <Link
+                                href={`/profile/${checkIn.username}`}
+                                className='shrink-0'
+                                onClick={(e) => e.stopPropagation()}
+                                title={checkIn.displayName}
+                            >
+                                {checkIn.avatarUrl ? (
+                                    <Image
+                                        src={checkIn.avatarUrl}
+                                        alt={checkIn.displayName}
+                                        width={40}
+                                        height={40}
+                                        className='w-6 h-6 rounded-full object-cover'
+                                    />
+                                ) : (
+                                    <div className='w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center'>
+                                        <span className='text-primary font-bold'>
+                                            {checkIn.displayName.charAt(0)}
+                                        </span>
+                                    </div>
+                                )}
+                            </Link>
+                            <Link
+                                href={`/profile/${checkIn.username}`}
+                                className='font-medium text-text/60 hover:text-text transition-colors truncate'
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                @{checkIn.username}
+                            </Link>
+                            <span className='text-text/40 text-sm'>
+                                {new Date(checkIn.visitedAt).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                        month: "short",
+                                        day: "numeric",
+                                        year: "numeric",
+                                    }
+                                )}
+                            </span>
+                        </div>
+
+                        {/* Cafe info */}
+                        <Link
+                            href={`/cafes/${checkIn.cafeSlug}`}
+                            className='flex items-center gap-3 bg-background rounded-lg p-2 shadow-none hover:shadow-sm transition-colors'
+                        >
+                            <div className='w-14 h-14 rounded-lg overflow-hidden bg-text/5 shrink-0'>
+                                {checkIn.cafeThumbnail ? (
+                                    <Image
+                                        src={getCafeThumbnailUrl(
+                                            checkIn.cafeThumbnail
+                                        )}
+                                        alt={checkIn.cafeName}
+                                        width={56}
+                                        height={56}
+                                        className='w-full h-full object-cover'
+                                    />
+                                ) : (
+                                    <div className='w-full h-full flex items-center justify-center'>
+                                        <Coffee className='w-6 h-6 text-text opacity-30' />
+                                    </div>
+                                )}
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                                <h3 className='font-semibold text-text group-hover:text-primary transition-colors truncate'>
+                                    {checkIn.cafeName}
+                                </h3>
+                                <p className='flex flex-row items-center text-xs'>
+                                    Visit Cafe{" "}
+                                    <ArrowRightIcon className='w-2 h-2 ml-1' />
+                                </p>
+                            </div>
+                        </Link>
+
+                        {/* Companions */}
+                        {checkIn.companions.length > 0 && (
+                            <div className='flex items-center gap-1.5 overflow-x-auto overflow-y-hidden scrollbar-hide'>
+                                <span className='text-text/40 text-sm shrink-0'>
+                                    with:
+                                </span>
+                                {checkIn.companions.map((companion) => (
+                                    <Link
+                                        key={companion.id}
+                                        href={`/profile/${companion.username}`}
+                                        className='shrink-0'
+                                        onClick={(e) => e.stopPropagation()}
+                                        title={companion.displayName}
+                                    >
+                                        {companion.avatarUrl ? (
+                                            <Image
+                                                src={companion.avatarUrl}
+                                                alt={companion.displayName}
+                                                width={24}
+                                                height={24}
+                                                className='w-6 h-6 rounded-full object-cover'
+                                            />
+                                        ) : (
+                                            <div className='w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary'>
+                                                {companion.displayName.charAt(
+                                                    0
+                                                )}
+                                            </div>
+                                        )}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </section>
+    )
+}
