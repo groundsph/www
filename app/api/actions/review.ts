@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { reviews, profiles, reviewInteractions, cafes } from "@/db/schema"
-import { eq, and, sql } from "drizzle-orm"
+import { eq, and, sql, desc } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { deleteReviewImagesAction } from "@/utils/storage/actions"
 import { notifyDiscordReviewReport } from "./notify"
@@ -331,4 +331,58 @@ export async function reportReview(reviewId: string) {
     }
 
     return { reported: true }
+}
+
+/**
+ * Get recent published reviews for the landing page
+ */
+export async function getRecentReviews(limit: number = 6): Promise<{
+    id: string
+    rating: number
+    comment: string
+    created_at: string | null
+    author: { display_name: string; username: string; avatar_url: string | null }
+    cafe: { name: string; slug: string; thumbnail: string | null }
+}[]> {
+    try {
+        const results = await db
+            .select({
+                id: reviews.id,
+                rating: reviews.rating,
+                comment: reviews.comment,
+                createdAt: reviews.createdAt,
+                authorDisplayName: profiles.displayName,
+                authorUsername: profiles.username,
+                authorAvatarUrl: profiles.avatarUrl,
+                cafeName: cafes.name,
+                cafeSlug: cafes.slug,
+                cafeThumbnail: cafes.thumbnail,
+            })
+            .from(reviews)
+            .innerJoin(profiles, eq(reviews.userId, profiles.id))
+            .innerJoin(cafes, eq(reviews.cafeId, cafes.id))
+            .where(eq(reviews.status, "published"))
+            .orderBy(desc(reviews.createdAt))
+            .limit(limit)
+
+        return results.map((r) => ({
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment,
+            created_at: r.createdAt?.toISOString() ?? null,
+            author: {
+                display_name: r.authorDisplayName,
+                username: r.authorUsername,
+                avatar_url: r.authorAvatarUrl,
+            },
+            cafe: {
+                name: r.cafeName,
+                slug: r.cafeSlug,
+                thumbnail: r.cafeThumbnail,
+            },
+        }))
+    } catch (error) {
+        console.error("Error fetching recent reviews:", error)
+        return []
+    }
 }

@@ -5,10 +5,12 @@ import {
 } from "@/app/api/actions/cafe"
 import { getUpcomingEvents } from "@/app/api/actions/events"
 import { getPublishedBlogPosts } from "@/app/api/actions/blog"
+import { getRecentReviews } from "@/app/api/actions/review"
 import LandingHero from "@/components/LandingHero"
 import RecentlyAddedSection from "@/components/RecentlyAddedSection"
 import SubmitCafeSection from "@/components/SubmitCafeSection"
 import StoriesEventsSection from "@/components/StoriesEventsSection"
+import RecentReviewsSection from "@/components/RecentReviewsSection"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 // Dynamic rendering for Dokploy build compatibility
@@ -50,16 +52,23 @@ export default async function Home() {
         ],
     }
     // Fetch data using server actions
-    const [featured, recentlyAdded, cafeCount, upcomingEvents, blogResult] =
-        await Promise.all([
-            getDailyFeatured() as Promise<CafeWithRatings | null>,
-            getAllCafes(1, 10, { exclude_hidden_gems: true }) as Promise<
-                CafeWithRatings[]
-            >,
-            getPublishedCafeCount(),
-            getUpcomingEvents(5),
-            getPublishedBlogPosts({ pageSize: 4 }),
-        ])
+    const [
+        featured,
+        recentlyAdded,
+        cafeCount,
+        upcomingEvents,
+        blogResult,
+        recentReviews,
+    ] = await Promise.all([
+        getDailyFeatured() as Promise<CafeWithRatings | null>,
+        getAllCafes(1, 10, { exclude_hidden_gems: true }) as Promise<
+            CafeWithRatings[]
+        >,
+        getPublishedCafeCount(),
+        getUpcomingEvents(5),
+        getPublishedBlogPosts({ pageSize: 4 }),
+        getRecentReviews(6),
+    ])
 
     const latestPosts = blogResult.posts
 
@@ -75,6 +84,9 @@ export default async function Home() {
 
             {/* Recently Added */}
             <RecentlyAddedSection cafes={recentlyAdded} />
+
+            {/* Recent Reviews */}
+            <RecentReviewsSection reviews={recentReviews} />
 
             {/* Stories & Events Section - Side by Side */}
             <StoriesEventsSection

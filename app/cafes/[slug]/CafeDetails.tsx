@@ -113,13 +113,18 @@ export default function CafeDetails({
     // Group Check-in Modal State
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false)
 
-    // Check-in handler with milestone celebration (called from modal)
+    // Check-in handler (called from modal) - no longer triggers milestone here
     const handleCheckIn = async (companionIds?: string[]) => {
         const result = await checkIn(companionIds)
-        if (result?.milestone) {
-            setMilestone(result.milestone)
-        }
         return result
+    }
+
+    // Called when check-in modal closes after successful check-in
+    const handleCheckInComplete = (result: { milestone?: number | null }) => {
+        // Show milestone celebration after modal closes
+        if (result?.milestone) {
+            setTimeout(() => setMilestone(result.milestone ?? null), 300)
+        }
     }
 
     // Open the check-in modal instead of direct check-in
@@ -456,10 +461,19 @@ export default function CafeDetails({
                         </div>
                     )}
 
-                    {/* Story */}
+                    {/* Story - Limited height on desktop to keep reviews visible */}
                     {story ? (
-                        <div className='w-full'>
-                            <MarkdownRender content={story.content} />
+                        <div className='w-full relative'>
+                            <div className='max-h-[350px] overflow-hidden'>
+                                <MarkdownRender content={story.content} />
+                            </div>
+                            {/* Gradient fade overlay */}
+                            <div className='absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-background via-background/80 to-transparent pointer-events-none' />
+                            {/* Read more indicator */}
+                            <p className='text-sm text-text/50 text-center mt-2'>
+                                Scroll down on desktop or visit the cafe to
+                                learn more
+                            </p>
                         </div>
                     ) : (
                         <div className='w-full bg-text/5 rounded-xl border border-dashed border-text/20 p-8 text-center'>
@@ -631,6 +645,7 @@ export default function CafeDetails({
                 onClose={() => setIsCheckInModalOpen(false)}
                 cafeName={cafe.name}
                 onCheckIn={handleCheckIn}
+                onComplete={handleCheckInComplete}
                 visitedToday={visitedToday}
                 visitCount={visitCount}
             />

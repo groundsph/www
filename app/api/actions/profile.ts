@@ -929,6 +929,8 @@ export interface CheckInResult {
     milestone?: number | null
     alreadyVisitedToday?: boolean
     companions?: string[] // IDs of companions added to the check-in
+    /** Results of companion visit auto-marking */
+    companionResults?: { id: string; added: boolean; alreadyVisited: boolean }[]
     error?: string
 }
 
@@ -1044,6 +1046,94 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
             }
         }
 
+        // =====================================================================
+        // COMPANION VISIT AUTO-MARKING
+        // Record visits for companions (if they haven't visited today)
+        // =====================================================================
+        const companionResults: { id: string; added: boolean; alreadyVisited: boolean }[] = []
+
+        if (validCompanions.length > 0) {
+            for (const companionId of validCompanions) {
+                try {
+                    // Check if companion already visited today
+                    const companionTodayVisit = await db
+                        .select({ id: cafeVisits.id, companions: cafeVisits.companions })
+                        .from(cafeVisits)
+                        .where(
+                            and(
+                                eq(cafeVisits.userId, companionId),
+                                eq(cafeVisits.cafeId, cafeId),
+                                sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                            )
+                        )
+                        .limit(1)
+
+                    if (companionTodayVisit.length > 0) {
+                        // Companion already visited today - update their visit to include main user as companion
+                        const existingCompanions = (companionTodayVisit[0].companions as string[]) || []
+                        if (!existingCompanions.includes(user.id)) {
+                            await db
+                                .update(cafeVisits)
+                                .set({ companions: [...existingCompanions, user.id] })
+                                .where(eq(cafeVisits.id, companionTodayVisit[0].id))
+                        }
+                        companionResults.push({ id: companionId, added: false, alreadyVisited: true })
+                    } else {
+                        // Check if this is companion's first visit to this cafe
+                        const companionExistingVisits = await db
+                            .select({ count: count() })
+                            .from(cafeVisits)
+                            .where(and(eq(cafeVisits.userId, companionId), eq(cafeVisits.cafeId, cafeId)))
+
+                        const isCompanionFirstVisit = (companionExistingVisits[0]?.count ?? 0) === 0
+
+                        // Record companion's visit
+                        await db.insert(cafeVisits).values({
+                            userId: companionId,
+                            cafeId: cafeId,
+                            visitedAt: new Date(),
+                            companions: [user.id], // Tag the main user as their companion
+                        })
+
+                        // Update companion's passport if first visit
+                        if (isCompanionFirstVisit) {
+                            const companionProfile = await db
+                                .select({ passport: profiles.passport })
+                                .from(profiles)
+                                .where(eq(profiles.id, companionId))
+                                .limit(1)
+
+                            const companionPassport = (companionProfile[0]?.passport as ProfilePassport) || {
+                                visited_ids: [],
+                                visits: [],
+                                wishlist_ids: [],
+                                favorite_ids: [],
+                            }
+
+                            if (!companionPassport.visited_ids.includes(cafeId)) {
+                                await db
+                                    .update(profiles)
+                                    .set({
+                                        passport: {
+                                            ...companionPassport,
+                                            visited_ids: [...companionPassport.visited_ids, cafeId],
+                                            visits: [...(companionPassport.visits || []), { cafe_id: cafeId, visited_at: new Date().toISOString() }],
+                                        },
+                                    })
+                                    .where(eq(profiles.id, companionId))
+                            }
+                        }
+
+                        companionResults.push({ id: companionId, added: true, alreadyVisited: false })
+                    }
+                } catch (companionError) {
+                    console.error(`Error recording companion visit for ${companionId}:`, companionError)
+                    // Continue with other companions even if one fails
+                }
+            }
+        }
+
         const newCount = (existingVisits[0]?.count ?? 0) + 1
 
         // Check for visit-based badges (Regular at 5, Loyal Customer at 10)
@@ -1054,7 +1144,7 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
         const milestones = [5, 10, 25, 50, 100]
         const milestone = milestones.includes(newCount) ? newCount : null
 
-        return { success: true, visitCount: newCount, isFirstVisit, milestone, companions: validCompanions }
+        return { success: true, visitCount: newCount, isFirstVisit, milestone, companions: validCompanions, companionResults }
     } catch (error) {
         console.error("Error recording visit:", error)
         return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Failed to record visit" }

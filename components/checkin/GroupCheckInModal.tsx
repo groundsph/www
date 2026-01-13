@@ -17,6 +17,8 @@ interface GroupCheckInModalProps {
     onClose: () => void
     cafeName: string
     onCheckIn: (companionIds?: string[]) => Promise<CheckInResult | undefined>
+    /** Called when check-in completes successfully and user dismisses the modal */
+    onComplete?: (result: CheckInResult) => void
     visitedToday?: boolean
     visitCount?: number
 }
@@ -26,6 +28,7 @@ export default function GroupCheckInModal({
     onClose,
     cafeName,
     onCheckIn,
+    onComplete,
     visitedToday = false,
     visitCount = 0,
 }: GroupCheckInModalProps) {
@@ -64,6 +67,13 @@ export default function GroupCheckInModal({
         setShowCompanions(false)
         setResult(null)
         onClose()
+    }
+
+    const handleDone = () => {
+        if (result?.success && onComplete) {
+            onComplete(result)
+        }
+        handleClose()
     }
 
     if (!isOpen) return null
@@ -113,34 +123,43 @@ export default function GroupCheckInModal({
 
                     {/* Success result */}
                     {result?.success && (
-                        <div className='bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center'>
-                            <div className='text-4xl mb-2'>🎉</div>
-                            <p className='font-semibold text-green-700 dark:text-green-300'>
-                                Check-in successful!
-                            </p>
-                            <p className='text-sm text-green-600 dark:text-green-400 mt-1'>
+                        <div className='text-center py-2'>
+                            {/* Success icon */}
+                            <div className='w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center'>
+                                <span className='text-3xl'>☕</span>
+                            </div>
+
+                            {/* Main message */}
+                            <h3 className='text-xl font-bold text-text mb-1'>
+                                You're here!
+                            </h3>
+                            <p className='text-text/60'>
                                 Visit #{result.visitCount} to {cafeName}
                             </p>
-                            {result.isFirstVisit && (
-                                <p className='text-sm text-green-600 dark:text-green-400 mt-1'>
-                                    ✨ First time visiting this cafe!
-                                </p>
-                            )}
-                            {result.companions &&
-                                result.companions.length > 0 && (
-                                    <p className='text-sm text-green-600 dark:text-green-400 mt-1'>
-                                        👥 Checked in with{" "}
-                                        {result.companions.length} companion
-                                        {result.companions.length > 1
-                                            ? "s"
-                                            : ""}
-                                    </p>
+
+                            {/* Additional info badges */}
+                            <div className='flex flex-wrap justify-center gap-2 mt-4'>
+                                {result.isFirstVisit && (
+                                    <span className='inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm font-medium rounded-full'>
+                                        ✨ First visit
+                                    </span>
                                 )}
-                            {result.milestone && (
-                                <p className='text-sm text-green-600 dark:text-green-400 mt-2 font-medium'>
-                                    🏆 Milestone: {result.milestone} visits!
-                                </p>
-                            )}
+                                {result.companions &&
+                                    result.companions.length > 0 && (
+                                        <span className='inline-flex items-center gap-1 px-3 py-1.5 bg-secondary/40 text-text text-sm font-medium rounded-full'>
+                                            👥 {result.companions.length}{" "}
+                                            companion
+                                            {result.companions.length > 1
+                                                ? "s"
+                                                : ""}
+                                        </span>
+                                    )}
+                                {result.milestone && (
+                                    <span className='inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full'>
+                                        🏆 {result.milestone} visits!
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -229,8 +248,8 @@ export default function GroupCheckInModal({
                         </button>
                     ) : (
                         <button
-                            onClick={handleClose}
-                            className='w-full py-3 bg-text/10 text-text font-bold rounded-xl hover:bg-text/20 transition-colors'
+                            onClick={handleDone}
+                            className='w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors'
                         >
                             Done
                         </button>

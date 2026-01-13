@@ -162,21 +162,7 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
                 </div>
             )}
 
-            {/* Story */}
-            {story ? (
-                <div className='w-full'>
-                    <MarkdownRender content={story.content} />
-                </div>
-            ) : (
-                <div className='w-full bg-text/5 rounded-xl border border-dashed border-text/20 p-6 text-center'>
-                    <p className='text-text/50 font-serif italic'>
-                        This cafe&apos;s story is yet to be told...
-                    </p>
-                    <p className='text-text/40 text-sm mt-1'>
-                        Check back later for more about {cafe.name}
-                    </p>
-                </div>
-            )}
+            {/* Story removed from About tab on mobile - it has a dedicated Story tab */}
 
             {/* Map - Only show if cafe has coordinates (not a Hidden Gem) */}
             {cafe.lat !== null && cafe.lng !== null ? (
