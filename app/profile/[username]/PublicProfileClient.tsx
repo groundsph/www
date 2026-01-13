@@ -717,7 +717,10 @@ export default function PublicProfileClient({
 
                 {/* Visit History Section */}
                 <section className='mt-10'>
-                    <VisitHistory visits={visitedCafes} />
+                    <VisitHistory
+                        visits={visitedCafes}
+                        isPublic={true}
+                    />
                 </section>
 
                 {/* Passport Section */}

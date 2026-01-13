@@ -18,6 +18,7 @@ interface VisitHistoryCafe {
 interface VisitHistoryProps {
     visits: VisitHistoryCafe[]
     className?: string
+    isPublic?: boolean
 }
 
 // Generate seeded random number from string (consistent per cafe)
@@ -131,6 +132,7 @@ function getSCurveControls(
 export default function VisitHistory({
     visits,
     className = "",
+    isPublic = false,
 }: VisitHistoryProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [isMobile, setIsMobile] = useState(false)
@@ -194,12 +196,14 @@ export default function VisitHistory({
                     {sortedVisits.length}{" "}
                     {sortedVisits.length === 1 ? "cafe" : "cafes"}
                 </span>
-                <Link
-                    href='/profile/visits'
-                    className='ml-auto text-xs sm:text-sm text-primary hover:text-primary/80 font-medium transition-colors'
-                >
-                    View All →
-                </Link>
+                {!isPublic && (
+                    <Link
+                        href='/profile/visits'
+                        className='ml-auto text-xs sm:text-sm text-primary hover:text-primary/80 font-medium transition-colors'
+                    >
+                        View All →
+                    </Link>
+                )}
             </div>
 
             {/* Fixed wrapper for visual box (background & border) */}

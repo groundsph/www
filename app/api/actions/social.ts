@@ -141,7 +141,8 @@ export async function getFollowCounts(userId: string): Promise<{
  */
 export async function getFollowers(
     userId: string,
-    limit: number = 50
+    limit: number = 50,
+    offset: number = 0
 ): Promise<{
     users: { id: string; username: string; displayName: string; avatarUrl: string | null }[]
 }> {
@@ -158,6 +159,7 @@ export async function getFollowers(
             .where(eq(userFollows.followingId, userId))
             .orderBy(desc(userFollows.createdAt))
             .limit(limit)
+            .offset(offset)
 
         return { users: result }
     } catch (error) {
@@ -171,7 +173,8 @@ export async function getFollowers(
  */
 export async function getFollowing(
     userId: string,
-    limit: number = 50
+    limit: number = 50,
+    offset: number = 0
 ): Promise<{
     users: { id: string; username: string; displayName: string; avatarUrl: string | null }[]
 }> {
@@ -188,6 +191,7 @@ export async function getFollowing(
             .where(eq(userFollows.followerId, userId))
             .orderBy(desc(userFollows.createdAt))
             .limit(limit)
+            .offset(offset)
 
         return { users: result }
     } catch (error) {
