@@ -13,7 +13,6 @@ export default function ActivityFeedWrapper() {
     useEffect(() => {
         // If not authenticated, don't fetch and hide section
         if (!user) {
-            setLoading(false)
             return
         }
 
