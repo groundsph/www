@@ -24,7 +24,7 @@ export default function RecentReviewsSection({
 
     return (
         <section className='w-full min-h-max flex flex-col mt-4'>
-            <div className='flex items-center justify-between px-6 mb-2'>
+            <div className='flex items-center justify-between px-6 mb-2 flex-wrap'>
                 <h2 className='font-semibold font-serif text-2xl'>
                     Recent Reviews
                 </h2>
@@ -39,7 +39,7 @@ export default function RecentReviewsSection({
                     <Link
                         key={review.id}
                         href={`/cafes/${review.cafe.slug}`}
-                        className='group shrink-0 w-[320px] bg-text/5 rounded-xl p-4 hover:bg-text/10 transition-colors border border-text/5 hover:border-text/10 snap-start'
+                        className='group shrink-0 w-[320px] max-w-[85svw] bg-text/5 rounded-xl p-4 hover:bg-text/10 transition-colors border border-text/5 hover:border-text/10 snap-start'
                     >
                         {/* Cafe info */}
                         <div className='flex items-center gap-3 mb-3'>
