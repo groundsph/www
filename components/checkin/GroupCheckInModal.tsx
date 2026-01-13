@@ -141,7 +141,7 @@ export default function GroupCheckInModal({
 
                             {/* Main message */}
                             <h3 className='text-xl font-bold text-text mb-1'>
-                                You're here!
+                                You&apos;re here!
                             </h3>
                             <p className='text-text/60'>
                                 Visit #{result.visitCount} to {cafeName}

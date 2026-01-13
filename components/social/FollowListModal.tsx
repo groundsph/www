@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { X, Loader2, ArrowLeft, User } from "lucide-react"
+import { X, Loader2, User } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import FollowButton from "./FollowButton"
@@ -40,7 +40,6 @@ export default function FollowListModal({
     const [currentUserFollowing, setCurrentUserFollowing] = useState<
         Record<string, boolean>
     >({})
-    const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null)
 
     const listRef = useRef<HTMLDivElement>(null)
     const LIMIT = 20
@@ -66,75 +65,60 @@ export default function FollowListModal({
         checkUser()
     }, [])
 
-    // We need current user ID to hide follow button for self
-    // I will add currentUserId prop to the component in next iteration or now.
-    // Actually, let's just fetch it once safely or better yet, pass it from parent.
-    // For now, I'll proceed without it and the "Follow" button logic will handle "cannot follow self" by API returning error or simply checking in the button component (it handles logic).
-    // The FollowButton component checks `isFollowing` state.
+    const loadUsers = useCallback(
+        async (currentOffset: number, type: "followers" | "following") => {
+            setIsLoading(true)
+            try {
+                const { getFollowers, getFollowing, isFollowing } =
+                    await import("@/app/api/actions/social")
 
-    // Reset list when tab changes
-    useEffect(() => {
-        if (!isOpen) return
-        setUsers([])
-        setOffset(0)
-        setHasMore(true)
-        loadUsers(0, activeTab)
-    }, [activeTab, isOpen])
+                let result
+                if (type === "followers") {
+                    result = await getFollowers(userId, LIMIT, currentOffset)
+                } else {
+                    result = await getFollowing(userId, LIMIT, currentOffset)
+                }
 
-    const loadUsers = async (
-        currentOffset: number,
-        type: "followers" | "following"
-    ) => {
-        setIsLoading(true)
-        try {
-            const { getFollowers, getFollowing, isFollowing } =
-                await import("@/app/api/actions/social")
+                const newUsers = result.users
 
-            let result
-            if (type === "followers") {
-                result = await getFollowers(userId, LIMIT, currentOffset)
-            } else {
-                result = await getFollowing(userId, LIMIT, currentOffset)
+                if (newUsers.length < LIMIT) {
+                    setHasMore(false)
+                }
+
+                setUsers((prev) =>
+                    currentOffset === 0 ? newUsers : [...prev, ...newUsers]
+                )
+
+                // Check follow status for each user
+                // Optimization: We could batch this, but for now individual checks or the button doing it itself.
+                // However, FollowButton takes `initialIsFollowing`. We should verify this.
+                // Let's do a batch check or just let the button handle it?
+                // The existing pages did a loop. I'll do a loop.
+
+                const statuses: Record<string, boolean> = {}
+                await Promise.all(
+                    newUsers.map(async (u) => {
+                        statuses[u.id] = await isFollowing(u.id)
+                    })
+                )
+
+                setCurrentUserFollowing((prev) => ({ ...prev, ...statuses }))
+            } catch (error) {
+                console.error("Error loading users:", error)
+            } finally {
+                setIsLoading(false)
             }
+        },
+        [userId]
+    )
 
-            const newUsers = result.users
-
-            if (newUsers.length < LIMIT) {
-                setHasMore(false)
-            }
-
-            setUsers((prev) =>
-                currentOffset === 0 ? newUsers : [...prev, ...newUsers]
-            )
-
-            // Check follow status for each user
-            // Optimization: We could batch this, but for now individual checks or the button doing it itself.
-            // However, FollowButton takes `initialIsFollowing`. We should verify this.
-            // Let's do a batch check or just let the button handle it?
-            // The existing pages did a loop. I'll do a loop.
-
-            const statuses: Record<string, boolean> = {}
-            await Promise.all(
-                newUsers.map(async (u) => {
-                    statuses[u.id] = await isFollowing(u.id)
-                })
-            )
-
-            setCurrentUserFollowing((prev) => ({ ...prev, ...statuses }))
-        } catch (error) {
-            console.error("Error loading users:", error)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    const handleLoadMore = () => {
+    const handleLoadMore = useCallback(() => {
         if (!isLoading && hasMore) {
             const newOffset = offset + LIMIT
             setOffset(newOffset)
             loadUsers(newOffset, activeTab)
         }
-    }
+    }, [isLoading, hasMore, offset, activeTab, loadUsers])
 
     const handleScroll = useCallback(() => {
         if (listRef.current) {
@@ -147,7 +131,16 @@ export default function FollowListModal({
                 handleLoadMore()
             }
         }
-    }, [isLoading, hasMore, offset, activeTab]) // dependencies for closure
+    }, [isLoading, hasMore, handleLoadMore])
+
+    // Reset list when tab changes
+    useEffect(() => {
+        if (!isOpen) return
+        setUsers([])
+        setOffset(0)
+        setHasMore(true)
+        loadUsers(0, activeTab)
+    }, [activeTab, isOpen, loadUsers])
 
     if (!isOpen) return null
 

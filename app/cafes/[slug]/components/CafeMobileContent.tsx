@@ -31,7 +31,6 @@ import {
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
 import RatingDistribution from "./RatingDistribution"
-import MarkdownRender from "@/components/MarkdownRender"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
 import ReportCafeModal from "@/components/ReportCafeModal"
 import ImageLightbox from "@/components/ImageLightbox"
@@ -103,7 +102,6 @@ interface CafeMobileContentProps {
 export function AboutTabContent({ cafe }: CafeMobileContentProps) {
     const openStatus = isOpenNow(cafe.operating_hours)
     const socials = (cafe.socials as unknown as CafeSocial[]) ?? []
-    const story = cafe.story
     const gallery = cafe.gallery ?? []
 
     // Lightbox state

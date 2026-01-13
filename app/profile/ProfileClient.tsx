@@ -42,7 +42,6 @@ import ImageCropper from "@/components/ui/ImageCropper"
 import { getUserCollections } from "@/app/api/actions/collection"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
-import FollowButton from "@/components/social/FollowButton"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
