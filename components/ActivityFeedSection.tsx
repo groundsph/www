@@ -1,7 +1,12 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRightIcon, Coffee } from "lucide-react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import { useInView } from "motion/react"
+import { useRef } from "react"
+import { motion } from "motion/react"
 
 export interface FeedCheckIn {
     id: string
@@ -29,10 +34,16 @@ interface ActivityFeedSectionProps {
 export default function ActivityFeedSection({
     checkIns,
 }: ActivityFeedSectionProps) {
+    const ref = useRef(null)
+    const isInView = useInView(ref, { once: true, margin: "-100px" })
+
     if (checkIns.length === 0) return null
 
     return (
-        <section className='w-full min-h-max flex flex-col mt-4'>
+        <section
+            className='w-full min-h-max flex flex-col mt-4'
+            ref={ref}
+        >
             <div className='flex items-center justify-between px-6 mb-2 flex-wrap'>
                 <h2 className='font-semibold font-serif text-2xl'>
                     Activity Feed
@@ -52,9 +63,20 @@ export default function ActivityFeedSection({
 
             {/* Horizontal scrollable container */}
             <div className='flex flex-row gap-4 min-w-full overflow-x-auto overscroll-x-contain px-4 pt-4 pb-10 snap-x snap-mandatory scroll-px-4'>
-                {checkIns.map((checkIn) => (
-                    <div
+                {checkIns.map((checkIn, idx) => (
+                    <motion.div
                         key={checkIn.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={
+                            isInView
+                                ? { opacity: 1, y: 0 }
+                                : { opacity: 0, y: 10 }
+                        }
+                        transition={{
+                            delay: idx * 0.1,
+                            duration: 0.6,
+                            ease: "easeOut",
+                        }}
                         className='group shrink-0 w-[320px] max-w-[85svw] bg-text/5 rounded-xl p-4 hover:bg-text/10 transition-colors border border-text/5 hover:border-text/10 snap-start flex flex-col gap-3'
                     >
                         {/* User info row */}
@@ -166,7 +188,7 @@ export default function ActivityFeedSection({
                                 ))}
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 ))}
             </div>
         </section>
