@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { DM_Sans, Playfair_Display } from "next/font/google"
+import { DM_Sans } from "next/font/google"
 import Script from "next/script"
 import { Suspense } from "react"
 import "./globals.css"
@@ -10,14 +10,10 @@ import AnalyticsBanner from "@/components/AnalyticsBanner"
 import NavigationProgress from "@/components/NavigationProgress"
 import AnnouncementBanner from "@/components/AnnouncementBanner"
 
-const playfairDisplay = Playfair_Display({
-    variable: "--font-playfair-display",
-    subsets: ["latin"],
-})
-
 const dmSans = DM_Sans({
     variable: "--font-dm-sans",
-    subsets: ["latin"],
+    display: "swap",
+    adjustFontFallback: true,
 })
 
 export const metadata: Metadata = {
@@ -115,7 +111,7 @@ export default function RootLayout({
                 />
             </head>
             <body
-                className={`${playfairDisplay.variable} ${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen [&_button]:cursor-pointer`}
+                className={`${dmSans.variable} font-sans antialiased bg-background text-text flex flex-col items-center max-w-screen relative min-h-screen [&_button]:cursor-pointer`}
             >
                 <Suspense fallback={null}>
                     <NavigationProgress />
