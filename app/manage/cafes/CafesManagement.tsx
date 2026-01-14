@@ -459,7 +459,7 @@ export default function CafesManagement({
                     }`}
                 >
                     <FileText className='w-4 h-4' />
-                    Pending ({pendingCafes.length})
+                    Pending ({pendingTotal})
                 </button>
                 <button
                     onClick={() => setActiveTab("published")}
@@ -470,7 +470,7 @@ export default function CafesManagement({
                     }`}
                 >
                     <Globe className='w-4 h-4' />
-                    Published ({publishedCafes.length})
+                    Published ({publishedTotal})
                 </button>
                 <button
                     onClick={() => setActiveTab("suggestions")}
