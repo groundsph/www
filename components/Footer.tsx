@@ -1,4 +1,4 @@
-import { Coffee, Mail } from "lucide-react"
+import { Coffee, Mail, Facebook } from "lucide-react"
 import Link from "next/link"
 
 export default function Footer() {
@@ -42,6 +42,15 @@ export default function Footer() {
                                 aria-label='TikTok'
                             >
                                 TikTok
+                            </a>
+                            <a
+                                href='https://www.facebook.com/grounds.philippines'
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className='text-background/50 hover:text-background transition-colors'
+                                aria-label='Facebook'
+                            >
+                                <Facebook className='w-5 h-5' />
                             </a>
                             <Link
                                 href='/contact'
