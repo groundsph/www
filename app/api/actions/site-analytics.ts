@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { cafePageViews, cafes, profiles } from "@/db/schema"
 import { eq, gte, lte, and, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
+import { parse } from "tldts"
 
 export interface SiteAnalytics {
     // Overview stats
@@ -170,8 +171,18 @@ export async function getSiteAnalytics(days: number = 30): Promise<SiteAnalytics
         if (view.referrer) {
             try {
                 const url = new URL(view.referrer)
-                const domain = url.hostname
-                referrerCounts.set(domain, (referrerCounts.get(domain) || 0) + 1)
+                const parsed = parse(url.hostname)
+                const domain = parsed.domain || url.hostname
+
+                // Skip localhost
+                if (domain.includes("localhost")) {
+                    continue
+                }
+
+                // Replace grounds.ph with Internal
+                const displayName = domain === "grounds.ph" ? "Internal" : domain
+
+                referrerCounts.set(displayName, (referrerCounts.get(displayName) || 0) + 1)
             } catch {
                 referrerCounts.set(view.referrer, (referrerCounts.get(view.referrer) || 0) + 1)
             }

@@ -1,6 +1,6 @@
 {
     "name": "grounds-website",
-    "version": "2026.8.3",
+    "version": "2026.9.0",
     "private": true,
     "scripts": {
         "dev": "next dev --experimental-https",
@@ -45,6 +45,7 @@
         "recharts": "^3.6.0",
         "resend": "^6.6.0",
         "tailwind-merge": "^3.4.0",
+        "tldts": "^7.0.19",
         "zod": "^4.2.1"
     },
     "devDependencies": {
