@@ -7,6 +7,13 @@ interface LocationPickerProps {
     lng: number | null
     onChange: (lat: number, lng: number) => void
     onAddressChange?: (address: string) => void
+    onLocationMatch?: (match: {
+        region: string | null
+        province: string | null
+        city: string | null
+        area: string | null
+        fullAddress: string
+    }) => void
 }
 
 // Dynamic import to avoid SSR issues with Leaflet

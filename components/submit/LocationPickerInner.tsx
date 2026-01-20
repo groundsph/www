@@ -1,8 +1,16 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { MapPin, Search, Crosshair, Link } from "lucide-react"
-import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
+import { useEffect, useState, useCallback, useRef } from "react"
+import {
+    MapPin,
+    Search,
+    Crosshair,
+    Loader2,
+    Check,
+    AlertCircle,
+} from "lucide-react"
+import { reverseGeocodeAndMatch } from "@/app/api/actions/location"
+import { useNotification } from "@/components/NotificationProvider"
 import {
     MapContainer,
     TileLayer,
@@ -30,6 +38,13 @@ interface LocationPickerInnerProps {
     lng: number | null
     onChange: (lat: number, lng: number) => void
     onAddressChange?: (address: string) => void
+    onLocationMatch?: (match: {
+        region: string | null
+        province: string | null
+        city: string | null
+        area: string | null
+        fullAddress: string
+    }) => void
 }
 
 // Component to handle map clicks
@@ -77,7 +92,7 @@ function MapBoundsLogger({
         // Nominatim expects: <x1>,<y1>,<x2>,<y2> (left, top, right, bottom)
         // lon1, lat1, lon2, lat2
         onBoundsChange(
-            `${b.getWest()},${b.getNorth()},${b.getEast()},${b.getSouth()}`
+            `${b.getWest()},${b.getNorth()},${b.getEast()},${b.getSouth()}`,
         )
     }, [map, onBoundsChange])
 
@@ -98,17 +113,21 @@ export default function LocationPickerInner({
     lng,
     onChange,
     onAddressChange,
+    onLocationMatch,
 }: LocationPickerInnerProps) {
+    const { addNotification } = useNotification()
     const [searchQuery, setSearchQuery] = useState("")
     const [isSearching, setIsSearching] = useState(false)
     const [manualLat, setManualLat] = useState(lat?.toString() || "")
     const [manualLng, setManualLng] = useState(lng?.toString() || "")
     // Search bias viewbox: minLon, maxLat, maxLon, minLat
     const [viewbox, setViewbox] = useState("")
-    // Google Maps URL parsing
-    const [googleMapsUrl, setGoogleMapsUrl] = useState("")
-    const [isParsingUrl, setIsParsingUrl] = useState(false)
-    const [urlError, setUrlError] = useState<string | null>(null)
+
+    // Reverse geocoding state
+    const [isReverseGeocoding, setIsReverseGeocoding] = useState(false)
+    const [locationAutoFilled, setLocationAutoFilled] = useState(false)
+    const [partialMatch, setPartialMatch] = useState(false)
+    const skipReverseGeocodeRef = useRef(false)
 
     // Default center (Philippines)
     const defaultCenter: [number, number] = [12.8797, 121.774]
@@ -137,44 +156,25 @@ export default function LocationPickerInner({
         }
     }
 
-    const handleGoogleMapsUrl = async () => {
-        if (!googleMapsUrl.trim()) return
-
-        setIsParsingUrl(true)
-        setUrlError(null)
-
-        try {
-            const coords = await extractCoordsFromGoogleMapsUrl(googleMapsUrl)
-            if (coords) {
-                onChange(coords.lat, coords.lng)
-                setGoogleMapsUrl("") // Clear on success
-            } else {
-                setUrlError("Could not extract coordinates from this URL")
-            }
-        } catch (error) {
-            console.error("Google Maps URL parsing error:", error)
-            setUrlError("Failed to parse URL")
-        } finally {
-            setIsParsingUrl(false)
-        }
-    }
-
     const handleSearch = async () => {
         if (!searchQuery.trim()) return
 
         setIsSearching(true)
+        setLocationAutoFilled(false)
+        setPartialMatch(false)
+        skipReverseGeocodeRef.current = true
         try {
             // First attempt: Strict search within current viewbox
             let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-                searchQuery
+                searchQuery,
             )}&countrycodes=ph&limit=1`
 
             if (viewbox) {
-                // bounded=1 forces results to be within the viewbox
+                // bounded=1 forces results to be within viewbox
                 const strictUrl = `${url}&viewbox=${viewbox}&bounded=1`
                 console.log(
                     "[LocationPicker] attempting strict search:",
-                    strictUrl
+                    strictUrl,
                 )
 
                 const response = await fetch(strictUrl, {
@@ -188,10 +188,27 @@ export default function LocationPickerInner({
                         lon: newLng,
                         display_name,
                     } = results[0]
-                    onChange(parseFloat(newLat), parseFloat(newLng))
+                    const parsedLat = parseFloat(newLat)
+                    const parsedLng = parseFloat(newLng)
+                    onChange(parsedLat, parsedLng)
                     if (onAddressChange && display_name) {
                         onAddressChange(display_name)
                     }
+
+                    // Auto-fill location fields
+                    if (onLocationMatch) {
+                        setIsReverseGeocoding(true)
+                        const result = await reverseGeocodeAndMatch(
+                            parsedLat,
+                            parsedLng,
+                        )
+                        setIsReverseGeocoding(false)
+
+                        if (result.success && result.data) {
+                            onLocationMatch(result.data)
+                        }
+                    }
+
                     return // Found strict match!
                 }
             }
@@ -209,28 +226,86 @@ export default function LocationPickerInner({
 
             if (results.length > 0) {
                 const { lat: newLat, lon: newLng, display_name } = results[0]
-                onChange(parseFloat(newLat), parseFloat(newLng))
+                const parsedLat = parseFloat(newLat)
+                const parsedLng = parseFloat(newLng)
+                onChange(parsedLat, parsedLng)
                 if (onAddressChange && display_name) {
                     onAddressChange(display_name)
                 }
+
+                // Auto-fill location fields
+                if (onLocationMatch) {
+                    setIsReverseGeocoding(true)
+                    const result = await reverseGeocodeAndMatch(
+                        parsedLat,
+                        parsedLng,
+                    )
+                    setIsReverseGeocoding(false)
+
+                    if (result.success && result.data) {
+                        onLocationMatch(result.data)
+                    }
+                }
+            } else {
+                addNotification(
+                    "No results found. Try a different query.",
+                    "warning",
+                )
             }
         } catch (error) {
             console.error("Geocoding error:", error)
+            addNotification("Search failed. Please try again.", "error")
         } finally {
             setIsSearching(false)
+            skipReverseGeocodeRef.current = false
         }
     }
 
-    const getCurrentLocation = () => {
+    const getCurrentLocation = async () => {
         if (!navigator.geolocation) return
 
+        skipReverseGeocodeRef.current = true
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
                 onChange(position.coords.latitude, position.coords.longitude)
+
+                if (onLocationMatch) {
+                    setLocationAutoFilled(false)
+                    setPartialMatch(false)
+                    setIsReverseGeocoding(true)
+                    const result = await reverseGeocodeAndMatch(
+                        position.coords.latitude,
+                        position.coords.longitude,
+                    )
+                    setIsReverseGeocoding(false)
+
+                    if (result.success && result.data) {
+                        onLocationMatch(result.data)
+                        if (result.data.fullAddress && onAddressChange) {
+                            onAddressChange(result.data.fullAddress)
+                        }
+
+                        const hasData =
+                            result.data.region ||
+                            result.data.province ||
+                            result.data.city ||
+                            result.data.area
+                        if (hasData) {
+                            setLocationAutoFilled(true)
+                            setTimeout(() => setLocationAutoFilled(false), 3000)
+                        } else {
+                            setPartialMatch(true)
+                            setTimeout(() => setPartialMatch(false), 3000)
+                        }
+                    }
+                }
+                skipReverseGeocodeRef.current = false
             },
             (error) => {
                 console.error("Geolocation error:", error)
-            }
+                addNotification("Failed to get your location.", "error")
+                skipReverseGeocodeRef.current = false
+            },
         )
     }
 
@@ -238,8 +313,79 @@ export default function LocationPickerInner({
         (clickLat: number, clickLng: number) => {
             onChange(clickLat, clickLng)
         },
-        [onChange]
+        [onChange],
     )
+
+    // Refs for callbacks to avoid dependency cycles in useEffect
+    const onLocationMatchRef = useRef(onLocationMatch)
+    const onAddressChangeRef = useRef(onAddressChange)
+
+    useEffect(() => {
+        onLocationMatchRef.current = onLocationMatch
+        onAddressChangeRef.current = onAddressChange
+    }, [onLocationMatch, onAddressChange])
+
+    // Track last geocoded coordinates to prevent redundant calls
+    const lastGeocodedCoords = useRef<{ lat: number; lng: number } | null>(null)
+
+    useEffect(() => {
+        // Skip if coordinates are missing or same as last time
+        if (!lat || !lng || skipReverseGeocodeRef.current) return
+
+        // Epsilon check for float equality (approx 1 meter precision)
+        if (
+            lastGeocodedCoords.current &&
+            Math.abs(lastGeocodedCoords.current.lat - lat) < 0.00001 &&
+            Math.abs(lastGeocodedCoords.current.lng - lng) < 0.00001
+        ) {
+            return
+        }
+
+        const timeoutId = setTimeout(async () => {
+            // Double check ref in case it changed during timeout
+            if (skipReverseGeocodeRef.current) return
+
+            setLocationAutoFilled(false)
+            setPartialMatch(false)
+            setIsReverseGeocoding(true)
+
+            try {
+                const result = await reverseGeocodeAndMatch(lat, lng)
+
+                // Only update if we are still on the same coordinates (roughly)
+                // and component is still mounted
+                if (result.success && result.data) {
+                    lastGeocodedCoords.current = { lat, lng }
+
+                    if (onLocationMatchRef.current) {
+                        onLocationMatchRef.current(result.data)
+                    }
+                    if (result.data.fullAddress && onAddressChangeRef.current) {
+                        onAddressChangeRef.current(result.data.fullAddress)
+                    }
+
+                    const hasData =
+                        result.data.region ||
+                        result.data.province ||
+                        result.data.city ||
+                        result.data.area
+                    if (hasData) {
+                        setLocationAutoFilled(true)
+                        setTimeout(() => setLocationAutoFilled(false), 3000)
+                    } else {
+                        setPartialMatch(true)
+                        setTimeout(() => setPartialMatch(false), 3000)
+                    }
+                }
+            } catch (err) {
+                console.error("Geocoding effect error:", err)
+            } finally {
+                setIsReverseGeocoding(false)
+            }
+        }, 800) // Increased debounce time slightly
+
+        return () => clearTimeout(timeoutId)
+    }, [lat, lng]) // Only depend on generic primitives that matter
 
     const [showTools, setShowTools] = useState(false)
 
@@ -251,6 +397,36 @@ export default function LocationPickerInner({
                     <MapPin className='w-4 h-4 shrink-0' />
                     <span className='font-medium'>
                         Location set: {lat.toFixed(6)}, {lng.toFixed(6)}
+                    </span>
+                </div>
+            )}
+
+            {/* Reverse geocoding loading state */}
+            {isReverseGeocoding && (
+                <div className='flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700'>
+                    <Loader2 className='w-4 h-4 animate-spin shrink-0' />
+                    <span>Detecting location details...</span>
+                </div>
+            )}
+
+            {/* Success feedback */}
+            {locationAutoFilled && (
+                <div className='flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700'>
+                    <Check className='w-4 h-4 shrink-0' />
+                    <span>
+                        Location details auto-filled. Please verify the fields
+                        below.
+                    </span>
+                </div>
+            )}
+
+            {/* Partial match warning */}
+            {partialMatch && (
+                <div className='flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700'>
+                    <AlertCircle className='w-4 h-4 shrink-0' />
+                    <span>
+                        Some location details couldn&apos;t be detected. Please
+                        select manually.
                     </span>
                 </div>
             )}
@@ -309,8 +485,8 @@ export default function LocationPickerInner({
 
             {/* Helper text */}
             <p className='text-xs text-text/50 text-center'>
-                Click anywhere on the map to place the marker, or use the
-                location tools below
+                Click anywhere on map to place the marker, or use location tools
+                below
             </p>
 
             {/* Collapsible Location Tools */}
@@ -374,53 +550,6 @@ export default function LocationPickerInner({
                                     {isSearching ? "..." : "Search"}
                                 </button>
                             </div>
-                        </div>
-
-                        {/* Divider - Google Maps */}
-                        <div className='flex items-center gap-3'>
-                            <div className='flex-1 h-px bg-text/10' />
-                            <span className='text-xs text-text/40'>
-                                or paste a Google Maps link
-                            </span>
-                            <div className='flex-1 h-px bg-text/10' />
-                        </div>
-
-                        {/* Google Maps URL input */}
-                        <div>
-                            <div className='flex gap-2'>
-                                <div className='flex-1 relative'>
-                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
-                                    <input
-                                        type='text'
-                                        value={googleMapsUrl}
-                                        onChange={(e) => {
-                                            setGoogleMapsUrl(e.target.value)
-                                            setUrlError(null)
-                                        }}
-                                        onKeyDown={(e) =>
-                                            e.key === "Enter" &&
-                                            handleGoogleMapsUrl()
-                                        }
-                                        placeholder='https://maps.app.goo.gl/...'
-                                        className='w-full pl-10 pr-4 py-2.5 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
-                                    />
-                                </div>
-                                <button
-                                    type='button'
-                                    onClick={handleGoogleMapsUrl}
-                                    disabled={
-                                        isParsingUrl || !googleMapsUrl.trim()
-                                    }
-                                    className='px-4 py-2 bg-primary text-white rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer'
-                                >
-                                    {isParsingUrl ? "..." : "Get"}
-                                </button>
-                            </div>
-                            {urlError && (
-                                <p className='text-xs text-red-500 mt-1.5'>
-                                    {urlError}
-                                </p>
-                            )}
                         </div>
 
                         {/* Divider - Coordinates */}

@@ -63,6 +63,8 @@ import {
 import ImageCropper from "@/components/ui/ImageCropper"
 import AmenitiesSection from "@/components/cafe-editor/AmenitiesSection"
 import HoursSection from "@/components/cafe-editor/HoursSection"
+import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
+import { Link } from "lucide-react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { useNotification } from "@/components/NotificationProvider"
 
@@ -88,7 +90,7 @@ export default function CafeSubmissionForm({
     const { addNotification } = useNotification()
     const [currentStep, setCurrentStep] = useState(0)
     const [formData, setFormData] = useState<CafeSubmission>(
-        DEFAULT_CAFE_SUBMISSION
+        DEFAULT_CAFE_SUBMISSION,
     )
 
     // "Before We Begin" step state
@@ -98,7 +100,7 @@ export default function CafeSubmissionForm({
     const [isSearching, setIsSearching] = useState(false)
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(
-        null
+        null,
     )
     const [galleryFiles, setGalleryFiles] = useState<File[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -120,6 +122,10 @@ export default function CafeSubmissionForm({
     // Ownership proof files for owner verification
     const [ownershipProofFiles, setOwnershipProofFiles] = useState<File[]>([])
 
+    // Google Maps URL Parsing State
+    const [googleMapsUrl, setGoogleMapsUrl] = useState("")
+    const [isParsingUrl, setIsParsingUrl] = useState(false)
+
     // Computed state for Step 0 verification
     const isNameVerified =
         preSearchQuery.trim().length >= 3 &&
@@ -133,7 +139,7 @@ export default function CafeSubmissionForm({
                 try {
                     // isSearching is already set to true by input change
                     const results = await searchCafesSimple(
-                        preSearchQuery.trim()
+                        preSearchQuery.trim(),
                     )
                     setPreSearchResults(results)
                 } catch (err) {
@@ -153,7 +159,7 @@ export default function CafeSubmissionForm({
             const trimmedName = formData.name.trim()
             console.log(
                 "[CafeSubmission] Checking duplicates for:",
-                trimmedName
+                trimmedName,
             )
             if (trimmedName.length >= 3) {
                 try {
@@ -163,7 +169,7 @@ export default function CafeSubmissionForm({
                 } catch (err) {
                     console.error(
                         "[CafeSubmission] Error checking duplicates:",
-                        err
+                        err,
                     )
                 }
             } else {
@@ -204,7 +210,38 @@ export default function CafeSubmissionForm({
         <K extends keyof CafeSubmission>(key: K, value: CafeSubmission[K]) => {
             setFormData((prev) => ({ ...prev, [key]: value }))
         },
-        []
+        [],
+    )
+
+    const handleLocationMatch = useCallback(
+        (match: {
+            region: string | null
+            province: string | null
+            city: string | null
+            area: string | null
+            fullAddress: string
+        }) => {
+            if (match.region) {
+                updateFormData("region", match.region)
+            }
+
+            if (match.province) {
+                updateFormData("province", match.province)
+            }
+
+            if (match.city) {
+                updateFormData("city_municipality", match.city)
+            }
+
+            if (match.area) {
+                updateFormData("area", match.area)
+            }
+
+            if (match.fullAddress && !formData.address_display.trim()) {
+                updateFormData("address_display", match.fullAddress)
+            }
+        },
+        [formData, updateFormData],
     )
 
     const resetForm = () => {
@@ -355,7 +392,7 @@ export default function CafeSubmissionForm({
     }
 
     const handleThumbnailChange = async (
-        e: React.ChangeEvent<HTMLInputElement>
+        e: React.ChangeEvent<HTMLInputElement>,
     ) => {
         const file = e.target.files?.[0]
         if (!file) return
@@ -382,7 +419,7 @@ export default function CafeSubmissionForm({
             {
                 type: "image/webp",
                 lastModified: Date.now(),
-            }
+            },
         )
 
         // Compress cover image (250KB WebP)
@@ -392,6 +429,39 @@ export default function CafeSubmissionForm({
         setThumbnailPreview(URL.createObjectURL(finalFile))
         setCropperOpen(false)
         setCroppingImage(null)
+    }
+
+    const handleGoogleMapsUrl = async () => {
+        if (!googleMapsUrl.trim()) return
+
+        setIsParsingUrl(true)
+
+        try {
+            const coords = await extractCoordsFromGoogleMapsUrl(googleMapsUrl)
+            if (coords) {
+                // Update coordinates - this will trigger LocationPicker to update map
+                // and eventually trigger reverse geocoding via onLocationMatch
+                updateFormData("lat", coords.lat)
+                updateFormData("lng", coords.lng)
+
+                // Clear the input on success
+                setGoogleMapsUrl("")
+                addNotification(
+                    "Location extracted from Google Maps!",
+                    "success",
+                )
+            } else {
+                addNotification(
+                    "Could not extract coordinates from this URL",
+                    "error",
+                )
+            }
+        } catch (error) {
+            console.error("Google Maps URL parsing error:", error)
+            addNotification("Failed to parse URL", "error")
+        } finally {
+            setIsParsingUrl(false)
+        }
     }
 
     const handleSubmit = async () => {
@@ -407,7 +477,7 @@ export default function CafeSubmissionForm({
             // Validate ownership proof if claiming ownership
             if (formData.is_owner && ownershipProofFiles.length === 0) {
                 throw new Error(
-                    "At least one proof document is required when claiming ownership"
+                    "At least one proof document is required when claiming ownership",
                 )
             }
 
@@ -433,12 +503,12 @@ export default function CafeSubmissionForm({
                             ...prev,
                             thumbnail: progress,
                         }))
-                    }
+                    },
                 )
 
                 if (!thumbnailResult.success || !thumbnailResult.url) {
                     throw new Error(
-                        thumbnailResult.error || "Failed to upload thumbnail"
+                        thumbnailResult.error || "Failed to upload thumbnail",
                     )
                 }
                 thumbnailUrl = thumbnailResult.url
@@ -449,7 +519,7 @@ export default function CafeSubmissionForm({
 
             // 3. Process Gallery Images
             setProcessingStatus(
-                `Compressing ${galleryFiles.length} gallery images...`
+                `Compressing ${galleryFiles.length} gallery images...`,
             )
             const processedGalleryFiles: File[] = []
             for (let i = 0; i < galleryFiles.length; i++) {
@@ -475,7 +545,7 @@ export default function CafeSubmissionForm({
                             ...prev,
                             [key]: progress,
                         }))
-                    }
+                    },
                 )
 
                 if (result.success && result.url) {
@@ -489,7 +559,7 @@ export default function CafeSubmissionForm({
                 setProcessingStatus("Uploading ownership proof documents...")
                 console.log(
                     "[Cafe Submit] Uploading ownership proofs...",
-                    ownershipProofFiles.length
+                    ownershipProofFiles.length,
                 )
 
                 for (let i = 0; i < ownershipProofFiles.length; i++) {
@@ -504,7 +574,7 @@ export default function CafeSubmissionForm({
                                 ...prev,
                                 [key]: progress,
                             }))
-                        }
+                        },
                     )
 
                     if (result.success && result.url) {
@@ -512,14 +582,14 @@ export default function CafeSubmissionForm({
                     } else {
                         console.error(
                             "[Cafe Submit] Failed to upload proof:",
-                            result.error
+                            result.error,
                         )
                     }
                 }
 
                 if (proofUrls.length === 0) {
                     throw new Error(
-                        "Failed to upload ownership proof documents"
+                        "Failed to upload ownership proof documents",
                     )
                 }
             }
@@ -540,7 +610,7 @@ export default function CafeSubmissionForm({
             const result = await submitCafe(
                 serializableFormData,
                 thumbnailUrl,
-                galleryUrls
+                galleryUrls,
             )
 
             if (!result.success) {
@@ -556,13 +626,13 @@ export default function CafeSubmissionForm({
                 const claimResult = await submitCafeClaim(
                     result.cafeId,
                     proofText,
-                    proofUrls[0] // Primary proof document
+                    proofUrls[0], // Primary proof document
                 )
 
                 if (!claimResult.success) {
                     console.error(
                         "[Cafe Submit] Failed to create claim:",
-                        claimResult.error
+                        claimResult.error,
                     )
                     // Don't throw - cafe was already created, just log the warning
                 }
@@ -574,7 +644,7 @@ export default function CafeSubmissionForm({
             setSuccess(true)
             addNotification(
                 "Cafe submitted successfully! We'll review it soon.",
-                "success"
+                "success",
             )
             onSuccess?.(result.cafeId!, result.slug!)
         } catch (err: unknown) {
@@ -645,7 +715,7 @@ export default function CafeSubmissionForm({
                                     "flex items-center gap-2 px-3 py-2 rounded-xl transition-all",
                                     isActive && "bg-primary/10 text-primary",
                                     isComplete && "text-green-800",
-                                    !isActive && !isComplete && "text-text/40"
+                                    !isActive && !isComplete && "text-text/40",
                                 )}
                             >
                                 <div
@@ -654,7 +724,9 @@ export default function CafeSubmissionForm({
                                         isActive && "bg-primary text-white",
                                         isComplete &&
                                             "bg-green-200! text-green-600",
-                                        !isActive && !isComplete && "bg-text/10"
+                                        !isActive &&
+                                            !isComplete &&
+                                            "bg-text/10",
                                     )}
                                 >
                                     {isComplete ? (
@@ -673,7 +745,7 @@ export default function CafeSubmissionForm({
                                         "w-8 h-0.5 mx-1",
                                         currentStep > step.id
                                             ? "bg-green-500"
-                                            : "bg-text/10"
+                                            : "bg-text/10",
                                     )}
                                 />
                             )}
@@ -890,7 +962,7 @@ export default function CafeSubmissionForm({
                                                                     </div>
                                                                     <ExternalLink className='w-4 h-4 text-gray-400 group-hover:text-primary shrink-0' />
                                                                 </a>
-                                                            )
+                                                            ),
                                                         )}
                                                     </div>
                                                     <p className='text-xs text-yellow-700 mt-3'>
@@ -953,7 +1025,7 @@ export default function CafeSubmissionForm({
                                             onChange={(e) =>
                                                 updateFormData(
                                                     "name",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             placeholder='e.g. The Coffee House'
@@ -1055,7 +1127,7 @@ export default function CafeSubmissionForm({
                                                                         </div>
                                                                         <ExternalLink className='w-4 h-4 text-gray-400 group-hover:text-primary' />
                                                                     </a>
-                                                                )
+                                                                ),
                                                             )}
                                                         </div>
                                                     </div>
@@ -1076,7 +1148,7 @@ export default function CafeSubmissionForm({
                                                 ) {
                                                     updateFormData(
                                                         "description",
-                                                        e.target.value
+                                                        e.target.value,
                                                     )
                                                 }
                                             }}
@@ -1155,7 +1227,7 @@ export default function CafeSubmissionForm({
                                                             </div>
                                                             <span className='absolute mt-6 text-white text-xs font-medium'>
                                                                 {Math.round(
-                                                                    uploadProgress.thumbnail
+                                                                    uploadProgress.thumbnail,
                                                                 )}
                                                                 %
                                                             </span>
@@ -1203,8 +1275,8 @@ export default function CafeSubmissionForm({
                                                 setGalleryFiles(
                                                     files.filter(
                                                         (f): f is File =>
-                                                            f instanceof File
-                                                    )
+                                                            f instanceof File,
+                                                    ),
                                                 )
                                             }
                                             maxImages={5}
@@ -1212,15 +1284,17 @@ export default function CafeSubmissionForm({
                                                 // Convert "gallery-i" keys to numeric index keys for ImageUpload
                                                 Object.entries(uploadProgress)
                                                     .filter(([k]) =>
-                                                        k.startsWith("gallery-")
+                                                        k.startsWith(
+                                                            "gallery-",
+                                                        ),
                                                     )
                                                     .reduce(
                                                         (acc, [k, v]) => {
                                                             const idx =
                                                                 parseInt(
                                                                     k.split(
-                                                                        "-"
-                                                                    )[1]
+                                                                        "-",
+                                                                    )[1],
                                                                 )
                                                             if (!isNaN(idx))
                                                                 acc[idx] = v
@@ -1229,7 +1303,7 @@ export default function CafeSubmissionForm({
                                                         {} as Record<
                                                             number,
                                                             number
-                                                        >
+                                                        >,
                                                     )
                                             }
                                         />
@@ -1250,6 +1324,61 @@ export default function CafeSubmissionForm({
                                     </p>
                                 </div>
 
+                                {/* Google Maps URL Input Step */}
+                                <div className='p-5 bg-blue-50/30 border border-blue-100/60 rounded-xl space-y-4'>
+                                    <div className='flex items-start gap-3 mb-1'>
+                                        <div className='p-2 bg-blue-100/80 rounded-full text-blue-700'>
+                                            <MapPin className='w-5 h-5' />
+                                        </div>
+                                        <div>
+                                            <h4 className='font-semibold text-base'>
+                                                Quick Fill from Google Maps
+                                            </h4>
+                                            <p className='text-xs text-text/60'>
+                                                Paste a Google Maps link to
+                                                automatically extract the
+                                                location details
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className='flex gap-2'>
+                                        <div className='flex-1 relative'>
+                                            <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                            <input
+                                                type='text'
+                                                value={googleMapsUrl}
+                                                onChange={(e) => {
+                                                    setGoogleMapsUrl(
+                                                        e.target.value,
+                                                    )
+                                                }}
+                                                onKeyDown={(e) =>
+                                                    e.key === "Enter" &&
+                                                    handleGoogleMapsUrl()
+                                                }
+                                                placeholder='https://maps.app.goo.gl/...'
+                                                className='w-full pl-10 pr-4 py-2.5 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                            />
+                                        </div>
+                                        <button
+                                            type='button'
+                                            onClick={handleGoogleMapsUrl}
+                                            disabled={
+                                                isParsingUrl ||
+                                                !googleMapsUrl.trim()
+                                            }
+                                            className='px-4 py-2 bg-primary text-white rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2 min-w-[80px] justify-center'
+                                        >
+                                            {isParsingUrl ? (
+                                                <Loader2 className='w-4 h-4 animate-spin' />
+                                            ) : (
+                                                "Fill"
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                                     <div>
                                         <label className='block text-sm font-medium mb-2'>
@@ -1263,12 +1392,12 @@ export default function CafeSubmissionForm({
                                             onChange={(e) => {
                                                 updateFormData(
                                                     "region",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                                 updateFormData("province", "")
                                                 updateFormData(
                                                     "city_municipality",
-                                                    ""
+                                                    "",
                                                 )
                                             }}
                                             className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
@@ -1284,7 +1413,7 @@ export default function CafeSubmissionForm({
                                                     >
                                                         {r.name}
                                                     </option>
-                                                )
+                                                ),
                                             )}
                                         </select>
                                     </div>
@@ -1301,11 +1430,11 @@ export default function CafeSubmissionForm({
                                             onChange={(e) => {
                                                 updateFormData(
                                                     "province",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                                 updateFormData(
                                                     "city_municipality",
-                                                    ""
+                                                    "",
                                                 )
                                             }}
                                             disabled={!formData.region}
@@ -1337,7 +1466,7 @@ export default function CafeSubmissionForm({
                                             onChange={(e) =>
                                                 updateFormData(
                                                     "city_municipality",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             disabled={!formData.province}
@@ -1368,7 +1497,7 @@ export default function CafeSubmissionForm({
                                         onChange={(e) =>
                                             updateFormData(
                                                 "area",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         placeholder='e.g. IT Park, Ayala Center'
@@ -1395,7 +1524,7 @@ export default function CafeSubmissionForm({
                                         onChange={(e) =>
                                             updateFormData(
                                                 "address_display",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         placeholder={
@@ -1426,17 +1555,17 @@ export default function CafeSubmissionForm({
                                                 onChange={(e) => {
                                                     updateFormData(
                                                         "is_hidden_gem",
-                                                        e.target.checked
+                                                        e.target.checked,
                                                     )
                                                     // Clear coordinates when switching to Hidden Gem
                                                     if (e.target.checked) {
                                                         updateFormData(
                                                             "lat",
-                                                            null
+                                                            null,
                                                         )
                                                         updateFormData(
                                                             "lng",
-                                                            null
+                                                            null,
                                                         )
                                                     }
                                                 }}
@@ -1469,7 +1598,7 @@ export default function CafeSubmissionForm({
                                                 onChange={(e) => {
                                                     updateFormData(
                                                         "is_chain",
-                                                        e.target.checked
+                                                        e.target.checked,
                                                     )
                                                 }}
                                                 className='w-5 h-5 rounded border-orange-300 text-orange-600 focus:ring-orange-500 mt-0.5'
@@ -1521,7 +1650,7 @@ export default function CafeSubmissionForm({
                                                     onChange={(e) =>
                                                         updateFormData(
                                                             "finding_hint",
-                                                            e.target.value
+                                                            e.target.value,
                                                         )
                                                     }
                                                     maxLength={200}
@@ -1549,10 +1678,13 @@ export default function CafeSubmissionForm({
                                                 if (!formData.address_display) {
                                                     updateFormData(
                                                         "address_display",
-                                                        addr
+                                                        addr,
                                                     )
                                                 }
                                             }}
+                                            onLocationMatch={
+                                                handleLocationMatch
+                                            }
                                         />
                                     )}
                                 </div>
@@ -1603,7 +1735,7 @@ export default function CafeSubmissionForm({
                                                 onClick={() =>
                                                     updateFormData(
                                                         "price_level",
-                                                        value
+                                                        value,
                                                     )
                                                 }
                                                 className={cn(
@@ -1611,7 +1743,7 @@ export default function CafeSubmissionForm({
                                                     formData.price_level ===
                                                         value
                                                         ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-text/10 text-text/60 hover:border-text/30"
+                                                        : "border-text/10 text-text/60 hover:border-text/30",
                                                 )}
                                             >
                                                 <div>{symbol}</div>
@@ -1646,7 +1778,7 @@ export default function CafeSubmissionForm({
                                                             "coffee_style",
                                                             value as
                                                                 | "classic"
-                                                                | "artisan"
+                                                                | "artisan",
                                                         )
                                                     }
                                                     className={cn(
@@ -1654,7 +1786,7 @@ export default function CafeSubmissionForm({
                                                         formData.coffee_style ===
                                                             value
                                                             ? "border-primary bg-primary/10 text-primary"
-                                                            : "border-text/10 text-text/60 hover:border-text/30"
+                                                            : "border-text/10 text-text/60 hover:border-text/30",
                                                     )}
                                                 >
                                                     <div className='font-medium'>
@@ -1664,21 +1796,21 @@ export default function CafeSubmissionForm({
                                                         {description}
                                                     </div>
                                                 </button>
-                                            )
+                                            ),
                                         )}
                                         <button
                                             type='button'
                                             onClick={() =>
                                                 updateFormData(
                                                     "coffee_style",
-                                                    null
+                                                    null,
                                                 )
                                             }
                                             className={cn(
                                                 "px-4 py-3 rounded-xl border-2 transition-all cursor-pointer",
                                                 formData.coffee_style === null
                                                     ? "border-primary bg-primary/10 text-primary"
-                                                    : "border-text/10 text-text/60 hover:border-text/30"
+                                                    : "border-text/10 text-text/60 hover:border-text/30",
                                             )}
                                         >
                                             <div className='font-medium'>
@@ -1698,7 +1830,7 @@ export default function CafeSubmissionForm({
                                     onChange={(key, value) =>
                                         updateFormData(
                                             key as keyof CafeSubmission,
-                                            value
+                                            value,
                                         )
                                     }
                                 />
@@ -1713,7 +1845,7 @@ export default function CafeSubmissionForm({
                                         onChange={(e) =>
                                             updateFormData(
                                                 "roaster",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         placeholder='e.g. Local roaster, Yardstick Coffee'
@@ -1758,7 +1890,7 @@ export default function CafeSubmissionForm({
                                             onChange={(e) =>
                                                 updateFormData(
                                                     "website_url",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             placeholder='https://...'
@@ -1776,7 +1908,7 @@ export default function CafeSubmissionForm({
                                             onChange={(e) =>
                                                 updateFormData(
                                                     "phone",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             placeholder='+63 XXX XXX XXXX'
@@ -1795,7 +1927,7 @@ export default function CafeSubmissionForm({
                                         onChange={(e) =>
                                             updateFormData(
                                                 "email",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         placeholder='cafe@example.com'
@@ -1838,7 +1970,7 @@ export default function CafeSubmissionForm({
                                             /* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */
                                             <img
                                                 src={URL.createObjectURL(
-                                                    thumbnailFile
+                                                    thumbnailFile,
                                                 )}
                                                 alt={
                                                     formData.name ||
@@ -1869,7 +2001,7 @@ export default function CafeSubmissionForm({
                                                     <span className='text-white text-sm font-medium'>
                                                         Uploading cover...{" "}
                                                         {Math.round(
-                                                            uploadProgress.thumbnail
+                                                            uploadProgress.thumbnail,
                                                         )}
                                                         %
                                                     </span>
@@ -2008,7 +2140,7 @@ export default function CafeSubmissionForm({
                                                                 <span className='text-xs text-text/60'>
                                                                     (
                                                                     {formData.milk_options.join(
-                                                                        ", "
+                                                                        ", ",
                                                                     )}
                                                                     )
                                                                 </span>
@@ -2050,10 +2182,10 @@ export default function CafeSubmissionForm({
                                                                     >
                                                                         {s.replace(
                                                                             /_/g,
-                                                                            " "
+                                                                            " ",
                                                                         )}
                                                                     </span>
-                                                                )
+                                                                ),
                                                             )}
                                                         </div>
                                                     </div>
@@ -2072,10 +2204,10 @@ export default function CafeSubmissionForm({
                                                                     >
                                                                         {t.replace(
                                                                             /_/g,
-                                                                            " "
+                                                                            " ",
                                                                         )}
                                                                     </span>
-                                                                )
+                                                                ),
                                                             )}
                                                         </div>
                                                     </div>
@@ -2100,7 +2232,7 @@ export default function CafeSubmissionForm({
                                                                 {/* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */}
                                                                 <img
                                                                     src={URL.createObjectURL(
-                                                                        file
+                                                                        file,
                                                                     )}
                                                                     alt={`Gallery ${idx + 1}`}
                                                                     className='w-full h-full object-cover'
@@ -2181,7 +2313,7 @@ export default function CafeSubmissionForm({
                                                                 >
                                                                     {s.title}
                                                                 </span>
-                                                            )
+                                                            ),
                                                         )}
                                                     </div>
                                                 )}
@@ -2198,12 +2330,12 @@ export default function CafeSubmissionForm({
                                                 "w-5 h-5 mt-0.5 rounded border flex items-center justify-center shrink-0 cursor-pointer transition-colors",
                                                 formData.is_owner
                                                     ? "bg-primary border-primary text-white"
-                                                    : "border-text/30 hover:border-primary"
+                                                    : "border-text/30 hover:border-primary",
                                             )}
                                             onClick={() => {
                                                 updateFormData(
                                                     "is_owner",
-                                                    !formData.is_owner
+                                                    !formData.is_owner,
                                                 )
                                                 // Clear proof files when unchecking
                                                 if (formData.is_owner) {
@@ -2220,7 +2352,7 @@ export default function CafeSubmissionForm({
                                             onClick={() => {
                                                 updateFormData(
                                                     "is_owner",
-                                                    !formData.is_owner
+                                                    !formData.is_owner,
                                                 )
                                                 if (formData.is_owner) {
                                                     setOwnershipProofFiles([])
@@ -2276,14 +2408,15 @@ export default function CafeSubmissionForm({
                                                         const files =
                                                             Array.from(
                                                                 e.target
-                                                                    .files || []
+                                                                    .files ||
+                                                                    [],
                                                             )
                                                         if (files.length > 0) {
                                                             setOwnershipProofFiles(
                                                                 (prev) => [
                                                                     ...prev,
                                                                     ...files,
-                                                                ]
+                                                                ],
                                                             )
                                                         }
                                                         // Reset input
@@ -2331,7 +2464,7 @@ export default function CafeSubmissionForm({
                                                                         file.size /
                                                                         1024
                                                                     ).toFixed(
-                                                                        0
+                                                                        0,
                                                                     )}
                                                                     KB
                                                                 </span>
@@ -2340,16 +2473,16 @@ export default function CafeSubmissionForm({
                                                                     onClick={() => {
                                                                         setOwnershipProofFiles(
                                                                             (
-                                                                                prev
+                                                                                prev,
                                                                             ) =>
                                                                                 prev.filter(
                                                                                     (
                                                                                         _,
-                                                                                        i
+                                                                                        i,
                                                                                     ) =>
                                                                                         i !==
-                                                                                        idx
-                                                                                )
+                                                                                        idx,
+                                                                                ),
                                                                         )
                                                                     }}
                                                                     className='p-1 hover:bg-red-100 rounded transition-colors cursor-pointer'
@@ -2357,7 +2490,7 @@ export default function CafeSubmissionForm({
                                                                     <Trash2 className='w-4 h-4 text-red-500' />
                                                                 </button>
                                                             </div>
-                                                        )
+                                                        ),
                                                     )}
                                                 </div>
                                             )}

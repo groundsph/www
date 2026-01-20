@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
 import {
@@ -29,7 +29,11 @@ import {
     Sparkles,
     Phone,
     MapPin,
+    Link,
 } from "lucide-react"
+
+import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
+import { useNotification } from "@/components/NotificationProvider"
 
 import { submitEditSuggestion } from "@/app/api/actions/suggestions"
 import {
@@ -66,7 +70,7 @@ const LocationPickerInner = dynamic(
         loading: () => (
             <div className='aspect-video bg-text/5 rounded-xl animate-pulse' />
         ),
-    }
+    },
 )
 
 interface SuggestEditModalProps {
@@ -107,6 +111,7 @@ export default function SuggestEditModal({
     onClose,
     cafe,
 }: SuggestEditModalProps) {
+    const { addNotification } = useNotification()
     const router = useRouter()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -114,7 +119,7 @@ export default function SuggestEditModal({
 
     // Expandable sections
     const [expandedSections, setExpandedSections] = useState<Set<string>>(
-        new Set(["basic"])
+        new Set(["basic"]),
     )
 
     // Form state - only store values that differ from current
@@ -123,11 +128,15 @@ export default function SuggestEditModal({
     // Image state
     const [newThumbnail, setNewThumbnail] = useState<File | null>(null)
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(
-        null
+        null,
     )
     const [newGalleryFiles, setNewGalleryFiles] = useState<File[]>([])
     const [removeFromGallery, setRemoveFromGallery] = useState<string[]>([])
     const [uploadingImages, setUploadingImages] = useState(false)
+
+    // Google Maps URL Parsing State
+    const [googleMapsUrl, setGoogleMapsUrl] = useState("")
+    const [isParsingUrl, setIsParsingUrl] = useState(false)
 
     // Cover photo cropper state
     const [croppingImage, setCroppingImage] = useState<File | null>(null)
@@ -196,7 +205,7 @@ export default function SuggestEditModal({
             {
                 type: "image/webp",
                 lastModified: Date.now(),
-            }
+            },
         )
 
         // Compress cover image (250KB WebP)
@@ -223,7 +232,7 @@ export default function SuggestEditModal({
     // Helper to compare arrays
     const arraysEqual = (
         a: unknown[] | undefined,
-        b: unknown[] | undefined
+        b: unknown[] | undefined,
     ): boolean => {
         if (!a && !b) return true
         if (!a || !b) return false
@@ -238,7 +247,7 @@ export default function SuggestEditModal({
 
     const updateChange = <K extends keyof SuggestableFields>(
         key: K,
-        value: SuggestableFields[K]
+        value: SuggestableFields[K],
     ) => {
         setChanges((prev) => {
             const cafeValue = cafe[key as keyof CafeWithRatings]
@@ -273,6 +282,21 @@ export default function SuggestEditModal({
         })
     }
 
+    const handleLocationMatch = useCallback(
+        (match: {
+            region: string | null
+            province: string | null
+            city: string | null
+            area: string | null
+            fullAddress: string
+        }) => {
+            if (match.area) updateChange("area", match.area)
+            if (match.fullAddress)
+                updateChange("address_display", match.fullAddress)
+        },
+        [updateChange],
+    )
+
     const toggleAmenity = (key: AmenityKey) => {
         const currentCafeValue = cafe[key] ?? false
         const currentChangeValue = changes[key]
@@ -295,7 +319,7 @@ export default function SuggestEditModal({
 
     const toggleArrayItem = (
         key: "brew_methods" | "specialty" | "tags",
-        item: string
+        item: string,
     ) => {
         const currentCafeValue = (cafe[key] as string[]) ?? []
         const currentChangeValue = changes[key] as string[] | undefined
@@ -389,7 +413,7 @@ export default function SuggestEditModal({
             const result = await submitEditSuggestion(
                 cafe.id,
                 changes,
-                imageChanges
+                imageChanges,
             )
 
             if (result.success) {
@@ -403,11 +427,43 @@ export default function SuggestEditModal({
             }
         } catch (e) {
             setError(
-                e instanceof Error ? e.message : "An unexpected error occurred"
+                e instanceof Error ? e.message : "An unexpected error occurred",
             )
         } finally {
             setIsSubmitting(false)
             setUploadingImages(false)
+        }
+    }
+
+    const handleGoogleMapsUrl = async () => {
+        if (!googleMapsUrl.trim()) return
+
+        setIsParsingUrl(true)
+
+        try {
+            const coords = await extractCoordsFromGoogleMapsUrl(googleMapsUrl)
+            if (coords) {
+                // Update coordinates
+                updateChange("lat", coords.lat)
+                updateChange("lng", coords.lng)
+
+                // Clear the input on success
+                setGoogleMapsUrl("")
+                addNotification(
+                    "Location extracted from Google Maps!",
+                    "success",
+                )
+            } else {
+                addNotification(
+                    "Could not extract coordinates from this URL",
+                    "error",
+                )
+            }
+        } catch (error) {
+            console.error("Google Maps URL parsing error:", error)
+            addNotification("Failed to parse URL", "error")
+        } finally {
+            setIsParsingUrl(false)
         }
     }
 
@@ -425,7 +481,7 @@ export default function SuggestEditModal({
 
     // Helper to get effective array value (with changes applied)
     const getEffectiveArray = (
-        key: "brew_methods" | "specialty" | "tags"
+        key: "brew_methods" | "specialty" | "tags",
     ): string[] => {
         return (
             (changes[key] as string[] | undefined) ??
@@ -554,7 +610,7 @@ export default function SuggestEditModal({
                                                                 "name",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='Cafe name'
@@ -582,14 +638,14 @@ export default function SuggestEditModal({
                                                                 "description",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='Describe the cafe...'
                                                         rows={3}
                                                         className={`w-full bg-text/5 text-sm leading-relaxed placeholder:text-text/30 focus:outline-none p-3 resize-none rounded-lg border transition-all text-text ${
                                                             hasChange(
-                                                                "description"
+                                                                "description",
                                                             )
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
@@ -614,13 +670,13 @@ export default function SuggestEditModal({
                                                                 "address_display",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='Full address'
                                                         className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
                                                             hasChange(
-                                                                "address_display"
+                                                                "address_display",
                                                             )
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
@@ -645,7 +701,7 @@ export default function SuggestEditModal({
                                                                 "area",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='e.g., Makati, BGC, Poblacion'
@@ -679,7 +735,7 @@ export default function SuggestEditModal({
                                                 )}
                                             </span>
                                             {expandedSections.has(
-                                                "location"
+                                                "location",
                                             ) ? (
                                                 <ChevronUp className='w-4 h-4' />
                                             ) : (
@@ -716,6 +772,72 @@ export default function SuggestEditModal({
                                                                 below.
                                                             </p>
                                                         )}
+
+                                                        {/* Google Maps URL Input (Hidden Gem) */}
+                                                        <div className='p-3 bg-blue-50/30 border border-blue-100/60 rounded-xl space-y-3 mb-2'>
+                                                            <div className='flex items-start gap-3 mb-1'>
+                                                                <div className='p-1.5 bg-blue-100/80 rounded-full text-blue-700'>
+                                                                    <MapPin className='w-4 h-4' />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className='font-semibold text-sm'>
+                                                                        Quick
+                                                                        Fill
+                                                                        from
+                                                                        Google
+                                                                        Maps
+                                                                    </h4>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className='flex gap-2'>
+                                                                <div className='flex-1 relative'>
+                                                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text/40' />
+                                                                    <input
+                                                                        type='text'
+                                                                        value={
+                                                                            googleMapsUrl
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) => {
+                                                                            setGoogleMapsUrl(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }}
+                                                                        onKeyDown={(
+                                                                            e,
+                                                                        ) =>
+                                                                            e.key ===
+                                                                                "Enter" &&
+                                                                            handleGoogleMapsUrl()
+                                                                        }
+                                                                        placeholder='https://maps.app.goo.gl/...'
+                                                                        className='w-full pl-9 pr-3 py-2 border border-text/20 rounded-lg bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    type='button'
+                                                                    onClick={
+                                                                        handleGoogleMapsUrl
+                                                                    }
+                                                                    disabled={
+                                                                        isParsingUrl ||
+                                                                        !googleMapsUrl.trim()
+                                                                    }
+                                                                    className='px-3 py-2 bg-primary text-white rounded-lg font-medium text-xs hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2 min-w-[70px] justify-center'
+                                                                >
+                                                                    {isParsingUrl ? (
+                                                                        <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                                                                    ) : (
+                                                                        "Fill"
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
                                                         <LocationPickerInner
                                                             lat={
                                                                 changes.lat ??
@@ -727,17 +849,20 @@ export default function SuggestEditModal({
                                                             }
                                                             onChange={(
                                                                 newLat,
-                                                                newLng
+                                                                newLng,
                                                             ) => {
                                                                 updateChange(
                                                                     "lat",
-                                                                    newLat
+                                                                    newLat,
                                                                 )
                                                                 updateChange(
                                                                     "lng",
-                                                                    newLng
+                                                                    newLng,
                                                                 )
                                                             }}
+                                                            onLocationMatch={
+                                                                handleLocationMatch
+                                                            }
                                                         />
                                                     </>
                                                 ) : (
@@ -750,6 +875,72 @@ export default function SuggestEditModal({
                                                             cafe&apos;s exact
                                                             location.
                                                         </p>
+
+                                                        {/* Google Maps URL Input (Regular) */}
+                                                        <div className='p-3 bg-blue-50/30 border border-blue-100/60 rounded-xl space-y-3 mb-2'>
+                                                            <div className='flex items-start gap-3 mb-1'>
+                                                                <div className='p-1.5 bg-blue-100/80 rounded-full text-blue-700'>
+                                                                    <MapPin className='w-4 h-4' />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className='font-semibold text-sm'>
+                                                                        Quick
+                                                                        Fill
+                                                                        from
+                                                                        Google
+                                                                        Maps
+                                                                    </h4>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className='flex gap-2'>
+                                                                <div className='flex-1 relative'>
+                                                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text/40' />
+                                                                    <input
+                                                                        type='text'
+                                                                        value={
+                                                                            googleMapsUrl
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) => {
+                                                                            setGoogleMapsUrl(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }}
+                                                                        onKeyDown={(
+                                                                            e,
+                                                                        ) =>
+                                                                            e.key ===
+                                                                                "Enter" &&
+                                                                            handleGoogleMapsUrl()
+                                                                        }
+                                                                        placeholder='https://maps.app.goo.gl/...'
+                                                                        className='w-full pl-9 pr-3 py-2 border border-text/20 rounded-lg bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm'
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    type='button'
+                                                                    onClick={
+                                                                        handleGoogleMapsUrl
+                                                                    }
+                                                                    disabled={
+                                                                        isParsingUrl ||
+                                                                        !googleMapsUrl.trim()
+                                                                    }
+                                                                    className='px-3 py-2 bg-primary text-white rounded-lg font-medium text-xs hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2 min-w-[70px] justify-center'
+                                                                >
+                                                                    {isParsingUrl ? (
+                                                                        <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                                                                    ) : (
+                                                                        "Fill"
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
                                                         <LocationPickerInner
                                                             lat={
                                                                 changes.lat ??
@@ -763,7 +954,7 @@ export default function SuggestEditModal({
                                                             }
                                                             onChange={(
                                                                 newLat,
-                                                                newLng
+                                                                newLng,
                                                             ) => {
                                                                 const currentLat =
                                                                     cafe.lat
@@ -776,12 +967,12 @@ export default function SuggestEditModal({
                                                                 ) {
                                                                     updateChange(
                                                                         "lat",
-                                                                        newLat
+                                                                        newLat,
                                                                     )
                                                                 } else {
                                                                     setChanges(
                                                                         (
-                                                                            prev
+                                                                            prev,
                                                                         ) => {
                                                                             const rest =
                                                                                 {
@@ -789,7 +980,7 @@ export default function SuggestEditModal({
                                                                                 }
                                                                             delete rest.lat
                                                                             return rest
-                                                                        }
+                                                                        },
                                                                     )
                                                                 }
 
@@ -799,12 +990,12 @@ export default function SuggestEditModal({
                                                                 ) {
                                                                     updateChange(
                                                                         "lng",
-                                                                        newLng
+                                                                        newLng,
                                                                     )
                                                                 } else {
                                                                     setChanges(
                                                                         (
-                                                                            prev
+                                                                            prev,
                                                                         ) => {
                                                                             const rest =
                                                                                 {
@@ -812,10 +1003,13 @@ export default function SuggestEditModal({
                                                                                 }
                                                                             delete rest.lng
                                                                             return rest
-                                                                        }
+                                                                        },
                                                                     )
                                                                 }
                                                             }}
+                                                            onLocationMatch={
+                                                                handleLocationMatch
+                                                            }
                                                         />
                                                     </>
                                                 )}
@@ -875,14 +1069,14 @@ export default function SuggestEditModal({
                                                                 !(
                                                                     changes.is_chain ??
                                                                     cafe.is_chain
-                                                                )
+                                                                ),
                                                             )
                                                         }
                                                         className={`relative inline-flex h-6 min-w-11 items-center rounded-full transition-colors cursor-pointer ${
                                                             (changes.is_chain ??
                                                             cafe.is_chain)
                                                                 ? hasChange(
-                                                                      "is_chain"
+                                                                      "is_chain",
                                                                   )
                                                                     ? "bg-orange-500 ring-2 ring-primary/50"
                                                                     : "bg-orange-500"
@@ -950,13 +1144,13 @@ export default function SuggestEditModal({
                                                                                 level.value as
                                                                                     | "low"
                                                                                     | "medium"
-                                                                                    | "high"
+                                                                                    | "high",
                                                                             )
                                                                         }
                                                                         className={`flex-1 p-3 rounded-lg border-2 transition-all cursor-pointer ${
                                                                             isSelected
                                                                                 ? hasChange(
-                                                                                      "price_level"
+                                                                                      "price_level",
                                                                                   )
                                                                                     ? "border-primary bg-primary/20 text-primary"
                                                                                     : "border-text/30 bg-text/10 text-text"
@@ -975,7 +1169,7 @@ export default function SuggestEditModal({
                                                                         </div>
                                                                     </button>
                                                                 )
-                                                            }
+                                                            },
                                                         )}
                                                     </div>
                                                 </div>
@@ -1010,13 +1204,13 @@ export default function SuggestEditModal({
                                                                                 "coffee_style",
                                                                                 style.value as
                                                                                     | "classic"
-                                                                                    | "artisan"
+                                                                                    | "artisan",
                                                                             )
                                                                         }
                                                                         className={`flex-1 p-3 rounded-lg border-2 transition-all cursor-pointer text-left ${
                                                                             isSelected
                                                                                 ? hasChange(
-                                                                                      "coffee_style"
+                                                                                      "coffee_style",
                                                                                   )
                                                                                     ? "border-primary bg-primary/20 text-primary"
                                                                                     : "border-text/30 bg-text/10 text-text"
@@ -1035,7 +1229,7 @@ export default function SuggestEditModal({
                                                                         </div>
                                                                     </button>
                                                                 )
-                                                            }
+                                                            },
                                                         )}
                                                     </div>
                                                 </div>
@@ -1057,13 +1251,13 @@ export default function SuggestEditModal({
                                                                 "payment_methods",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='e.g., cash, card, gcash, maya'
                                                         className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
                                                             hasChange(
-                                                                "payment_methods"
+                                                                "payment_methods",
                                                             )
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
@@ -1092,7 +1286,7 @@ export default function SuggestEditModal({
                                                                 "roaster",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='e.g., Yardstick, Henry & Sons'
@@ -1120,7 +1314,7 @@ export default function SuggestEditModal({
                                                 Amenities
                                             </span>
                                             {expandedSections.has(
-                                                "amenities"
+                                                "amenities",
                                             ) ? (
                                                 <ChevronUp className='w-4 h-4' />
                                             ) : (
@@ -1155,7 +1349,7 @@ export default function SuggestEditModal({
                                                                     key={key}
                                                                     onClick={() =>
                                                                         toggleAmenity(
-                                                                            key
+                                                                            key,
                                                                         )
                                                                     }
                                                                     className={`flex items-center gap-2 p-3 rounded-lg border transition-all cursor-pointer text-left ${
@@ -1181,7 +1375,7 @@ export default function SuggestEditModal({
                                                                     )}
                                                                 </button>
                                                             )
-                                                        }
+                                                        },
                                                     )}
                                                 </div>
 
@@ -1202,7 +1396,7 @@ export default function SuggestEditModal({
                                                             onChange={(e) =>
                                                                 setMilkInput(
                                                                     e.target
-                                                                        .value
+                                                                        .value,
                                                                 )
                                                             }
                                                             onFocus={() => {
@@ -1213,26 +1407,26 @@ export default function SuggestEditModal({
                                                                 const options =
                                                                     milkInput
                                                                         .split(
-                                                                            ","
+                                                                            ",",
                                                                         )
                                                                         .map(
                                                                             (
-                                                                                s
+                                                                                s,
                                                                             ) =>
-                                                                                s.trim()
+                                                                                s.trim(),
                                                                         )
                                                                         .filter(
-                                                                            Boolean
+                                                                            Boolean,
                                                                         )
                                                                 updateChange(
                                                                     "milk_options",
-                                                                    options
+                                                                    options,
                                                                 )
                                                             }}
                                                             placeholder='Oat, Almond, Soy, Coconut...'
                                                             className={`w-full px-3 py-2 bg-background border rounded-lg text-sm outline-none transition-all ${
                                                                 hasChange(
-                                                                    "milk_options"
+                                                                    "milk_options",
                                                                 )
                                                                     ? "border-primary/50 ring-2 ring-primary/20"
                                                                     : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
@@ -1278,16 +1472,16 @@ export default function SuggestEditModal({
                                                             (method) => {
                                                                 const isSelected =
                                                                     getEffectiveArray(
-                                                                        "brew_methods"
+                                                                        "brew_methods",
                                                                     ).includes(
-                                                                        method
+                                                                        method,
                                                                     )
                                                                 const originalHas =
                                                                     (
                                                                         cafe.brew_methods ??
                                                                         []
                                                                     ).includes(
-                                                                        method
+                                                                        method,
                                                                     )
                                                                 const isChanged =
                                                                     isSelected !==
@@ -1301,7 +1495,7 @@ export default function SuggestEditModal({
                                                                         onClick={() =>
                                                                             toggleArrayItem(
                                                                                 "brew_methods",
-                                                                                method
+                                                                                method,
                                                                             )
                                                                         }
                                                                         className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
@@ -1316,10 +1510,10 @@ export default function SuggestEditModal({
                                                                     >
                                                                         {method
                                                                             .split(
-                                                                                "_"
+                                                                                "_",
                                                                             )
                                                                             .join(
-                                                                                " "
+                                                                                " ",
                                                                             )}
                                                                         {isSelected &&
                                                                             isChanged && (
@@ -1327,7 +1521,7 @@ export default function SuggestEditModal({
                                                                             )}
                                                                     </button>
                                                                 )
-                                                            }
+                                                            },
                                                         )}
                                                     </div>
                                                 </div>
@@ -1342,16 +1536,16 @@ export default function SuggestEditModal({
                                                             (item) => {
                                                                 const isSelected =
                                                                     getEffectiveArray(
-                                                                        "specialty"
+                                                                        "specialty",
                                                                     ).includes(
-                                                                        item
+                                                                        item,
                                                                     )
                                                                 const originalHas =
                                                                     (
                                                                         cafe.specialty ??
                                                                         []
                                                                     ).includes(
-                                                                        item
+                                                                        item,
                                                                     )
                                                                 const isChanged =
                                                                     isSelected !==
@@ -1365,7 +1559,7 @@ export default function SuggestEditModal({
                                                                         onClick={() =>
                                                                             toggleArrayItem(
                                                                                 "specialty",
-                                                                                item
+                                                                                item,
                                                                             )
                                                                         }
                                                                         className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
@@ -1380,10 +1574,10 @@ export default function SuggestEditModal({
                                                                     >
                                                                         {item
                                                                             .split(
-                                                                                "_"
+                                                                                "_",
                                                                             )
                                                                             .join(
-                                                                                " "
+                                                                                " ",
                                                                             )}
                                                                         {isSelected &&
                                                                             isChanged && (
@@ -1391,7 +1585,7 @@ export default function SuggestEditModal({
                                                                             )}
                                                                     </button>
                                                                 )
-                                                            }
+                                                            },
                                                         )}
                                                     </div>
 
@@ -1412,22 +1606,22 @@ export default function SuggestEditModal({
                                                                     const items =
                                                                         input.value
                                                                             .split(
-                                                                                ","
+                                                                                ",",
                                                                             )
                                                                             .map(
                                                                                 (
-                                                                                    s
+                                                                                    s,
                                                                                 ) =>
                                                                                     s
                                                                                         .trim()
                                                                                         .toLowerCase()
                                                                                         .replace(
                                                                                             /\s+/g,
-                                                                                            "_"
-                                                                                        )
+                                                                                            "_",
+                                                                                        ),
                                                                             )
                                                                             .filter(
-                                                                                Boolean
+                                                                                Boolean,
                                                                             )
                                                                     if (
                                                                         items.length >
@@ -1435,7 +1629,7 @@ export default function SuggestEditModal({
                                                                     ) {
                                                                         const current =
                                                                             getEffectiveArray(
-                                                                                "specialty"
+                                                                                "specialty",
                                                                             )
                                                                         const updated =
                                                                             [
@@ -1443,12 +1637,12 @@ export default function SuggestEditModal({
                                                                                     [
                                                                                         ...current,
                                                                                         ...items,
-                                                                                    ]
+                                                                                    ],
                                                                                 ),
                                                                             ]
                                                                         updateChange(
                                                                             "specialty",
-                                                                            updated
+                                                                            updated,
                                                                         )
                                                                         input.value =
                                                                             ""
@@ -1465,22 +1659,22 @@ export default function SuggestEditModal({
                                                                 const items =
                                                                     input.value
                                                                         .split(
-                                                                            ","
+                                                                            ",",
                                                                         )
                                                                         .map(
                                                                             (
-                                                                                s
+                                                                                s,
                                                                             ) =>
                                                                                 s
                                                                                     .trim()
                                                                                     .toLowerCase()
                                                                                     .replace(
                                                                                         /\s+/g,
-                                                                                        "_"
-                                                                                    )
+                                                                                        "_",
+                                                                                    ),
                                                                         )
                                                                         .filter(
-                                                                            Boolean
+                                                                            Boolean,
                                                                         )
                                                                 if (
                                                                     items.length >
@@ -1488,7 +1682,7 @@ export default function SuggestEditModal({
                                                                 ) {
                                                                     const current =
                                                                         getEffectiveArray(
-                                                                            "specialty"
+                                                                            "specialty",
                                                                         )
                                                                     const updated =
                                                                         [
@@ -1496,12 +1690,12 @@ export default function SuggestEditModal({
                                                                                 [
                                                                                     ...current,
                                                                                     ...items,
-                                                                                ]
+                                                                                ],
                                                                             ),
                                                                         ]
                                                                     updateChange(
                                                                         "specialty",
-                                                                        updated
+                                                                        updated,
                                                                     )
                                                                     input.value =
                                                                         ""
@@ -1515,22 +1709,22 @@ export default function SuggestEditModal({
 
                                                     {/* Display custom specialties */}
                                                     {getEffectiveArray(
-                                                        "specialty"
+                                                        "specialty",
                                                     ).filter(
                                                         (s) =>
                                                             !CAFE_SPECIALTIES.includes(
-                                                                s
-                                                            )
+                                                                s,
+                                                            ),
                                                     ).length > 0 && (
                                                         <div className='flex flex-wrap gap-1 mt-2'>
                                                             {getEffectiveArray(
-                                                                "specialty"
+                                                                "specialty",
                                                             )
                                                                 .filter(
                                                                     (s) =>
                                                                         !CAFE_SPECIALTIES.includes(
-                                                                            s
-                                                                        )
+                                                                            s,
+                                                                        ),
                                                                 )
                                                                 .map((item) => (
                                                                     <span
@@ -1541,13 +1735,13 @@ export default function SuggestEditModal({
                                                                         onClick={() =>
                                                                             toggleArrayItem(
                                                                                 "specialty",
-                                                                                item
+                                                                                item,
                                                                             )
                                                                         }
                                                                     >
                                                                         {item.replace(
                                                                             /_/g,
-                                                                            " "
+                                                                            " ",
                                                                         )}
                                                                         <XIcon className='w-3 h-3' />
                                                                     </span>
@@ -1566,16 +1760,16 @@ export default function SuggestEditModal({
                                                             (tag) => {
                                                                 const isSelected =
                                                                     getEffectiveArray(
-                                                                        "tags"
+                                                                        "tags",
                                                                     ).includes(
-                                                                        tag
+                                                                        tag,
                                                                     )
                                                                 const originalHas =
                                                                     (
                                                                         cafe.tags ??
                                                                         []
                                                                     ).includes(
-                                                                        tag
+                                                                        tag,
                                                                     )
                                                                 const isChanged =
                                                                     isSelected !==
@@ -1589,7 +1783,7 @@ export default function SuggestEditModal({
                                                                         onClick={() =>
                                                                             toggleArrayItem(
                                                                                 "tags",
-                                                                                tag
+                                                                                tag,
                                                                             )
                                                                         }
                                                                         className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
@@ -1604,10 +1798,10 @@ export default function SuggestEditModal({
                                                                     >
                                                                         {tag
                                                                             .split(
-                                                                                "_"
+                                                                                "_",
                                                                             )
                                                                             .join(
-                                                                                " "
+                                                                                " ",
                                                                             )}
                                                                         {isSelected &&
                                                                             isChanged && (
@@ -1615,7 +1809,7 @@ export default function SuggestEditModal({
                                                                             )}
                                                                     </button>
                                                                 )
-                                                            }
+                                                            },
                                                         )}
                                                     </div>
 
@@ -1636,22 +1830,22 @@ export default function SuggestEditModal({
                                                                     const items =
                                                                         input.value
                                                                             .split(
-                                                                                ","
+                                                                                ",",
                                                                             )
                                                                             .map(
                                                                                 (
-                                                                                    s
+                                                                                    s,
                                                                                 ) =>
                                                                                     s
                                                                                         .trim()
                                                                                         .toLowerCase()
                                                                                         .replace(
                                                                                             /\s+/g,
-                                                                                            "_"
-                                                                                        )
+                                                                                            "_",
+                                                                                        ),
                                                                             )
                                                                             .filter(
-                                                                                Boolean
+                                                                                Boolean,
                                                                             )
                                                                     if (
                                                                         items.length >
@@ -1659,7 +1853,7 @@ export default function SuggestEditModal({
                                                                     ) {
                                                                         const current =
                                                                             getEffectiveArray(
-                                                                                "tags"
+                                                                                "tags",
                                                                             )
                                                                         const updated =
                                                                             [
@@ -1667,12 +1861,12 @@ export default function SuggestEditModal({
                                                                                     [
                                                                                         ...current,
                                                                                         ...items,
-                                                                                    ]
+                                                                                    ],
                                                                                 ),
                                                                             ]
                                                                         updateChange(
                                                                             "tags",
-                                                                            updated
+                                                                            updated,
                                                                         )
                                                                         input.value =
                                                                             ""
@@ -1689,22 +1883,22 @@ export default function SuggestEditModal({
                                                                 const items =
                                                                     input.value
                                                                         .split(
-                                                                            ","
+                                                                            ",",
                                                                         )
                                                                         .map(
                                                                             (
-                                                                                s
+                                                                                s,
                                                                             ) =>
                                                                                 s
                                                                                     .trim()
                                                                                     .toLowerCase()
                                                                                     .replace(
                                                                                         /\s+/g,
-                                                                                        "_"
-                                                                                    )
+                                                                                        "_",
+                                                                                    ),
                                                                         )
                                                                         .filter(
-                                                                            Boolean
+                                                                            Boolean,
                                                                         )
                                                                 if (
                                                                     items.length >
@@ -1712,7 +1906,7 @@ export default function SuggestEditModal({
                                                                 ) {
                                                                     const current =
                                                                         getEffectiveArray(
-                                                                            "tags"
+                                                                            "tags",
                                                                         )
                                                                     const updated =
                                                                         [
@@ -1720,12 +1914,12 @@ export default function SuggestEditModal({
                                                                                 [
                                                                                     ...current,
                                                                                     ...items,
-                                                                                ]
+                                                                                ],
                                                                             ),
                                                                         ]
                                                                     updateChange(
                                                                         "tags",
-                                                                        updated
+                                                                        updated,
                                                                     )
                                                                     input.value =
                                                                         ""
@@ -1739,22 +1933,22 @@ export default function SuggestEditModal({
 
                                                     {/* Display custom tags */}
                                                     {getEffectiveArray(
-                                                        "tags"
+                                                        "tags",
                                                     ).filter(
                                                         (t) =>
                                                             !CAFE_VIBE_TAGS.includes(
-                                                                t
-                                                            )
+                                                                t,
+                                                            ),
                                                     ).length > 0 && (
                                                         <div className='flex flex-wrap gap-1 mt-2'>
                                                             {getEffectiveArray(
-                                                                "tags"
+                                                                "tags",
                                                             )
                                                                 .filter(
                                                                     (t) =>
                                                                         !CAFE_VIBE_TAGS.includes(
-                                                                            t
-                                                                        )
+                                                                            t,
+                                                                        ),
                                                                 )
                                                                 .map((item) => (
                                                                     <span
@@ -1765,13 +1959,13 @@ export default function SuggestEditModal({
                                                                         onClick={() =>
                                                                             toggleArrayItem(
                                                                                 "tags",
-                                                                                item
+                                                                                item,
                                                                             )
                                                                         }
                                                                     >
                                                                         {item.replace(
                                                                             /_/g,
-                                                                            " "
+                                                                            " ",
                                                                         )}
                                                                         <XIcon className='w-3 h-3' />
                                                                     </span>
@@ -1821,7 +2015,7 @@ export default function SuggestEditModal({
                                                                 "phone",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='Phone number'
@@ -1850,7 +2044,7 @@ export default function SuggestEditModal({
                                                                 "email",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='Email address'
@@ -1879,13 +2073,13 @@ export default function SuggestEditModal({
                                                                 "website_url",
                                                                 e.target
                                                                     .value ||
-                                                                    undefined
+                                                                    undefined,
                                                             )
                                                         }
                                                         placeholder='https://example.com'
                                                         className={`w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border transition-all text-text ${
                                                             hasChange(
-                                                                "website_url"
+                                                                "website_url",
                                                             )
                                                                 ? "border-primary/50 ring-2 ring-primary/20"
                                                                 : "border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
@@ -1908,7 +2102,7 @@ export default function SuggestEditModal({
                                                 <Clock className='w-4 h-4' />
                                                 Operating Hours
                                                 {hasChange(
-                                                    "operating_hours"
+                                                    "operating_hours",
                                                 ) && (
                                                     <span className='text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full'>
                                                         Modified
@@ -1933,7 +2127,7 @@ export default function SuggestEditModal({
                                                     onChange={(hours) =>
                                                         updateChange(
                                                             "operating_hours",
-                                                            hours
+                                                            hours,
                                                         )
                                                     }
                                                 />
@@ -1976,7 +2170,7 @@ export default function SuggestEditModal({
                                                     onChange={(socials) =>
                                                         updateChange(
                                                             "socials",
-                                                            socials
+                                                            socials,
                                                         )
                                                     }
                                                 />
@@ -2034,7 +2228,7 @@ export default function SuggestEditModal({
                                                             ) : cafe.thumbnail ? (
                                                                 <Image
                                                                     src={getCafeThumbnailUrl(
-                                                                        cafe.thumbnail
+                                                                        cafe.thumbnail,
                                                                     )}
                                                                     alt={
                                                                         cafe.name
@@ -2067,7 +2261,7 @@ export default function SuggestEditModal({
                                                                     accept='image/*'
                                                                     className='hidden'
                                                                     onChange={(
-                                                                        e
+                                                                        e,
                                                                     ) => {
                                                                         const file =
                                                                             e
@@ -2077,7 +2271,7 @@ export default function SuggestEditModal({
                                                                             file
                                                                         ) {
                                                                             handleCoverPhotoSelect(
-                                                                                file
+                                                                                file,
                                                                             )
                                                                         }
                                                                     }}
@@ -2087,17 +2281,17 @@ export default function SuggestEditModal({
                                                                 <button
                                                                     onClick={() => {
                                                                         setNewThumbnail(
-                                                                            null
+                                                                            null,
                                                                         )
                                                                         if (
                                                                             thumbnailPreview
                                                                         ) {
                                                                             URL.revokeObjectURL(
-                                                                                thumbnailPreview
+                                                                                thumbnailPreview,
                                                                             )
                                                                         }
                                                                         setThumbnailPreview(
-                                                                            null
+                                                                            null,
                                                                         )
                                                                     }}
                                                                     className='text-xs text-red-500 hover:underline cursor-pointer'
@@ -2130,11 +2324,11 @@ export default function SuggestEditModal({
                                                                     {cafe.gallery.map(
                                                                         (
                                                                             url,
-                                                                            idx
+                                                                            idx,
                                                                         ) => {
                                                                             const isMarkedForRemoval =
                                                                                 removeFromGallery.includes(
-                                                                                    url
+                                                                                    url,
                                                                                 )
                                                                             return (
                                                                                 <button
@@ -2147,24 +2341,24 @@ export default function SuggestEditModal({
                                                                                         ) {
                                                                                             setRemoveFromGallery(
                                                                                                 (
-                                                                                                    prev
+                                                                                                    prev,
                                                                                                 ) =>
                                                                                                     prev.filter(
                                                                                                         (
-                                                                                                            u
+                                                                                                            u,
                                                                                                         ) =>
                                                                                                             u !==
-                                                                                                            url
-                                                                                                    )
+                                                                                                            url,
+                                                                                                    ),
                                                                                             )
                                                                                         } else {
                                                                                             setRemoveFromGallery(
                                                                                                 (
-                                                                                                    prev
+                                                                                                    prev,
                                                                                                 ) => [
                                                                                                     ...prev,
                                                                                                     url,
-                                                                                                ]
+                                                                                                ],
                                                                                             )
                                                                                         }
                                                                                     }}
@@ -2189,7 +2383,7 @@ export default function SuggestEditModal({
                                                                                     )}
                                                                                 </button>
                                                                             )
-                                                                        }
+                                                                        },
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -2209,11 +2403,11 @@ export default function SuggestEditModal({
                                                                 setNewGalleryFiles(
                                                                     files.filter(
                                                                         (
-                                                                            f
+                                                                            f,
                                                                         ): f is File =>
                                                                             f instanceof
-                                                                            File
-                                                                    )
+                                                                            File,
+                                                                    ),
                                                                 )
                                                             }
                                                             maxImages={0}

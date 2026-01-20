@@ -1,5 +1,7 @@
 "use server"
 
+import { matchNominatimToLocation } from "@/utils/data/location-matcher"
+
 /**
  * Server action to get user's location from their IP address
  * This runs server-side to avoid CORS issues with external IP APIs
@@ -82,23 +84,24 @@ export async function extractCoordsFromGoogleMapsUrl(
 
         // Helper to extract from URL patterns
         const extractFromUrl = (url: string): { lat: number; lng: number } | null => {
-            // Pattern 1: @lat,lng in URL (most common)
-            const atPattern = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/
-            const atMatch = url.match(atPattern)
-            if (atMatch) {
-                const lat = parseFloat(atMatch[1])
-                const lng = parseFloat(atMatch[2])
-                if (!isNaN(lat) && !isNaN(lng) && isValidCoord(lat, lng)) {
-                    return { lat, lng }
-                }
-            }
-
-            // Pattern 2: !3d and !4d format (embed/place URLs)
+            // Pattern 1: !3d and !4d format (embed/place URLs) - HIGHEST PRIORITY
+            // This represents the specific POI location
             const embedPattern = /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/
             const embedMatch = url.match(embedPattern)
             if (embedMatch) {
                 const lat = parseFloat(embedMatch[1])
                 const lng = parseFloat(embedMatch[2])
+                if (!isNaN(lat) && !isNaN(lng) && isValidCoord(lat, lng)) {
+                    return { lat, lng }
+                }
+            }
+
+            // Pattern 2: q= query parameter with coordinates
+            const qPattern = /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/
+            const qMatch = url.match(qPattern)
+            if (qMatch) {
+                const lat = parseFloat(qMatch[1])
+                const lng = parseFloat(qMatch[2])
                 if (!isNaN(lat) && !isNaN(lng) && isValidCoord(lat, lng)) {
                     return { lat, lng }
                 }
@@ -115,12 +118,13 @@ export async function extractCoordsFromGoogleMapsUrl(
                 }
             }
 
-            // Pattern 4: q= query parameter with coordinates
-            const qPattern = /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/
-            const qMatch = url.match(qPattern)
-            if (qMatch) {
-                const lat = parseFloat(qMatch[1])
-                const lng = parseFloat(qMatch[2])
+            // Pattern 4: @lat,lng in URL (Viewport Center) - LOWEST PRIORITY
+            // This is often just where the camera is looking, not necessarily the pin
+            const atPattern = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/
+            const atMatch = url.match(atPattern)
+            if (atMatch) {
+                const lat = parseFloat(atMatch[1])
+                const lng = parseFloat(atMatch[2])
                 if (!isNaN(lat) && !isNaN(lng) && isValidCoord(lat, lng)) {
                     return { lat, lng }
                 }
@@ -218,5 +222,50 @@ export async function extractCoordsFromGoogleMapsUrl(
     } catch (err) {
         console.error("[extractCoordsFromGoogleMapsUrl] Error:", err)
         return null
+    }
+}
+
+interface ReverseGeocodeResult {
+    success: boolean
+    data?: {
+        region: string | null
+        province: string | null
+        city: string | null
+        area: string | null
+        fullAddress: string
+    }
+    error?: string
+}
+
+export async function reverseGeocodeAndMatch(
+    lat: number,
+    lng: number,
+): Promise<ReverseGeocodeResult> {
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+            {
+                headers: { "User-Agent": "Grounds-CafeApp" },
+            }
+        )
+
+        if (!response.ok) {
+            throw new Error("Nominatim API error")
+        }
+
+        const data = await response.json()
+
+        const matched = matchNominatimToLocation(data)
+
+        return {
+            success: true,
+            data: matched,
+        }
+    } catch (error) {
+        console.error("[reverseGeocodeAndMatch] Error:", error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        }
     }
 }
