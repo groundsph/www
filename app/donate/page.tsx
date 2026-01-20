@@ -24,7 +24,7 @@ import gcash from "@/assets/gcash-dono.png"
 
 export default function DonatePage() {
     return (
-        <main className='min-h-screen bg-background py-12 px-6'>
+        <main className='min-h-screen max-w-svw bg-background py-12 px-6'>
             <div className='max-w-2xl mx-auto'>
                 {/* Header */}
                 <div className='text-center mb-12'>
@@ -120,7 +120,7 @@ export default function DonatePage() {
                             <Image
                                 src={qrph}
                                 alt='QRPh QR Code'
-                                className='rounded max-w-md h-auto aspect-square'
+                                className='rounded max-w-full w-md h-auto aspect-square'
                             />
                         </div>
                     </div>
@@ -144,7 +144,7 @@ export default function DonatePage() {
                             <Image
                                 src={gcash}
                                 alt='GCash QR Code'
-                                className='rounded max-w-md h-auto aspect-square'
+                                className='rounded max-w-full w-md h-auto aspect-square'
                             />
                         </div>
                     </div>
