@@ -33,7 +33,7 @@ import {
     COFFEE_STYLES,
     CAFE_VIBE_TAGS,
 } from "@/utils/data/philippines"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useState, useTransition, useRef } from "react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
 import RandomCafeButton from "@/components/RandomCafeButton"
 
@@ -49,6 +49,9 @@ export default function CafesPageClient({
     const [loading, setLoading] = useState(initialCafes.length === 0)
     const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
+
+    // Track if user has manually toggled location filter
+    const hasUserToggledLocation = useRef(false)
 
     // Location State
     const [userLocation, setUserLocation] = useState<{
@@ -94,6 +97,10 @@ export default function CafesPageClient({
                 if (city || region) {
                     // eslint-disable-next-line react-hooks/set-state-in-effect
                     setUserLocation({ city, region })
+                    // Auto-enable near_me filter if user hasn't manually toggled it
+                    if (!hasUserToggledLocation.current) {
+                        setFilters((prev) => ({ ...prev, near_me: true }))
+                    }
                     return
                 }
             } catch {
@@ -119,6 +126,10 @@ export default function CafesPageClient({
                     const region = data.address?.state || data.address?.region
                     if (city || region) {
                         setUserLocation({ city, region })
+                        // Auto-enable near_me filter if user hasn't manually toggled it
+                        if (!hasUserToggledLocation.current) {
+                            setFilters((prev) => ({ ...prev, near_me: true }))
+                        }
                     }
                 } catch (error) {
                     console.error("Failed to get location:", error)
@@ -187,7 +198,22 @@ export default function CafesPageClient({
         return true
     })
 
+    // Auto-disable near_me filter if no results and user hasn't manually toggled it
+    useEffect(() => {
+        if (
+            filters.near_me &&
+            filteredCafes.length === 0 &&
+            cafes.length > 0 &&
+            !hasUserToggledLocation.current
+        ) {
+            setFilters((prev) => ({ ...prev, near_me: false }))
+        }
+    }, [filteredCafes.length, cafes.length, filters.near_me])
+
     const toggleFilter = (key: keyof typeof filters) => {
+        if (key === "near_me") {
+            hasUserToggledLocation.current = true
+        }
         setFilters((prev) => ({ ...prev, [key]: !prev[key] }))
     }
 
@@ -355,6 +381,7 @@ export default function CafesPageClient({
                                     {activeFilterCount > 0 && (
                                         <button
                                             onClick={() => {
+                                                hasUserToggledLocation.current = false
                                                 setFilters({
                                                     has_wifi: false,
                                                     has_smoking: false,
