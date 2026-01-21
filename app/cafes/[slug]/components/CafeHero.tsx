@@ -136,54 +136,49 @@ export default function CafeHero({
     }
 
     const handleCheckIn = async () => {
-        // If already visited today, show feedback but don't block the confetti for first-time visitors
-        if (visitedToday) {
-            // Could show a toast here, but for now just return
-            return
-        }
-
         // Use new check-in if available, otherwise fall back to toggle
         if (onCheckIn) {
-            // Trigger confetti on successful check-in
-            const confetti = (await import("canvas-confetti")).default
+            // Only trigger confetti if not already visited today
+            if (!visitedToday) {
+                const confetti = (await import("canvas-confetti")).default
 
-            // Trigger fireworks from bottom
-            const duration = 3 * 1000
-            const animationEnd = Date.now() + duration
-            const defaults = {
-                startVelocity: 45,
-                spread: 360,
-                ticks: 60,
-                zIndex: 0,
-                origin: { y: 1 },
+                // Trigger fireworks from bottom
+                const duration = 3 * 1000
+                const animationEnd = Date.now() + duration
+                const defaults = {
+                    startVelocity: 45,
+                    spread: 360,
+                    ticks: 60,
+                    zIndex: 0,
+                    origin: { y: 1 },
+                }
+
+                const interval: ReturnType<typeof setInterval> = setInterval(
+                    function () {
+                        const timeLeft = animationEnd - Date.now()
+
+                        if (timeLeft <= 0) {
+                            return clearInterval(interval)
+                        }
+
+                        const particleCount = 50 * (timeLeft / duration)
+
+                        confetti({
+                            ...defaults,
+                            particleCount,
+                            angle: 60,
+                            origin: { x: 0, y: 1 },
+                        })
+                        confetti({
+                            ...defaults,
+                            particleCount,
+                            angle: 120,
+                            origin: { x: 1, y: 1 },
+                        })
+                    },
+                    250
+                )
             }
-
-            const interval: ReturnType<typeof setInterval> = setInterval(
-                function () {
-                    const timeLeft = animationEnd - Date.now()
-
-                    if (timeLeft <= 0) {
-                        return clearInterval(interval)
-                    }
-
-                    const particleCount = 50 * (timeLeft / duration)
-
-                    confetti({
-                        ...defaults,
-                        particleCount,
-                        angle: 60,
-                        origin: { x: 0, y: 1 },
-                    })
-                    confetti({
-                        ...defaults,
-                        particleCount,
-                        angle: 120,
-                        origin: { x: 1, y: 1 },
-                    })
-                },
-                250
-            )
-
             await onCheckIn()
         } else {
             // Legacy fallback
@@ -417,15 +412,15 @@ export default function CafeHero({
                                 <motion.button
                                     whileTap={{ scale: 0.97 }}
                                     onClick={handleCheckIn}
-                                    disabled={isCheckingIn || visitedToday}
+                                    disabled={isCheckingIn}
                                     className={`p-2 flex-1 rounded-lg backdrop-blur-sm transition-all group flex flex-row text-nowrap items-center gap-2 justify-center font-bold ${
                                         visitedToday
-                                            ? "bg-green-500/30 text-green-200 cursor-default"
+                                            ? "bg-green-500/30 text-green-200 hover:bg-green-500/40 cursor-pointer"
                                             : "bg-white/10 hover:bg-white/20 cursor-pointer"
                                     } ${isCheckingIn ? "opacity-70" : ""}`}
                                     title={
                                         visitedToday
-                                            ? "Already checked in today"
+                                            ? "Edit Check-in"
                                             : "Check In"
                                     }
                                 >

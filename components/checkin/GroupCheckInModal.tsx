@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import {
     X,
     MapPin,
@@ -30,8 +30,11 @@ interface GroupCheckInModalProps {
     onCheckIn: (companionIds?: string[]) => Promise<CheckInResult | undefined>
     /** Called when check-in completes successfully and user dismisses the modal */
     onComplete?: (result: CheckInResult) => void
+    /** Called when updating an existing check-in */
+    onUpdateCheckIn?: (companionIds: string[]) => Promise<CheckInResult | undefined>
     visitedToday?: boolean
     visitCount?: number
+    initialCompanions?: UserResult[]
 }
 
 export default function GroupCheckInModal({
@@ -40,16 +43,26 @@ export default function GroupCheckInModal({
     cafeName,
     onCheckIn,
     onComplete,
+    onUpdateCheckIn,
     visitedToday = false,
     visitCount = 0,
+    initialCompanions = [],
 }: GroupCheckInModalProps) {
     const [selectedCompanions, setSelectedCompanions] = useState<UserResult[]>(
-        []
+        initialCompanions
     )
     const [showCompanions, setShowCompanions] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [result, setResult] = useState<CheckInResult | null>(null)
     const { showBadgeNotifications } = useBadgeNotification()
+
+    // Sync selected companions with initial companions when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedCompanions(initialCompanions)
+            setResult(null)
+        }
+    }, [isOpen, initialCompanions])
 
     const handleSelect = useCallback((user: UserResult) => {
         setSelectedCompanions((prev) => [...prev, user])
@@ -63,9 +76,17 @@ export default function GroupCheckInModal({
         setIsSubmitting(true)
         try {
             const companionIds = selectedCompanions.map((c) => c.id)
-            const checkInResult = await onCheckIn(
-                companionIds.length > 0 ? companionIds : undefined
-            )
+            let checkInResult: CheckInResult | undefined
+
+            // Use appropriate handler based on whether editing or creating
+            if (visitedToday && onUpdateCheckIn) {
+                checkInResult = await onUpdateCheckIn(companionIds)
+            } else {
+                checkInResult = await onCheckIn(
+                    companionIds.length > 0 ? companionIds : undefined
+                )
+            }
+
             if (checkInResult) {
                 setResult(checkInResult)
                 if (checkInResult.awardedBadges && checkInResult.awardedBadges.length > 0) {
@@ -126,8 +147,8 @@ export default function GroupCheckInModal({
 
                 {/* Content */}
                 <div className='p-5 space-y-4'>
-                    {/* Already visited message */}
-                    {visitedToday && !result && (
+                    {/* Already visited message (only show if not editing mode) */}
+                    {visitedToday && !result && !onUpdateCheckIn && (
                         <div className='bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3'>
                             <p className='text-sm text-amber-700 dark:text-amber-300'>
                                 You&apos;ve already checked in here today! Check
@@ -181,12 +202,19 @@ export default function GroupCheckInModal({
                     )}
 
                     {/* Check-in form */}
-                    {!visitedToday && !result && (
+                    {(!visitedToday || onUpdateCheckIn) && !result && (
                         <>
                             {/* Visit count preview */}
-                            {visitCount > 0 && (
+                            {visitCount > 0 && !visitedToday && (
                                 <p className='text-sm text-text/60 text-center'>
                                     This will be your visit #{visitCount + 1}
+                                </p>
+                            )}
+
+                            {/* Edit mode notice */}
+                            {visitedToday && onUpdateCheckIn && (
+                                <p className='text-sm text-text/60 text-center'>
+                                    Update your companions for today&apos;s visit
                                 </p>
                             )}
 
@@ -239,7 +267,7 @@ export default function GroupCheckInModal({
                     {!result ? (
                         <button
                             onClick={handleCheckIn}
-                            disabled={visitedToday || isSubmitting}
+                            disabled={(visitedToday && !onUpdateCheckIn) || isSubmitting}
                             className='w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
                         >
                             {isSubmitting ? (
@@ -250,7 +278,7 @@ export default function GroupCheckInModal({
                             ) : (
                                 <>
                                     <MapPin className='w-4 h-4' />
-                                    Check In
+                                    {visitedToday && onUpdateCheckIn ? "Update Check-in" : "Check In"}
                                     {selectedCompanions.length > 0 && (
                                         <span className='text-white/80'>
                                             with {selectedCompanions.length}{" "}

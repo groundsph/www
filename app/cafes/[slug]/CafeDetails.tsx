@@ -82,7 +82,9 @@ export default function CafeDetails({
         visitCount,
         visitedToday,
         isCheckingIn,
+        currentCompanions,
         checkIn,
+        updateCheckInCompanions,
         toggleVisited,
         toggleFavorite,
         toggleWishlist,
@@ -129,9 +131,7 @@ export default function CafeDetails({
 
     // Open the check-in modal instead of direct check-in
     const handleCheckInClick = () => {
-        if (!visitedToday) {
-            setIsCheckInModalOpen(true)
-        }
+        setIsCheckInModalOpen(true)
     }
 
     // Computed
@@ -646,8 +646,10 @@ export default function CafeDetails({
                 cafeName={cafe.name}
                 onCheckIn={handleCheckIn}
                 onComplete={handleCheckInComplete}
+                onUpdateCheckIn={updateCheckInCompanions}
                 visitedToday={visitedToday}
                 visitCount={visitCount}
+                initialCompanions={currentCompanions}
             />
         </>
     )

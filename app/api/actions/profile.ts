@@ -1152,6 +1152,275 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
     }
 }
 
+/**
+ * Get details of today's check-in (including companions)
+ */
+export async function getTodayCheckIn(cafeId: string): Promise<{
+    id: string
+    visitedAt: string
+    companions: {
+        id: string
+        username: string
+        displayName: string
+        avatarUrl: string | null
+    }[]
+} | null> {
+    const user = await getCurrentUser()
+    if (!user) return null
+
+    try {
+        const today = getPHTodayStart()
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const result = await db
+            .select({
+                id: cafeVisits.id,
+                visitedAt: cafeVisits.visitedAt,
+                companions: cafeVisits.companions,
+            })
+            .from(cafeVisits)
+            .where(
+                and(
+                    eq(cafeVisits.userId, user.id),
+                    eq(cafeVisits.cafeId, cafeId),
+                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                )
+            )
+            .limit(1)
+
+        if (result.length === 0) return null
+        
+        const visit = result[0]
+        const companionIds = (visit.companions as string[]) || []
+        
+        let companionsData: { id: string; username: string; displayName: string; avatarUrl: string | null }[] = []
+        
+        if (companionIds.length > 0) {
+            const profilesResult = await db
+                .select({
+                    id: profiles.id,
+                    username: profiles.username,
+                    displayName: profiles.displayName,
+                    avatarUrl: profiles.avatarUrl,
+                })
+                .from(profiles)
+                .where(inArray(profiles.id, companionIds))
+                
+            companionsData = profilesResult
+        }
+
+        return {
+            id: visit.id,
+            visitedAt: visit.visitedAt?.toISOString() ?? new Date().toISOString(),
+            companions: companionsData
+        }
+    } catch (error) {
+        console.error("Error getting today's check-in:", error)
+        return null
+    }
+}
+
+/**
+ * Update an existing check-in for today (add/remove companions)
+ */
+export async function updateCheckIn(cafeId: string, companionIds: string[]): Promise<CheckInResult> {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
+
+    try {
+        const today = getPHTodayStart()
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        // Get existing visit
+        const existingVisitResult = await db
+            .select({ id: cafeVisits.id, companions: cafeVisits.companions })
+            .from(cafeVisits)
+            .where(
+                and(
+                    eq(cafeVisits.userId, user.id),
+                    eq(cafeVisits.cafeId, cafeId),
+                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                )
+            )
+            .limit(1)
+
+        if (existingVisitResult.length === 0) {
+            return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "No check-in found for today" }
+        }
+
+        const existingVisit = existingVisitResult[0]
+        const oldCompanionIds = (existingVisit.companions as string[]) || []
+        
+        // Filter out self if somehow included
+        const requestedCompanionIds = (companionIds || []).filter(id => id !== user.id)
+        
+        // Identify added and removed companions
+        const addedIds = requestedCompanionIds.filter(id => !oldCompanionIds.includes(id))
+        const removedIds = oldCompanionIds.filter(id => !requestedCompanionIds.includes(id))
+        const keptIds = oldCompanionIds.filter(id => requestedCompanionIds.includes(id))
+
+        // Validate added companions
+        let validAddedCompanions: string[] = []
+        if (addedIds.length > 0) {
+            const existingProfiles = await db
+                .select({ id: profiles.id })
+                .from(profiles)
+                .where(inArray(profiles.id, addedIds))
+
+            validAddedCompanions = existingProfiles.map(p => p.id)
+        }
+
+        const companionResults: { id: string; added: boolean; alreadyVisited: boolean }[] = []
+
+        // PROCESS ADDED COMPANIONS (Logic from recordVisit)
+        if (validAddedCompanions.length > 0) {
+            for (const companionId of validAddedCompanions) {
+                try {
+                    // Check if companion already visited today
+                    const companionTodayVisit = await db
+                        .select({ id: cafeVisits.id, companions: cafeVisits.companions })
+                        .from(cafeVisits)
+                        .where(
+                            and(
+                                eq(cafeVisits.userId, companionId),
+                                eq(cafeVisits.cafeId, cafeId),
+                                sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                            )
+                        )
+                        .limit(1)
+
+                    if (companionTodayVisit.length > 0) {
+                        // Companion already visited today - update their visit to include main user as companion
+                        const existingCompanions = (companionTodayVisit[0].companions as string[]) || []
+                        if (!existingCompanions.includes(user.id)) {
+                            await db
+                                .update(cafeVisits)
+                                .set({ companions: [...existingCompanions, user.id] })
+                                .where(eq(cafeVisits.id, companionTodayVisit[0].id))
+                        }
+                        companionResults.push({ id: companionId, added: false, alreadyVisited: true })
+                    } else {
+                        // Check if this is companion's first visit to this cafe
+                        const companionExistingVisits = await db
+                            .select({ count: count() })
+                            .from(cafeVisits)
+                            .where(and(eq(cafeVisits.userId, companionId), eq(cafeVisits.cafeId, cafeId)))
+
+                        const isCompanionFirstVisit = (companionExistingVisits[0]?.count ?? 0) === 0
+
+                        // Record companion's visit
+                        await db.insert(cafeVisits).values({
+                            userId: companionId,
+                            cafeId: cafeId,
+                            visitedAt: new Date(),
+                            companions: [user.id], // Tag the main user as their companion
+                        })
+
+                        // Update companion's passport if first visit
+                        if (isCompanionFirstVisit) {
+                            const companionProfile = await db
+                                .select({ passport: profiles.passport })
+                                .from(profiles)
+                                .where(eq(profiles.id, companionId))
+                                .limit(1)
+
+                            const companionPassport = (companionProfile[0]?.passport as ProfilePassport) || {
+                                visited_ids: [],
+                                visits: [],
+                                wishlist_ids: [],
+                                favorite_ids: [],
+                            }
+
+                            if (!companionPassport.visited_ids.includes(cafeId)) {
+                                await db
+                                    .update(profiles)
+                                    .set({
+                                        passport: {
+                                            ...companionPassport,
+                                            visited_ids: [...companionPassport.visited_ids, cafeId],
+                                            visits: [...(companionPassport.visits || []), { cafe_id: cafeId, visited_at: new Date().toISOString() }],
+                                        },
+                                    })
+                                    .where(eq(profiles.id, companionId))
+                            }
+                        }
+
+                        companionResults.push({ id: companionId, added: true, alreadyVisited: false })
+                    }
+                } catch (companionError) {
+                    console.error(`Error recording companion visit for ${companionId}:`, companionError)
+                }
+            }
+        }
+
+        // PROCESS REMOVED COMPANIONS
+        if (removedIds.length > 0) {
+            for (const companionId of removedIds) {
+                try {
+                    // Find companion's visit today
+                    const companionTodayVisit = await db
+                        .select({ id: cafeVisits.id, companions: cafeVisits.companions })
+                        .from(cafeVisits)
+                        .where(
+                            and(
+                                eq(cafeVisits.userId, companionId),
+                                eq(cafeVisits.cafeId, cafeId),
+                                sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                            )
+                        )
+                        .limit(1)
+
+                    if (companionTodayVisit.length > 0) {
+                        const existingCompanions = (companionTodayVisit[0].companions as string[]) || []
+                        if (existingCompanions.includes(user.id)) {
+                            // Remove user from companion's list
+                            const updatedCompanions = existingCompanions.filter(id => id !== user.id)
+                            await db
+                                .update(cafeVisits)
+                                .set({ companions: updatedCompanions.length > 0 ? updatedCompanions : null })
+                                .where(eq(cafeVisits.id, companionTodayVisit[0].id))
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error removing companion association for ${companionId}:`, error)
+                }
+            }
+        }
+
+        // Update main user's check-in
+        const finalCompanions = [...keptIds, ...validAddedCompanions]
+        
+        await db
+            .update(cafeVisits)
+            .set({ companions: finalCompanions.length > 0 ? finalCompanions : null })
+            .where(eq(cafeVisits.id, existingVisit.id))
+
+        // Get current visit count
+        const countResult = await db
+            .select({ count: count() })
+            .from(cafeVisits)
+            .where(and(eq(cafeVisits.userId, user.id), eq(cafeVisits.cafeId, cafeId)))
+
+        return { 
+            success: true, 
+            visitCount: countResult[0]?.count ?? 0, 
+            isFirstVisit: false, 
+            milestone: null, 
+            companions: finalCompanions, 
+            companionResults 
+        }
+
+    } catch (error) {
+        console.error("Error updating check-in:", error)
+        return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Failed to update check-in" }
+    }
+}
 
 /**
  * Get the user's visit count for a specific cafe

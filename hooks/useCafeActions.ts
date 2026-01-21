@@ -19,21 +19,29 @@ export function useCafeActions(cafeId: string) {
     const [visitCount, setVisitCount] = useState(0)
     const [visitedToday, setVisitedToday] = useState(false)
     const [isCheckingIn, setIsCheckingIn] = useState(false)
-
+    const [currentCompanions, setCurrentCompanions] = useState<{
+        id: string
+        username: string
+        displayName: string
+        avatarUrl: string | null
+    }[]>([])
 
     // Fetch visit count and today status
     const fetchVisitData = useCallback(async () => {
         try {
-            const [{ getVisitCount }, { hasVisitedToday }] = await Promise.all([
+            const [{ getVisitCount }, { hasVisitedToday }, { getTodayCheckIn }] = await Promise.all([
+                import("@/app/api/actions/profile"),
                 import("@/app/api/actions/profile"),
                 import("@/app/api/actions/profile"),
             ])
-            const [countResult, todayResult] = await Promise.all([
+            const [countResult, todayResult, checkInResult] = await Promise.all([
                 getVisitCount(cafeId),
                 hasVisitedToday(cafeId),
+                getTodayCheckIn(cafeId),
             ])
             setVisitCount(countResult.count)
             setVisitedToday(todayResult)
+            setCurrentCompanions(checkInResult?.companions ?? [])
         } catch (error) {
             console.error("Failed to fetch visit data", error)
         }
@@ -81,6 +89,36 @@ export function useCafeActions(cafeId: string) {
         } catch (error) {
             console.error("Check-in failed", error)
             return { success: false, visitCount, isFirstVisit: false, milestone: null, error: "Check-in failed" }
+        } finally {
+            setIsCheckingIn(false)
+        }
+    }, [user, isCheckingIn, cafeId, visitCount, refreshProfile])
+
+    // Update check-in handler (edit companions for today's check-in)
+    const updateCheckInCompanions = useCallback(async (companionIds: string[]): Promise<CheckInResult | undefined> => {
+        if (!user || isCheckingIn) return
+
+        setIsCheckingIn(true)
+
+        try {
+            const { updateCheckIn } = await import("@/app/api/actions/profile")
+            const result = await updateCheckIn(cafeId, companionIds)
+
+            if (result.success) {
+                setCurrentCompanions(
+                    await (async () => {
+                        const checkIn = await import("@/app/api/actions/profile")
+                        const result = await checkIn.getTodayCheckIn(cafeId)
+                        return result?.companions ?? []
+                    })()
+                )
+                refreshProfile()
+            }
+
+            return result
+        } catch (error) {
+            console.error("Update check-in failed", error)
+            return { success: false, visitCount, isFirstVisit: false, milestone: null, error: "Update check-in failed" }
         } finally {
             setIsCheckingIn(false)
         }
@@ -152,8 +190,10 @@ export function useCafeActions(cafeId: string) {
         visitCount,
         visitedToday,
         isCheckingIn,
+        currentCompanions,
         // Actions
         checkIn,
+        updateCheckInCompanions,
         toggleVisited,
         toggleFavorite,
         toggleWishlist,
