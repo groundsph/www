@@ -1,4 +1,4 @@
-import { PHILIPPINES_LOCATIONS, Region, Province } from "./philippines";
+import { PHILIPPINES_LOCATIONS } from "./philippines";
 
 export interface NominatimAddress {
     city?: string;
@@ -28,8 +28,6 @@ export interface MatchedLocation {
     fullAddress: string;
 }
 
-const COMMON_SUFFIXES = [" City", " City of", " Municipality", " Municipality of", " Province", " Province of"];
-
 function normalizeForMatch(str: string): string {
     return str
         .toLowerCase()
@@ -40,14 +38,6 @@ function normalizeForMatch(str: string): string {
         .split(/\s+/)
         .filter((word) => word.length > 0)
         .join(" ");
-}
-
-function removeSuffixes(str: string): string {
-    let result = str;
-    // Check against suffixes/prefixes logic (simplified for suffixes as per original, but "City of" is prefixish)
-    // Actually, simple includes check in fuzzy match handles most.
-    // We'll strip common noise words for stricter comparison if needed.
-    return result;
 }
 
 function fuzzyMatch(candidate: string | undefined, target: string): number {

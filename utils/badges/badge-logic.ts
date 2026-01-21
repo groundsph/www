@@ -386,9 +386,9 @@ export async function checkAndAwardBadges(
 
 /**
  * Track map usage and award Eye Spy badge
- * Should be called when user interacts with the map feature
+ * Should be called when user interacts with map feature
  */
-export async function trackMapUsage(): Promise<{ awarded: boolean; error?: string }> {
+export async function trackMapUsage(): Promise<{ awarded: boolean; badgeName?: string; error?: string }> {
     const user = await getCurrentUser()
     if (!user) {
         return { awarded: false, error: "Not authenticated" }
@@ -405,15 +405,15 @@ export async function trackMapUsage(): Promise<{ awarded: boolean; error?: strin
             return { awarded: false } // Already has badge, no error
         }
 
-        // Award the badge
+        // Award badge
         const success = await awardBadge(user.id, badgeId)
-
-        return { awarded: success }
+        return { awarded: success, badgeName: BADGE_NAMES.EYE_SPY }
     } catch (error) {
         console.error("[Badge] Error tracking map usage:", error)
         return { awarded: false, error: "Failed to track map usage" }
     }
 }
+
 
 // ============================================
 // Badge Backfill Function (Admin Only)

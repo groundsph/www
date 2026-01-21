@@ -245,7 +245,7 @@ export default function SuggestEditModal({
         return JSON.stringify(a) === JSON.stringify(b)
     }
 
-    const updateChange = <K extends keyof SuggestableFields>(
+    const updateChange = useCallback(<K extends keyof SuggestableFields>(
         key: K,
         value: SuggestableFields[K],
     ) => {
@@ -280,7 +280,7 @@ export default function SuggestEditModal({
             }
             return { ...prev, [key]: value }
         })
-    }
+    }, [cafe, setChanges])
 
     const handleLocationMatch = useCallback(
         (match: {

@@ -932,6 +932,7 @@ export interface CheckInResult {
     companions?: string[] // IDs of companions added to the check-in
     /** Results of companion visit auto-marking */
     companionResults?: { id: string; added: boolean; alreadyVisited: boolean }[]
+    awardedBadges?: string[]
     error?: string
 }
 
@@ -1138,13 +1139,13 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
 
         // Check for visit-based badges (Regular at 5, Loyal Customer at 10)
         const { checkAndAwardBadges } = await import("@/utils/badges/badge-logic")
-        await checkAndAwardBadges(user.id, { visits: true, cafeId })
+        const awardedBadges = await checkAndAwardBadges(user.id, { visits: true, cafeId })
 
         // Check for milestone (celebrate at 5, 10, 25, 50, 100 visits)
         const milestones = [5, 10, 25, 50, 100]
         const milestone = milestones.includes(newCount) ? newCount : null
 
-        return { success: true, visitCount: newCount, isFirstVisit, milestone, companions: validCompanions, companionResults }
+        return { success: true, visitCount: newCount, isFirstVisit, milestone, companions: validCompanions, companionResults, awardedBadges }
     } catch (error) {
         console.error("Error recording visit:", error)
         return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Failed to record visit" }

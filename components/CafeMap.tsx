@@ -35,6 +35,7 @@ import {
 import MarkerClusterGroup from "react-leaflet-cluster"
 import { trackMapUsage } from "@/utils/badges/badge-logic"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
 
 interface CafeMapProps {
     cafes: CafeWithRatings[]
@@ -226,12 +227,17 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
 
     // Track map usage for Eye Spy badge (only once per session)
     const hasTrackedMapUsage = useRef(false)
-    const handleMapUsed = useCallback(() => {
+    const { showBadgeNotification } = useBadgeNotification()
+
+    const handleMapUsed = useCallback(async () => {
         if (!hasTrackedMapUsage.current) {
             hasTrackedMapUsage.current = true
-            trackMapUsage().catch(console.error)
+            const result = await trackMapUsage()
+            if (result.awarded && result.badgeName) {
+                showBadgeNotification(result.badgeName)
+            }
         }
-    }, [])
+    }, [showBadgeNotification])
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: Force re-render on mount to avoid map initialization issues

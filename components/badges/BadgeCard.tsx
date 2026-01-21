@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { motion } from "motion/react"
 import Image from "next/image"
 import { getLucideIcon } from "./iconUtils"
 
@@ -38,9 +39,9 @@ const sizeClasses = {
 
 const rarityStyles = {
     common: "border-2 border-text/20",
-    rare: "border-2 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]",
+    rare: "border-2 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)] hover:shadow-[0_0_18px_rgba(59,130,246,0.6)]",
     legendary:
-        "border-2 border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.5)] animate-pulse",
+        "border-2 border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.5)] hover:shadow-[0_0_24px_rgba(251,191,36,0.7)]",
 }
 
 const rarityLabels = {
@@ -76,16 +77,18 @@ export default function BadgeCard({
     const iconSize = size === "lg" ? 32 : size === "md" ? 24 : 16
 
     return (
-        <div className='group relative'>
-            {/* Badge Image/Icon Container */}
+        <motion.div
+            className='group relative'
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
             <div
                 className={`
-                    ${sizeClasses[size]} 
-                    ${rarityStyles[badge.rarity]} 
+                    ${sizeClasses[size]}
+                    ${rarityStyles[badge.rarity]}
                     rounded-full overflow-hidden bg-background
                     flex items-center justify-center
-                    transition-transform duration-200
-                    ${showDetails ? "group-hover:scale-105" : ""}
+                    transition-shadow duration-300
                 `}
                 title={
                     showDetails
@@ -172,7 +175,7 @@ export default function BadgeCard({
                     )}
                 </div>
             )}
-        </div>
+        </motion.div>
     )
 }
 

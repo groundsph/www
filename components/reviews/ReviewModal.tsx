@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 import ImageUpload from "./ImageUpload"
 import { uploadReviewImage } from "@/utils/storage/client"
 import { compressReviewImage } from "@/utils/image-processing"
+import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
 
 interface ReviewModalProps {
     isOpen: boolean
@@ -39,6 +40,7 @@ export default function ReviewModal({
     )
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const { showBadgeNotifications } = useBadgeNotification()
 
     const handleSubmit = async () => {
         if (rating === 0) {
@@ -105,6 +107,12 @@ export default function ReviewModal({
             if (result.error) {
                 setError(result.error)
             } else {
+                if (!existingReview) {
+                    const awardedBadges = (result as unknown as { awardedBadges?: string[] }).awardedBadges
+                    if (awardedBadges && awardedBadges.length > 0) {
+                        showBadgeNotifications(awardedBadges)
+                    }
+                }
                 router.refresh()
                 onClose()
             }

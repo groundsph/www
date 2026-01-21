@@ -6,6 +6,7 @@ import "./globals.css"
 import AuthProvider from "@/components/AuthProvider"
 import LayoutWrapper from "@/components/LayoutWrapper"
 import NotificationProvider from "@/components/NotificationProvider"
+import BadgeNotificationProvider from "@/components/badges/BadgeNotificationContext"
 import AnalyticsBanner from "@/components/AnalyticsBanner"
 import NavigationProgress from "@/components/NavigationProgress"
 import AnnouncementBanner from "@/components/AnnouncementBanner"
@@ -118,9 +119,11 @@ export default function RootLayout({
                 </Suspense>
                 <AnnouncementBanner />
                 <NotificationProvider>
-                    <AuthProvider>
-                        <LayoutWrapper>{children}</LayoutWrapper>
-                    </AuthProvider>
+                    <BadgeNotificationProvider>
+                        <AuthProvider>
+                            <LayoutWrapper>{children}</LayoutWrapper>
+                        </AuthProvider>
+                    </BadgeNotificationProvider>
                 </NotificationProvider>
                 <AnalyticsBanner />
                 <Script

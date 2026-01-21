@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import CompanionSelector from "./CompanionSelector"
 import type { CheckInResult } from "@/app/api/actions/profile"
+import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
 
 interface UserResult {
     id: string
@@ -48,6 +49,7 @@ export default function GroupCheckInModal({
     const [showCompanions, setShowCompanions] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [result, setResult] = useState<CheckInResult | null>(null)
+    const { showBadgeNotifications } = useBadgeNotification()
 
     const handleSelect = useCallback((user: UserResult) => {
         setSelectedCompanions((prev) => [...prev, user])
@@ -66,6 +68,9 @@ export default function GroupCheckInModal({
             )
             if (checkInResult) {
                 setResult(checkInResult)
+                if (checkInResult.awardedBadges && checkInResult.awardedBadges.length > 0) {
+                    showBadgeNotifications(checkInResult.awardedBadges)
+                }
             }
         } finally {
             setIsSubmitting(false)

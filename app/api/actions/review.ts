@@ -81,14 +81,14 @@ export async function createReview(
     }
 
     // Check and award badges
-    await checkAndAwardBadges(user.id, { reviews: true, geographic: true })
+    const awardedBadges = await checkAndAwardBadges(user.id, { reviews: true, geographic: true })
 
     // Update activity points
     const { updateUserActivityStats } = await import("./admin")
     await updateUserActivityStats(user.id)
 
     revalidatePath(`/cafes/[slug]`)
-    return { success: true, data: inserted }
+    return { success: true, data: inserted, awardedBadges }
 }
 
 export async function updateReview(
