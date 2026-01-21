@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { motion } from "motion/react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import {
     CAFE_VIBE_TAGS,
@@ -163,8 +164,9 @@ export default function AmenitiesSection({
                         const isSelected =
                             cafe.payment_methods?.includes(method)
                         return (
-                            <button
+                            <motion.button
                                 key={method}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => {
                                     const current =
                                         cafe.payment_methods
@@ -185,8 +187,8 @@ export default function AmenitiesSection({
                                         : "bg-text/5 border border-text/10 hover:bg-text/10"
                                 }`}
                             >
-                                {formatLabel(method)}
-                            </button>
+                                    {formatLabel(method)}
+                                </motion.button>
                         )
                     })}
                 </div>
@@ -260,8 +262,9 @@ export default function AmenitiesSection({
                     {CAFE_SPECIALTIES.map((s) => {
                         const isSelected = cafe.specialty?.includes(s)
                         return (
-                            <button
+                            <motion.button
                                 key={s}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => {
                                     const current = cafe.specialty || []
                                     const updated = isSelected
@@ -276,7 +279,7 @@ export default function AmenitiesSection({
                                 }`}
                             >
                                 {formatLabel(s)}
-                            </button>
+                            </motion.button>
                         )
                     })}
                 </div>
@@ -339,8 +342,9 @@ export default function AmenitiesSection({
                     {CAFE_VIBE_TAGS.map((t) => {
                         const isSelected = cafe.tags?.includes(t)
                         return (
-                            <button
+                            <motion.button
                                 key={t}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => {
                                     const current = cafe.tags || []
                                     const updated = isSelected
@@ -355,7 +359,7 @@ export default function AmenitiesSection({
                                 }`}
                             >
                                 {formatLabel(t)}
-                            </button>
+                            </motion.button>
                         )
                     })}
                 </div>
@@ -414,8 +418,9 @@ export default function AmenitiesSection({
                     {BREW_METHODS.map((method) => {
                         const isSelected = cafe.brew_methods?.includes(method)
                         return (
-                            <button
+                            <motion.button
                                 key={method}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => {
                                     const current = cafe.brew_methods || []
                                     const updated = isSelected
@@ -433,7 +438,7 @@ export default function AmenitiesSection({
                                 }`}
                             >
                                 {method}
-                            </button>
+                            </motion.button>
                         )
                     })}
                 </div>

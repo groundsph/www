@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "motion/react"
+import confetti from "canvas-confetti"
 import {
     ChevronLeft,
     ChevronRight,
@@ -79,6 +80,31 @@ const STEPS = [
 ]
 
 const DRAFT_KEY = "grounds_cafe_submission_draft"
+
+// Animation variants for staggered entrance
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.1,
+        },
+    },
+}
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring" as const,
+            stiffness: 300,
+            damping: 24,
+        },
+    },
+}
 
 interface CafeSubmissionFormProps {
     onSuccess?: (cafeId: string, slug: string) => void
@@ -642,6 +668,13 @@ export default function CafeSubmissionForm({
             console.log("[Cafe Submit] Success!")
             clearDraft()
             setSuccess(true)
+
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#74512d', '#af8f6f', '#bc6c25', '#f1dec9'],
+            })
             addNotification(
                 "Cafe submitted successfully! We'll review it soon.",
                 "success",
@@ -676,17 +709,36 @@ export default function CafeSubmissionForm({
                 animate={{ opacity: 1, scale: 1 }}
                 className='text-center py-12'
             >
-                <div className='w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-6'>
+                <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className='w-16 h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-6'
+                >
                     <Check className='w-8 h-8 text-green-600' />
-                </div>
-                <h2 className='text-2xl font-bold font-serif mb-2'>
-                    Submission Received!
-                </h2>
-                <p className='text-text/60 max-w-md mx-auto'>
-                    Thank you for contributing to Grounds! Your cafe submission
-                    is now under review. We&apos;ll notify you once it&apos;s
-                    approved and live on the platform.
-                </p>
+                </motion.div>
+                <motion.div
+                    initial="hidden"
+                    animate="show"
+                    variants={itemVariants}
+                    transition={{ delay: 0.2 }}
+                >
+                    <h2 className='text-2xl font-bold font-serif mb-2'>
+                        Submission Received!
+                    </h2>
+                </motion.div>
+                <motion.div
+                    initial="hidden"
+                    animate="show"
+                    variants={itemVariants}
+                    transition={{ delay: 0.3 }}
+                >
+                    <p className='text-text/60 max-w-md mx-auto'>
+                        Thank you for contributing to Grounds! Your cafe submission
+                        is now under review. We&apos;ll notify you once it&apos;s
+                        approved and live on platform.
+                    </p>
+                </motion.div>
                 <button
                     onClick={resetForm}
                     className='mt-8 px-6 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-colors cursor-pointer'
@@ -718,7 +770,7 @@ export default function CafeSubmissionForm({
                                     !isActive && !isComplete && "text-text/40",
                                 )}
                             >
-                                <div
+                                <motion.div
                                     className={cn(
                                         "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
                                         isActive && "bg-primary text-white",
@@ -728,13 +780,21 @@ export default function CafeSubmissionForm({
                                             !isComplete &&
                                             "bg-text/10",
                                     )}
+                                    animate={{
+                                        scale: isActive ? 1.1 : 1,
+                                        rotate: isActive ? [0, -5, 5, -5, 0] : 0,
+                                    }}
+                                    transition={{
+                                        scale: { type: "spring", stiffness: 300, damping: 20 },
+                                        rotate: isActive ? { duration: 0.4 } : { duration: 0 }
+                                    }}
                                 >
                                     {isComplete ? (
                                         <Check className='w-4 h-4' />
                                     ) : (
                                         step.id
                                     )}
-                                </div>
+                                </motion.div>
                                 <span className='hidden md:block text-sm font-medium whitespace-nowrap'>
                                     {step.title}
                                 </span>
@@ -807,8 +867,16 @@ export default function CafeSubmissionForm({
                                             </p>
                                         </div>
                                     </div>
-                                    <ul className='space-y-3 ml-1'>
-                                        <li className='flex items-start gap-3'>
+                                    <motion.ul
+                                        className='space-y-3 ml-1'
+                                        initial="hidden"
+                                        animate="show"
+                                        variants={containerVariants}
+                                    >
+                                        <motion.li
+                                            className='flex items-start gap-3'
+                                            variants={itemVariants}
+                                        >
                                             <Check className='w-5 h-5 text-green-600 shrink-0 mt-0.5' />
                                             <span className='text-sm'>
                                                 <strong>Seating area</strong> —
@@ -816,19 +884,25 @@ export default function CafeSubmissionForm({
                                                 customers to sit and enjoy their
                                                 drinks
                                             </span>
-                                        </li>
-                                        <li className='flex items-start gap-3'>
+                                        </motion.li>
+                                        <motion.li
+                                            className='flex items-start gap-3'
+                                            variants={itemVariants}
+                                        >
                                             <Check className='w-5 h-5 text-green-600 shrink-0 mt-0.5' />
                                             <span className='text-sm'>
                                                 <strong>
                                                     Coffee or tea service
                                                 </strong>{" "}
                                                 — Serves freshly prepared
-                                                coffee, espresso, or tea
+                                                 coffee, espresso, or tea
                                                 beverages
                                             </span>
-                                        </li>
-                                        <li className='flex items-start gap-3'>
+                                        </motion.li>
+                                        <motion.li
+                                            className='flex items-start gap-3'
+                                            variants={itemVariants}
+                                        >
                                             <AlertCircle className='w-5 h-5 text-orange-500 shrink-0 mt-0.5' />
                                             <span className='text-sm'>
                                                 <strong>
@@ -836,11 +910,14 @@ export default function CafeSubmissionForm({
                                                 </strong>{" "}
                                                 — Mall kiosks, grab-and-go
                                                 stalls, or counters with
-                                                shared/borrowed seating
+                                                 shared/borrowed seating
                                                 don&apos;t qualify
                                             </span>
-                                        </li>
-                                        <li className='flex items-start gap-3'>
+                                        </motion.li>
+                                        <motion.li
+                                            className='flex items-start gap-3'
+                                            variants={itemVariants}
+                                        >
                                             <AlertCircle className='w-5 h-5 text-orange-500 shrink-0 mt-0.5' />
                                             <span className='text-sm'>
                                                 <strong>
@@ -849,8 +926,8 @@ export default function CafeSubmissionForm({
                                                 — Stores with a coffee machine
                                                 (like 7-Eleven) are not cafes
                                             </span>
-                                        </li>
-                                    </ul>
+                                        </motion.li>
+                                    </motion.ul>
                                 </div>
 
                                 {/* Search for existing cafe */}
@@ -909,6 +986,7 @@ export default function CafeSubmissionForm({
                                                     height: "auto",
                                                 }}
                                                 exit={{ opacity: 0, height: 0 }}
+                                                layout
                                                 className='overflow-hidden'
                                             >
                                                 <div className='mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl'>
@@ -991,18 +1069,23 @@ export default function CafeSubmissionForm({
 
                         {/* Step 1: Basic Info */}
                         {currentStep === 1 && (
-                            <div className='space-y-6'>
-                                <div>
+                            <motion.div
+                                initial="hidden"
+                                animate="show"
+                                variants={containerVariants}
+                                className='space-y-6'
+                            >
+                                <motion.div variants={itemVariants}>
                                     <h3 className='text-xl font-semibold font-serif mb-1'>
                                         Basic Information
                                     </h3>
                                     <p className='text-text/60 text-sm'>
                                         Tell us about the cafe
                                     </p>
-                                </div>
+                                </motion.div>
 
-                                <div className='space-y-4'>
-                                    <div>
+                                <motion.div className='space-y-4' variants={containerVariants}>
+                                    <motion.div variants={itemVariants}>
                                         <label className='block text-sm font-medium mb-2'>
                                             Cafe Name{" "}
                                             <span className='text-red-500'>
@@ -1134,7 +1217,7 @@ export default function CafeSubmissionForm({
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
-                                    </div>
+                                    </motion.div>
 
                                     <div>
                                         <label className='block text-sm font-medium mb-2'>
@@ -1308,8 +1391,8 @@ export default function CafeSubmissionForm({
                                             }
                                         />
                                     </div>
-                                </div>
-                            </div>
+                                </motion.div>
+                            </motion.div>
                         )}
 
                         {/* Step 2: Location */}
@@ -1729,7 +1812,7 @@ export default function CafeSubmissionForm({
                                                 desc: "Above ₱200",
                                             },
                                         ].map(({ value, symbol, desc }) => (
-                                            <button
+                                            <motion.button
                                                 key={value}
                                                 type='button'
                                                 onClick={() =>
@@ -1738,6 +1821,8 @@ export default function CafeSubmissionForm({
                                                         value,
                                                     )
                                                 }
+                                                whileHover={{ y: -4 }}
+                                                whileTap={{ scale: 0.95 }}
                                                 className={cn(
                                                     "flex-1 py-3 rounded-xl border-2 font-medium transition-all cursor-pointer text-center",
                                                     formData.price_level ===
@@ -1750,7 +1835,7 @@ export default function CafeSubmissionForm({
                                                 <div className='text-xs opacity-70 mt-0.5'>
                                                     {desc}
                                                 </div>
-                                            </button>
+                                            </motion.button>
                                         ))}
                                     </div>
                                 </div>
@@ -1770,23 +1855,25 @@ export default function CafeSubmissionForm({
                                     <div className='flex gap-3'>
                                         {COFFEE_STYLES.map(
                                             ({ value, label, description }) => (
-                                                <button
+                                                <motion.button
                                                     key={value}
                                                     type='button'
                                                     onClick={() =>
                                                         updateFormData(
-                                                            "coffee_style",
-                                                            value as
-                                                                | "classic"
-                                                                | "artisan",
-                                                        )
+                                                                "coffee_style",
+                                                                value as
+                                                                    | "classic"
+                                                                    | "artisan",
+                                                            )
                                                     }
+                                                    whileHover={{ y: -4 }}
+                                                    whileTap={{ scale: 0.95 }}
                                                     className={cn(
                                                         "flex-1 py-3 px-4 rounded-xl border-2 transition-all cursor-pointer text-left",
                                                         formData.coffee_style ===
                                                             value
-                                                            ? "border-primary bg-primary/10 text-primary"
-                                                            : "border-text/10 text-text/60 hover:border-text/30",
+                                                                ? "border-primary bg-primary/10 text-primary"
+                                                                : "border-text/10 text-text/60 hover:border-text/30",
                                                     )}
                                                 >
                                                     <div className='font-medium'>
@@ -1795,10 +1882,10 @@ export default function CafeSubmissionForm({
                                                     <div className='text-xs opacity-70 mt-0.5'>
                                                         {description}
                                                     </div>
-                                                </button>
+                                                </motion.button>
                                             ),
                                         )}
-                                        <button
+                                        <motion.button
                                             type='button'
                                             onClick={() =>
                                                 updateFormData(
@@ -1806,6 +1893,8 @@ export default function CafeSubmissionForm({
                                                     null,
                                                 )
                                             }
+                                            whileHover={{ y: -4 }}
+                                            whileTap={{ scale: 0.95 }}
                                             className={cn(
                                                 "px-4 py-3 rounded-xl border-2 transition-all cursor-pointer",
                                                 formData.coffee_style === null
@@ -1817,9 +1906,9 @@ export default function CafeSubmissionForm({
                                                 None
                                             </div>
                                             <div className='text-xs opacity-70 mt-0.5'>
-                                                Skip
+                                                    Skip
                                             </div>
-                                        </button>
+                                        </motion.button>
                                     </div>
                                 </div>
 
@@ -2548,26 +2637,30 @@ export default function CafeSubmissionForm({
 
             {/* Navigation Buttons */}
             <div className='flex justify-between mt-8 pt-6 border-t border-text/10'>
-                <button
+                <motion.button
                     type='button'
                     onClick={prevStep}
                     disabled={currentStep === 0}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.95 }}
                     className='flex items-center gap-2 px-6 py-3 text-text/60 hover:text-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
                 >
                     <ChevronLeft className='w-5 h-5' />
                     Previous
-                </button>
+                </motion.button>
 
                 {currentStep < STEPS[STEPS.length - 1].id ? (
-                    <button
+                    <motion.button
                         type='button'
                         onClick={nextStep}
                         disabled={currentStep === 0 && !isNameVerified}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.95 }}
                         className='flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
                     >
                         Next
                         <ChevronRight className='w-5 h-5' />
-                    </button>
+                    </motion.button>
                 ) : (
                     <motion.button
                         whileHover={{ scale: 1.02 }}
