@@ -154,14 +154,14 @@ export default function LandingHero({
                 className='w-full relative h-auto aspect-square md:aspect-video'
             >
                 <div className='absolute inset-0 bg-linear-to-b from-black/50 via-black/20 to-transparent z-10' />
-                <AnimatePresence mode='wait'>
+                <AnimatePresence mode='popLayout'>
                     {featured && (
                         <motion.div
                             key={featured.id}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.8, ease: "easeInOut" }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
                             className='absolute inset-0'
                         >
                             <div className='absolute top-0 z-20 px-4 py-4 max-w-full w-max gap-x-2 text-3xl font-semibold flex flex-row flex-wrap text-background'>
