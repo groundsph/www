@@ -68,6 +68,7 @@ export default function StoriesEventsSection({
                                 <motion.div
                                     key={post.id}
                                     variants={itemVariants}
+                                    whileHover={{ x: 4 }}
                                 >
                                     <Link
                                         href={`/blog/${post.slug}`}
@@ -120,6 +121,7 @@ export default function StoriesEventsSection({
                                     <motion.div
                                         key={event.id}
                                         variants={itemVariants}
+                                        whileHover={{ x: 4 }}
                                     >
                                         <Link
                                             href='/events'

@@ -23,6 +23,7 @@ export default function RecentCard({
             initial={{ opacity: 0, y: 10 }}
             animate={animate ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
             transition={{ delay: idx * 0.1, duration: 0.6, ease: "easeOut" }}
+            whileHover={{ y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
             href={`/cafes/${cafe.slug}`}
             className='min-w-[85%] md:min-w-72 md:w-72 snap-center md:snap-start flex flex-col bg-background hover:bg-tertiary/60 border border-secondary/20 hover:border-secondary/40 shadow-sm hover:shadow-md rounded-2xl overflow-hidden group transition-all duration-300'
         >

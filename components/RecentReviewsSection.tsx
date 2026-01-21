@@ -55,6 +55,7 @@ export default function RecentReviewsSection({
                                 ? { opacity: 1, y: 0 }
                                 : { opacity: 0, y: 10 }
                         }
+                        whileHover={{ y: -5, transition: { type: "spring", stiffness: 300, damping: 20 } }}
                         transition={{
                             delay: idx * 0.1,
                             duration: 0.6,

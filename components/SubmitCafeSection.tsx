@@ -18,7 +18,8 @@ export default function SubmitCafeSection({
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 0.1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 1.5, ease: "easeOut", repeat: Infinity, repeatDelay: 1 }}
                 className='absolute left-8 bottom-4 -rotate-12'
             >
                 <MapPinIcon className='h-32 w-32 text-background' />
@@ -27,8 +28,9 @@ export default function SubmitCafeSection({
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 0.1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
-                className='absolute right-12 top-8 rotate-6'
+                animate={{ y: [0, 15, 0], rotate: [6, 4, 6] }}
+                transition={{ duration: 5, repeat: Infinity, repeatDelay: 0.5, ease: "easeInOut" }}
+                className='absolute right-12 top-8'
             >
                 <Coffee className='h-24 w-24 text-background' />
             </motion.div>

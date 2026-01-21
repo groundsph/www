@@ -27,34 +27,17 @@ export default function LandingHero({
         >
             {/* Information */}
             <motion.div
-                initial='hidden'
-                animate='visible'
-                variants={{
-                    hidden: { opacity: 0 },
-                    visible: {
-                        opacity: 1,
-                        transition: {
-                            staggerChildren: 0.15,
-                            delayChildren: 0.2,
-                        },
-                    },
-                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.05 }}
                 className='w-full flex flex-col gap-4 px-6 md:px-0'
             >
                 <div className='w-full flex flex-col md:flex-row gap-4 md:gap-6'>
                     <div className='flex-1 flex flex-col'>
                         <motion.h1
-                            variants={{
-                                hidden: { opacity: 0, y: 10 },
-                                visible: {
-                                    opacity: 1,
-                                    y: 0,
-                                    transition: {
-                                        duration: 0.8,
-                                        ease: "easeOut",
-                                    },
-                                },
-                            }}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
                             className='text-5xl md:text-6xl lg:text-7xl font-bold flex flex-col'
                         >
                             <span>
@@ -66,17 +49,9 @@ export default function LandingHero({
                             </span>
                         </motion.h1>
                         <motion.span
-                            variants={{
-                                hidden: { opacity: 0, y: 10 },
-                                visible: {
-                                    opacity: 1,
-                                    y: 0,
-                                    transition: {
-                                        duration: 0.8,
-                                        ease: "easeOut",
-                                    },
-                                },
-                            }}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
                             className='text-lg md:text-2xl lg:text-3xl font-semibold'
                         >
                             Discover the finest cafes across the archipelago
@@ -87,38 +62,19 @@ export default function LandingHero({
                             <>
                                 <div className='flex flex-col gap-1'>
                                     <motion.h2
-                                        variants={{
-                                            hidden: { opacity: 0, y: 10 },
-                                            visible: {
-                                                opacity: 1,
-                                                y: 0,
-                                                transition: {
-                                                    duration: 0.8,
-                                                    ease: "easeOut",
-                                                },
-                                            },
-                                        }}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
                                         className='text-2xl md:text-5xl lg:text-6xl font-bold font-serif'
                                     >
                                         Today&apos;s Featured
                                     </motion.h2>
                                     {isLocalFeatured && locationName && (
                                         <motion.div
-                                            initial='hidden'
-                                            animate='visible'
-                                            exit='hidden'
-                                            variants={{
-                                                hidden: { opacity: 0, y: 5 },
-                                                visible: {
-                                                    opacity: 1,
-                                                    y: 0,
-                                                    transition: {
-                                                        duration: 0.8,
-                                                        delay: 0.6,
-                                                        ease: "easeOut",
-                                                    },
-                                                },
-                                            }}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 5 }}
+                                            transition={{ duration: 0.8, delay: 0.35, ease: "easeOut" }}
                                             className='flex flex-col gap-1'
                                         >
                                             <div className='flex flex-row items-center gap-1 text-sm text-text/60'>
@@ -142,37 +98,19 @@ export default function LandingHero({
                                 <AnimatePresence mode='wait'>
                                     <motion.p
                                         key={featured.id}
-                                        initial='hidden'
-                                        animate='visible'
-                                        exit='hidden'
-                                        variants={{
-                                            hidden: { opacity: 0, y: 5 },
-                                            visible: {
-                                                opacity: 1,
-                                                y: 0,
-                                                transition: {
-                                                    duration: 0.8,
-                                                    delay: 0.7,
-                                                    ease: "easeOut",
-                                                },
-                                            },
-                                        }}
+                                        initial={{ opacity: 0, y: 5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 5 }}
+                                        transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
                                         className='text-sm md:text-base lg:text-lg my-4 md:my-6'
                                     >
                                         {featured.description}
                                     </motion.p>
                                 </AnimatePresence>
                                 <motion.div
-                                    variants={{
-                                        hidden: { opacity: 0 },
-                                        visible: {
-                                            opacity: 1,
-                                            transition: {
-                                                duration: 0.8,
-                                                ease: "easeOut",
-                                            },
-                                        },
-                                    }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
                                     className='w-full flex flex-row gap-4 items-center flex-wrap'
                                 >
                                     {featured.slug && (
@@ -211,7 +149,7 @@ export default function LandingHero({
                 initial={{ opacity: 0 }}
                 animate={{
                     opacity: 1,
-                    transition: { duration: 1.2, delay: 0.2, ease: "easeOut" },
+                    transition: { duration: 0.8, delay: 0.6, ease: "easeOut" },
                 }}
                 className='w-full relative h-auto aspect-square md:aspect-video'
             >
@@ -223,7 +161,7 @@ export default function LandingHero({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 1.2, ease: "easeInOut" }}
+                            transition={{ duration: 0.8, ease: "easeInOut" }}
                             className='absolute inset-0'
                         >
                             <div className='absolute top-0 z-20 px-4 py-4 max-w-full w-max gap-x-2 text-3xl font-semibold flex flex-row flex-wrap text-background'>
