@@ -35,6 +35,7 @@ import {
     Droplet,
     MilkOff,
     Coffee,
+    RotateCcw,
 } from "lucide-react"
 import {
     approveCafe,
@@ -42,16 +43,19 @@ import {
     unpublishCafe,
     deleteCafe,
     getPaginatedCafes,
+    getManualSubscriptions,
     type CafeFilterOptions,
 } from "@/app/api/actions/admin"
 import {
     approveSuggestion,
     rejectSuggestion,
+    getPendingSuggestions,
 } from "@/app/api/actions/suggestions"
 import {
     approveClaim,
     rejectClaim,
     CafeClaim,
+    getPendingClaims,
     getOwnershipProofSignedUrl,
 } from "@/app/api/actions/claim"
 import { EditSuggestion } from "@/utils/types/suggestions"
@@ -111,9 +115,12 @@ export default function CafesManagement({
     const [publishedPage, setPublishedPage] = useState(1)
     const [loadingMore, setLoadingMore] = useState(false)
     const [isFiltering, setIsFiltering] = useState(false)
+    const [isRefreshing, setIsRefreshing] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
 
     const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [claims, setClaims] = useState<CafeClaim[]>(initialClaims)
+    const [subscriptions, setSubscriptions] = useState(manualSubscriptions)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
         null
@@ -218,6 +225,33 @@ export default function CafesManagement({
         const isPublished = activeTab === "published"
         await fetchCafes(isPublished, 1, false)
         setIsFiltering(false)
+    }
+
+    // Refresh data for current tab
+    const handleRefresh = async () => {
+        setIsRefreshing(true)
+        try {
+            if (activeTab === "pending") {
+                await fetchCafes(false, 1, false)
+            } else if (activeTab === "published") {
+                await fetchCafes(true, 1, false)
+            } else if (activeTab === "suggestions") {
+                const data = await getPendingSuggestions()
+                setSuggestions(data)
+            } else if (activeTab === "claims") {
+                const data = await getPendingClaims()
+                setClaims(data)
+            } else if (activeTab === "subscriptions") {
+                const data = await getManualSubscriptions()
+                setSubscriptions(data)
+                setRefreshKey((prev) => prev + 1)
+            }
+        } catch (error) {
+            console.error("Failed to refresh:", error)
+            alert("Failed to refresh data")
+        } finally {
+            setIsRefreshing(false)
+        }
     }
 
     // Reset city filter when province changes
@@ -417,13 +451,25 @@ export default function CafesManagement({
     return (
         <div className='space-y-6'>
             {/* Header */}
-            <div>
-                <h1 className='text-2xl md:text-3xl font-bold text-text'>
-                    Cafes Management
-                </h1>
-                <p className='text-text/60 mt-1'>
-                    Review submissions, suggestions, and ownership claims.
-                </p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className='text-2xl md:text-3xl font-bold text-text'>
+                        Cafes Management
+                    </h1>
+                    <p className='text-text/60 mt-1'>
+                        Review submissions, suggestions, and ownership claims.
+                    </p>
+                </div>
+                <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 px-4 py-2 bg-tertiary/30 text-text rounded-lg hover:bg-tertiary transition disabled:opacity-50"
+                >
+                    <RotateCcw
+                        className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+                    />
+                    Refresh Data
+                </button>
             </div>
 
             {/* Stats */}
@@ -514,7 +560,8 @@ export default function CafesManagement({
             {/* Subscriptions Tab */}
             {activeTab === "subscriptions" && (
                 <SubscriptionsTable
-                    initialSubscriptions={manualSubscriptions}
+                    key={refreshKey}
+                    initialSubscriptions={subscriptions}
                 />
             )}
 
@@ -654,7 +701,7 @@ export default function CafesManagement({
 
                     {/* Results count */}
                     <div className='text-sm text-text/50'>
-                        {isFiltering ? (
+                        {isFiltering || isRefreshing ? (
                             <span className='flex items-center gap-2'>
                                 <Loader2 className='w-4 h-4 animate-spin' />
                                 Loading...
