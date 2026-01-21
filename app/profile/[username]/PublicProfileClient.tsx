@@ -101,6 +101,20 @@ function getProgressToNextRank(
     return { progress, pointsNeeded, nextRankLabel: nextConfig.label }
 }
 
+const staggerContainer = {
+    animate: {
+        transition: {
+            staggerChildren: 0.1,
+        },
+    },
+}
+
+const item = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 },
+}
+
 interface PublicProfileClientProps {
     profile: ProfileWithBadges
 }
@@ -208,12 +222,13 @@ export default function PublicProfileClient({
     return (
         <main className='w-full min-h-screen px-4 py-8'>
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
                 className='max-w-7xl mx-auto'
             >
                 {/* Profile Header */}
-                <section className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
+                <motion.section variants={item} className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
                     {/* Avatar */}
                     <div className='relative'>
                         <div className='w-28 h-28 rounded-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden border-4 border-background relative'>
@@ -348,10 +363,10 @@ export default function PublicProfileClient({
                             </div>
                         )}
                     </div>
-                </section>
+                </motion.section>
 
                 {/* Badges Collection - Passport Style */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <div className='flex items-center gap-2 mb-4'>
                         <Medal className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
@@ -644,10 +659,10 @@ export default function PublicProfileClient({
                             )
                         })()}
                     </div>
-                </section>
+                </motion.section>
 
                 {/* Stats Grid */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
                         <Award className='w-5 h-5' />
                         Stats
@@ -664,7 +679,7 @@ export default function PublicProfileClient({
                                 )
 
                             return (
-                                <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                                <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                                     <div
                                         className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
                                     >
@@ -699,13 +714,14 @@ export default function PublicProfileClient({
                                             Max Rank!
                                         </span>
                                     )}
-                                </div>
+                                </motion.div>
                             )
                         })()}
                         {/* Reviews */}
-                        <a
+                        <motion.a
+                            whileHover={{ scale: 1.05, y: -2 }}
                             href='#reviews'
-                            className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-text/20 transition-colors'
+                            className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-text/20 transition-all'
                         >
                             <div className='p-2 bg-primary/10 rounded-lg mb-2'>
                                 <MessageSquare className='w-6 h-6 text-primary' />
@@ -716,9 +732,9 @@ export default function PublicProfileClient({
                             <span className='text-xs text-text/60'>
                                 Reviews
                             </span>
-                        </a>
+                        </motion.a>
                         {/* Photos */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                        <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                             <div className='p-2 bg-secondary/10 rounded-lg mb-2'>
                                 <Camera className='w-6 h-6 text-secondary' />
                             </div>
@@ -726,9 +742,9 @@ export default function PublicProfileClient({
                                 {stats?.total_photos ?? 0}
                             </span>
                             <span className='text-xs text-text/60'>Photos</span>
-                        </div>
+                        </motion.div>
                         {/* Scouted */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                        <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                             <div className='p-2 bg-text/10 rounded-lg mb-2'>
                                 <Coffee className='w-6 h-6 text-text/70' />
                             </div>
@@ -738,20 +754,20 @@ export default function PublicProfileClient({
                             <span className='text-xs text-text/60'>
                                 Scouted
                             </span>
-                        </div>
+                        </motion.div>
                     </div>
-                </section>
+                </motion.section>
 
                 {/* Visit History Section */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <VisitHistory
                         visits={visitedCafes}
                         isPublic={true}
                     />
-                </section>
+                </motion.section>
 
                 {/* Passport Section */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <Passport
                         visited={visitedCafes.map((c) => ({
                             name: c.name,
@@ -760,15 +776,16 @@ export default function PublicProfileClient({
                         favorites={favoriteCafes}
                         wishlist={wishlistCafes}
                     />
-                </section>
+                </motion.section>
 
                 {/* Contribution History */}
-                <section className='mt-10 bg-text/5 border border-text/10 rounded-xl'>
+                <motion.section variants={item} className='mt-10 bg-text/5 border border-text/10 rounded-xl'>
                     <ContributionTimeline userId={profile.id} />
-                </section>
+                </motion.section>
 
                 {/* Reviews Section */}
-                <section
+                <motion.section
+                    variants={item}
                     id='reviews'
                     className='mt-10'
                 >
@@ -789,9 +806,10 @@ export default function PublicProfileClient({
                     {reviews.length > 0 ? (
                         <div className='flex flex-col gap-6'>
                             {reviews.map((review) => (
-                                <div
+                                <motion.div
                                     key={review.id}
-                                    className='bg-text/5 border border-text/10 rounded-xl p-5 flex flex-col gap-4'
+                                    whileHover={{ scale: 1.01, y: -1 }}
+                                    className='bg-text/5 border border-text/10 rounded-xl p-5 flex flex-col gap-4 transition-all hover:border-text/20'
                                 >
                                     {/* Cafe info line - Added Link and visual context */}
                                     <div className='flex items-center gap-2 pb-4 border-b border-text/10'>
@@ -841,7 +859,7 @@ export default function PublicProfileClient({
                                         }}
                                         currentUser={user}
                                     />
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
                     ) : (
@@ -852,7 +870,7 @@ export default function PublicProfileClient({
                             </p>
                         </div>
                     )}
-                </section>
+                </motion.section>
             </motion.div>
 
             <FollowListModal

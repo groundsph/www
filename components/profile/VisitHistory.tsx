@@ -368,11 +368,13 @@ export default function VisitHistory({
                                         className='group flex flex-col items-center'
                                     >
                                         {/* Badge circle with thumbnail */}
-                                        <div
-                                            className='rounded-full bg-background border-2 border-primary/40 flex items-center justify-center shadow-md group-hover:border-primary group-hover:shadow-lg group-hover:scale-110 transition-all duration-200 overflow-hidden'
+                                        <motion.div
+                                            whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(116, 81, 45, 0.4)" }}
+                                            className='rounded-full bg-background border-2 border-primary/40 flex items-center justify-center overflow-hidden transition-all duration-200'
                                             style={{
                                                 width: `${BADGE_SIZE}px`,
                                                 height: `${BADGE_SIZE}px`,
+                                                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                                             }}
                                         >
                                             {cafe.thumbnail ? (
@@ -388,12 +390,13 @@ export default function VisitHistory({
                                             ) : (
                                                 <Coffee
                                                     className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary/70 group-hover:text-primary transition-colors`}
-                                                />
-                                            )}
-                                        </div>
+                                                    />
+                                                )}
+                                        </motion.div>
 
                                         {/* Cafe name - responsive display */}
-                                        <span
+                                        <motion.span
+                                            whileHover={{ color: "rgb(116, 81, 45)" }}
                                             className='mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-text/80 font-medium text-center leading-tight'
                                             style={{
                                                 maxWidth: isMobile
@@ -401,9 +404,9 @@ export default function VisitHistory({
                                                     : "120px",
                                                 wordBreak: "break-word",
                                             }}
-                                        >
+                                            >
                                             {cafe.name}
-                                        </span>
+                                        </motion.span>
 
                                         {/* Date below name */}
                                         <span className='text-[9px] sm:text-[10px] text-text/40 font-medium whitespace-nowrap'>

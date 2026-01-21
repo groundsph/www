@@ -121,14 +121,24 @@ export default function Passport({
 
                             {visited.length > 0 ? (
                                 <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-8'>
-                                    {visited.map((cafe) => (
-                                        <Link
+                                    {visited.map((cafe, index) => (
+                                        <motion.div
                                             key={cafe.slug}
-                                            href={`/cafes/${cafe.slug}`}
-                                            className='group relative aspect-square'
+                                            initial={{ opacity: 0, scale: 0.8, rotate: -12 }}
+                                            animate={{ opacity: 1, scale: 1, rotate: -12 }}
+                                            whileHover={{ rotate: 0, scale: 1.05 }}
+                                            transition={{
+                                                delay: index * 0.05,
+                                                duration: 0.3,
+                                            }}
+                                            className='relative aspect-square'
                                         >
-                                            {/* Stamp Visual */}
-                                            <div className='absolute inset-0 flex flex-col items-center justify-center p-4 text-center transform -rotate-12 group-hover:rotate-0 group-hover:scale-105 transition-all duration-300'>
+                                            <Link
+                                                href={`/cafes/${cafe.slug}`}
+                                                className='group w-full h-full'
+                                            >
+                                                {/* Stamp Visual */}
+                                                <div className='absolute inset-0 flex flex-col items-center justify-center p-4 text-center transition-all duration-300'>
                                                 <Coffee className='w-6 h-6 text-primary/50 mb-1' />
                                                 <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight max-w-4/5'>
                                                     {cafe.name}
@@ -142,7 +152,8 @@ export default function Passport({
                                                     className='w-full h-full absolute inset-0 object-contain'
                                                 />
                                             </div>
-                                        </Link>
+                                            </Link>
+                                        </motion.div>
                                     ))}
                                 </div>
                             ) : (
@@ -183,10 +194,14 @@ export default function Passport({
 
                             {favorites.length > 0 ? (
                                 <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-                                    {favorites.map((cafe) => (
-                                        <div
+                                    {favorites.map((cafe, index) => (
+                                        <motion.div
                                             key={cafe.slug}
-                                            className='flex items-center gap-3 p-3 bg-background border border-text/5 rounded-xl hover:border-red-500/30 transition-colors group'
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            whileHover={{ scale: 1.02, x: 3 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            className='flex items-center gap-3 p-3 bg-background border border-text/5 rounded-xl hover:border-red-500/30 transition-all'
                                         >
                                             <div className='w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0'>
                                                 <Heart className='w-5 h-5 text-red-500 fill-red-500' />
@@ -197,7 +212,7 @@ export default function Passport({
                                             >
                                                 {cafe.name}
                                             </Link>
-                                        </div>
+                                        </motion.div>
                                     ))}
                                 </div>
                             ) : (
@@ -238,10 +253,14 @@ export default function Passport({
 
                             {wishlist.length > 0 ? (
                                 <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-                                    {wishlist.map((cafe) => (
-                                        <div
+                                    {wishlist.map((cafe, index) => (
+                                        <motion.div
                                             key={cafe.slug}
-                                            className='flex items-center gap-3 p-3 bg-background border border-text/5 rounded-xl hover:border-secondary/30 transition-colors group'
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            whileHover={{ scale: 1.02, x: 3 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            className='flex items-center gap-3 p-3 bg-background border border-text/5 rounded-xl hover:border-secondary/30 transition-all'
                                         >
                                             <div className='w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center shrink-0'>
                                                 <Bookmark className='w-5 h-5 text-secondary fill-secondary' />
@@ -252,7 +271,7 @@ export default function Passport({
                                             >
                                                 {cafe.name}
                                             </Link>
-                                        </div>
+                                        </motion.div>
                                     ))}
                                 </div>
                             ) : (

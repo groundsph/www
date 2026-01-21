@@ -112,6 +112,20 @@ function getProgressToNextRank(
     return { progress, pointsNeeded, nextRankLabel: nextConfig.label }
 }
 
+const staggerContainer = {
+    animate: {
+        transition: {
+            staggerChildren: 0.1,
+        },
+    },
+}
+
+const item = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 },
+}
+
 export default function ProfileClient() {
     const router = useRouter()
     const { user, refreshProfile } = useAuth()
@@ -429,12 +443,13 @@ export default function ProfileClient() {
     return (
         <main className='w-full min-h-screen px-4 py-8'>
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
                 className='max-w-7xl mx-auto'
             >
                 {/* Profile Header */}
-                <section className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
+                <motion.section variants={item} className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
                     {/* Avatar */}
                     <div className='relative'>
                         {/* Hidden input for Avatar Upload */}
@@ -716,11 +731,11 @@ export default function ProfileClient() {
                             </Link>
                         </div>
                     </div>
-                </section>
+                </motion.section>
 
                 {/* My Cafes Section - Only shown if user owns cafes */}
                 {ownedCafes.length > 0 && (
-                    <section className='mt-10'>
+                    <motion.section variants={item} className='mt-10'>
                         <div className='flex items-center gap-2 mb-4'>
                             <Store className='w-5 h-5' />
                             <h2 className='text-xl font-semibold font-serif'>
@@ -734,11 +749,11 @@ export default function ProfileClient() {
                         <div className='bg-linear-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-6'>
                             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
                                 {ownedCafes.slice(0, 3).map((cafe) => (
-                                    <Link
-                                        key={cafe.id}
-                                        href={`/owner/cafes/${cafe.slug}`}
-                                        className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group'
-                                    >
+                                    <motion.div key={cafe.id} whileHover={{ scale: 1.02, y: -2 }}>
+                                        <Link
+                                            href={`/owner/cafes/${cafe.slug}`}
+                                            className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                        >
                                         {cafe.thumbnail ? (
                                             <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
                                                 <Image
@@ -765,6 +780,7 @@ export default function ProfileClient() {
                                             </p>
                                         </div>
                                     </Link>
+                                    </motion.div>
                                 ))}
                             </div>
 
@@ -776,11 +792,11 @@ export default function ProfileClient() {
                                 Go to Owner Dashboard
                             </Link>
                         </div>
-                    </section>
+                    </motion.section>
                 )}
 
                 {/* Badges Collection - Passport Style */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <div className='flex items-center gap-2 mb-4'>
                         <Medal className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
@@ -1073,10 +1089,10 @@ export default function ProfileClient() {
                             )
                         })()}
                     </div>
-                </section>
+                </motion.section>
 
                 {/* Stats Grid - Cleaned up icons */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
                         <Award className='w-5 h-5' />
                         Your Stats
@@ -1093,7 +1109,7 @@ export default function ProfileClient() {
                                 )
 
                             return (
-                                <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                                <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                                     <div
                                         className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
                                     >
@@ -1129,13 +1145,14 @@ export default function ProfileClient() {
                                             Max Rank!
                                         </span>
                                     )}
-                                </div>
+                                </motion.div>
                             )
                         })()}
                         {/* Reviews - Clickable */}
-                        <a
+                        <motion.a
+                            whileHover={{ scale: 1.05, y: -2 }}
                             href='#reviews'
-                            className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-text/20 transition-colors cursor-pointer'
+                            className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-text/20 transition-all cursor-pointer'
                         >
                             <div className='p-2 bg-primary/10 rounded-lg mb-2'>
                                 <MessageSquare className='w-6 h-6 text-primary' />
@@ -1146,9 +1163,9 @@ export default function ProfileClient() {
                             <span className='text-xs text-text/60'>
                                 Reviews
                             </span>
-                        </a>
+                        </motion.a>
                         {/* Photos */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                        <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                             <div className='p-2 bg-secondary/10 rounded-lg mb-2'>
                                 <Camera className='w-6 h-6 text-secondary' />
                             </div>
@@ -1156,9 +1173,9 @@ export default function ProfileClient() {
                                 {stats?.total_photos ?? 0}
                             </span>
                             <span className='text-xs text-text/60'>Photos</span>
-                        </div>
+                        </motion.div>
                         {/* Scouted */}
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center'>
+                        <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                             <div className='p-2 bg-text/10 rounded-lg mb-2'>
                                 <Coffee className='w-6 h-6 text-text/70' />
                             </div>
@@ -1168,7 +1185,7 @@ export default function ProfileClient() {
                             <span className='text-xs text-text/60'>
                                 Scouted
                             </span>
-                        </div>
+                        </motion.div>
                     </div>
 
                     {/* Rank Hierarchy Toggle */}
@@ -1293,11 +1310,11 @@ export default function ProfileClient() {
                             )}
                         </AnimatePresence>
                     </div>
-                </section>
+                </motion.section>
 
                 {/* Favorite Spots - Top 5 most visited cafes */}
                 {visitedCafes.some((c) => (c.visitCount ?? 0) > 1) && (
-                    <section className='mt-10'>
+                    <motion.section variants={item} className='mt-10'>
                         <div className='flex items-center gap-2 mb-4'>
                             <Coffee className='w-5 h-5' />
                             <h2 className='text-xl font-semibold font-serif'>
@@ -1318,11 +1335,11 @@ export default function ProfileClient() {
                                 .slice(0, 5)
                                 .filter((c) => (c.visitCount ?? 0) > 1)
                                 .map((cafe) => (
-                                    <Link
-                                        key={cafe.slug}
-                                        href={`/cafes/${cafe.slug}`}
-                                        className='group relative flex flex-col items-center p-4 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-colors'
-                                    >
+                                    <motion.div key={cafe.slug} whileHover={{ scale: 1.05, y: -3 }}>
+                                        <Link
+                                            href={`/cafes/${cafe.slug}`}
+                                            className='group relative flex flex-col items-center p-4 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-all h-full'
+                                        >
                                         {/* Visit count badge */}
                                         <span className='absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
                                             {cafe.visitCount}×
@@ -1352,18 +1369,19 @@ export default function ProfileClient() {
                                             {cafe.name}
                                         </span>
                                     </Link>
+                                    </motion.div>
                                 ))}
-                        </div>
-                    </section>
+                            </div>
+                    </motion.section>
                 )}
 
                 {/* Visit History Section */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <VisitHistory visits={visitedCafes} />
-                </section>
+                </motion.section>
 
                 {/* Passport Section */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <Passport
                         visited={visitedCafes.map((c) => ({
                             name: c.name,
@@ -1373,10 +1391,10 @@ export default function ProfileClient() {
                         wishlist={wishlistCafes}
                         isOwnProfile={true}
                     />
-                </section>
+                </motion.section>
 
                 {/* Collections Section */}
-                <section className='mt-10'>
+                <motion.section variants={item} className='mt-10'>
                     <div className='flex items-center gap-2 mb-4'>
                         <Layers className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
@@ -1391,11 +1409,11 @@ export default function ProfileClient() {
                         <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
                                 {collections.slice(0, 3).map((collection) => (
-                                    <Link
-                                        key={collection.id}
-                                        href={`/community/${collection.slug}`}
-                                        className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group'
-                                    >
+                                    <motion.div key={collection.id} whileHover={{ scale: 1.02, y: -2 }}>
+                                        <Link
+                                            href={`/community/${collection.slug}`}
+                                            className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                        >
                                         {collection.coverImage ? (
                                             <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
                                                 <Image
@@ -1420,6 +1438,7 @@ export default function ProfileClient() {
                                             </p>
                                         </div>
                                     </Link>
+                                    </motion.div>
                                 ))}
                             </div>
 
@@ -1446,9 +1465,10 @@ export default function ProfileClient() {
                             </Link>
                         </div>
                     )}
-                </section>
+                </motion.section>
 
-                <section
+                <motion.section
+                    variants={item}
                     id='reviews'
                     className='mt-10'
                 >
@@ -1469,9 +1489,10 @@ export default function ProfileClient() {
                     {reviews.length > 0 ? (
                         <div className='flex flex-col gap-6'>
                             {reviews.map((review) => (
-                                <div
+                                <motion.div
                                     key={review.id}
-                                    className='bg-text/5 border border-text/10 rounded-xl p-5 flex flex-col gap-4'
+                                    whileHover={{ scale: 1.01, y: -1 }}
+                                    className='bg-text/5 border border-text/10 rounded-xl p-5 flex flex-col gap-4 transition-all hover:border-text/20'
                                 >
                                     {/* Cafe info line - Added Link and visual context */}
                                     <div className='flex items-center gap-2 pb-4 border-b border-text/10'>
@@ -1530,7 +1551,7 @@ export default function ProfileClient() {
                                         // Edit requires a modal parent.
                                         // Let's omit `onEdit` for now to simplify, or if needed, we can add it later.
                                     />
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
                     ) : (
@@ -1540,7 +1561,7 @@ export default function ProfileClient() {
                             </p>
                         </div>
                     )}
-                </section>
+                </motion.section>
             </motion.div>
 
             {profileData && (
