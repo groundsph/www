@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth"
 import {
     getCafeForOwnerManagement,
     getCafeIdBySlug,
+    getCafeMenuItems,
 } from "@/app/api/actions/owner"
 import CafeEditClient from "./CafeEditClient"
 
@@ -37,10 +38,13 @@ export default async function CafeEditPage({ params }: Props) {
         notFound()
     }
 
+    // Fetch menu items
+    const menuItems = await getCafeMenuItems(cafeId)
+
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <CafeEditClient cafe={cafe} />
+                <CafeEditClient cafe={cafe} menuItems={menuItems} />
             </div>
         </main>
     )

@@ -383,7 +383,7 @@ export default function PublicProfileClient({
                         <div
                             className='absolute inset-0 opacity-[0.03] pointer-events-none rounded-xl'
                             style={{
-                                backgroundImage: `radial-gradient(circle at 2px 2px, black 1px, transparent 0)`,
+                                backgroundImage: `radial-gradient(circle at 2px 2px, theme("colors.background") 1px, transparent 0)`,
                                 backgroundSize: "24px 24px",
                             }}
                         />

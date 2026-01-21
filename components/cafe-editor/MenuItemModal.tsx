@@ -178,7 +178,11 @@ export default function MenuItemModal({
             setUploadProgress(0)
             try {
                 const formData = new FormData()
-                formData.append("image", pendingImage.blob)
+                // Create a File from the Blob so it has a name for validation
+                const imageFile = new File([pendingImage.blob], `menu-photo.webp`, {
+                    type: "image/webp",
+                })
+                formData.append("image", imageFile)
                 formData.append("cafeId", cafeId)
 
                 setUploadProgress(50)

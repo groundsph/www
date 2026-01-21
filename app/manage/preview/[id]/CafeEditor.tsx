@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -392,9 +393,11 @@ export default function CafeEditor({
             {/* Section Tabs */}
             <div className='flex gap-2 overflow-x-auto pb-2'>
                 {SECTIONS.map(({ id, title, icon: Icon }) => (
-                    <button
+                    <motion.button
                         key={id}
                         onClick={() => setActiveSection(id)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition border ${
                             activeSection === id
                                 ? "bg-accent/20 text-accent border-accent/30"
@@ -403,7 +406,7 @@ export default function CafeEditor({
                     >
                         <Icon className='w-4 h-4' />
                         {title}
-                    </button>
+                    </motion.button>
                 ))}
             </div>
 
@@ -431,9 +434,17 @@ export default function CafeEditor({
             </div>
 
             {/* Section Content */}
-            <div className='w-full min-h-[400px] bg-text/5 border border-text/10 rounded-xl p-6'>
-                {/* Basic Info */}
-                {activeSection === "basic" && (
+            <AnimatePresence mode='wait'>
+                <motion.div
+                    key={activeSection}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2 }}
+                    className='w-full min-h-[400px] bg-text/5 border border-text/10 rounded-xl p-6'
+                >
+                    {/* Basic Info */}
+                    {activeSection === "basic" && (
                     <div className='space-y-6'>
                         {/* Verified Status Toggle */}
                         <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'>
@@ -986,7 +997,8 @@ export default function CafeEditor({
                         </p>
                     </div>
                 )}
-            </div>
+                </motion.div>
+                </AnimatePresence>
 
             {/* Menu Item Modal */}
             <MenuItemModal
