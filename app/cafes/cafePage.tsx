@@ -206,7 +206,9 @@ export default function CafesPageClient({
             cafes.length > 0 &&
             !hasUserToggledLocation.current
         ) {
-            setFilters((prev) => ({ ...prev, near_me: false }))
+            setTimeout(() => {
+                setFilters((prev) => ({ ...prev, near_me: false }))
+            }, 0)
         }
     }, [filteredCafes.length, cafes.length, filters.near_me])
 

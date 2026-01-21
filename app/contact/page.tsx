@@ -1,5 +1,7 @@
+import { Suspense } from "react"
 import { Metadata } from "next"
 import ContactPageClient from "./ContactPageClient"
+import Loading from "@/components/Loading"
 
 export const metadata: Metadata = {
     title: "Contact Us",
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 }
 
 export default function ContactPage() {
-    return <ContactPageClient />
+    return (
+        <Suspense fallback={<Loading />}>
+            <ContactPageClient />
+        </Suspense>
+    )
 }

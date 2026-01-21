@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Megaphone, type LucideIcon } from "lucide-react"
+import { X, Megaphone, Feather, type LucideIcon } from "lucide-react"
 
 // ============================================================
 // ANNOUNCEMENT CONFIGURATION
@@ -16,7 +16,13 @@ interface Announcement {
     link?: { href: string; label: string }
 }
 
-const CURRENT_ANNOUNCEMENT: Announcement | null = null
+const CURRENT_ANNOUNCEMENT: Announcement | null = {
+    id: "writer-app-2026-v1",
+    message: "We're looking for passionate community writers to share their coffee stories!",
+    icon: Feather,
+    link: { href: "/contact?as=writer_application", label: "Apply Now" },
+    expiresAt: new Date("2026-02-20"),
+}
 
 // ============================================================
 // COMPONENT

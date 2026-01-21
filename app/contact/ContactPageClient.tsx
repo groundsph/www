@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useSearchParams } from "next/navigation"
 import {
     Mail,
     Send,
@@ -12,7 +13,30 @@ import {
 } from "lucide-react"
 import { sendContactEmail } from "@/app/api/actions/contact"
 
+const WRITER_APPLICATION_TEMPLATE = `Hi Grounds Team,
+
+I'd love to contribute as a community writer! Here is a bit about me and what I'd like to share.
+
+—
+My Experience & Portfolio:
+[Share a brief background or links to your previous work here]
+
+Topics I'm Passionate About:
+[e.g., Cafe reviews, brewing guides, barista stories...]
+
+Why I Want to Join:
+[Tell us a bit about your motivation]
+
+Socials / Website:
+[Link to your Instagram, blog, etc.]
+—
+
+Looking forward to hearing from you!`
+
 export default function ContactPageClient() {
+    const searchParams = useSearchParams()
+    const hasInitialized = useRef(false)
+
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -24,6 +48,23 @@ export default function ContactPageClient() {
         type: "success" | "error" | null
         message: string
     }>({ type: null, message: "" })
+
+    useEffect(() => {
+        if (hasInitialized.current) return
+
+        const applicationType = searchParams.get("as")
+        if (applicationType === "writer_application") {
+            setTimeout(() => {
+                setFormData({
+                    name: "",
+                    email: "",
+                    subject: "Community Writer Application",
+                    message: WRITER_APPLICATION_TEMPLATE,
+                })
+            }, 0)
+            hasInitialized.current = true
+        }
+    }, [searchParams])
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -159,8 +200,7 @@ export default function ContactPageClient() {
                                 onChange={handleChange}
                                 placeholder="Tell us what's on your mind..."
                                 required
-                                rows={6}
-                                className='w-full px-4 py-3 bg-background border border-text/20 rounded-lg text-text placeholder:text-text/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none'
+                                className='w-full min-h-[200px] px-4 py-3 bg-background border border-text/20 rounded-lg text-text placeholder:text-text/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-y'
                             />
                         </div>
 
