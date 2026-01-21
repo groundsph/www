@@ -92,6 +92,40 @@ export default function GroupCheckInModal({
                 if (checkInResult.awardedBadges && checkInResult.awardedBadges.length > 0) {
                     showBadgeNotifications(checkInResult.awardedBadges)
                 }
+                if (!visitedToday && !onUpdateCheckIn) {
+                    const confetti = (await import("canvas-confetti")).default
+                    const duration = 3 * 1000
+                    const animationEnd = Date.now() + duration
+                    const defaults = {
+                        startVelocity: 45,
+                        spread: 360,
+                        ticks: 60,
+                        zIndex: 100,
+                        origin: { y: 1 },
+                    }
+                    const interval: ReturnType<typeof setInterval> = setInterval(
+                        function () {
+                            const timeLeft = animationEnd - Date.now()
+                            if (timeLeft <= 0) {
+                                return clearInterval(interval)
+                            }
+                            const particleCount = 50 * (timeLeft / duration)
+                            confetti({
+                                ...defaults,
+                                particleCount,
+                                angle: 60,
+                                origin: { x: 0, y: 1 },
+                            })
+                            confetti({
+                                ...defaults,
+                                particleCount,
+                                angle: 120,
+                                origin: { x: 1, y: 1 },
+                            })
+                        },
+                        250
+                    )
+                }
             }
         } finally {
             setIsSubmitting(false)

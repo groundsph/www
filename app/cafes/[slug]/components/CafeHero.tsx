@@ -138,47 +138,6 @@ export default function CafeHero({
     const handleCheckIn = async () => {
         // Use new check-in if available, otherwise fall back to toggle
         if (onCheckIn) {
-            // Only trigger confetti if not already visited today
-            if (!visitedToday) {
-                const confetti = (await import("canvas-confetti")).default
-
-                // Trigger fireworks from bottom
-                const duration = 3 * 1000
-                const animationEnd = Date.now() + duration
-                const defaults = {
-                    startVelocity: 45,
-                    spread: 360,
-                    ticks: 60,
-                    zIndex: 0,
-                    origin: { y: 1 },
-                }
-
-                const interval: ReturnType<typeof setInterval> = setInterval(
-                    function () {
-                        const timeLeft = animationEnd - Date.now()
-
-                        if (timeLeft <= 0) {
-                            return clearInterval(interval)
-                        }
-
-                        const particleCount = 50 * (timeLeft / duration)
-
-                        confetti({
-                            ...defaults,
-                            particleCount,
-                            angle: 60,
-                            origin: { x: 0, y: 1 },
-                        })
-                        confetti({
-                            ...defaults,
-                            particleCount,
-                            angle: 120,
-                            origin: { x: 1, y: 1 },
-                        })
-                    },
-                    250
-                )
-            }
             await onCheckIn()
         } else {
             // Legacy fallback
