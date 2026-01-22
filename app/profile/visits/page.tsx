@@ -79,10 +79,10 @@ export default async function VisitsPage() {
                                         <Link
                                             key={visit.cafeId}
                                             href={`/cafes/${visit.cafeSlug}`}
-                                            className='flex items-center gap-4 p-4 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-colors group'
+                                            className='flex flex-col md:flex-row items-center gap-4 p-4 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-colors group'
                                         >
                                             {/* Thumbnail */}
-                                            <div className='w-16 h-16 rounded-lg overflow-hidden bg-text/5 shrink-0'>
+                                            <div className='w-full h-auto md:w-16 md:h-16 aspect-video md:aspect-square rounded-lg overflow-hidden bg-text/5 shrink-0'>
                                                 {visit.cafeThumbnail ? (
                                                     <Image
                                                         src={getCafeThumbnailUrl(
@@ -91,7 +91,7 @@ export default async function VisitsPage() {
                                                         alt={visit.cafeName}
                                                         width={64}
                                                         height={64}
-                                                        className='w-full h-full object-cover'
+                                                        className='w-full h-full object-cover md:object-contain'
                                                     />
                                                 ) : (
                                                     <div className='w-full h-full flex items-center justify-center'>
@@ -101,7 +101,7 @@ export default async function VisitsPage() {
                                             </div>
 
                                             {/* Info */}
-                                            <div className='flex-1 min-w-0'>
+                                            <div className='flex-1 min-w-0 w-full md:w-auto'>
                                                 <h3 className='font-semibold text-text group-hover:text-primary transition-colors truncate'>
                                                     {visit.cafeName}
                                                 </h3>
@@ -122,11 +122,11 @@ export default async function VisitsPage() {
                                             </div>
 
                                             {/* Visit count badge */}
-                                            <div className='shrink-0 flex flex-col items-center'>
+                                            <div className='shrink-0 flex flex-row md:flex-col items-center justify-start w-full md:w-auto gap-2 md:gap-0'>
                                                 <span className='text-2xl font-bold text-primary'>
                                                     {visit.visitCount}
                                                 </span>
-                                                <span className='text-xs text-text/50'>
+                                                <span className='text-sm md:text-xs text-text/50'>
                                                     {visit.visitCount === 1
                                                         ? "visit"
                                                         : "visits"}
