@@ -79,10 +79,10 @@ export default async function VisitsPage() {
                                         <Link
                                             key={visit.cafeId}
                                             href={`/cafes/${visit.cafeSlug}`}
-                                            className='flex flex-col md:flex-row items-center gap-4 p-4 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-colors group'
+                                            className='flex flex-col md:flex-row items-center gap-4 p-2 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-colors group'
                                         >
                                             {/* Thumbnail */}
-                                            <div className='w-full h-auto md:w-16 md:h-16 aspect-video md:aspect-square rounded-lg overflow-hidden bg-text/5 shrink-0'>
+                                            <div className='w-full h-auto md:w-auto md:h-16 aspect-video rounded-lg overflow-hidden bg-text/5 shrink-0'>
                                                 {visit.cafeThumbnail ? (
                                                     <Image
                                                         src={getCafeThumbnailUrl(
@@ -91,7 +91,7 @@ export default async function VisitsPage() {
                                                         alt={visit.cafeName}
                                                         width={64}
                                                         height={64}
-                                                        className='w-full h-full object-cover md:object-contain'
+                                                        className='w-full h-full object-cover'
                                                     />
                                                 ) : (
                                                     <div className='w-full h-full flex items-center justify-center'>
