@@ -388,14 +388,6 @@ export default function CafeSidebar({
             {/* Visitors Section */}
             <div className='font-semibold text-lg font-serif text-text flex flex-row items-center gap-2'>
                 Visitors
-                <div className='flex flex-row items-center gap-1 text-sm font-normal text-text/60'>
-                    <Users className='w-4 h-4' />
-                    {visitorsLoading ? (
-                        <span className='animate-pulse'>...</span>
-                    ) : (
-                        <span>{visitStats?.uniqueVisitors ?? 0} unique</span>
-                    )}
-                </div>
             </div>
 
             {/* Visit Stats */}
@@ -459,7 +451,7 @@ export default function CafeSidebar({
                                         <UserIcon className='w-4 h-4 text-primary' />
                                     </div>
                                 )}
-                                <span className='text-xs font-medium text-text group-hover:text-primary transition-colors truncate max-w-[80px]'>
+                                <span className='text-xs font-medium text-text group-hover:text-primary transition-colors truncate max-w-20'>
                                     {visitor.displayName}
                                 </span>
                             </Link>
