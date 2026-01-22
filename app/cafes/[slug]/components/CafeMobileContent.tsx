@@ -439,11 +439,6 @@ export function DetailsTabContent({
                 <h3 className='font-semibold font-serif mb-3 flex items-center gap-2'>
                     <Users className='w-4 h-4' />
                     Visitors
-                    {!visitorsLoading && (
-                        <span className='text-xs font-normal text-text/60'>
-                            ({visitStats?.uniqueVisitors ?? 0} unique)
-                        </span>
-                    )}
                 </h3>
 
                 {/* Visit Stats */}
