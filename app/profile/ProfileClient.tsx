@@ -94,7 +94,7 @@ const rankConfig = {
 // Calculate progress to next rank
 function getProgressToNextRank(
     currentPoints: number,
-    currentRank: keyof typeof rankConfig
+    currentRank: keyof typeof rankConfig,
 ) {
     const config = rankConfig[currentRank]
     if (!config.nextRank)
@@ -105,7 +105,7 @@ function getProgressToNextRank(
     const tierRange = nextConfig.minPoints - config.minPoints
     const progress = Math.min(
         100,
-        Math.round((pointsInCurrentTier / tierRange) * 100)
+        Math.round((pointsInCurrentTier / tierRange) * 100),
     )
     const pointsNeeded = nextConfig.minPoints - currentPoints
 
@@ -133,7 +133,7 @@ export default function ProfileClient() {
 
     // States
     const [profileData, setProfileData] = useState<ProfileWithBadges | null>(
-        null
+        null,
     )
     const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])
     const [loading, setLoading] = useState(true)
@@ -285,7 +285,7 @@ export default function ProfileClient() {
                               display_name: editDisplayName,
                               bio: editBio,
                           }
-                        : null
+                        : null,
                 )
                 setIsEditing(false)
                 addNotification("Profile updated successfully", "success")
@@ -342,7 +342,7 @@ export default function ProfileClient() {
                             ? resolve(b)
                             : reject(new Error("Failed to create blob")),
                     "image/jpeg",
-                    0.9
+                    0.9,
                 )
             })
 
@@ -361,7 +361,7 @@ export default function ProfileClient() {
                               ...prev,
                               avatar_url: result.url!,
                           }
-                        : null
+                        : null,
                 )
                 refreshProfile()
             } else {
@@ -444,12 +444,15 @@ export default function ProfileClient() {
         <main className='w-full min-h-screen px-4 py-8'>
             <motion.div
                 variants={staggerContainer}
-                initial="initial"
-                animate="animate"
+                initial='initial'
+                animate='animate'
                 className='max-w-7xl mx-auto'
             >
                 {/* Profile Header */}
-                <motion.section variants={item} className='flex flex-col md:flex-row gap-6 items-center md:items-start'>
+                <motion.section
+                    variants={item}
+                    className='flex flex-col md:flex-row gap-6 items-center md:items-start'
+                >
                     {/* Avatar */}
                     <div className='relative'>
                         {/* Hidden input for Avatar Upload */}
@@ -480,7 +483,7 @@ export default function ProfileClient() {
 
                                 if (!isValidType) {
                                     setAvatarError(
-                                        "Please use JPEG, PNG, WebP, or GIF"
+                                        "Please use JPEG, PNG, WebP, or GIF",
                                     )
                                     e.target.value = ""
                                     return
@@ -489,7 +492,7 @@ export default function ProfileClient() {
                                 // Validate file size
                                 if (file.size > MAX_FILE_SIZE) {
                                     setAvatarError(
-                                        "Image too large. Please use an image under 5MB"
+                                        "Image too large. Please use an image under 5MB",
                                     )
                                     e.target.value = ""
                                     return
@@ -564,7 +567,7 @@ export default function ProfileClient() {
 
                     {/* Info */}
                     <div className='flex-1 flex flex-col items-center md:items-start gap-1'>
-                        <div className='flex flex-row items-center gap-3'>
+                        <div className='flex flex-col md:flex-row items-center gap-3'>
                             {isEditing ? (
                                 <input
                                     type='text'
@@ -580,56 +583,57 @@ export default function ProfileClient() {
                                     {profileData.display_name}
                                 </h1>
                             )}
-                            {!isEditing && (
-                                <>
-                                    <button
-                                        onClick={() => setIsEditing(true)}
-                                        className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
-                                        title='Edit Profile'
-                                    >
-                                        <Edit2 className='w-4 h-4' />
-                                    </button>
-                                    <Link
-                                        href='/profile/settings'
-                                        className='p-1.5 rounded-full hover:bg-text/10 transition-colors'
-                                        title='Account Settings'
-                                    >
-                                        <Settings className='w-4 h-4' />
-                                    </Link>
-                                    <button
-                                        onClick={async () => {
-                                            const profileUrl = `${window.location.origin}/profile/${profileData.username}`
-                                            if (navigator.share) {
-                                                try {
-                                                    await navigator.share({
-                                                        title: `${profileData.display_name}'s Coffee Profile`,
-                                                        text: `Check out ${profileData.display_name}'s coffee journey!`,
-                                                        url: profileUrl,
-                                                    })
-                                                } catch {
-                                                    // User cancelled or error
+                            <div className='flex flex-row items-center gap-3'>
+                                {!isEditing && (
+                                    <>
+                                        <button
+                                            onClick={() => setIsEditing(true)}
+                                            className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
+                                            title='Edit Profile'
+                                        >
+                                            <Edit2 className='w-4 h-4' />
+                                        </button>
+                                        <Link
+                                            href='/profile/settings'
+                                            className='p-1.5 rounded-full hover:bg-text/10 transition-colors'
+                                            title='Account Settings'
+                                        >
+                                            <Settings className='w-4 h-4' />
+                                        </Link>
+                                        <button
+                                            onClick={async () => {
+                                                const profileUrl = `${window.location.origin}/profile/${profileData.username}`
+                                                if (navigator.share) {
+                                                    try {
+                                                        await navigator.share({
+                                                            title: `${profileData.display_name}'s Coffee Profile`,
+                                                            text: `Check out ${profileData.display_name}'s coffee journey!`,
+                                                            url: profileUrl,
+                                                        })
+                                                    } catch {
+                                                        // User cancelled or error
+                                                    }
+                                                } else {
+                                                    await navigator.clipboard.writeText(
+                                                        profileUrl,
+                                                    )
+                                                    alert(
+                                                        "Profile link copied to clipboard!",
+                                                    )
                                                 }
-                                            } else {
-                                                await navigator.clipboard.writeText(
-                                                    profileUrl
-                                                )
-                                                alert(
-                                                    "Profile link copied to clipboard!"
-                                                )
-                                            }
-                                        }}
-                                        className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
-                                        title='Share Profile'
-                                    >
-                                        <Share2 className='w-4 h-4' />
-                                    </button>
-                                </>
-                            )}
+                                            }}
+                                            className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
+                                            title='Share Profile'
+                                        >
+                                            <Share2 className='w-4 h-4' />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                         <p className='text-text/60 font-medium'>
                             @{profileData.username}
                         </p>
-
                         {/* Bio */}
                         {isEditing ? (
                             <textarea
@@ -682,7 +686,7 @@ export default function ProfileClient() {
                                         <Sparkles className='w-3.5 h-3.5' />
                                         Supporter since{" "}
                                         {new Date(
-                                            profileData.support_since
+                                            profileData.support_since,
                                         ).toLocaleDateString("en-US", {
                                             month: "short",
                                             year: "numeric",
@@ -693,7 +697,7 @@ export default function ProfileClient() {
                                 <span>
                                     Member since{" "}
                                     {new Date(
-                                        profileData.created_at
+                                        profileData.created_at,
                                     ).toLocaleDateString("en-US", {
                                         month: "short",
                                         year: "numeric",
@@ -735,7 +739,10 @@ export default function ProfileClient() {
 
                 {/* My Cafes Section - Only shown if user owns cafes */}
                 {ownedCafes.length > 0 && (
-                    <motion.section variants={item} className='mt-10'>
+                    <motion.section
+                        variants={item}
+                        className='mt-10'
+                    >
                         <div className='flex items-center gap-2 mb-4'>
                             <Store className='w-5 h-5' />
                             <h2 className='text-xl font-semibold font-serif'>
@@ -749,37 +756,40 @@ export default function ProfileClient() {
                         <div className='bg-linear-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-6'>
                             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
                                 {ownedCafes.slice(0, 3).map((cafe) => (
-                                    <motion.div key={cafe.id} whileHover={{ scale: 1.02, y: -2 }}>
+                                    <motion.div
+                                        key={cafe.id}
+                                        whileHover={{ scale: 1.02, y: -2 }}
+                                    >
                                         <Link
                                             href={`/owner/cafes/${cafe.slug}`}
                                             className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
                                         >
-                                        {cafe.thumbnail ? (
-                                            <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
-                                                <Image
-                                                    src={getCafeThumbnailUrl(
-                                                        cafe.thumbnail
-                                                    )}
-                                                    alt={cafe.name}
-                                                    fill
-                                                    className='object-cover'
-                                                />
+                                            {cafe.thumbnail ? (
+                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                    <Image
+                                                        src={getCafeThumbnailUrl(
+                                                            cafe.thumbnail,
+                                                        )}
+                                                        alt={cafe.name}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className='w-12 h-12 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
+                                                    <Coffee className='w-5 h-5 text-text/40' />
+                                                </div>
+                                            )}
+                                            <div className='flex-1 min-w-0'>
+                                                <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                    {cafe.name}
+                                                </p>
+                                                <p className='text-xs text-text/50 truncate'>
+                                                    {cafe.address_display ||
+                                                        cafe.city_municipality}
+                                                </p>
                                             </div>
-                                        ) : (
-                                            <div className='w-12 h-12 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
-                                                <Coffee className='w-5 h-5 text-text/40' />
-                                            </div>
-                                        )}
-                                        <div className='flex-1 min-w-0'>
-                                            <p className='font-semibold truncate group-hover:text-primary transition-colors'>
-                                                {cafe.name}
-                                            </p>
-                                            <p className='text-xs text-text/50 truncate'>
-                                                {cafe.address_display ||
-                                                    cafe.city_municipality}
-                                            </p>
-                                        </div>
-                                    </Link>
+                                        </Link>
                                     </motion.div>
                                 ))}
                             </div>
@@ -796,7 +806,10 @@ export default function ProfileClient() {
                 )}
 
                 {/* Badges Collection - Passport Style */}
-                <motion.section variants={item} className='mt-10'>
+                <motion.section
+                    variants={item}
+                    className='mt-10'
+                >
                     <div className='flex items-center gap-2 mb-4'>
                         <Medal className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
@@ -836,10 +849,10 @@ export default function ProfileClient() {
                             })
 
                             const earnedBadges = sortedBadges.filter((b) =>
-                                earnedBadgeIds.has(b.id)
+                                earnedBadgeIds.has(b.id),
                             )
                             const unearnedBadges = sortedBadges.filter(
-                                (b) => !earnedBadgeIds.has(b.id)
+                                (b) => !earnedBadgeIds.has(b.id),
                             )
                             const displayBadges = showAllBadges
                                 ? sortedBadges
@@ -934,7 +947,7 @@ export default function ProfileClient() {
                                                                 const IconComponent =
                                                                     iconName
                                                                         ? getLucideIcon(
-                                                                              iconName
+                                                                              iconName,
                                                                           )
                                                                         : null
 
@@ -1022,10 +1035,10 @@ export default function ProfileClient() {
                                                                         const earnedBadge =
                                                                             profileData.badges.find(
                                                                                 (
-                                                                                    b
+                                                                                    b,
                                                                                 ) =>
                                                                                     b.badge_id ===
-                                                                                    badge.id
+                                                                                    badge.id,
                                                                             )
                                                                         if (
                                                                             earnedBadge?.awarded_at
@@ -1034,14 +1047,14 @@ export default function ProfileClient() {
                                                                                 <div className='text-background/50 text-[10px] mt-1'>
                                                                                     Earned:{" "}
                                                                                     {new Date(
-                                                                                        earnedBadge.awarded_at
+                                                                                        earnedBadge.awarded_at,
                                                                                     ).toLocaleDateString(
                                                                                         "en-US",
                                                                                         {
                                                                                             month: "short",
                                                                                             day: "numeric",
                                                                                             year: "numeric",
-                                                                                        }
+                                                                                        },
                                                                                     )}
                                                                                 </div>
                                                                             )
@@ -1092,7 +1105,10 @@ export default function ProfileClient() {
                 </motion.section>
 
                 {/* Stats Grid - Cleaned up icons */}
-                <motion.section variants={item} className='mt-10'>
+                <motion.section
+                    variants={item}
+                    className='mt-10'
+                >
                     <h2 className='text-xl font-semibold font-serif mb-4 flex items-center gap-2'>
                         <Award className='w-5 h-5' />
                         Your Stats
@@ -1105,11 +1121,14 @@ export default function ProfileClient() {
                             const { progress, pointsNeeded, nextRankLabel } =
                                 getProgressToNextRank(
                                     currentPoints,
-                                    currentRank
+                                    currentRank,
                                 )
 
                             return (
-                                <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
+                                <motion.div
+                                    whileHover={{ scale: 1.05, y: -2 }}
+                                    className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'
+                                >
                                     <div
                                         className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
                                     >
@@ -1165,7 +1184,10 @@ export default function ProfileClient() {
                             </span>
                         </motion.a>
                         {/* Photos */}
-                        <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
+                        <motion.div
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'
+                        >
                             <div className='p-2 bg-secondary/10 rounded-lg mb-2'>
                                 <Camera className='w-6 h-6 text-secondary' />
                             </div>
@@ -1175,7 +1197,10 @@ export default function ProfileClient() {
                             <span className='text-xs text-text/60'>Photos</span>
                         </motion.div>
                         {/* Scouted */}
-                        <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
+                        <motion.div
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'
+                        >
                             <div className='p-2 bg-text/10 rounded-lg mb-2'>
                                 <Coffee className='w-6 h-6 text-text/70' />
                             </div>
@@ -1232,7 +1257,7 @@ export default function ProfileClient() {
                                             .sort(
                                                 (a, b) =>
                                                     a[1].minPoints -
-                                                    b[1].minPoints
+                                                    b[1].minPoints,
                                             )
                                             .map(([key, config]) => {
                                                 const currentRank =
@@ -1314,7 +1339,10 @@ export default function ProfileClient() {
 
                 {/* Favorite Spots - Top 5 most visited cafes */}
                 {visitedCafes.some((c) => (c.visitCount ?? 0) > 1) && (
-                    <motion.section variants={item} className='mt-10'>
+                    <motion.section
+                        variants={item}
+                        className='mt-10'
+                    >
                         <div className='flex items-center gap-2 mb-4'>
                             <Coffee className='w-5 h-5' />
                             <h2 className='text-xl font-semibold font-serif'>
@@ -1330,58 +1358,67 @@ export default function ProfileClient() {
                                 .sort(
                                     (a, b) =>
                                         (b.visitCount ?? 0) -
-                                        (a.visitCount ?? 0)
+                                        (a.visitCount ?? 0),
                                 )
                                 .slice(0, 5)
                                 .filter((c) => (c.visitCount ?? 0) > 1)
                                 .map((cafe) => (
-                                    <motion.div key={cafe.slug} whileHover={{ scale: 1.05, y: -3 }}>
+                                    <motion.div
+                                        key={cafe.slug}
+                                        whileHover={{ scale: 1.05, y: -3 }}
+                                    >
                                         <Link
                                             href={`/cafes/${cafe.slug}`}
                                             className='group relative flex flex-col items-center p-4 bg-text/5 hover:bg-text/10 border border-text/10 rounded-xl transition-all h-full'
                                         >
-                                        {/* Visit count badge */}
-                                        <span className='absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
-                                            {cafe.visitCount}×
-                                        </span>
+                                            {/* Visit count badge */}
+                                            <span className='absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
+                                                {cafe.visitCount}×
+                                            </span>
 
-                                        {/* Cafe thumbnail */}
-                                        <div className='w-14 h-14 rounded-full overflow-hidden bg-text/10 mb-2'>
-                                            {cafe.thumbnail ? (
-                                                <Image
-                                                    src={getCafeThumbnailUrl(
-                                                        cafe.thumbnail
-                                                    )}
-                                                    alt={cafe.name}
-                                                    width={56}
-                                                    height={56}
-                                                    className='w-full h-full object-cover'
-                                                />
-                                            ) : (
-                                                <div className='w-full h-full flex items-center justify-center'>
-                                                    <Coffee className='w-6 h-6 text-text opacity-30' />
-                                                </div>
-                                            )}
-                                        </div>
+                                            {/* Cafe thumbnail */}
+                                            <div className='w-14 h-14 rounded-full overflow-hidden bg-text/10 mb-2'>
+                                                {cafe.thumbnail ? (
+                                                    <Image
+                                                        src={getCafeThumbnailUrl(
+                                                            cafe.thumbnail,
+                                                        )}
+                                                        alt={cafe.name}
+                                                        width={56}
+                                                        height={56}
+                                                        className='w-full h-full object-cover'
+                                                    />
+                                                ) : (
+                                                    <div className='w-full h-full flex items-center justify-center'>
+                                                        <Coffee className='w-6 h-6 text-text opacity-30' />
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                        {/* Cafe name */}
-                                        <span className='text-sm font-medium text-center line-clamp-2 group-hover:text-primary transition-colors'>
-                                            {cafe.name}
-                                        </span>
-                                    </Link>
+                                            {/* Cafe name */}
+                                            <span className='text-sm font-medium text-center line-clamp-2 group-hover:text-primary transition-colors'>
+                                                {cafe.name}
+                                            </span>
+                                        </Link>
                                     </motion.div>
                                 ))}
-                            </div>
+                        </div>
                     </motion.section>
                 )}
 
                 {/* Visit History Section */}
-                <motion.section variants={item} className='mt-10'>
+                <motion.section
+                    variants={item}
+                    className='mt-10'
+                >
                     <VisitHistory visits={visitedCafes} />
                 </motion.section>
 
                 {/* Passport Section */}
-                <motion.section variants={item} className='mt-10'>
+                <motion.section
+                    variants={item}
+                    className='mt-10'
+                >
                     <Passport
                         visited={visitedCafes.map((c) => ({
                             name: c.name,
@@ -1394,7 +1431,10 @@ export default function ProfileClient() {
                 </motion.section>
 
                 {/* Collections Section */}
-                <motion.section variants={item} className='mt-10'>
+                <motion.section
+                    variants={item}
+                    className='mt-10'
+                >
                     <div className='flex items-center gap-2 mb-4'>
                         <Layers className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
@@ -1409,35 +1449,40 @@ export default function ProfileClient() {
                         <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
                                 {collections.slice(0, 3).map((collection) => (
-                                    <motion.div key={collection.id} whileHover={{ scale: 1.02, y: -2 }}>
+                                    <motion.div
+                                        key={collection.id}
+                                        whileHover={{ scale: 1.02, y: -2 }}
+                                    >
                                         <Link
                                             href={`/community/${collection.slug}`}
                                             className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
                                         >
-                                        {collection.coverImage ? (
-                                            <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
-                                                <Image
-                                                    src={collection.coverImage}
-                                                    alt={collection.title}
-                                                    fill
-                                                    className='object-cover'
-                                                />
+                                            {collection.coverImage ? (
+                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                    <Image
+                                                        src={
+                                                            collection.coverImage
+                                                        }
+                                                        alt={collection.title}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                    <Layers className='w-5 h-5 text-primary/60' />
+                                                </div>
+                                            )}
+                                            <div className='flex-1 min-w-0'>
+                                                <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                    {collection.title}
+                                                </p>
+                                                <p className='text-xs text-text/50'>
+                                                    {collection.itemCount ?? 0}{" "}
+                                                    cafes
+                                                </p>
                                             </div>
-                                        ) : (
-                                            <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                <Layers className='w-5 h-5 text-primary/60' />
-                                            </div>
-                                        )}
-                                        <div className='flex-1 min-w-0'>
-                                            <p className='font-semibold truncate group-hover:text-primary transition-colors'>
-                                                {collection.title}
-                                            </p>
-                                            <p className='text-xs text-text/50'>
-                                                {collection.itemCount ?? 0}{" "}
-                                                cafes
-                                            </p>
-                                        </div>
-                                    </Link>
+                                        </Link>
                                     </motion.div>
                                 ))}
                             </div>
@@ -1500,7 +1545,7 @@ export default function ProfileClient() {
                                             {review.cafe?.thumbnail ? (
                                                 <Image
                                                     src={getCafeThumbnailUrl(
-                                                        review.cafe.thumbnail
+                                                        review.cafe.thumbnail,
                                                     )}
                                                     alt={review.cafe.name}
                                                     fill
