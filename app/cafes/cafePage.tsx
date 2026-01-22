@@ -663,9 +663,9 @@ export default function CafesPageClient({
                                     href={`/cafes/${cafe.slug}`}
                                     key={cafe.id}
                                     layout
-                                    className={`py-4 px-6 bg-background rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0 group ${
+                                    className={`py-4 px-6 bg-background rounded-xl border-2 border-text/5 flex flex-col-reverse md:flex-row gap-4 md:gap-0 group ${
                                         cafe.membership_tier === "premium"
-                                            ? "shadow-lg shadow-amber-500/30 border border-amber-400/30 hover:shadow-amber-500/40"
+                                            ? "shadow-lg shadow-amber-500/30 border-amber-400/30 hover:shadow-amber-500/40"
                                             : "shadow-lg shadow-black/10"
                                     }`}
                                 >
