@@ -1602,7 +1602,8 @@ export default function ProfileClient() {
                     ) : (
                         <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
                             <p className='text-text/60 font-medium'>
-                                You haven&apos;t written any reviews yet.
+                                You haven&apos;t written any reviews yet.<br/>
+                                <span className="text-sm opacity-60 italic">Get started by sharing your thoughts on cafes you&apos;ve visited!</span>
                             </p>
                         </div>
                     )}
