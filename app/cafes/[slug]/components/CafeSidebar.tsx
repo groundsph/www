@@ -19,7 +19,6 @@ import {
     Droplet,
     MilkOff,
     Armchair,
-    Users,
     MapPin,
     Cigarette,
     Coffee,

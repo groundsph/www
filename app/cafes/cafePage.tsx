@@ -36,6 +36,7 @@ import {
 import { useEffect, useState, useTransition, useRef } from "react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
 import RandomCafeButton from "@/components/RandomCafeButton"
+import MiniSubmitCafeBanner from "@/components/MiniSubmitCafeBanner"
 
 interface CafesPageClientProps {
     initialCafes?: CafeWithRatings[]
@@ -306,6 +307,8 @@ export default function CafesPageClient({
                     Find the perfect spot for your next brew or work session.
                 </p>
             </div>
+
+            <MiniSubmitCafeBanner />
 
             {/* Controls - Compact Row */}
             <div className='flex flex-col gap-3'>
