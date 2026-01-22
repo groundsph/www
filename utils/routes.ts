@@ -18,7 +18,7 @@ export const routes: Route[] = [
         href: '/community',
         children: [
             {
-                title: 'community',
+                title: 'discover',
                 href: '/community',
             },
             {
