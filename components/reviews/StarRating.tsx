@@ -69,11 +69,6 @@ export default function StarRating({
                     </div>
                 )
             })}
-            {!readOnly && (
-                <span className='ml-2 text-sm font-semibold text-text/60 min-w-[3ch]'>
-                    {(hoverRating ?? rating > 0) ? (hoverRating ?? rating) : 0}
-                </span>
-            )}
         </div>
     )
 }

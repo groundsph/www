@@ -201,7 +201,7 @@ export default function ReviewModal({
                                                 setComment(e.target.value)
                                             }
                                             placeholder='Share your experience...'
-                                            className='w-full min-h-[160px] bg-text/5 text-base leading-relaxed placeholder:text-text/30 focus:outline-none p-4 resize-none rounded-xl border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
+                                            className='w-full min-h-40 bg-text/5 text-base leading-relaxed placeholder:text-text/30 focus:outline-none p-4 resize-none rounded-xl border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
                                         />
                                         <div className='absolute bottom-3 right-3 text-xs text-text/40'>
                                             {comment.length} characters
