@@ -31,7 +31,9 @@ interface GroupCheckInModalProps {
     /** Called when check-in completes successfully and user dismisses the modal */
     onComplete?: (result: CheckInResult) => void
     /** Called when updating an existing check-in */
-    onUpdateCheckIn?: (companionIds: string[]) => Promise<CheckInResult | undefined>
+    onUpdateCheckIn?: (
+        companionIds: string[],
+    ) => Promise<CheckInResult | undefined>
     visitedToday?: boolean
     visitCount?: number
     initialCompanions?: UserResult[]
@@ -48,9 +50,8 @@ export default function GroupCheckInModal({
     visitCount = 0,
     initialCompanions = [],
 }: GroupCheckInModalProps) {
-    const [selectedCompanions, setSelectedCompanions] = useState<UserResult[]>(
-        initialCompanions
-    )
+    const [selectedCompanions, setSelectedCompanions] =
+        useState<UserResult[]>(initialCompanions)
     const [showCompanions, setShowCompanions] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [result, setResult] = useState<CheckInResult | null>(null)
@@ -83,13 +84,16 @@ export default function GroupCheckInModal({
                 checkInResult = await onUpdateCheckIn(companionIds)
             } else {
                 checkInResult = await onCheckIn(
-                    companionIds.length > 0 ? companionIds : undefined
+                    companionIds.length > 0 ? companionIds : undefined,
                 )
             }
 
             if (checkInResult) {
                 setResult(checkInResult)
-                if (checkInResult.awardedBadges && checkInResult.awardedBadges.length > 0) {
+                if (
+                    checkInResult.awardedBadges &&
+                    checkInResult.awardedBadges.length > 0
+                ) {
                     showBadgeNotifications(checkInResult.awardedBadges)
                 }
                 if (!visitedToday && !onUpdateCheckIn) {
@@ -103,8 +107,8 @@ export default function GroupCheckInModal({
                         zIndex: 100,
                         origin: { y: 1 },
                     }
-                    const interval: ReturnType<typeof setInterval> = setInterval(
-                        function () {
+                    const interval: ReturnType<typeof setInterval> =
+                        setInterval(function () {
                             const timeLeft = animationEnd - Date.now()
                             if (timeLeft <= 0) {
                                 return clearInterval(interval)
@@ -122,9 +126,7 @@ export default function GroupCheckInModal({
                                 angle: 120,
                                 origin: { x: 1, y: 1 },
                             })
-                        },
-                        250
-                    )
+                        }, 250)
                 }
             }
         } finally {
@@ -160,13 +162,13 @@ export default function GroupCheckInModal({
             <div className='relative bg-background rounded-2xl shadow-xl w-full max-w-md'>
                 {/* Header */}
                 <div className='flex items-center justify-between px-5 py-4 border-b border-text/10 rounded-t-2xl'>
-                    <div className='flex items-center gap-3'>
+                    <div className='flex items-center gap-3 flex-1'>
                         <div className='w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center'>
                             <MapPin className='w-5 h-5 text-primary' />
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <h2 className='font-bold text-lg'>Check In</h2>
-                            <p className='text-sm text-text/60 truncate max-w-[200px]'>
+                            <p className='text-sm text-text/60'>
                                 {cafeName}
                             </p>
                         </div>
@@ -248,7 +250,8 @@ export default function GroupCheckInModal({
                             {/* Edit mode notice */}
                             {visitedToday && onUpdateCheckIn && (
                                 <p className='text-sm text-text/60 text-center'>
-                                    Update your companions for today&apos;s visit
+                                    Update your companions for today&apos;s
+                                    visit
                                 </p>
                             )}
 
@@ -301,8 +304,11 @@ export default function GroupCheckInModal({
                     {!result ? (
                         <button
                             onClick={handleCheckIn}
-                            disabled={(visitedToday && !onUpdateCheckIn) || isSubmitting}
-                            className='w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                            disabled={
+                                (visitedToday && !onUpdateCheckIn) ||
+                                isSubmitting
+                            }
+                            className='w-full py-3 px-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
                         >
                             {isSubmitting ? (
                                 <>
@@ -311,17 +317,12 @@ export default function GroupCheckInModal({
                                 </>
                             ) : (
                                 <>
-                                    <MapPin className='w-4 h-4' />
-                                    {visitedToday && onUpdateCheckIn ? "Update Check-in" : "Check In"}
-                                    {selectedCompanions.length > 0 && (
-                                        <span className='text-white/80'>
-                                            with {selectedCompanions.length}{" "}
-                                            companion
-                                            {selectedCompanions.length > 1
-                                                ? "s"
-                                                : ""}
-                                        </span>
-                                    )}
+                                    <MapPin className='w-4 h-4 hidden md:block' />
+                                    {visitedToday && onUpdateCheckIn
+                                        ? "Update Check-in"
+                                        : "Check In"}
+                                    {selectedCompanions.length > 0 &&
+                                        ` with ${selectedCompanions.length} companion ${selectedCompanions.length > 1 ? "s" : ""}`}
                                 </>
                             )}
                         </button>

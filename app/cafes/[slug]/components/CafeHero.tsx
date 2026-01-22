@@ -403,7 +403,7 @@ export default function CafeHero({
                                             transition={{ duration: 0.2 }}
                                             className='absolute inset-0'
                                         >
-                                            <CheckCircle className='w-5 h-5 text-white' />
+                                            <CheckCircle className='w-5 h-5' />
                                         </motion.div>
                                         <motion.div
                                             initial={false}
@@ -424,7 +424,7 @@ export default function CafeHero({
                                             transition={{ duration: 0.2 }}
                                             className='absolute inset-0'
                                         >
-                                            <MapPin className='w-5 h-5 text-white' />
+                                            <MapPin className='w-5 h-5' />
                                         </motion.div>
                                     </div>
                                     <span className='min-w-[100px] text-center'>
