@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import { sendContactEmail } from "@/app/api/actions/contact"
 
-const WRITER_APPLICATION_TEMPLATE = `Hi Grounds Team,
+const WRITER_APPLICATION_TEMPLATE = `Hi Grounds,
 
 I'd love to contribute as a community writer! Here is a bit about me and what I'd like to share.
 
@@ -29,6 +29,8 @@ Why I Want to Join:
 
 Socials / Website:
 [Link to your Instagram, blog, etc.]
+
+Grounds Username: [If you have an account on Grounds]
 —
 
 Looking forward to hearing from you!`
