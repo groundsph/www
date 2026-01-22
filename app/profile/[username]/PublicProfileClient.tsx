@@ -681,7 +681,7 @@ export default function PublicProfileClient({
                             return (
                                 <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                                     <div
-                                        className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
+                                        className={`p-2 rounded-lg mb-2 bg-secondary/10`}
                                     >
                                         <RankIcon
                                             className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text/40"}`}
@@ -724,7 +724,7 @@ export default function PublicProfileClient({
                             className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-text/20 transition-all'
                         >
                             <div className='p-2 bg-primary/10 rounded-lg mb-2'>
-                                <MessageSquare className='w-6 h-6 text-primary' />
+                                <MessageSquare className='w-6 h-6' />
                             </div>
                             <span className='text-2xl font-bold'>
                                 {stats?.total_reviews ?? 0}
@@ -736,7 +736,7 @@ export default function PublicProfileClient({
                         {/* Photos */}
                         <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
                             <div className='p-2 bg-secondary/10 rounded-lg mb-2'>
-                                <Camera className='w-6 h-6 text-secondary' />
+                                <Camera className='w-6 h-6' />
                             </div>
                             <span className='text-2xl font-bold'>
                                 {stats?.total_photos ?? 0}
@@ -745,8 +745,8 @@ export default function PublicProfileClient({
                         </motion.div>
                         {/* Scouted */}
                         <motion.div whileHover={{ scale: 1.05, y: -2 }} className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'>
-                            <div className='p-2 bg-text/10 rounded-lg mb-2'>
-                                <Coffee className='w-6 h-6 text-text/70' />
+                            <div className='p-2 bg-secondary/10 rounded-lg mb-2'>
+                                <Coffee className='w-6 h-6' />
                             </div>
                             <span className='text-2xl font-bold'>
                                 {stats?.total_scouted ?? 0}

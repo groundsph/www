@@ -93,7 +93,7 @@ export default function CafeDetails({
     // Review Modal State
     const [isReviewOpen, setIsReviewOpen] = useState(false)
     const [editingReview, setEditingReview] = useState<Review | undefined>(
-        undefined
+        undefined,
     )
 
     // Claim Modal State
@@ -280,7 +280,7 @@ export default function CafeDetails({
                                         .filter(
                                             (item) =>
                                                 item.is_available &&
-                                                item.category !== "Add-ons"
+                                                item.category !== "Add-ons",
                                         )
                                         .sort((a, b) => {
                                             const aIsSpecialty = a.category
@@ -336,7 +336,7 @@ export default function CafeDetails({
                                     {menuItems.filter(
                                         (item) =>
                                             item.is_available &&
-                                            item.category !== "Add-ons"
+                                            item.category !== "Add-ons",
                                     ).length > 5 && (
                                         <Link
                                             href={`/cafes/${cafe.slug}/menu`}
@@ -348,7 +348,7 @@ export default function CafeDetails({
                                                     (item) =>
                                                         item.is_available &&
                                                         item.category !==
-                                                            "Add-ons"
+                                                            "Add-ons",
                                                 ).length
                                             }{" "}
                                             items) →
@@ -390,7 +390,7 @@ export default function CafeDetails({
                                 }}
                                 className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm transition-all duration-200 ${
                                     canScrollLeft
-                                        ? "opacity-0 group-hover:opacity-100"
+                                        ? ""
                                         : "opacity-0 pointer-events-none"
                                 }`}
                                 aria-label='Scroll left'
@@ -406,7 +406,7 @@ export default function CafeDetails({
                                 }}
                                 className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm transition-all duration-200 ${
                                     canScrollRight
-                                        ? "opacity-0 group-hover:opacity-100"
+                                        ? ""
                                         : "opacity-0 pointer-events-none"
                                 }`}
                                 aria-label='Scroll right'
@@ -453,9 +453,11 @@ export default function CafeDetails({
                                         ← Scroll to see {gallery.length} photos
                                         →
                                     </p>
-                                    <p className='text-xs text-text/40 text-center'>
-                                        or navigate using the buttons above
-                                    </p>
+                                    {(canScrollLeft || canScrollRight) && (
+                                        <p className='text-xs text-text/40 text-center'>
+                                            or navigate using the buttons above
+                                        </p>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -504,7 +506,7 @@ export default function CafeDetails({
                                     .filter(
                                         (item) =>
                                             item.is_available &&
-                                            item.category !== "Add-ons"
+                                            item.category !== "Add-ons",
                                     )
                                     .sort((a, b) => {
                                         const aIsSpecialty = a.category
@@ -554,7 +556,7 @@ export default function CafeDetails({
                                 {menuItems.filter(
                                     (item) =>
                                         item.is_available &&
-                                        item.category !== "Add-ons"
+                                        item.category !== "Add-ons",
                                 ).length > 5 && (
                                     <Link
                                         href={`/cafes/${cafe.slug}/menu`}
@@ -565,7 +567,7 @@ export default function CafeDetails({
                                             menuItems.filter(
                                                 (item) =>
                                                     item.is_available &&
-                                                    item.category !== "Add-ons"
+                                                    item.category !== "Add-ons",
                                             ).length
                                         }{" "}
                                         items) →

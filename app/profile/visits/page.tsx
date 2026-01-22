@@ -16,10 +16,22 @@ export default async function VisitsPage() {
     // Group visits by month-year for timeline display
     const groupedVisits = visits.reduce(
         (acc, visit) => {
+            // Handle null or invalid dates
+            if (!visit.lastVisit) {
+                acc["No Date"] = acc["No Date"] || []
+                acc["No Date"].push(visit)
+                return acc
+            }
             const date = new Date(visit.lastVisit)
+            if (isNaN(date.getTime())) {
+                acc["Invalid Date"] = acc["Invalid Date"] || []
+                acc["Invalid Date"].push(visit)
+                return acc
+            }
             const key = date.toLocaleDateString("en-US", {
                 month: "long",
                 year: "numeric",
+                timeZone: "Asia/Manila",
             })
             if (!acc[key]) acc[key] = []
             acc[key].push(visit)
@@ -27,6 +39,18 @@ export default async function VisitsPage() {
         },
         {} as Record<string, typeof visits>
     )
+
+    // Sort months chronologically (oldest first), putting "No Date" and "Invalid Date" at the end
+    const sortedMonths = Object.keys(groupedVisits).sort((a, b) => {
+        const isInvalidA = a === "No Date" || a === "Invalid Date"
+        const isInvalidB = b === "No Date" || b === "Invalid Date"
+        if (isInvalidA && !isInvalidB) return 1
+        if (!isInvalidA && isInvalidB) return -1
+        if (isInvalidA && isInvalidB) return 0
+        const dateA = new Date(a)
+        const dateB = new Date(b)
+        return dateA.getTime() - dateB.getTime()
+    })
 
     return (
         <main className='w-full max-w-4xl mx-auto px-4 py-8'>
@@ -67,15 +91,15 @@ export default async function VisitsPage() {
                 </div>
             ) : (
                 <div className='space-y-8'>
-                    {Object.entries(groupedVisits).map(
-                        ([monthYear, monthVisits]) => (
+                    {sortedMonths.map(
+                        (monthYear) => (
                             <section key={monthYear}>
                                 <h2 className='text-lg font-semibold text-text/70 mb-4 flex items-center gap-2'>
                                     <Calendar className='w-4 h-4' />
                                     {monthYear}
                                 </h2>
                                 <div className='grid gap-3'>
-                                    {monthVisits.map((visit) => (
+                                    {groupedVisits[monthYear].map((visit) => (
                                         <Link
                                             key={visit.cafeId}
                                             href={`/cafes/${visit.cafeSlug}`}
@@ -107,16 +131,21 @@ export default async function VisitsPage() {
                                                 </h3>
                                                 <p className='text-text/50 text-sm flex items-center gap-1 mt-1'>
                                                     <MapPin className='w-3.5 h-3.5' />
-                                                    Last visit:{" "}
-                                                    {new Date(
-                                                        visit.lastVisit
-                                                    ).toLocaleDateString(
-                                                        "en-US",
-                                                        {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                            year: "numeric",
-                                                        }
+                                                    {visit.lastVisit ? (
+                                                        <>
+                                                            Last visit:{" "}
+                                                            {new Date(visit.lastVisit).toLocaleDateString(
+                                                                "en-US",
+                                                                {
+                                                                    month: "short",
+                                                                    day: "numeric",
+                                                                    year: "numeric",
+                                                                    timeZone: "Asia/Manila",
+                                                                }
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        "No date recorded"
                                                     )}
                                                 </p>
                                             </div>

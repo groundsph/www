@@ -1130,7 +1130,7 @@ export default function ProfileClient() {
                                     className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'
                                 >
                                     <div
-                                        className={`p-2 rounded-lg mb-2 ${stats?.scout_rank ? "bg-primary/10" : "bg-text/10"}`}
+                                        className={`p-2 rounded-lg mb-2 bg-secondary/10`}
                                     >
                                         <RankIcon
                                             className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text/40"}`}
@@ -1174,7 +1174,7 @@ export default function ProfileClient() {
                             className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-text/20 transition-all cursor-pointer'
                         >
                             <div className='p-2 bg-primary/10 rounded-lg mb-2'>
-                                <MessageSquare className='w-6 h-6 text-primary' />
+                                <MessageSquare className='w-6 h-6' />
                             </div>
                             <span className='text-2xl font-bold'>
                                 {stats?.total_reviews ?? 0}
@@ -1189,7 +1189,7 @@ export default function ProfileClient() {
                             className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'
                         >
                             <div className='p-2 bg-secondary/10 rounded-lg mb-2'>
-                                <Camera className='w-6 h-6 text-secondary' />
+                                <Camera className='w-6 h-6' />
                             </div>
                             <span className='text-2xl font-bold'>
                                 {stats?.total_photos ?? 0}
@@ -1201,8 +1201,8 @@ export default function ProfileClient() {
                             whileHover={{ scale: 1.05, y: -2 }}
                             className='bg-text/5 border border-text/10 rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all hover:border-text/20'
                         >
-                            <div className='p-2 bg-text/10 rounded-lg mb-2'>
-                                <Coffee className='w-6 h-6 text-text/70' />
+                            <div className='p-2 bg-primary/10 rounded-lg mb-2'>
+                                <Coffee className='w-6 h-6' />
                             </div>
                             <span className='text-2xl font-bold'>
                                 {stats?.total_scouted ?? 0}
@@ -1569,9 +1569,6 @@ export default function ProfileClient() {
                                             </Link>
                                         </div>
                                     </div>
-
-                                    {/* Use ReviewItem for the actual content */}
-                                    {/* We need to reconstruct the author object since ReviewItem expects it */}
                                     <ReviewItem
                                         review={{
                                             ...review,
@@ -1582,19 +1579,11 @@ export default function ProfileClient() {
                                                 avatar_url:
                                                     profileData.avatar_url,
                                             },
-                                            // Handle is_liked from our fetch
                                             review_interactions: review.is_liked
                                                 ? [{ user_id: user.id }]
                                                 : [],
                                         }}
                                         currentUser={user}
-                                        // On profile page, we might restrict editing? Or allow it?
-                                        // Since it's the "Manage Profile" page, editing seems appropriate.
-                                        // However, providing the `onEdit` handler requires the Modal state which is currently not fully set up here.
-                                        // For now, let's keep it read-only-ish or just delete.
-                                        // ReviewItem handles delete internally if currentUser matches.
-                                        // Edit requires a modal parent.
-                                        // Let's omit `onEdit` for now to simplify, or if needed, we can add it later.
                                     />
                                 </motion.div>
                             ))}

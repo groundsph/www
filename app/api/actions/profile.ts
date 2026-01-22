@@ -128,19 +128,51 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
         const interactions = await db
             .select({ reviewId: reviewInteractions.reviewId })
             .from(reviewInteractions)
-            .where(and(eq(reviewInteractions.userId, userId), inArray(reviewInteractions.reviewId, reviewIds)))
+            .where(and(eq(reviewInteractions.userId, userId), inArray(reviewInteractions.reviewId, reviewIds), eq(reviewInteractions.interactionType, "like")))
         viewerLikes = new Set(interactions.map((i) => i.reviewId))
     }
 
     // 4. Get passport cafes
-    const passport = profile.passport as ProfilePassport | null
     let visitedCafes: { name: string; slug: string; thumbnail: string | null; visited_at: string | null; visitCount?: number }[] = []
     let favoriteCafes: { name: string; slug: string }[] = []
     let wishlistCafes: { name: string; slug: string }[] = []
 
+    const passport = profile.passport as ProfilePassport | null
+
+    // Fetch visited cafes from cafe_visits table (source of truth)
+    const visitedCafesResult = await db
+        .select({
+            cafeId: cafeVisits.cafeId,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            visitCount: count(),
+            firstVisit: sql<string>`MIN(${cafeVisits.visitedAt})`,
+        })
+        .from(cafeVisits)
+        .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+        .where(eq(cafeVisits.userId, userId))
+        .groupBy(cafeVisits.cafeId, cafes.id, cafes.name, cafes.slug, cafes.thumbnail)
+
+    visitedCafes = visitedCafesResult.map((r) => ({
+        name: r.cafeName,
+        slug: r.cafeSlug,
+        thumbnail: r.cafeThumbnail,
+        visited_at: r.firstVisit,
+        visitCount: r.visitCount,
+    }))
+
+    // Sort: entries with dates first (oldest to newest), then entries without dates
+    visitedCafes.sort((a, b) => {
+        if (!a.visited_at && !b.visited_at) return 0
+        if (!a.visited_at) return 1 // No date goes to end
+        if (!b.visited_at) return -1
+        return new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime()
+    })
+
+    // Fetch favorite and wishlist cafes from passport (these don't exist in cafe_visits)
     if (passport) {
         const allCafeIds = [
-            ...(passport.visited_ids || []),
             ...(passport.favorite_ids || []),
             ...(passport.wishlist_ids || []),
         ]
@@ -153,53 +185,6 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
                 .where(inArray(cafes.id, uniqueIds))
 
             const cafeMap = new Map(passportCafesResult.map((c) => [c.id, c]))
-
-            // Build a map from cafe_id to visited_at from the visits array
-            const visitDatesMap = new Map<string, string>()
-            if (passport.visits) {
-                for (const v of passport.visits) {
-                    visitDatesMap.set(v.cafe_id, v.visited_at)
-                }
-            }
-
-            // Fetch visit counts from cafe_visits table
-            const visitedIds = passport.visited_ids || []
-            let visitCountMap = new Map<string, number>()
-            if (visitedIds.length > 0) {
-                const visitCountsResult = await db
-                    .select({
-                        cafeId: cafeVisits.cafeId,
-                        visitCount: count(),
-                    })
-                    .from(cafeVisits)
-                    .where(and(eq(cafeVisits.userId, userId), inArray(cafeVisits.cafeId, visitedIds)))
-                    .groupBy(cafeVisits.cafeId)
-
-                visitCountMap = new Map(visitCountsResult.map((v) => [v.cafeId, v.visitCount]))
-            }
-
-            // Build visited cafes array and sort by date (oldest first for left-to-right display)
-            visitedCafes = visitedIds
-                .map((id) => {
-                    const cafe = cafeMap.get(id)
-                    if (!cafe) return null
-                    return {
-                        name: cafe.name,
-                        slug: cafe.slug,
-                        thumbnail: cafe.thumbnail,
-                        visited_at: visitDatesMap.get(id) || null,
-                        visitCount: visitCountMap.get(id) || 1,
-                    }
-                })
-                .filter(Boolean) as { name: string; slug: string; thumbnail: string | null; visited_at: string | null; visitCount?: number }[]
-
-            // Sort: entries with dates first (oldest to newest), then entries without dates
-            visitedCafes.sort((a, b) => {
-                if (!a.visited_at && !b.visited_at) return 0
-                if (!a.visited_at) return -1 // No date goes to the left (older)
-                if (!b.visited_at) return 1
-                return new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime()
-            })
 
             favoriteCafes = (passport.favorite_ids || [])
                 .map((id) => cafeMap.get(id))
@@ -361,31 +346,34 @@ export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?
             return result.map(r => ({ ...r, isLiked: false }))
         })(),
 
-        // Passport - visited cafes (with dates from visits array)
+        // Passport - visited cafes (from cafe_visits table - source of truth)
         (async () => {
-            if (!passport?.visited_ids?.length) return []
-            const cafeResults = await db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail }).from(cafes).where(inArray(cafes.id, passport.visited_ids))
-            const visitDatesMap = new Map<string, string>()
-            if (passport.visits) {
-                for (const v of passport.visits) {
-                    visitDatesMap.set(v.cafe_id, v.visited_at)
-                }
-            }
-            const result = passport.visited_ids.map(id => {
-                const cafe = cafeResults.find(c => c.id === id)
-                if (!cafe) return null
-                return {
-                    name: cafe.name,
-                    slug: cafe.slug,
-                    thumbnail: cafe.thumbnail,
-                    visited_at: visitDatesMap.get(id) || null,
-                }
-            }).filter(Boolean) as { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
-            // Sort: entries without dates to the left (older), then by date oldest to newest
+            // Fetch visited cafes from cafe_visits table directly
+            const visitedCafesResult = await db
+                .select({
+                    cafeId: cafeVisits.cafeId,
+                    cafeName: cafes.name,
+                    cafeSlug: cafes.slug,
+                    cafeThumbnail: cafes.thumbnail,
+                    firstVisit: sql<string>`MIN(${cafeVisits.visitedAt})`,
+                })
+                .from(cafeVisits)
+                .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+                .where(eq(cafeVisits.userId, profile.id))
+                .groupBy(cafeVisits.cafeId, cafes.id, cafes.name, cafes.slug, cafes.thumbnail)
+
+            const result = visitedCafesResult.map((r) => ({
+                name: r.cafeName,
+                slug: r.cafeSlug,
+                thumbnail: r.cafeThumbnail,
+                visited_at: r.firstVisit,
+            }))
+
+            // Sort: entries with dates first (oldest to newest), then entries without dates
             result.sort((a, b) => {
                 if (!a.visited_at && !b.visited_at) return 0
-                if (!a.visited_at) return -1
-                if (!b.visited_at) return 1
+                if (!a.visited_at) return 1 // No date goes to end
+                if (!b.visited_at) return -1
                 return new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime()
             })
             return result
@@ -948,9 +936,11 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
 
     try {
         // Check if user already visited this cafe today (PH time)
-        const today = getPHTodayStart()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        // Convert PH time bounds to UTC for DB comparison
+        // getPHTodayStart() returns Shifted UTC (e.g. 00:00). Subtract 8h to get Real UTC (e.g. Prev Day 16:00)
+        const todayPH = getPHTodayStart()
+        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
+        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
 
         const existingTodayVisit = await db
             .select({ id: cafeVisits.id })
@@ -959,8 +949,8 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
                 and(
                     eq(cafeVisits.userId, user.id),
                     eq(cafeVisits.cafeId, cafeId),
-                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                    sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                 )
             )
             .limit(1)
@@ -1047,7 +1037,6 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
             }
         }
 
-        // =====================================================================
         // COMPANION VISIT AUTO-MARKING
         // Record visits for companions (if they haven't visited today)
         // =====================================================================
@@ -1064,8 +1053,8 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
                             and(
                                 eq(cafeVisits.userId, companionId),
                                 eq(cafeVisits.cafeId, cafeId),
-                                sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                                sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                                sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                             )
                         )
                         .limit(1)
@@ -1169,9 +1158,9 @@ export async function getTodayCheckIn(cafeId: string): Promise<{
     if (!user) return null
 
     try {
-        const today = getPHTodayStart()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        const todayPH = getPHTodayStart()
+        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
+        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
 
         const result = await db
             .select({
@@ -1184,8 +1173,8 @@ export async function getTodayCheckIn(cafeId: string): Promise<{
                 and(
                     eq(cafeVisits.userId, user.id),
                     eq(cafeVisits.cafeId, cafeId),
-                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                    sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                 )
             )
             .limit(1)
@@ -1230,9 +1219,9 @@ export async function updateCheckIn(cafeId: string, companionIds: string[]): Pro
     if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
 
     try {
-        const today = getPHTodayStart()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        const todayPH = getPHTodayStart()
+        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
+        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
 
         // Get existing visit
         const existingVisitResult = await db
@@ -1242,8 +1231,8 @@ export async function updateCheckIn(cafeId: string, companionIds: string[]): Pro
                 and(
                     eq(cafeVisits.userId, user.id),
                     eq(cafeVisits.cafeId, cafeId),
-                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                    sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                 )
             )
             .limit(1)
@@ -1288,8 +1277,8 @@ export async function updateCheckIn(cafeId: string, companionIds: string[]): Pro
                             and(
                                 eq(cafeVisits.userId, companionId),
                                 eq(cafeVisits.cafeId, cafeId),
-                                sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                                sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                                sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                             )
                         )
                         .limit(1)
@@ -1362,7 +1351,7 @@ export async function updateCheckIn(cafeId: string, companionIds: string[]): Pro
         if (removedIds.length > 0) {
             for (const companionId of removedIds) {
                 try {
-                    // Find companion's visit today
+                    // Check if companion already visited today
                     const companionTodayVisit = await db
                         .select({ id: cafeVisits.id, companions: cafeVisits.companions })
                         .from(cafeVisits)
@@ -1370,8 +1359,8 @@ export async function updateCheckIn(cafeId: string, companionIds: string[]): Pro
                             and(
                                 eq(cafeVisits.userId, companionId),
                                 eq(cafeVisits.cafeId, cafeId),
-                                sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                                sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                                sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                             )
                         )
                         .limit(1)
@@ -1482,9 +1471,10 @@ export async function getTodayVisitors(cafeId: string): Promise<{
 }> {
     try {
         // Get start and end of today (UTC+8 Philippine Time)
-        const today = getPHTodayStart()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        // Convert to Real UTC for DB Query
+        const todayPH = getPHTodayStart()
+        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
+        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
 
         const result = await db
             .select({
@@ -1499,8 +1489,8 @@ export async function getTodayVisitors(cafeId: string): Promise<{
             .where(
                 and(
                     eq(cafeVisits.cafeId, cafeId),
-                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                    sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                 )
             )
             .orderBy(desc(cafeVisits.visitedAt))
@@ -1577,9 +1567,9 @@ export async function hasVisitedToday(cafeId: string): Promise<boolean> {
     if (!user) return false
 
     try {
-        const today = getPHTodayStart()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        const todayPH = getPHTodayStart()
+        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
+        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
 
         const result = await db
             .select({ id: cafeVisits.id })
@@ -1588,8 +1578,8 @@ export async function hasVisitedToday(cafeId: string): Promise<boolean> {
                 and(
                     eq(cafeVisits.userId, user.id),
                     eq(cafeVisits.cafeId, cafeId),
-                    sql`${cafeVisits.visitedAt} >= ${today.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${tomorrow.toISOString()}`
+                    sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
                 )
             )
             .limit(1)
@@ -1653,8 +1643,11 @@ export async function getMonthlyLeaderboard(
 
     try {
         // Get start of current month in PH time
-        const now = getPHTime()
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const nowPH = getPHTime()
+        // Month start in PH (e.g. Jan 1 00:00 PH)
+        const monthStartPH = new Date(nowPH.getFullYear(), nowPH.getMonth(), 1)
+        // Convert to UTC (e.g. Dec 31 16:00 UTC)
+        const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
 
         // Build base query
         let query = db
@@ -1667,7 +1660,7 @@ export async function getMonthlyLeaderboard(
             })
             .from(cafeVisits)
             .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
-            .where(sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`)
+            .where(sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`)
 
         // Add region filter if specified
         if (region) {
@@ -1684,7 +1677,7 @@ export async function getMonthlyLeaderboard(
                 .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
                 .where(
                     and(
-                        sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`,
+                        sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
                         eq(cafes.region, region)
                     )
                 )
@@ -1722,7 +1715,7 @@ export async function getMonthlyLeaderboard(
                         .where(
                             and(
                                 eq(cafeVisits.userId, user.id),
-                                sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
                                 eq(cafes.region, region)
                             )
                         )
@@ -1732,7 +1725,7 @@ export async function getMonthlyLeaderboard(
                         .where(
                             and(
                                 eq(cafeVisits.userId, user.id),
-                                sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`
+                                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`
                             )
                         )
 
@@ -1751,7 +1744,7 @@ export async function getMonthlyLeaderboard(
                                     .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
                                     .where(
                                         and(
-                                            sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`,
+                                            sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
                                             eq(cafes.region, region)
                                         )
                                     )
@@ -1765,7 +1758,7 @@ export async function getMonthlyLeaderboard(
                                 db
                                     .select({ userId: cafeVisits.userId, total: count() })
                                     .from(cafeVisits)
-                                    .where(sql`${cafeVisits.visitedAt} >= ${monthStart.toISOString()}`)
+                                    .where(sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`)
                                     .groupBy(cafeVisits.userId)
                                     .having(sql`count(*) > ${userVisitCount}`)
                                     .as("higher")

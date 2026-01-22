@@ -36,7 +36,7 @@ export default function ReviewModal({
     const [comment, setComment] = useState(existingReview?.comment || "")
     // Update state type to accept strings and Files
     const [images, setImages] = useState<(string | File)[]>(
-        existingReview?.images || []
+        existingReview?.images || [],
     )
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -58,10 +58,10 @@ export default function ReviewModal({
         try {
             // Separate existing URLs from new Files
             const existingUrls = images.filter(
-                (img): img is string => typeof img === "string"
+                (img): img is string => typeof img === "string",
             )
             const newFiles = images.filter(
-                (img): img is File => img instanceof File
+                (img): img is File => img instanceof File,
             )
 
             const uploadedUrls: string[] = []
@@ -78,7 +78,7 @@ export default function ReviewModal({
                         uploadedUrls.push(result.url)
                     } else {
                         throw new Error(
-                            result.error || "Failed to upload image"
+                            result.error || "Failed to upload image",
                         )
                     }
                 }
@@ -93,14 +93,14 @@ export default function ReviewModal({
                     existingReview.id,
                     rating,
                     comment,
-                    finalImages
+                    finalImages,
                 )
             } else {
                 result = await createReview(
                     cafeId,
                     rating,
                     comment,
-                    finalImages
+                    finalImages,
                 )
             }
 
@@ -108,7 +108,9 @@ export default function ReviewModal({
                 setError(result.error)
             } else {
                 if (!existingReview) {
-                    const awardedBadges = (result as unknown as { awardedBadges?: string[] }).awardedBadges
+                    const awardedBadges = (
+                        result as unknown as { awardedBadges?: string[] }
+                    ).awardedBadges
                     if (awardedBadges && awardedBadges.length > 0) {
                         showBadgeNotifications(awardedBadges)
                     }
@@ -118,7 +120,7 @@ export default function ReviewModal({
             }
         } catch (e: unknown) {
             setError(
-                e instanceof Error ? e.message : "An unexpected error occurred"
+                e instanceof Error ? e.message : "An unexpected error occurred",
             )
         } finally {
             setIsSubmitting(false)
@@ -194,7 +196,7 @@ export default function ReviewModal({
                                     <label className='text-sm font-medium text-text/60'>
                                         Your Review
                                     </label>
-                                    <div className='relative'>
+                                    <div className='my-2'>
                                         <textarea
                                             value={comment}
                                             onChange={(e) =>
@@ -203,9 +205,10 @@ export default function ReviewModal({
                                             placeholder='Share your experience...'
                                             className='w-full min-h-40 bg-text/5 text-base leading-relaxed placeholder:text-text/30 focus:outline-none p-4 resize-none rounded-xl border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
                                         />
-                                        <div className='absolute bottom-3 right-3 text-xs text-text/40'>
-                                            {comment.length} characters
-                                        </div>
+                                    </div>
+
+                                    <div className='text-xs text-text/60 w-full text-right'>
+                                        {comment.length} characters
                                     </div>
                                 </div>
 
