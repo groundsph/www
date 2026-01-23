@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { motion } from "motion/react"
-import { MapPin } from "lucide-react"
 import { NearbyCafe } from "@/app/api/actions/nearby"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
 import { recordVisit } from "@/app/api/actions/profile"
