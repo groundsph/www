@@ -303,7 +303,7 @@ export default function Navbar() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className='absolute inset-0 bg-background pt-4 pb-10 px-6 flex flex-col h-max top-full left-0 right-0'
+                        className='md:hidden absolute inset-0 bg-background pt-4 pb-10 px-6 flex flex-col h-max top-full left-0 right-0'
                         onClick={(e) => e.stopPropagation()}
                     >
                         <ul className='flex flex-col gap-4'>
@@ -323,7 +323,7 @@ export default function Navbar() {
                                                         openDropdown ===
                                                             route.title
                                                             ? null
-                                                            : route.title
+                                                            : route.title,
                                                     )
                                                 }}
                                                 className={`w-full text-left flex items-center justify-between text-3xl font-semibold ${
@@ -387,7 +387,7 @@ export default function Navbar() {
                                                                         }
                                                                     </Link>
                                                                 </li>
-                                                            )
+                                                            ),
                                                         )}
                                                     </motion.ul>
                                                 )}
@@ -473,7 +473,6 @@ export default function Navbar() {
                                 transition={{
                                     delay: 0.1 + (routes.length + 1) * 0.1,
                                 }}
-                                className='mt-4'
                             >
                                 <Auth isMobile />
                             </motion.li>
@@ -501,8 +500,10 @@ function Auth({ isMobile = false }: { isMobile?: boolean }) {
         return (
             <button
                 onClick={handleSignOut}
-                className={`hover:text-text/60 transition-colors font-serif flex flex-row gap-2 items-center cursor-pointer hover:bg-text/5 rounded-md p-2 ${
-                    isMobile ? "text-xl" : ""
+                className={`flex flex-row gap-2 transition-colors items-center cursor-pointer ${
+                    isMobile
+                        ? "text-3xl font-semibold lowercase"
+                        : "hover:text-text/60 hover:bg-text/5 rounded-md p-2 font-serif"
                 }`}
             >
                 <LogOutIcon
