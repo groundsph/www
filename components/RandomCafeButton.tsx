@@ -20,7 +20,6 @@ import { getAllCafes } from "@/app/api/actions/cafe"
 
 interface RandomCafeButtonProps {
     cafes?: CafeWithRatings[]
-    radiusKm?: number
     variant?: "default" | "hero"
 }
 
@@ -28,7 +27,6 @@ type CafeWithDistance = CafeWithRatings & { distance: number }
 
 export default function RandomCafeButton({
     cafes: propCafes,
-    radiusKm = 10,
     variant = "default",
 }: RandomCafeButtonProps) {
     const {
@@ -63,11 +61,26 @@ export default function RandomCafeButton({
         }
     }, [propCafes, fetchedCafes.length])
 
-    // Get nearby cafes when we have location
-    const nearbyCafes = useMemo(() => {
-        if (!location.lat || !location.lng) return []
-        return getNearbyCafes(cafes, location.lat, location.lng, radiusKm)
-    }, [cafes, location.lat, location.lng, radiusKm])
+    // Get nearby cafes with incremental radius search (1km to 5km, min 2 cafes)
+    const { nearbyCafes, effectiveRadius } = useMemo(() => {
+        if (!location.lat || !location.lng) {
+            return { nearbyCafes: [], effectiveRadius: 1 }
+        }
+
+        let foundCafes: Array<CafeWithRatings & { distance: number }> = []
+        let effective = 1
+
+        for (let r = 1; r <= 5; r++) {
+            foundCafes = getNearbyCafes(cafes, location.lat, location.lng, r)
+            if (foundCafes.length >= 2) {
+                effective = r
+                break
+            }
+            effective = r
+        }
+
+        return { nearbyCafes: foundCafes, effectiveRadius: effective }
+    }, [cafes, location.lat, location.lng])
 
     const pickRandom = useCallback(() => {
         if (nearbyCafes.length === 0) return
@@ -200,7 +213,7 @@ export default function RandomCafeButton({
                                     </div>
                                 )}
 
-                                {/* No Nearby Cafes */}
+                                 {/* No Nearby Cafes */}
                                 {!isLoading &&
                                     hasLocation &&
                                     cafes.length > 0 &&
@@ -212,8 +225,7 @@ export default function RandomCafeButton({
                                             </p>
                                             <p className='text-sm text-text/60 max-w-xs'>
                                                 We couldn&apos;t find any cafes
-                                                within {radiusKm}km of your
-                                                location.
+                                                within 5km of your location.
                                             </p>
                                         </div>
                                     )}
@@ -326,12 +338,12 @@ export default function RandomCafeButton({
                                             </a>
                                         </div>
 
-                                        <p className='text-xs text-text/40 text-center'>
+                                         <p className='text-xs text-text/40 text-center'>
                                             {nearbyCafes.length} cafe
                                             {nearbyCafes.length !== 1
                                                 ? "s"
                                                 : ""}{" "}
-                                            within {radiusKm}km
+                                            within {effectiveRadius}km
                                         </p>
                                     </motion.div>
                                 )}
