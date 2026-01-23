@@ -81,22 +81,22 @@ export default async function Home() {
             />
             <LandingHero featured={featured} />
 
-            <SubmitCafeSection cafeCount={cafeCount} />
-
-            {/* Recently Added */}
-            <RecentlyAddedSection cafes={recentlyAdded} />
-
-            {/* Activity Feed - Only shows for authenticated users with follows */}
-            <ActivityFeedWrapper />
-
-            {/* Recent Reviews */}
-            <RecentReviewsSection reviews={recentReviews} />
-
             {/* Stories & Events Section - Side by Side */}
             <StoriesEventsSection
                 latestPosts={latestPosts}
                 upcomingEvents={upcomingEvents}
             />
+
+            <SubmitCafeSection cafeCount={cafeCount} />
+
+            {/* Recently Added */}
+            <RecentlyAddedSection cafes={recentlyAdded} />
+
+            {/* Recent Reviews */}
+            <RecentReviewsSection reviews={recentReviews} />
+
+            {/* Activity Feed - Only shows for authenticated users with follows */}
+            <ActivityFeedWrapper />
 
             {/* Supporters Section */}
             {/* <SupportersSection /> */}
