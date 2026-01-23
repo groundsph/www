@@ -3,7 +3,7 @@
 import { Coffee, Route, Footprints } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useEffect, useRef, useMemo, useState } from "react"
+import { useEffect, useRef, useMemo, useState, Suspense } from "react"
 import { motion } from "motion/react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
@@ -50,7 +50,7 @@ function getPointOnCurve(
     cp2x: number,
     cp2y: number,
     x2: number,
-    y2: number
+    y2: number,
 ) {
     const t2 = t * t
     const t3 = t2 * t
@@ -74,7 +74,7 @@ function getTangentAngle(
     cp2x: number,
     cp2y: number,
     x2: number,
-    y2: number
+    y2: number,
 ) {
     const delta = 0.001
     const p1 = getPointOnCurve(
@@ -86,7 +86,7 @@ function getTangentAngle(
         cp2x,
         cp2y,
         x2,
-        y2
+        y2,
     )
     const p2 = getPointOnCurve(
         Math.min(1, t + delta),
@@ -97,7 +97,7 @@ function getTangentAngle(
         cp2x,
         cp2y,
         x2,
-        y2
+        y2,
     )
     return Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI)
 }
@@ -109,7 +109,7 @@ function getSCurveControls(
     x1: number,
     y1: number,
     x2: number,
-    y2: number
+    y2: number,
 ) {
     const random1 = seededRandom(fromSlug + toSlug)
     const random2 = seededRandom(toSlug + fromSlug + "curve")
@@ -260,7 +260,7 @@ export default function VisitHistory({
                                     x1,
                                     y1,
                                     x2,
-                                    y2
+                                    y2,
                                 )
 
                             // Generate footstep positions along the curve (start at 25%, end at 75%)
@@ -281,7 +281,7 @@ export default function VisitHistory({
                                     cp2x,
                                     cp2y,
                                     x2,
-                                    y2
+                                    y2,
                                 )
                                 const angle = getTangentAngle(
                                     t,
@@ -292,7 +292,7 @@ export default function VisitHistory({
                                     cp2x,
                                     cp2y,
                                     x2,
-                                    y2
+                                    y2,
                                 )
                                 footsteps.push({ ...point, angle, t })
                             }
@@ -369,34 +369,55 @@ export default function VisitHistory({
                                     >
                                         {/* Badge circle with thumbnail */}
                                         <motion.div
-                                            whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(116, 81, 45, 0.4)" }}
+                                            whileHover={{
+                                                scale: 1.05,
+                                                boxShadow:
+                                                    "0 0 20px rgba(116, 81, 45, 0.4)",
+                                            }}
                                             className='rounded-full bg-background border-2 border-primary/40 flex items-center justify-center overflow-hidden transition-all duration-200'
                                             style={{
                                                 width: `${BADGE_SIZE}px`,
                                                 height: `${BADGE_SIZE}px`,
-                                                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                                                boxShadow:
+                                                    "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                                             }}
                                         >
-                                            {cafe.thumbnail ? (
-                                                <Image
-                                                    src={getCafeThumbnailUrl(
-                                                        cafe.thumbnail
-                                                    )}
-                                                    alt={cafe.name}
-                                                    width={BADGE_SIZE}
-                                                    height={BADGE_SIZE}
-                                                    className='object-cover w-full h-full'
-                                                />
-                                            ) : (
-                                                <Coffee
-                                                    className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary/70 group-hover:text-primary transition-colors`}
+                                            {index ===
+                                                sortedVisits.length - 1 && (
+                                                <>
+                                                    <span className='-z-10 animate-ping absolute inline-flex h-full w-full aspect-square rounded-full bg-primary/60 opacity-10'></span>
+                                                </>
+                                            )}
+                                            <Suspense
+                                                fallback={
+                                                    <Coffee
+                                                        className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary/70 group-hover:text-primary transition-colors`}
+                                                    />
+                                                }
+                                            >
+                                                {cafe.thumbnail ? (
+                                                    <Image
+                                                        src={getCafeThumbnailUrl(
+                                                            cafe.thumbnail,
+                                                        )}
+                                                        alt={cafe.name}
+                                                        width={BADGE_SIZE}
+                                                        height={BADGE_SIZE}
+                                                        className='object-cover w-full h-full'
+                                                    />
+                                                ) : (
+                                                    <Coffee
+                                                        className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary/70 group-hover:text-primary transition-colors`}
                                                     />
                                                 )}
+                                            </Suspense>
                                         </motion.div>
 
                                         {/* Cafe name - responsive display */}
                                         <motion.span
-                                            whileHover={{ color: "rgb(116, 81, 45)" }}
+                                            whileHover={{
+                                                color: "rgb(116, 81, 45)",
+                                            }}
                                             className='mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-text/80 font-medium text-center leading-tight'
                                             style={{
                                                 maxWidth: isMobile
@@ -404,7 +425,7 @@ export default function VisitHistory({
                                                     : "120px",
                                                 wordBreak: "break-word",
                                             }}
-                                            >
+                                        >
                                             {cafe.name}
                                         </motion.span>
 
@@ -417,7 +438,7 @@ export default function VisitHistory({
                                                 </span>
                                             ) : cafe.visited_at ? (
                                                 new Date(
-                                                    cafe.visited_at
+                                                    cafe.visited_at,
                                                 ).toLocaleDateString("en-US", {
                                                     month: "short",
                                                     day: "numeric",
