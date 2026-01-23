@@ -7,6 +7,7 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
 import { useLandingLocation } from "@/hooks/useLandingLocation"
 import RandomCafeButton from "@/components/RandomCafeButton"
+import HeroLocationCheckIn from "@/components/checkin/HeroLocationCheckIn"
 
 interface LandingHeroProps {
     featured: CafeWithRatings | null
@@ -17,7 +18,7 @@ const MotionLink = motion.create(Link)
 export default function LandingHero({
     featured: initialFeatured,
 }: LandingHeroProps) {
-    const { featured, isLocalFeatured, locationName, isEstimate } =
+    const { featured, isLocalFeatured, locationName, isEstimate, nearbyCafe } =
         useLandingLocation(initialFeatured)
 
     return (
@@ -64,6 +65,9 @@ export default function LandingHero({
                         >
                             Discover the finest cafes across the archipelago
                         </motion.span>
+
+                        {/* Simple check-in prompt - only shows if GPS is active and cafe is nearby */}
+                        <HeroLocationCheckIn nearbyCafe={nearbyCafe} />
                     </div>
                     <div className='flex-1 flex flex-col'>
                         {featured && (

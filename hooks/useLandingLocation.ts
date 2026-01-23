@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react"
 import { getLocationFeatured } from "@/app/api/actions/cafe"
+import { getNearbyCafes, NearbyCafe } from "@/app/api/actions/nearby"
 import { CafeWithRatings } from "@/utils/types/extra"
 import {
     useUserLocation,
     GeolocationError,
+    LocationSource
 } from "@/hooks/useUserLocation"
 import { useNotification } from "@/components/NotificationProvider"
 
@@ -27,6 +29,8 @@ export interface UseLandingLocationReturn {
     locationName: string | null
     isEstimate: boolean
     loading: boolean
+    nearbyCafe: NearbyCafe | null
+    source: LocationSource
 }
 
 // ============================================================================
@@ -58,6 +62,7 @@ export function useLandingLocation(
     const [locationName, setLocationName] = useState<string | null>(null)
     const [isEstimate, setIsEstimate] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
+    const [nearbyCafe, setNearbyCafe] = useState<NearbyCafe | null>(null)
 
     // Track if we've shown a notification to avoid duplicates
     const hasShownNotificationRef = useRef(false)
@@ -83,6 +88,7 @@ export function useLandingLocation(
         location,
         loading: locationLoading,
         isEstimate: locationIsEstimate,
+        source,
     } = useUserLocation({
         onError: handleLocationError,
     })
@@ -149,11 +155,33 @@ export function useLandingLocation(
         fetchFeatured()
     }, [location, locationLoading, locationIsEstimate, hasFetched])
 
+    // Automatically fetch nearby cafes if source is GPS
+    useEffect(() => {
+        // Only fetch if we have GPS source and valid coordinates
+        if (source === "gps" && location.lat && location.lng) {
+            const fetchNearby = async () => {
+                try {
+                    // Search within 150m for check-ins
+                    const nearby = await getNearbyCafes(location.lat!, location.lng!, 1, 150)
+                    if (nearby.length > 0) {
+                        setNearbyCafe(nearby[0])
+                    }
+                } catch (err) {
+                    console.error("[LandingLocation] Failed to fetch nearby cafe:", err)
+                }
+            }
+
+            fetchNearby()
+        }
+    }, [source, location.lat, location.lng])
+
     return {
         featured,
         isLocalFeatured,
         locationName,
         isEstimate,
         loading: locationLoading && !hasFetched,
+        nearbyCafe,
+        source,
     }
 }
