@@ -573,6 +573,14 @@ export async function getAllCafes(
                 .limit(limit)
                 .offset(offset)
 
+            if (filters.is_24_7) {
+                return fallbackResults.filter(cafe => {
+                    if (!cafe.operatingHours) return false
+                    const hours = cafe.operatingHours as Array<{ day: string; is_24_hours?: boolean }>
+                    return hours.length === 7 && hours.every(h => h.is_24_hours === true)
+                }).map(c => mapCafeToSnakeCase(c))
+            }
+
             return fallbackResults.map(c => mapCafeToSnakeCase(c))
         }
 
@@ -659,6 +667,12 @@ export async function getAllCafes(
         conditions.push(sql`${cafes.tags} && ARRAY[${sql.join(filters.tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
     }
     if (filters.exclude_hidden_gems) conditions.push(eq(cafes.isHiddenGem, false))
+    if (filters.is_24_7) {
+        conditions.push(sql`jsonb_array_length(${cafes.operatingHours}) = 7 AND NOT EXISTS (
+            SELECT 1 FROM jsonb_array_elements(${cafes.operatingHours}) elem 
+            WHERE elem->>'is_24_hours' IS NULL OR elem->>'is_24_hours' != 'true'
+        )`)
+    }
     // Exclude chains by default unless include_chains is true
     // Treat NULL as non-chain (include cafes where is_chain is false OR null)
     if (!filters.include_chains) {

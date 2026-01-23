@@ -37,7 +37,11 @@ export default function LandingHero({
                         <motion.h1
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
+                            transition={{
+                                duration: 0.8,
+                                delay: 0.1,
+                                ease: "easeOut",
+                            }}
                             className='text-5xl md:text-6xl lg:text-7xl font-bold flex flex-col'
                         >
                             <span>
@@ -51,7 +55,11 @@ export default function LandingHero({
                         <motion.span
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                            transition={{
+                                duration: 0.8,
+                                delay: 0.2,
+                                ease: "easeOut",
+                            }}
                             className='text-lg md:text-2xl lg:text-3xl font-semibold'
                         >
                             Discover the finest cafes across the archipelago
@@ -64,7 +72,11 @@ export default function LandingHero({
                                     <motion.h2
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+                                        transition={{
+                                            duration: 0.8,
+                                            delay: 0.3,
+                                            ease: "easeOut",
+                                        }}
                                         className='text-2xl md:text-5xl lg:text-6xl font-bold font-serif'
                                     >
                                         Today&apos;s Featured
@@ -74,7 +86,11 @@ export default function LandingHero({
                                             initial={{ opacity: 0, y: 5 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 5 }}
-                                            transition={{ duration: 0.8, delay: 0.35, ease: "easeOut" }}
+                                            transition={{
+                                                duration: 0.8,
+                                                delay: 0.35,
+                                                ease: "easeOut",
+                                            }}
                                             className='flex flex-col gap-1'
                                         >
                                             <div className='flex flex-row items-center gap-1 text-sm text-text/60'>
@@ -101,7 +117,11 @@ export default function LandingHero({
                                         initial={{ opacity: 0, y: 5 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 5 }}
-                                        transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+                                        transition={{
+                                            duration: 0.8,
+                                            delay: 0.4,
+                                            ease: "easeOut",
+                                        }}
                                         className='text-sm md:text-base lg:text-lg my-4 md:my-6'
                                     >
                                         {featured.description}
@@ -110,20 +130,13 @@ export default function LandingHero({
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
+                                    transition={{
+                                        duration: 0.8,
+                                        delay: 0.5,
+                                        ease: "easeOut",
+                                    }}
                                     className='w-full flex flex-row gap-4 items-center flex-wrap'
                                 >
-                                    {featured.slug && (
-                                        <MotionLink
-                                            href={`/cafes/${featured.slug}`}
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            className='px-4 py-1 w-max text-sm md:text-base bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap'
-                                        >
-                                            Learn More
-                                        </MotionLink>
-                                    )}
-                                    <span className='text-text/60'>or</span>
                                     <MotionLink
                                         href='/map'
                                         whileHover={{ scale: 1.05 }}
@@ -194,6 +207,16 @@ export default function LandingHero({
                                 />
                             )}
                         </motion.div>
+                    )}
+                    {featured && (
+                        <MotionLink
+                            href={`/cafes/${featured.slug}`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className='absolute bottom-4 right-4 z-10 px-2 py-1 w-max rounded-md bg-background/10 text-white text-lg font-semibold backdrop-blur-sm hover:bg-background/20 transition-colors shadow-lg hover:shadow-xl'
+                        >
+                            Learn More
+                        </MotionLink>
                     )}
                 </AnimatePresence>
             </motion.div>

@@ -24,6 +24,7 @@ import {
     Gem,
     Cigarette,
     Store,
+    Clock12,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
@@ -79,6 +80,7 @@ export default function CafesPageClient({
         has_non_dairy: false,
         has_decaf: false,
         is_work_friendly: false,
+        is_24_7: false,
         open_now: false,
         price_level: "" as "" | "low" | "medium" | "high",
         coffee_style: "" as "" | "classic" | "artisan",
@@ -159,6 +161,7 @@ export default function CafesPageClient({
                 has_non_dairy: filters.has_non_dairy,
                 has_decaf: filters.has_decaf,
                 is_work_friendly: filters.is_work_friendly,
+                is_24_7: filters.is_24_7 || undefined,
                 price_level: filters.price_level || undefined,
                 coffee_style: filters.coffee_style || undefined,
                 region: filters.region || undefined,
@@ -294,6 +297,11 @@ export default function CafesPageClient({
             label: "Work Friendly",
             icon: <Briefcase className='w-4 h-4' />,
         },
+        {
+            key: "is_24_7",
+            label: "24/7",
+            icon: <Clock12 className='w-4 h-4' />,
+        },
     ]
 
     // Render
@@ -402,6 +410,7 @@ export default function CafesPageClient({
                                                     has_non_dairy: false,
                                                     has_decaf: false,
                                                     is_work_friendly: false,
+                                                    is_24_7: false,
                                                     open_now: false,
                                                     price_level: "",
                                                     coffee_style: "",
@@ -905,7 +914,7 @@ export default function CafesPageClient({
                                                 {cafe.tags.map((tag) => (
                                                     <span
                                                         key={tag}
-                                                        className='text-xs px-2 py-0.5 bg-primary/10 text-nowrap font-semibold rounded-full text-text/80 h-max'
+                                                        className='text-xs px-2 py-0.5 bg-tertiary/20 shadow-inner text-nowrap font-semibold rounded-full text-text/80 h-max'
                                                     >
                                                         #{tag}
                                                     </span>
@@ -970,6 +979,7 @@ export default function CafesPageClient({
                                         has_non_dairy: false,
                                         has_decaf: false,
                                         is_work_friendly: false,
+                                        is_24_7: false,
                                         open_now: false,
                                         price_level: "",
                                         coffee_style: "",

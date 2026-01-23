@@ -98,7 +98,8 @@ export interface CafeFilters {
     has_non_dairy?: boolean;
     has_decaf?: boolean;
     is_work_friendly?: boolean;
-    price_level?: Database['public']['Enums']['price_level']; // Uses the actual DB Enum type
+    is_24_7?: boolean;
+    price_level?: Database['public']['Enums']['price_level']; // Uses of actual DB Enum type
     coffee_style?: Database['public']['Enums']['coffee_style']; // Classic (2nd-wave) or Artisan (3rd-wave)
     region?: string;
     tags?: string[]; // Filter by vibe tags (any matching)

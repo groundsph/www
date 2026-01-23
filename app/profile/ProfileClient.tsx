@@ -33,7 +33,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
@@ -266,6 +266,22 @@ export default function ProfileClient() {
         }
         fetchCollections()
     }, [user])
+
+    // Stable handlers for FollowCounts
+    const handleCountsChange = useCallback((followers: number, following: number) => {
+        setFollowersCount(followers)
+        setFollowingCount(following)
+    }, [])
+
+    const handleFollowersClick = useCallback(() => {
+        setFollowModalType("followers")
+        setIsFollowModalOpen(true)
+    }, [])
+
+    const handleFollowingClick = useCallback(() => {
+        setFollowModalType("following")
+        setIsFollowModalOpen(true)
+    }, [])
 
     // Handle save
     const handleSave = async () => {
@@ -713,18 +729,9 @@ export default function ProfileClient() {
                                 username={profileData.username}
                                 followersCount={followersCount}
                                 followingCount={followingCount}
-                                onCountsChange={(followers, following) => {
-                                    setFollowersCount(followers)
-                                    setFollowingCount(following)
-                                }}
-                                onFollowersClick={() => {
-                                    setFollowModalType("followers")
-                                    setIsFollowModalOpen(true)
-                                }}
-                                onFollowingClick={() => {
-                                    setFollowModalType("following")
-                                    setIsFollowModalOpen(true)
-                                }}
+                                onCountsChange={handleCountsChange}
+                                onFollowersClick={handleFollowersClick}
+                                onFollowingClick={handleFollowingClick}
                             />
                             <Link
                                 href='/profile/activity'
