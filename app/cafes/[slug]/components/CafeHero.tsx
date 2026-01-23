@@ -19,7 +19,7 @@ import {
     Cigarette,
 } from "lucide-react"
 import { useState } from "react"
-import { getCafeThumbnailUrl, isOpenNow } from "@/utils/extras"
+import { getCafeDescription, getCafeThumbnailUrl, isOpenNow } from "@/utils/extras"
 
 // Simple user type - only used for truthiness check
 type SimpleUser = { id: string } | null
@@ -518,7 +518,7 @@ export default function CafeHero({
                         transition={{ duration: 0.5, delay: 0.3 }}
                         className='max-w-lg mt-6'
                     >
-                        {cafe.description}
+                        {getCafeDescription(cafe)}
                     </motion.p>
 
                     {/* Claim Button - Only for unclaimed cafes */}

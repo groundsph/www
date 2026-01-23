@@ -5,7 +5,7 @@ import type { Metadata } from "next"
 import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"
 import { getCafeMenuItems } from "@/app/api/actions/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
-import { getCafeThumbnailUrl } from "@/utils/extras"
+import { getCafeDescription, getCafeThumbnailUrl } from "@/utils/extras"
 
 export async function generateMetadata({
     params,
@@ -22,7 +22,7 @@ export async function generateMetadata({
         }
     }
 
-    const { name, description, address_display, thumbnail, tags, specialty } =
+    const { name, address_display, thumbnail, tags, specialty } =
         cafe
 
     // Only use real thumbnails for OG images, not placeholders (will inherit site default)
@@ -32,9 +32,7 @@ export async function generateMetadata({
     // Get the actual image URL for preloading (including placeholder fallback)
     const heroImageUrl = getCafeThumbnailUrl(thumbnail ?? "placeholder")
 
-    const metaDescription =
-        description ||
-        `Visit ${name} at ${address_display}. Find the perfect spot for your next coffee break or work session.`
+    const metaDescription = getCafeDescription(cafe)
 
     // Build keywords from cafe data
     const keywords = [

@@ -16,7 +16,7 @@
 ### Testing
 - `bun test` - Run all tests
 - `bun test <file-path>` - Run a single test file (e.g., `bun test utils/data/__tests__/location-matcher.test.ts`)
-- Tests use Bun's test framework (`import { describe, it, expect } from "bun:test"`)
+- Tests use Bun's test framework with `describe`, `it`, `expect`
 
 ## Code Style Guidelines
 

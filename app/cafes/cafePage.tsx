@@ -1,6 +1,6 @@
 "use client"
 
-import { getCafeThumbnailUrl, getPriceLevel, isOpenNow } from "@/utils/extras"
+import { getCafeDescription, getCafeThumbnailUrl, getPriceLevel, isOpenNow } from "@/utils/extras"
 import Image from "next/image"
 import { AnimatePresence, motion } from "motion/react"
 import {
@@ -886,7 +886,7 @@ export default function CafesPageClient({
 
                                         {/* Description */}
                                         <p className='text-sm font-semibold text-text mt-2'>
-                                            {cafe.description}
+                                            {getCafeDescription(cafe)}
                                         </p>
 
                                         {/* Specialty Items */}

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "motion/react"
 import { useLandingLocation } from "@/hooks/useLandingLocation"
 import RandomCafeButton from "@/components/RandomCafeButton"
 import HeroLocationCheckIn from "@/components/checkin/HeroLocationCheckIn"
+import { getCafeDescription } from "@/utils/extras"
 
 interface LandingHeroProps {
     featured: CafeWithRatings | null
@@ -128,7 +129,7 @@ export default function LandingHero({
                                         }}
                                         className='text-sm md:text-base lg:text-lg my-4 md:my-6'
                                     >
-                                        {featured.description}
+                                        {getCafeDescription(featured)}
                                     </motion.p>
                                 </AnimatePresence>
                                 <motion.div
