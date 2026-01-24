@@ -2,8 +2,9 @@
 
 import { db } from "@/db"
 import { cafes, cafeRatingStats } from "@/db/schema"
-import { eq, and, or, gte, lte, isNull } from "drizzle-orm"
+import { eq, and, or, gte, lte, isNull, sql } from "drizzle-orm"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { getPHTime } from "@/utils/featured"
 
 export interface MapBounds {
     swLat: number
@@ -11,6 +12,14 @@ export interface MapBounds {
     neLat: number
     neLng: number
     includeChains?: boolean
+    is_24_7?: boolean
+}
+
+// Helper to get current day key from PH time
+function getCurrentDayKey(): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
+    const phNow = getPHTime()
+    const days: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"> = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+    return days[phNow.getDay()]
 }
 
 export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatings[]> {
@@ -83,6 +92,13 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
                 // Exclude chains by default unless includeChains is true
                 // Treat NULL as non-chain (include cafes where is_chain is false OR null)
                 ...(bounds.includeChains ? [] : [or(eq(cafes.isChain, false), isNull(cafes.isChain))]),
+                // Filter to only 24-hour cafes for current day if is_24_7 is true
+                ...(bounds.is_24_7 ? [
+                    sql`EXISTS (
+                        SELECT 1 FROM jsonb_array_elements(${cafes.operatingHours}) elem
+                        WHERE elem->>'day' = ${getCurrentDayKey()} AND elem->>'is_24_hours' = 'true'
+                    )`
+                ] : []),
                 gte(cafes.lat, bounds.swLat),
                 lte(cafes.lat, bounds.neLat),
                 gte(cafes.lng, bounds.swLng),

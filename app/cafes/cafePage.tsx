@@ -299,7 +299,7 @@ export default function CafesPageClient({
         },
         {
             key: "is_24_7",
-            label: "24/7",
+            label: "24 Hours",
             icon: <Clock12 className='w-4 h-4' />,
         },
     ]
@@ -766,7 +766,7 @@ export default function CafesPageClient({
                                                     {openStatus.isOpen
                                                         ? openStatus.closesAt
                                                             ? `Open | Closes at ${openStatus.closesAt}`
-                                                            : "Open 24/7"
+                                                            : "Open 24 Hours"
                                                         : openStatus.opensAt
                                                           ? `Closed | Opens at ${openStatus.opensAt}`
                                                           : "Closed"}

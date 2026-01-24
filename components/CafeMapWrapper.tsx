@@ -4,7 +4,7 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import dynamic from "next/dynamic"
 import { useState, useCallback, useRef } from "react"
 import { getCafesInBounds, MapBounds } from "@/app/api/actions/map"
-import { Store } from "lucide-react"
+import { Store, Clock12 } from "lucide-react"
 
 const CafeMap = dynamic(() => import("@/components/CafeMap"), {
     ssr: false,
@@ -25,6 +25,7 @@ export default function CafeMapWrapper({
     const [cafes, setCafes] = useState<CafeWithRatings[]>(initialCafes)
     const [isLoading, setIsLoading] = useState(false)
     const [includeChains, setIncludeChains] = useState(false)
+    const [is24_7, setIs24_7] = useState(false)
     const lastBoundsRef = useRef<MapBounds | null>(null)
 
     const handleBoundsChange = useCallback(
@@ -35,6 +36,7 @@ export default function CafeMapWrapper({
                 const newCafes = await getCafesInBounds({
                     ...bounds,
                     includeChains,
+                    is_24_7: is24_7,
                 })
                 setCafes(newCafes)
             } catch (error) {
@@ -43,7 +45,7 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         },
-        [includeChains]
+        [includeChains, is24_7]
     )
 
     // Toggle chain visibility and refetch
@@ -57,6 +59,7 @@ export default function CafeMapWrapper({
                 const newCafes = await getCafesInBounds({
                     ...lastBoundsRef.current,
                     includeChains: newIncludeChains,
+                    is_24_7: is24_7,
                 })
                 setCafes(newCafes)
             } catch (error) {
@@ -65,7 +68,29 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         }
-    }, [includeChains])
+    }, [includeChains, is24_7])
+
+    // Toggle 24/7 filter and refetch
+    const toggle24_7 = useCallback(async () => {
+        const newIs24_7 = !is24_7
+        setIs24_7(newIs24_7)
+
+        if (lastBoundsRef.current) {
+            setIsLoading(true)
+            try {
+                const newCafes = await getCafesInBounds({
+                    ...lastBoundsRef.current,
+                    includeChains,
+                    is_24_7: newIs24_7,
+                })
+                setCafes(newCafes)
+            } catch (error) {
+                console.error("Failed to fetch cafes in bounds:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+    }, [is24_7, includeChains])
 
     return (
         <div className='relative w-full h-full'>
@@ -74,8 +99,21 @@ export default function CafeMapWrapper({
                 onBoundsChange={handleBoundsChange}
             />
 
-            {/* Show Chain Cafes Toggle */}
-            <div className='absolute top-4 right-4 z-50'>
+            {/* Filter Buttons */}
+            <div className='absolute top-4 right-4 z-50 flex flex-col gap-2'>
+                <button
+                    onClick={toggle24_7}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
+                        is24_7
+                            ? "bg-text text-background"
+                            : "bg-background text-text/80 hover:bg-text/5"
+                    }`}
+                >
+                    <Clock12 className='w-4 h-4' />
+                    <span className='hidden sm:inline'>
+                        24 Hours
+                    </span>
+                </button>
                 <button
                     onClick={toggleChains}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${

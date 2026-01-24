@@ -6,6 +6,22 @@ import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray } f
 import { getDayOfYear, getPHTime } from "@/utils/featured"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 
+// Helper to get current day key from PH time
+function getCurrentDayKey(): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
+    const phNow = getPHTime()
+    const days: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"> = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+    return days[phNow.getDay()]
+}
+
+// Helper to check if a cafe is open 24 hours on a specific day
+function isCafe24hForDay(operatingHours: unknown, dayKey: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"): boolean {
+    if (!operatingHours || !Array.isArray(operatingHours)) {
+        return false
+    }
+    const dayHours = operatingHours.find((hour) => hour && typeof hour === "object" && (hour as { day?: string }).day === dayKey)
+    return dayHours !== undefined && (dayHours as { is_24_hours?: boolean }).is_24_hours === true
+}
+
 // Helper to map Drizzle result to snake_case CafeWithRatings
 function mapCafeToSnakeCase(c: {
     id: string
@@ -530,6 +546,12 @@ export async function getAllCafes(
             rows = rows.filter(row => row.is_chain !== true)
         }
 
+        // Filter to only 24-hour cafes for current day if is_24_7 is true
+        if (filters.is_24_7) {
+            const currentDay = getCurrentDayKey()
+            rows = rows.filter(row => isCafe24hForDay(row.operating_hours, currentDay))
+        }
+
         // If full-text search returns no results, fallback to ILIKE search on name
         if (rows.length === 0) {
             const ilikeTerm = `%${filters.search}%`
@@ -574,11 +596,8 @@ export async function getAllCafes(
                 .offset(offset)
 
             if (filters.is_24_7) {
-                return fallbackResults.filter(cafe => {
-                    if (!cafe.operatingHours) return false
-                    const hours = cafe.operatingHours as Array<{ day: string; is_24_hours?: boolean }>
-                    return hours.length === 7 && hours.every(h => h.is_24_hours === true)
-                }).map(c => mapCafeToSnakeCase(c))
+                const currentDay = getCurrentDayKey()
+                return fallbackResults.filter(cafe => isCafe24hForDay(cafe.operatingHours, currentDay)).map(c => mapCafeToSnakeCase(c))
             }
 
             return fallbackResults.map(c => mapCafeToSnakeCase(c))
@@ -668,9 +687,10 @@ export async function getAllCafes(
     }
     if (filters.exclude_hidden_gems) conditions.push(eq(cafes.isHiddenGem, false))
     if (filters.is_24_7) {
-        conditions.push(sql`jsonb_array_length(${cafes.operatingHours}) = 7 AND NOT EXISTS (
-            SELECT 1 FROM jsonb_array_elements(${cafes.operatingHours}) elem 
-            WHERE elem->>'is_24_hours' IS NULL OR elem->>'is_24_hours' != 'true'
+        const currentDay = getCurrentDayKey()
+        conditions.push(sql`EXISTS (
+            SELECT 1 FROM jsonb_array_elements(${cafes.operatingHours}) elem
+            WHERE elem->>'day' = ${currentDay} AND elem->>'is_24_hours' = 'true'
         )`)
     }
     // Exclude chains by default unless include_chains is true
