@@ -25,6 +25,7 @@ import {
     ArrowUp,
     ArrowDown,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function UsersManagePage() {
     const { addNotification } = useNotification()
@@ -41,6 +42,7 @@ export default function UsersManagePage() {
     const [sortDirection, setSortDirection] =
         useState<ProfileSortDirection>("desc")
     const limit = 20
+    const router = useRouter()
 
     // Debounce search input
     useEffect(() => {
@@ -69,7 +71,7 @@ export default function UsersManagePage() {
         } catch (err: unknown) {
             addNotification(
                 err instanceof Error ? err.message : "Failed to fetch profiles",
-                "error"
+                "error",
             )
         } finally {
             setLoading(false)
@@ -104,7 +106,7 @@ export default function UsersManagePage() {
     const handleDelete = async (userId: string, userName: string) => {
         if (
             !confirm(
-                `Are you sure you want to delete user "${userName}"? This action cannot be undone.`
+                `Are you sure you want to delete user "${userName}"? This action cannot be undone.`,
             )
         ) {
             return
@@ -118,7 +120,7 @@ export default function UsersManagePage() {
                 setTotalProfiles((prev) => prev - 1)
                 addNotification(
                     `User "${userName}" deleted successfully`,
-                    "success"
+                    "success",
                 )
             } else {
                 throw new Error(result.error || "Failed to delete user")
@@ -303,7 +305,14 @@ export default function UsersManagePage() {
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className='px-4 py-3 text-text/60 text-sm'>
+                                        <td
+                                            onClick={() =>
+                                                router.push(
+                                                    `/profile/${profile.username}`,
+                                                )
+                                            }
+                                            className='px-4 py-3 text-text/60 text-sm hover:underline cursor-pointer'
+                                        >
                                             @{profile.username}
                                         </td>
                                         <td className='px-4 py-3'>
@@ -336,13 +345,13 @@ export default function UsersManagePage() {
                                         </td>
                                         <td className='px-4 py-3 text-text/60 text-sm'>
                                             {profile.totalContribution?.toFixed(
-                                                0
+                                                0,
                                             ) || 0}
                                         </td>
                                         <td className='px-4 py-3 text-text/40 text-sm'>
                                             {profile.createdAt
                                                 ? new Date(
-                                                      profile.createdAt
+                                                      profile.createdAt,
                                                   ).toLocaleDateString()
                                                 : "-"}
                                         </td>
@@ -351,7 +360,7 @@ export default function UsersManagePage() {
                                                 onClick={() =>
                                                     handleDelete(
                                                         profile.id,
-                                                        profile.displayName
+                                                        profile.displayName,
                                                     )
                                                 }
                                                 disabled={
