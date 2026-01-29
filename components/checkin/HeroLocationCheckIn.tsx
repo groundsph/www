@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "motion/react"
 import { NearbyCafe } from "@/app/api/actions/nearby"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
-import { recordVisit } from "@/app/api/actions/profile"
+import { recordVisit, getTodayCheckIn } from "@/app/api/actions/profile"
 import { useAuth } from "@/components/AuthProvider"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -17,8 +17,17 @@ export default function HeroLocationCheckIn({
     nearbyCafe,
 }: HeroLocationCheckInProps) {
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false)
+    const [hasCheckedIn, setHasCheckedIn] = useState(false)
     const { user } = useAuth()
     const router = useRouter()
+
+    useEffect(() => {
+        if (nearbyCafe && user) {
+            getTodayCheckIn(nearbyCafe.id).then((result) => {
+                setHasCheckedIn(!!result)
+            })
+        }
+    }, [nearbyCafe, user])
 
     // Don't render anything if no nearby cafe (this means user either
     // hasn't granted GPS permission or isn't near a registered cafe)
@@ -41,20 +50,31 @@ export default function HeroLocationCheckIn({
                 className="flex items-center gap-3 text-text/80"
             >
                 <span className="text-sm">
-                    Are you at{" "}
+                    {hasCheckedIn ? "You are at " : "Are you at "}
                     <Link
                         href={`/cafes/${nearbyCafe.slug}`}
                         className="font-bold text-primary hover:underline underline-offset-2 transition-all"
                     >
                         {nearbyCafe.name}
                     </Link>
-                    ?{" "}
-                    <button
-                        onClick={handleCheckInClick}
-                        className="font-bold text-primary hover:underline underline-offset-2 transition-all"
-                    >
-                        Check In
-                    </button>
+                    {hasCheckedIn ? (
+                        <>
+                            .{" "}
+                            <span className="font-bold text-primary">
+                                Checked in today ✓
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            ?{" "}
+                            <button
+                                onClick={handleCheckInClick}
+                                className="font-bold text-primary hover:underline underline-offset-2 transition-all"
+                            >
+                                Check In
+                            </button>
+                        </>
+                    )}
                 </span>
             </motion.div>
 
@@ -64,7 +84,10 @@ export default function HeroLocationCheckIn({
                 onClose={() => setIsCheckInModalOpen(false)}
                 cafeName={nearbyCafe.name}
                 onCheckIn={(companions) => recordVisit(nearbyCafe.id, companions)}
-                onComplete={() => setIsCheckInModalOpen(false)}
+                onComplete={() => {
+                    setIsCheckInModalOpen(false)
+                    setHasCheckedIn(true)
+                }}
             />
         </>
     )
