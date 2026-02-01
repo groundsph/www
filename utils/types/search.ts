@@ -7,6 +7,7 @@ export interface SearchResult {
   subtitle?: string
   href: string
   icon?: string
+  imageUrl?: string
   priority: number
   keywords?: string[]
 }

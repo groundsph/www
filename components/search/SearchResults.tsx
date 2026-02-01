@@ -5,6 +5,7 @@ import { SearchResult } from "@/utils/types/search"
 import { getResultIcon } from "./search-utils"
 import { FileText, Coffee, User, Zap, CornerDownRight } from "lucide-react"
 import { cn } from "@/utils/cn"
+import Image from "next/image"
 
 interface SearchResultsProps {
   results: SearchResult[]
@@ -22,6 +23,36 @@ function highlightMatch(text: string, query: string) {
     part.toLowerCase() === query.toLowerCase() ? (
       <mark key={i} className="bg-primary/20 text-text rounded px-0.5">{part}</mark>
     ) : part
+  )
+}
+
+function ResultIcon({ result }: { result: SearchResult }) {
+  if (result.imageUrl) {
+    return (
+      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+        <Image
+          src={result.imageUrl}
+          alt={result.title}
+          width={32}
+          height={32}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    )
+  }
+
+  const Icon = iconMap[getResultIcon(result.type) as keyof typeof iconMap] || FileText
+
+  return (
+    <div className={cn(
+      "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+      result.type === 'action' && "bg-accent/20 text-accent",
+      result.type === 'page' && "bg-secondary/20 text-secondary",
+      result.type === 'cafe' && "bg-primary/20 text-primary",
+      result.type === 'user' && "bg-tertiary text-text"
+    )}>
+      <Icon className="w-4 h-4" />
+    </div>
   )
 }
 
@@ -60,7 +91,6 @@ export function SearchResults({ results, selectedIndex, onSelect, query }: Searc
             {groupResults.map((result) => {
               const globalIndex = results.indexOf(result)
               const isSelected = globalIndex === selectedIndex
-              const Icon = iconMap[getResultIcon(result.type) as keyof typeof iconMap] || FileText
 
               return (
                 <motion.button
@@ -72,15 +102,7 @@ export function SearchResults({ results, selectedIndex, onSelect, query }: Searc
                   )}
                   layout
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                    type === 'action' && "bg-accent/20 text-accent",
-                    type === 'page' && "bg-secondary/20 text-secondary",
-                    type === 'cafe' && "bg-primary/20 text-primary",
-                    type === 'user' && "bg-tertiary text-text"
-                  )}>
-                    <Icon className="w-4 h-4" />
-                  </div>
+                  <ResultIcon result={result} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text truncate">
                       {highlightMatch(result.title, query)}

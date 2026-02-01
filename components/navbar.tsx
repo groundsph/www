@@ -255,22 +255,30 @@ export default function Navbar() {
                             )}
                         </Link>
                     </li>
-                 )}
-             </ul>
+                )}
+            </ul>
 
-             {/* Desktop Search */}
-             <div className='hidden md:block ml-4'>
-                 <SearchTrigger onClick={() => setIsSearchOpen(true)} />
-             </div>
-
-             {/* Desktop Auth */}
-             <div className='hidden md:block'>
-                 <Auth />
-             </div>
+            {/* Desktop Auth */}
+            <div className='hidden md:flex flex-row items-center gap-4'>
+                {/* Desktop Search */}
+                <div className='hidden lg:block'>
+                    <SearchTrigger onClick={() => setIsSearchOpen(true)} />
+                </div>
+                <div className='hidden lg:hidden md:block'>
+                    <SearchTrigger
+                        variant='mobile'
+                        onClick={() => setIsSearchOpen(true)}
+                    />
+                </div>
+                <Auth />
+            </div>
 
             {/* Mobile Search + Toggle */}
             <div className='md:hidden z-50 flex items-center gap-2'>
-                <SearchTrigger variant="mobile" onClick={() => setIsSearchOpen(true)} />
+                <SearchTrigger
+                    variant='mobile'
+                    onClick={() => setIsSearchOpen(true)}
+                />
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     className='p-1'

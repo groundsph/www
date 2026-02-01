@@ -21,6 +21,7 @@ export async function searchCafesAndUsers(
       name: cafes.name,
       addressDisplay: cafes.addressDisplay,
       slug: cafes.slug,
+      thumbnail: cafes.thumbnail,
     }).from(cafes).where(
       or(ilike(cafes.name, searchTerm), ilike(cafes.addressDisplay, searchTerm))
     ).limit(MAX_RESULTS / 2),
@@ -30,6 +31,7 @@ export async function searchCafesAndUsers(
           id: profiles.id,
           username: profiles.username,
           displayName: profiles.displayName,
+          avatarUrl: profiles.avatarUrl,
         }).from(profiles).where(
           or(ilike(profiles.username, searchTerm), ilike(profiles.displayName, searchTerm))
         ).limit(MAX_RESULTS / 2)
@@ -43,6 +45,7 @@ export async function searchCafesAndUsers(
       title: cafe.name,
       subtitle: cafe.addressDisplay,
       href: `/cafes/${cafe.slug}`,
+      imageUrl: cafe.thumbnail,
       priority: 80,
     })),
     ...userResults.map(user => ({
@@ -51,6 +54,7 @@ export async function searchCafesAndUsers(
       title: user.displayName || user.username,
       subtitle: `@${user.username}`,
       href: `/profile/${user.username}`,
+      imageUrl: user.avatarUrl || undefined,
       priority: 70,
     })),
   ]
