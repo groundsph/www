@@ -13,6 +13,8 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
+import { SearchModal, SearchTrigger } from "@/components/search"
+import { useSearchKeyboard } from "@/utils/hooks/useSearchKeyboard"
 
 export default function Navbar() {
     // Context
@@ -21,9 +23,13 @@ export default function Navbar() {
     // State
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
 
     // Constants
     const curPath = usePathname()
+
+    // Register keyboard shortcut globally
+    useSearchKeyboard(() => setIsSearchOpen(true))
 
     // Close mobile menu on path change
     useEffect(() => {
@@ -249,16 +255,22 @@ export default function Navbar() {
                             )}
                         </Link>
                     </li>
-                )}
-            </ul>
+                 )}
+             </ul>
 
-            {/* Desktop Auth */}
-            <div className='hidden md:block'>
-                <Auth />
-            </div>
+             {/* Desktop Search */}
+             <div className='hidden md:block ml-4'>
+                 <SearchTrigger onClick={() => setIsSearchOpen(true)} />
+             </div>
 
-            {/* Mobile Toggle */}
-            <div className='md:hidden z-50'>
+             {/* Desktop Auth */}
+             <div className='hidden md:block'>
+                 <Auth />
+             </div>
+
+            {/* Mobile Search + Toggle */}
+            <div className='md:hidden z-50 flex items-center gap-2'>
+                <SearchTrigger variant="mobile" onClick={() => setIsSearchOpen(true)} />
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     className='p-1'
@@ -480,6 +492,12 @@ export default function Navbar() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Search Modal */}
+            <SearchModal
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+            />
         </nav>
     )
 }
