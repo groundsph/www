@@ -3,8 +3,8 @@
 ## Progress Checklist
 
 - [x] **Phase 1**: Infrastructure & Types
-- [ ] **Phase 2**: Server Actions & Search Logic
-- [ ] **Phase 3**: UI Components (Modal, Results, Keyboard)
+- [x] **Phase 2**: Server Actions & Search Logic
+- [x] **Phase 3**: UI Components (Modal, Results, Keyboard)
 - [ ] **Phase 4**: Integration with Navbar
 - [ ] **Phase 5**: Testing & Polish
 
