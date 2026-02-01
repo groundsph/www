@@ -1,0 +1,18 @@
+export type SearchResultType = 'page' | 'cafe' | 'user' | 'action'
+
+export interface SearchResult {
+  id: string
+  type: SearchResultType
+  title: string
+  subtitle?: string
+  href: string
+  icon?: string
+  priority: number
+  keywords?: string[]
+}
+
+export interface QuickAction {
+  prefix: string
+  description: string
+  example: string
+}
