@@ -69,7 +69,7 @@ export default function Navbar() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className='z-50 relative'
+                    className='z-50 relative flex flex-row gap-6 items-center'
                 >
                     <Link
                         href='/'
@@ -79,197 +79,228 @@ export default function Navbar() {
                     >
                         Grounds
                     </Link>
+
+                    {/* Desktop Navigation */}
+                    <ul className='gap-6 hidden md:flex items-center'>
+                        {routes.map((route) => (
+                            <li
+                                key={route.title}
+                                className='relative'
+                                onMouseEnter={() =>
+                                    setOpenDropdown(route.title)
+                                }
+                                onMouseLeave={() => setOpenDropdown(null)}
+                            >
+                                {route.children ? (
+                                    <button
+                                        onClick={(e) =>
+                                            toggleDropdown(e, route.title)
+                                        }
+                                        className={`relative px-1 py-1 flex items-center gap-1 ${
+                                            isRouteActive(route)
+                                                ? "text-text"
+                                                : "text-text/60 hover:text-text/80"
+                                        } font-semibold transition-colors`}
+                                        aria-expanded={
+                                            openDropdown === route.title
+                                        }
+                                        aria-haspopup='true'
+                                    >
+                                        {route.title}
+                                        <ChevronDownIcon
+                                            size={14}
+                                            className={`transition-transform ${
+                                                openDropdown === route.title
+                                                    ? "rotate-180"
+                                                    : ""
+                                            }`}
+                                        />
+                                        {isRouteActive(route) && !isLoading && (
+                                            <motion.div
+                                                layoutId='navbar-indicator'
+                                                className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
+                                                transition={{
+                                                    type: "spring",
+                                                    bounce: 0.2,
+                                                    duration: 0.6,
+                                                }}
+                                            />
+                                        )}
+                                    </button>
+                                ) : (
+                                    <Link
+                                        href={route.href}
+                                        className={`relative px-1 py-1 ${
+                                            curPath === route.href
+                                                ? "text-text"
+                                                : "text-text/60 hover:text-text/80"
+                                        } font-semibold transition-colors`}
+                                    >
+                                        {route.title}
+                                        {curPath === route.href &&
+                                            !isLoading && (
+                                                <motion.div
+                                                    layoutId='navbar-indicator'
+                                                    className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
+                                                    transition={{
+                                                        type: "spring",
+                                                        bounce: 0.2,
+                                                        duration: 0.6,
+                                                    }}
+                                                />
+                                            )}
+                                    </Link>
+                                )}
+
+                                {/* Dropdown Menu */}
+                                <AnimatePresence>
+                                    {route.children &&
+                                        openDropdown === route.title && (
+                                            <div
+                                                key='navbar-dropdown'
+                                                className='absolute top-full left-0'
+                                            >
+                                                <motion.ul
+                                                    initial={{
+                                                        opacity: 0,
+                                                        y: -10,
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        y: 0,
+                                                    }}
+                                                    exit={{
+                                                        opacity: 0,
+                                                        y: -10,
+                                                    }}
+                                                    transition={{
+                                                        duration: 0.2,
+                                                    }}
+                                                    className='mt-2 bg-background border border-text/10 rounded-lg shadow-lg overflow-hidden min-w-max'
+                                                >
+                                                    {route.children.map(
+                                                        (child) => (
+                                                            <li
+                                                                key={child.href}
+                                                            >
+                                                                <Link
+                                                                    href={
+                                                                        child.href
+                                                                    }
+                                                                    className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                                                                        curPath ===
+                                                                        child.href
+                                                                            ? "text-text bg-text/5"
+                                                                            : "text-text/60 hover:text-text hover:bg-text/5"
+                                                                    }`}
+                                                                >
+                                                                    {
+                                                                        child.title
+                                                                    }
+                                                                </Link>
+                                                            </li>
+                                                        ),
+                                                    )}
+                                                </motion.ul>
+                                            </div>
+                                        )}
+                                </AnimatePresence>
+                            </li>
+                        ))}
+                        {user && (
+                            <li className='relative'>
+                                <Link
+                                    href='/profile'
+                                    className={`relative px-1 py-1 ${
+                                        curPath === "/profile"
+                                            ? "text-text"
+                                            : "text-text/60 hover:text-text/80"
+                                    } font-semibold transition-colors`}
+                                >
+                                    profile
+                                    {curPath === "/profile" && !isLoading && (
+                                        <motion.div
+                                            layoutId='navbar-indicator'
+                                            className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
+                                            transition={{
+                                                type: "spring",
+                                                bounce: 0.2,
+                                                duration: 0.6,
+                                            }}
+                                        />
+                                    )}
+                                </Link>
+                            </li>
+                        )}
+                        {isAdmin && (
+                            <li>
+                                <Link
+                                    href='/manage'
+                                    className={`relative px-1 py-1 ${
+                                        curPath === "/manage"
+                                            ? "text-text"
+                                            : "text-text/60 hover:text-text/80"
+                                    } font-semibold transition-colors`}
+                                >
+                                    dashboard
+                                    {curPath === "/manage" && !isLoading && (
+                                        <motion.div
+                                            layoutId='navbar-indicator'
+                                            className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
+                                            transition={{
+                                                type: "spring",
+                                                bounce: 0.2,
+                                                duration: 0.6,
+                                            }}
+                                        />
+                                    )}
+                                </Link>
+                            </li>
+                        )}
+                        {isWriter && (
+                            <li>
+                                <Link
+                                    href='/writer'
+                                    className={`relative px-1 py-1 ${
+                                        curPath === "/writer"
+                                            ? "text-text"
+                                            : "text-text/60 hover:text-text/80"
+                                    } font-semibold transition-colors`}
+                                >
+                                    write
+                                    {curPath === "/writer" && !isLoading && (
+                                        <motion.div
+                                            layoutId='navbar-indicator'
+                                            className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
+                                            transition={{
+                                                type: "spring",
+                                                bounce: 0.2,
+                                                duration: 0.6,
+                                            }}
+                                        />
+                                    )}
+                                </Link>
+                            </li>
+                        )}
+
+                        {/* Desktop Search */}
+                        <li className='hidden lg:block'>
+                            <SearchTrigger
+                                onClick={() => setIsSearchOpen(true)}
+                            />
+                        </li>
+                        <li className='hidden lg:hidden md:block'>
+                            <SearchTrigger
+                                variant='mobile'
+                                onClick={() => setIsSearchOpen(true)}
+                            />
+                        </li>
+                    </ul>
                 </motion.div>
             </AnimatePresence>
 
-            {/* Desktop Navigation */}
-            <ul className='gap-6 hidden md:flex items-center'>
-                {routes.map((route) => (
-                    <li
-                        key={route.title}
-                        className='relative'
-                        onMouseEnter={() => setOpenDropdown(route.title)}
-                        onMouseLeave={() => setOpenDropdown(null)}
-                    >
-                        {route.children ? (
-                            <button
-                                onClick={(e) => toggleDropdown(e, route.title)}
-                                className={`relative px-1 py-1 flex items-center gap-1 ${
-                                    isRouteActive(route)
-                                        ? "text-text"
-                                        : "text-text/60 hover:text-text/80"
-                                } font-semibold transition-colors`}
-                                aria-expanded={openDropdown === route.title}
-                                aria-haspopup='true'
-                            >
-                                {route.title}
-                                <ChevronDownIcon
-                                    size={14}
-                                    className={`transition-transform ${
-                                        openDropdown === route.title
-                                            ? "rotate-180"
-                                            : ""
-                                    }`}
-                                />
-                                {isRouteActive(route) && !isLoading && (
-                                    <motion.div
-                                        layoutId='navbar-indicator'
-                                        className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
-                                        transition={{
-                                            type: "spring",
-                                            bounce: 0.2,
-                                            duration: 0.6,
-                                        }}
-                                    />
-                                )}
-                            </button>
-                        ) : (
-                            <Link
-                                href={route.href}
-                                className={`relative px-1 py-1 ${
-                                    curPath === route.href
-                                        ? "text-text"
-                                        : "text-text/60 hover:text-text/80"
-                                } font-semibold transition-colors`}
-                            >
-                                {route.title}
-                                {curPath === route.href && !isLoading && (
-                                    <motion.div
-                                        layoutId='navbar-indicator'
-                                        className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
-                                        transition={{
-                                            type: "spring",
-                                            bounce: 0.2,
-                                            duration: 0.6,
-                                        }}
-                                    />
-                                )}
-                            </Link>
-                        )}
-
-                        {/* Dropdown Menu */}
-                        <AnimatePresence>
-                            {route.children && openDropdown === route.title && (
-                                <div
-                                    key='navbar-dropdown'
-                                    className='absolute top-full left-0'
-                                >
-                                    <motion.ul
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                        className='mt-2 bg-background border border-text/10 rounded-lg shadow-lg overflow-hidden min-w-max'
-                                    >
-                                        {route.children.map((child) => (
-                                            <li key={child.href}>
-                                                <Link
-                                                    href={child.href}
-                                                    className={`block px-4 py-2 text-sm font-medium transition-colors ${
-                                                        curPath === child.href
-                                                            ? "text-text bg-text/5"
-                                                            : "text-text/60 hover:text-text hover:bg-text/5"
-                                                    }`}
-                                                >
-                                                    {child.title}
-                                                </Link>
-                                            </li>
-                                        ))}
-                                    </motion.ul>
-                                </div>
-                            )}
-                        </AnimatePresence>
-                    </li>
-                ))}
-                {user && (
-                    <li className='relative'>
-                        <Link
-                            href='/profile'
-                            className={`relative px-1 py-1 ${
-                                curPath === "/profile"
-                                    ? "text-text"
-                                    : "text-text/60 hover:text-text/80"
-                            } font-semibold transition-colors`}
-                        >
-                            profile
-                            {curPath === "/profile" && !isLoading && (
-                                <motion.div
-                                    layoutId='navbar-indicator'
-                                    className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
-                                    transition={{
-                                        type: "spring",
-                                        bounce: 0.2,
-                                        duration: 0.6,
-                                    }}
-                                />
-                            )}
-                        </Link>
-                    </li>
-                )}
-                {isAdmin && (
-                    <li>
-                        <Link
-                            href='/manage'
-                            className={`relative px-1 py-1 ${
-                                curPath === "/manage"
-                                    ? "text-text"
-                                    : "text-text/60 hover:text-text/80"
-                            } font-semibold transition-colors`}
-                        >
-                            dashboard
-                            {curPath === "/manage" && !isLoading && (
-                                <motion.div
-                                    layoutId='navbar-indicator'
-                                    className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
-                                    transition={{
-                                        type: "spring",
-                                        bounce: 0.2,
-                                        duration: 0.6,
-                                    }}
-                                />
-                            )}
-                        </Link>
-                    </li>
-                )}
-                {isWriter && (
-                    <li>
-                        <Link
-                            href='/writer'
-                            className={`relative px-1 py-1 ${
-                                curPath === "/writer"
-                                    ? "text-text"
-                                    : "text-text/60 hover:text-text/80"
-                            } font-semibold transition-colors`}
-                        >
-                            write
-                            {curPath === "/writer" && !isLoading && (
-                                <motion.div
-                                    layoutId='navbar-indicator'
-                                    className='absolute top-[calc(100%-1px)] left-0 w-full h-0.5 bg-text/60'
-                                    transition={{
-                                        type: "spring",
-                                        bounce: 0.2,
-                                        duration: 0.6,
-                                    }}
-                                />
-                            )}
-                        </Link>
-                    </li>
-                )}
-            </ul>
-
             {/* Desktop Auth */}
             <div className='hidden md:flex flex-row items-center gap-4'>
-                {/* Desktop Search */}
-                <div className='hidden lg:block'>
-                    <SearchTrigger onClick={() => setIsSearchOpen(true)} />
-                </div>
-                <div className='hidden lg:hidden md:block'>
-                    <SearchTrigger
-                        variant='mobile'
-                        onClick={() => setIsSearchOpen(true)}
-                    />
-                </div>
                 <Auth />
             </div>
 

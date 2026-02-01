@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
-import Navbar from "@/components/navbar"
 import Footer from "@/components/Footer"
+import Navbar from "@/components/Navbar"
 
 interface LayoutWrapperProps {
     children: React.ReactNode

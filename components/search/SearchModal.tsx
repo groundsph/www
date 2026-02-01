@@ -119,11 +119,11 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="hidden sm:inline">
-                    <kbd className="px-1.5 py-0.5 bg-background rounded border border-text/20 text-[10px]">@</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-background rounded border border-text/20 text-[10px] mr-0.5">@</kbd>
                     for users
                   </span>
                   <span className="hidden sm:inline">
-                    <kbd className="px-1.5 py-0.5 bg-background rounded border border-text/20 text-[10px]">&gt;</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-background rounded border border-text/20 text-[10px] mr-0.5">&gt;</kbd>
                     for actions
                   </span>
                 </div>
