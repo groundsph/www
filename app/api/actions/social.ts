@@ -328,9 +328,8 @@ export async function searchUsers(
 }> {
     try {
         const user = await getCurrentUser()
-        
+
         if (!user) {
-            console.error("[searchUsers] No authenticated user found")
             return { users: [], error: "Authentication required" }
         }
 
@@ -359,10 +358,8 @@ export async function searchUsers(
             )
             .limit(limit)
 
-        console.log(`[searchUsers] Found ${result.length} users for query "${query}"`)
         return { users: result }
     } catch (error) {
-        console.error("[searchUsers] Error searching users:", error)
         return { users: [], error: "Search failed" }
     }
 }
