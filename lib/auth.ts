@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { db } from "@/db"
 import { headers } from "next/headers"
-import { admin } from "better-auth/plugins"
+import { admin, lastLoginMethod } from "better-auth/plugins"
 import { passkey } from "@better-auth/passkey"
 import bcrypt from "bcrypt"
 
@@ -58,7 +58,8 @@ export const auth = betterAuth({
         admin({
             adminUserIds: process.env.ADMIN_USER_IDS?.split(",") || [],
         }),
-        passkey()
+        passkey(),
+        lastLoginMethod()
     ],
     user: {
         additionalFields: {
