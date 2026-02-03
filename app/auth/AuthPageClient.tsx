@@ -139,10 +139,21 @@ export default function AuthPageClient() {
                 })
                 .then((result) => {
                     if (result?.error) {
-                        console.error(
-                            "Passkey authentication failed:",
-                            result.error
-                        )
+                        // Don't log errors for autofill - it's expected to fail/cancel
+                        // when the user doesn't use a passkey
+                        const isAbortError = 
+                            result.error.message?.includes("abort") ||
+                            result.error.message?.includes("cancelled") ||
+                            result.error.message?.includes("user") ||
+                            !result.error.message ||
+                            Object.keys(result.error).length === 0
+                        
+                        if (!isAbortError) {
+                            console.error(
+                                "Passkey authentication failed:",
+                                result.error
+                            )
+                        }
                     } else {
                         const redirect = searchParams.get("redirect") || "/"
                         window.location.href = redirect
@@ -336,7 +347,7 @@ export default function AuthPageClient() {
                 >
                     <h1 className='text-4xl md:text-5xl font-bold font-serif'>
                         Grounds
-                        <span className='text-primary/80'>.</span>
+                        <span className='text-primary/80'>.ph</span>
                     </h1>
                 </Link>
 
@@ -671,10 +682,21 @@ export default function AuthPageClient() {
                                                 const result =
                                                     await authClient.signIn.passkey()
                                                 if (result.error) {
-                                                    console.error(
-                                                        "Passkey authentication failed:",
-                                                        result.error
-                                                    )
+                                                    // Check if user cancelled
+                                                    const errorMsg = result.error.message || ""
+                                                    const isCancelled =
+                                                        errorMsg.toLowerCase().includes("cancel") ||
+                                                        errorMsg.toLowerCase().includes("abort") ||
+                                                        errorMsg.toLowerCase().includes("not allowed")
+
+                                                    if (isCancelled) {
+                                                        addNotification("Passkey sign-in cancelled", "warning")
+                                                    } else {
+                                                        addNotification(
+                                                            result.error.message || "Passkey authentication failed",
+                                                            "error"
+                                                        )
+                                                    }
                                                 } else {
                                                     const redirect =
                                                         searchParams.get(
@@ -687,6 +709,10 @@ export default function AuthPageClient() {
                                                 console.error(
                                                     "Passkey sign-in error:",
                                                     err
+                                                )
+                                                addNotification(
+                                                    "An unexpected error occurred during passkey sign-in",
+                                                    "error"
                                                 )
                                             } finally {
                                                 setIsPasskeyLoading(false)
