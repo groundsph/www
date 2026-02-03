@@ -145,3 +145,8 @@
 - Optimize images (compression utilities available)
 - Use `useCallback` for event handlers passed to child components
 - Use `useMemo` for expensive computations
+
+### Git Workflow
+- NEVER commit changes unless explicitly requested by the user
+- NEVER push to remote repositories unless explicitly requested
+- This is VERY IMPORTANT - only commit and push when explicitly asked
