@@ -130,6 +130,11 @@ async function reverseGeocode(
         return { city, region }
     } catch (err) {
         clearTimeout(timeoutId)
+        // Handle AbortError (timeout) gracefully - don't throw
+        if (err instanceof Error && err.name === "AbortError") {
+            console.log("[reverseGeocode] Request timed out, returning null")
+            return { city: null, region: null }
+        }
         throw err
     }
 }

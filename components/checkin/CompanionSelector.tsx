@@ -29,25 +29,38 @@ export default function CompanionSelector({
     const [isLoading, setIsLoading] = useState(false)
     const [showResults, setShowResults] = useState(false)
 
+    const [error, setError] = useState<string | null>(null)
+
     // Debounced search
     useEffect(() => {
         if (query.length < 2) {
             setResults([])
+            setError(null)
             return
         }
 
         const timer = setTimeout(async () => {
             setIsLoading(true)
+            setError(null)
             try {
                 const { searchUsers } = await import("@/app/api/actions/social")
-                const { users } = await searchUsers(query, 10)
+                const { users, error: searchError } = await searchUsers(query, 10)
+                
+                if (searchError) {
+                    console.error("[CompanionSelector] Search error:", searchError)
+                    setError(searchError)
+                    setResults([])
+                    return
+                }
+                
                 // Filter out already selected users
                 const filtered = users.filter(
                     (u) => !selectedCompanions.some((c) => c.id === u.id)
                 )
                 setResults(filtered)
             } catch (error) {
-                console.error("Search failed:", error)
+                console.error("[CompanionSelector] Search failed:", error)
+                setError("Search failed")
                 setResults([])
             } finally {
                 setIsLoading(false)
@@ -168,10 +181,20 @@ export default function CompanionSelector({
                         </div>
                     )}
 
+                    {/* Error message */}
+                    {showResults && error && (
+                        <div className='absolute top-full left-0 right-0 mt-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg z-50 p-3'>
+                            <p className='text-sm text-red-600 dark:text-red-400 text-center'>
+                                {error}
+                            </p>
+                        </div>
+                    )}
+
                     {/* No results message */}
                     {showResults &&
                         query.length >= 2 &&
                         !isLoading &&
+                        !error &&
                         results.length === 0 && (
                             <div className='absolute top-full left-0 right-0 mt-1 bg-background border border-text/10 rounded-lg shadow-lg z-50 p-3'>
                                 <p className='text-sm text-text/50 text-center'>

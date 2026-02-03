@@ -324,15 +324,20 @@ export async function searchUsers(
     limit: number = 10
 ): Promise<{
     users: { id: string; username: string; displayName: string; avatarUrl: string | null }[]
+    error?: string
 }> {
-    const user = await getCurrentUser()
-    if (!user) return { users: [] }
-
-    if (!query || query.length < 2) {
-        return { users: [] }
-    }
-
     try {
+        const user = await getCurrentUser()
+        
+        if (!user) {
+            console.error("[searchUsers] No authenticated user found")
+            return { users: [], error: "Authentication required" }
+        }
+
+        if (!query || query.length < 2) {
+            return { users: [] }
+        }
+
         const searchPattern = `%${query}%`
 
         const result = await db
@@ -354,9 +359,10 @@ export async function searchUsers(
             )
             .limit(limit)
 
+        console.log(`[searchUsers] Found ${result.length} users for query "${query}"`)
         return { users: result }
     } catch (error) {
-        console.error("Error searching users:", error)
-        return { users: [] }
+        console.error("[searchUsers] Error searching users:", error)
+        return { users: [], error: "Search failed" }
     }
 }
