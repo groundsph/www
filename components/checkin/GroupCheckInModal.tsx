@@ -63,7 +63,8 @@ export default function GroupCheckInModal({
             setSelectedCompanions(initialCompanions)
             setResult(null)
         }
-    }, [isOpen, initialCompanions])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen])
 
     const handleSelect = useCallback((user: UserResult) => {
         setSelectedCompanions((prev) => [...prev, user])
