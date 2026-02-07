@@ -26,7 +26,7 @@ import {
 } from "@/app/api/actions/collection"
 import { getCafesByIds } from "@/app/api/actions/profile"
 import { getCafeThumbnailUrl } from "@/utils/extras"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { uploadCollectionCover } from "@/utils/storage/client"
 import { compressCollectionCover } from "@/utils/image-processing"

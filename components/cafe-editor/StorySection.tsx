@@ -8,7 +8,7 @@
 import { useState } from "react"
 import { Save, Trash2, Loader2, Eye, Edit3 } from "lucide-react"
 import { type ColorScheme, getColorClasses } from "@/utils/hooks/cafe-form"
-import MarkdownRender from "@/components/MarkdownRender"
+import MarkdownRender from "@/components/ui/MarkdownRender"
 
 interface StorySectionProps {
     /** Current story content (markdown) */

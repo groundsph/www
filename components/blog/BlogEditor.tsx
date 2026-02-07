@@ -26,7 +26,7 @@ import { createBlogPost, updateBlogPost } from "@/app/api/actions/blog"
 import { uploadBlogImageAction } from "@/utils/storage/actions"
 import { compressBlogCover } from "@/utils/image-processing"
 import { generateExcerptAction, AIProvider } from "@/app/api/actions/ai"
-import MarkdownRender from "@/components/MarkdownRender"
+import MarkdownRender from "@/components/ui/MarkdownRender"
 
 interface BlogEditorProps {
     post?: BlogPost

@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import { routes } from "@/utils/routes"
 import { AnimatePresence, motion } from "motion/react"
 import {

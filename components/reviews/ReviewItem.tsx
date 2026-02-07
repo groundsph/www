@@ -21,8 +21,8 @@ import {
 } from "@/app/api/actions/review"
 import { useRouter } from "next/navigation"
 import { cn } from "@/utils/cn"
-import MarkdownRender from "@/components/MarkdownRender"
-import ImageLightbox from "@/components/ImageLightbox"
+import MarkdownRender from "@/components/ui/MarkdownRender"
+import ImageLightbox from "@/components/modal/ImageLightbox"
 
 // Simple user type - only needs id for this component
 type SimpleUser = { id: string } | null

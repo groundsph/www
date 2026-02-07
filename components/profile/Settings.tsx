@@ -1,7 +1,7 @@
 "use client"
 
 import { authClient } from "@/lib/auth-client"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import { motion, AnimatePresence } from "motion/react"
 import {
     ArrowLeft,

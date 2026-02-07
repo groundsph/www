@@ -57,7 +57,7 @@ import {
     getFeaturedSlotRequests,
     FeaturedSlotRequest,
 } from "@/app/api/actions/owner"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import BlogEditor from "@/components/blog/BlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"

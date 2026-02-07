@@ -5,7 +5,7 @@ import { motion } from "motion/react"
 import { NearbyCafe } from "@/app/api/actions/nearby"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
 import { recordVisit, getTodayCheckIn } from "@/app/api/actions/profile"
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 

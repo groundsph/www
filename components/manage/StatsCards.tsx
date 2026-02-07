@@ -11,7 +11,7 @@ import {
     Loader2,
 } from "lucide-react"
 import { getSystemStats, SystemStats } from "@/app/api/actions/admin-stats"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 function formatBytes(bytes: number): string {
     if (bytes === 0) return "0 B"

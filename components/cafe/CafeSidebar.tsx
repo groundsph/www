@@ -29,7 +29,7 @@ import Link from "next/link"
 import Image from "next/image"
 import RatingDistribution from "./RatingDistribution"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
-import ReportCafeModal from "@/components/ReportCafeModal"
+import ReportCafeModal from "@/components/modal/ReportCafeModal"
 import { motion } from "motion/react"
 import { useState, useEffect } from "react"
 import { getCafeVisitStats, getTodayVisitors } from "@/app/api/actions/profile"
@@ -77,7 +77,7 @@ const DAY_ORDER: OperatingHour["day"][] = [
 ]
 
 // Dynamic import for mini map
-const DynamicCafeMiniMap = dynamic(() => import("@/components/CafeMiniMap"), {
+const DynamicCafeMiniMap = dynamic(() => import("@/components/map/CafeMiniMap"), {
     ssr: false,
     loading: () => (
         <div className='w-full h-full min-h-[180px] flex items-center justify-center bg-secondary/20 rounded-xl'>

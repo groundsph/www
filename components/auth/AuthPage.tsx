@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import {
     checkUsernameAvailability,
     updateProfile,
@@ -10,7 +10,7 @@ import { motion } from "motion/react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 type AuthMode = "signin" | "signup" | "username" | "reset"
 

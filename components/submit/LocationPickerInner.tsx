@@ -10,7 +10,7 @@ import {
     AlertCircle,
 } from "lucide-react"
 import { reverseGeocodeAndMatch } from "@/app/api/actions/location"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import {
     MapContainer,
     TileLayer,

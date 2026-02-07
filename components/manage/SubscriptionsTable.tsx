@@ -23,7 +23,7 @@ import {
     rejectManualPayment,
     deleteSubscriptionProof,
 } from "@/app/api/actions/admin"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 // Extend CafeSubscription to include the joined 'cafes' relation
 interface SubscriptionWithCafe extends CafeSubscription {

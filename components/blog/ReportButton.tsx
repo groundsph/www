@@ -7,7 +7,7 @@ import {
     BlogReportReason,
 } from "@/utils/types/blog-report"
 import { reportBlogPost } from "@/app/api/actions/blog-report"
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import { cn } from "@/utils/cn"
 
 interface ReportButtonProps {

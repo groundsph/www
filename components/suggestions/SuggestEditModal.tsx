@@ -33,7 +33,7 @@ import {
 } from "lucide-react"
 
 import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 import { submitEditSuggestion } from "@/app/api/actions/suggestions"
 import {

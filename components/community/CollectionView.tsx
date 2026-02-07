@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { toggleLikeCollection } from "@/app/api/actions/collection"
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface CollectionData {

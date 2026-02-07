@@ -28,7 +28,7 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { Database } from "@/utils/types/database.types"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import {
     ContactSection,

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { X, Loader2 } from "lucide-react"
 import { createCollection } from "@/app/api/actions/collection"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 interface CreateCollectionModalProps {
     onClose: () => void

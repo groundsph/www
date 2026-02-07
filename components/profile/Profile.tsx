@@ -1,7 +1,7 @@
 "use client"
 
-import { useAuth } from "@/components/AuthProvider"
-import { useNotification } from "@/components/NotificationProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import { getFullProfileData, updateProfile } from "@/app/api/actions/profile"
 import { uploadAvatar } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"

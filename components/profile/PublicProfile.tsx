@@ -22,7 +22,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"

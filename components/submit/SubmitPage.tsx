@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import CafeSubmissionForm from "@/components/submit/CafeSubmissionForm"
 
 export default function SubmitPage() {

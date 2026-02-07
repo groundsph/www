@@ -67,7 +67,7 @@ import HoursSection from "@/components/cafe-editor/HoursSection"
 import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
 import { Link } from "lucide-react"
 import { CafeWithRatings } from "@/utils/types/extra"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 const STEPS = [
     { id: 0, title: "Before We Begin", icon: Search },
