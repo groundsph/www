@@ -1,5 +1,5 @@
 import CafeDetails from "@/app/cafes/[slug]/CafeDetails"
-import CafeHeroImage from "@/app/cafes/[slug]/components/CafeHeroImage"
+import CafeHeroImage from "@/components/cafe/CafeHeroImage"
 import Link from "next/link"
 import type { Metadata } from "next"
 import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"

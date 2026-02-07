@@ -9,13 +9,13 @@ import { useState, useRef, useEffect, useMemo } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 // Components
-import CafeHero from "./components/CafeHero"
-import CafeSidebar from "./components/CafeSidebar"
-import CafeTabs from "./components/CafeTabs"
+import CafeHero from "@/components/cafe/CafeHero"
+import CafeSidebar from "@/components/cafe/CafeSidebar"
+import CafeTabs from "@/components/cafe/CafeTabs"
 import {
     AboutTabContent,
     DetailsTabContent,
-} from "./components/CafeMobileContent"
+} from "@/components/cafe/CafeMobileContent"
 import ReviewModal from "@/components/reviews/ReviewModal"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import MarkdownRender from "@/components/MarkdownRender"
