@@ -59,7 +59,7 @@ interface CommunityPageClientProps {
     initialFeaturedUsers: UserResult[]
 }
 
-export default function CommunityPageClient({
+export default function CommunityPage({
     initialTab,
     initialCollections,
     initialCollectionsTotal,

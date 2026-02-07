@@ -52,7 +52,7 @@ interface CollectionData {
     isOwner: boolean
 }
 
-export default function CollectionViewClient({
+export default function CollectionView({
     collection,
 }: {
     collection: CollectionData
