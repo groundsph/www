@@ -60,15 +60,15 @@ const navItems: NavItem[] = [
     },
 ]
 
-interface ManageLayoutClientProps {
+interface ManageLayoutProps {
     children: React.ReactNode
     userRole: "admin" | "moderator"
 }
 
-export default function ManageLayoutClient({
+export default function ManageLayout({
     children,
     userRole,
-}: ManageLayoutClientProps) {
+}: ManageLayoutProps) {
     const pathname = usePathname()
     const isFullAdmin = userRole === "admin"
 
