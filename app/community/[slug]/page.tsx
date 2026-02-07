@@ -1,7 +1,7 @@
 import { getCollectionBySlug } from "@/app/api/actions/collection"
 import { notFound } from "next/navigation"
 import { Metadata } from "next"
-import CollectionViewClient from "./CollectionViewClient"
+import CollectionView from "@/components/community/CollectionView"
 
 interface Props {
     params: Promise<{ slug: string }>
@@ -39,5 +39,5 @@ export default async function CollectionPage({ params }: Props) {
         notFound()
     }
 
-    return <CollectionViewClient collection={collection} />
+    return <CollectionView collection={collection} />
 }

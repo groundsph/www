@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 import { Suspense } from "react"
-import CommunityPageClient from "./CommunityPageClient"
+import CommunityPage from "@/components/community/CommunityPage"
 import {
     getPublicCollections,
     getFeaturedUsers,
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     },
 }
 
-export default async function CommunityPage({
+export default async function Page({
     searchParams,
 }: {
     searchParams: Promise<{ tab?: string }>
@@ -37,7 +37,7 @@ export default async function CommunityPage({
 
     return (
         <Suspense fallback={<CommunityPageSkeleton />}>
-            <CommunityPageClient
+            <CommunityPage
                 initialTab={initialTab}
                 initialCollections={collectionsData.collections}
                 initialCollectionsTotal={collectionsData.total}
