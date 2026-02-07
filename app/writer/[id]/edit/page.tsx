@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { getWriterBlogPostById } from "@/app/api/actions/blog"
-import EditStoryClient from "./EditStoryClient"
+import EditStory from "@/components/writer/EditStory"
 
 export const metadata = {
     title: "Edit Story | Writer",
@@ -19,5 +19,5 @@ export default async function EditStoryPage({
         notFound()
     }
 
-    return <EditStoryClient post={post} />
+    return <EditStory post={post} />
 }

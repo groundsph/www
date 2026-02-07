@@ -6,13 +6,13 @@ import { ArrowLeft } from "lucide-react"
 import BlogEditor from "@/components/blog/BlogEditor"
 import { BlogPost } from "@/utils/types/blog"
 
-interface EditStoryClientProps {
+interface EditStoryProps {
     post: BlogPost
 }
 
 const WRITER_ALLOWED_CATEGORIES = ["news", "guides", "community"] as const
 
-export default function EditStoryClient({ post }: EditStoryClientProps) {
+export default function EditStory({ post }: EditStoryProps) {
     const router = useRouter()
 
     return (

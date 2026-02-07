@@ -35,7 +35,7 @@ Grounds Username: [If you have an account on Grounds]
 
 Looking forward to hearing from you!`
 
-export default function ContactPageClient() {
+export default function ContactPage() {
     const searchParams = useSearchParams()
     const hasInitialized = useRef(false)
 

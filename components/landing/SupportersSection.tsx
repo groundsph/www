@@ -2,7 +2,7 @@
 
 import { Sparkles, Check, Star, Award, Clock } from "lucide-react"
 
-interface SupporterSectionProps {
+interface SupportersSectionProps {
     isSupporter: boolean
     isLoggedIn: boolean
 }
@@ -13,9 +13,9 @@ const PERKS = [
     { icon: Check, text: "Supporter Tag on Reviews" },
 ]
 
-export default function SupporterSection({
+export default function SupportersSection({
     isSupporter,
-}: SupporterSectionProps) {
+}: SupportersSectionProps) {
     return (
         <div className='bg-linear-to-br from-purple-500/10 via-primary/5 to-purple-500/10 border border-purple-500/20 rounded-xl p-6'>
             <div className='flex items-center gap-3 mb-4'>

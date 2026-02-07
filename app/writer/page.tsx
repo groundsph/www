@@ -1,5 +1,5 @@
 import { getWriterBlogPosts } from "@/app/api/actions/blog"
-import WriterDashboard from "./WriterDashboard"
+import WriterDashboard from "@/components/writer/WriterDashboard"
 
 export const metadata = {
     title: "Dashboard | Writer",
