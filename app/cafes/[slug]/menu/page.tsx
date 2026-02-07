@@ -6,8 +6,8 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { Coffee } from "lucide-react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
-import MenuHeader from "./MenuHeader"
-import MenuContent from "./MenuContent"
+import MenuHeader from "@/components/menu/MenuHeader"
+import MenuContent from "@/components/menu/MenuContent"
 
 interface MenuPageProps {
     params: Promise<{ slug: string }>
