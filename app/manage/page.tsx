@@ -4,7 +4,7 @@ import {
     getUserRole,
     getPaginatedCafes,
 } from "@/app/api/actions/admin"
-import StatsCards from "./StatsCards"
+import StatsCards from "@/components/manage/StatsCards"
 import Link from "next/link"
 import {
     Store,

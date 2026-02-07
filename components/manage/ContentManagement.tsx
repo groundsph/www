@@ -16,9 +16,9 @@ import { BlogPost } from "@/utils/types/blog"
 import { EventWithCafe } from "@/utils/types/extra"
 import { type FeaturedSchedule } from "@/app/api/actions/admin"
 import BlogEditor from "@/components/blog/BlogEditor"
-import FeaturedScheduleManager from "../FeaturedScheduleManager"
+import FeaturedScheduleManager from "./FeaturedScheduleManager"
 import EventsManagement from "@/components/events/EventsManagement"
-import BlogReportsPanel from "./components/BlogReportsPanel"
+import BlogReportsPanel from "./BlogReportsPanel"
 import Link from "next/link"
 
 interface ContentManagementProps {

@@ -62,7 +62,7 @@ import { EditSuggestion } from "@/utils/types/suggestions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
 import ImageLightbox from "@/components/ImageLightbox"
-import SubscriptionsTable from "./components/SubscriptionsTable"
+import SubscriptionsTable from "@/components/manage/SubscriptionsTable"
 import RejectCafeModal from "@/components/admin/RejectCafeModal"
 import { CreditCard } from "lucide-react"
 

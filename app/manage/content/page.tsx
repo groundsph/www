@@ -6,7 +6,7 @@ import {
 } from "@/app/api/actions/admin"
 import { getAdminBlogPosts } from "@/app/api/actions/blog"
 import { getAdminEvents } from "@/app/api/actions/events"
-import ContentManagement from "./ContentManagement"
+import ContentManagement from "@/components/manage/ContentManagement"
 
 export const metadata = {
     title: "Content | Manage",

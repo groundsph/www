@@ -4,7 +4,7 @@ import {
     getUserRole,
     getReportedReviews,
 } from "@/app/api/actions/admin"
-import CommunityManagement from "./CommunityManagement"
+import CommunityManagement from "@/components/manage/CommunityManagement"
 
 export const metadata = {
     title: "Community | Manage",

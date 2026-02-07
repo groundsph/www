@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { isAdmin, getCafeById } from "@/app/api/actions/admin"
 import { getCafeMenuItems } from "@/app/api/actions/owner"
-import CafeEditor from "./CafeEditor"
+import CafeEditor from "@/components/manage/CafeEditor"
 
 interface Props {
     params: Promise<{ id: string }>

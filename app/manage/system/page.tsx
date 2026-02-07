@@ -4,7 +4,7 @@ import {
     getUserRole,
     getAllBadgeDefinitions,
 } from "@/app/api/actions/admin"
-import SystemManagement from "./SystemManagement"
+import SystemManagement from "@/components/manage/SystemManagement"
 
 export const metadata = {
     title: "System | Manage",

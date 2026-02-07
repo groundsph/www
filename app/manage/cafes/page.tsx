@@ -8,7 +8,7 @@ import {
 } from "@/app/api/actions/admin"
 import { getPendingSuggestions } from "@/app/api/actions/suggestions"
 import { getPendingClaims } from "@/app/api/actions/claim"
-import CafesManagement from "./CafesManagement"
+import CafesManagement from "@/components/manage/CafesManagement"
 
 export const metadata = {
     title: "Cafes | Manage",

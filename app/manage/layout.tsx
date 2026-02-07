@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation"
 import { isAdmin, getUserRole } from "@/app/api/actions/admin"
-import ManageLayoutClient from "./ManageLayoutClient"
+import ManageLayout from "@/components/manage/ManageLayout"
 
 export const metadata = {
     title: "Manage Dashboard",
     description: "Manage cafe submissions and platform settings",
 }
 
-export default async function ManageLayout({
+export default async function ManageDashboardLayout({
     children,
 }: {
     children: React.ReactNode
@@ -22,8 +22,8 @@ export default async function ManageLayout({
     const userRole = await getUserRole()
 
     return (
-        <ManageLayoutClient userRole={userRole as "admin" | "moderator"}>
+        <ManageLayout userRole={userRole as "admin" | "moderator"}>
             {children}
-        </ManageLayoutClient>
+        </ManageLayout>
     )
 }
