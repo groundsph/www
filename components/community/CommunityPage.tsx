@@ -51,7 +51,7 @@ interface UserResult {
     isSupporter: boolean
 }
 
-interface CommunityPageClientProps {
+interface CommunityPageProps {
     initialTab: string
     initialCollections: PublicCollection[]
     initialCollectionsTotal: number
@@ -64,7 +64,7 @@ export default function CommunityPage({
     initialCollections,
     initialCollectionsTotal,
     initialEvents,
-}: CommunityPageClientProps) {
+}: CommunityPageProps) {
     const router = useRouter()
     const searchParamsHook = useSearchParams()
 
