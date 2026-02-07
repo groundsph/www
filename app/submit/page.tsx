@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import SubmitPageComponent from "@/components/submit/SubmitPage"
+import { default as SubmitPageClient } from "@/components/submit/SubmitPage"
 
 export const metadata: Metadata = {
     title: "Submit a Cafe",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function SubmitPage() {
-    return <SubmitPageComponent />
+    return <SubmitPageClient />
 }
