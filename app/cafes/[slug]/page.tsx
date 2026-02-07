@@ -1,4 +1,4 @@
-import CafeDetails from "@/app/cafes/[slug]/CafeDetails"
+import CafeDetails from "@/components/cafe/CafeDetails"
 import CafeHeroImage from "@/components/cafe/CafeHeroImage"
 import Link from "next/link"
 import type { Metadata } from "next"

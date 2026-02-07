@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import CafesPageClient from "./cafePage"
+import CafesPageClient from "@/components/cafe/CafesPageClient"
 import { getAllCafes } from "@/app/api/actions/cafe"
 
 export const dynamic = "force-dynamic"

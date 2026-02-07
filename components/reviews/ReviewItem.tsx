@@ -1,6 +1,6 @@
 "use client"
 
-import { Review } from "@/app/cafes/[slug]/CafeDetails"
+import type { Review } from "@/components/cafe/CafeDetails"
 import { formatDistanceToNow } from "date-fns"
 import {
     Heart,
