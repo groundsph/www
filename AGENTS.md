@@ -109,13 +109,57 @@
 
 ### File Structure
 - `app/` - Next.js App Router (pages and API routes)
+  - **IMPORTANT:** Only page files (`page.tsx`), layout files (`layout.tsx`), API routes (`route.ts`), and server actions belong here
+  - NEVER place React components in `/app` - they must go in `/components/`
+- `components/` - ALL React components must be stored here, organized by domain
+  - See "Component Organization" section above for detailed structure
 - `app/api/actions/` - Server actions (grouped by domain)
-- `components/` - Reusable React components
 - `db/schema/` - Drizzle database schema definitions
 - `utils/` - Utility functions and helpers
 - `utils/types/` - Shared TypeScript type definitions
 - `hooks/` - Custom React hooks
 - `lib/` - Configuration and setup (auth, db connection)
+
+### Component Organization
+- ALL React components (including Client components) MUST be stored in `/components` directory
+- NEVER place component files in `/app` directory except for:
+  - `page.tsx` (page files)
+  - `layout.tsx` (layout files)
+  - `loading.tsx` (loading states)
+  - `error.tsx` (error states)
+  - `not-found.tsx` (not-found states)
+  - `route.ts` (API routes)
+  - `opengraph-image.tsx` (OG image generation)
+  - Server action files in `app/api/actions/`
+- Components are organized by functional domain with subdirectories:
+  - `components/admin/` - Admin-specific components
+  - `components/auth/` - Authentication components
+  - `components/badges/` - Badge components
+  - `components/blog/` - Blog-related components
+  - `components/cafe/` - Cafe detail components
+  - `components/cafe-editor/` - Cafe editing components
+  - `components/checkin/` - Check-in functionality
+  - `components/collections/` - Collection management
+  - `components/community/` - Community features
+  - `components/contact/` - Contact page components
+  - `components/events/` - Event components
+  - `components/feed/` - Activity feed components
+  - `components/landing/` - Landing page components
+  - `components/layout/` - Layout components (navbar, footer, providers)
+  - `components/map/` - Map-related components
+  - `components/manage/` - Admin management components
+  - `components/menu/` - Menu components
+  - `components/modal/` - Modal components
+  - `components/owner/` - Owner dashboard components
+  - `components/profile/` - Profile components
+  - `components/recent/` - Recent items sections
+  - `components/reviews/` - Review components
+  - `components/search/` - Search functionality
+  - `components/social/` - Social features
+  - `components/submit/` - Cafe submission components
+  - `components/suggestions/` - Suggestion components
+  - `components/ui/` - Reusable UI components
+  - `components/writer/` - Writer dashboard components
 
 ### Testing
 - Place test files in `__tests__/` directories alongside source code
