@@ -6,7 +6,7 @@ import {
     getCafeIdBySlug,
     getCafeMenuItems,
 } from "@/app/api/actions/owner"
-import CafeEditClient from "./CafeEditClient"
+import CafeEdit from "@/components/owner/CafeEdit"
 
 export const metadata: Metadata = {
     title: "Edit Cafe | Grounds",
@@ -44,7 +44,7 @@ export default async function CafeEditPage({ params }: Props) {
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <CafeEditClient cafe={cafe} menuItems={menuItems} />
+                <CafeEdit cafe={cafe} menuItems={menuItems} />
             </div>
         </main>
     )

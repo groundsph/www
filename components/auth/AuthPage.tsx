@@ -14,7 +14,7 @@ import { useNotification } from "@/components/NotificationProvider"
 
 type AuthMode = "signin" | "signup" | "username" | "reset"
 
-export default function AuthPageClient() {
+export default function AuthPage() {
     // Context
     const { refreshProfile, user } = useAuth()
     const { addNotification } = useNotification()

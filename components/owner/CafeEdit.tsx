@@ -44,15 +44,15 @@ import { useMenuItems } from "@/utils/hooks/useMenuItems"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
 
-interface CafeEditClientProps {
+interface CafeEditProps {
     cafe: CafeWithRatings
     menuItems: CafeMenuItem[]
 }
 
-export default function CafeEditClient({
+export default function CafeEdit({
     cafe: initialCafe,
     menuItems: initialMenuItems,
-}: CafeEditClientProps) {
+}: CafeEditProps) {
     const { addNotification } = useNotification()
     const [cafe, setCafe] = useState(initialCafe)
 

@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
 import { getOwnedCafes } from "@/app/api/actions/owner"
-import OwnerDashboardClient from "./OwnerDashboardClient"
+import OwnerDashboard from "@/components/owner/OwnerDashboard"
 
 export const metadata: Metadata = {
     title: "Owner Dashboard | Grounds",
@@ -23,7 +23,7 @@ export default async function OwnerPage() {
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12'>
             <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <OwnerDashboardClient cafes={ownedCafes} />
+                <OwnerDashboard cafes={ownedCafes} />
             </div>
         </main>
     )

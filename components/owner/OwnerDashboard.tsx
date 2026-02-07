@@ -25,7 +25,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
-interface OwnerDashboardClientProps {
+interface OwnerDashboardProps {
     cafes: OwnedCafe[]
 }
 
@@ -82,9 +82,9 @@ const item = {
     show: { opacity: 1, y: 0 },
 }
 
-export default function OwnerDashboardClient({
+export default function OwnerDashboard({
     cafes,
-}: OwnerDashboardClientProps) {
+}: OwnerDashboardProps) {
     // Calculate stats
     const totalReviews = cafes.reduce(
         (sum, cafe) => sum + (cafe.total_reviews || 0),

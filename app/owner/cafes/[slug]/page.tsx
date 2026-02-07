@@ -8,7 +8,7 @@ import {
     getCafeMenuItems,
     getCafeIdBySlug,
 } from "@/app/api/actions/owner"
-import CafeManagementClient from "./CafeManagementClient"
+import CafeManagement from "@/components/owner/CafeManagement"
 
 export const metadata: Metadata = {
     title: "Manage Cafe | Grounds",
@@ -50,7 +50,7 @@ export default async function CafeManagementPage({ params }: Props) {
     return (
         <main className='min-h-screen w-full bg-background pt-6 pb-12 [&_button]:cursor-pointer'>
             <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <CafeManagementClient
+                <CafeManagement
                     cafe={cafe}
                     subscription={subscription}
                     reviews={reviews}

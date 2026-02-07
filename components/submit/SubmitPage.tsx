@@ -3,7 +3,7 @@
 import { useAuth } from "@/components/AuthProvider"
 import CafeSubmissionForm from "@/components/submit/CafeSubmissionForm"
 
-export default function SubmitPageClient() {
+export default function SubmitPage() {
     // Context - auth is handled by middleware
     const { profile } = useAuth()
 

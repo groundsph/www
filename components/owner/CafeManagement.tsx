@@ -64,7 +64,7 @@ import EventsManagement from "@/components/events/EventsManagement"
 import MenuItemModal from "@/components/cafe-editor/MenuItemModal"
 import { EventWithCafe } from "@/utils/types/extra"
 
-interface CafeManagementClientProps {
+interface CafeManagementProps {
     cafe: CafeWithRatings
     subscription: CafeSubscription | null
     reviews: {
@@ -116,12 +116,12 @@ type Tab =
     | "events"
     | "settings"
 
-export default function CafeManagementClient({
+export default function CafeManagement({
     cafe,
     subscription,
     reviews: initialReviews,
     menuItems: initialMenuItems,
-}: CafeManagementClientProps) {
+}: CafeManagementProps) {
     const tier = subscription?.tier || "free"
     const tierConfig = SUBSCRIPTION_TIERS[tier]
     const colors = tierColors[tier]
