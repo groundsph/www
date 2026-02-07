@@ -30,7 +30,11 @@ interface CafeTabsProps {
     menuCount?: number
 }
 
-export default function CafeTabs({ tabContent, reviewCount }: CafeTabsProps) {
+export default function CafeTabs({
+    tabContent,
+    reviewCount,
+    menuCount,
+}: CafeTabsProps) {
     const [activeTab, setActiveTab] = useState<TabId>("about")
 
     return (
@@ -40,6 +44,8 @@ export default function CafeTabs({ tabContent, reviewCount }: CafeTabsProps) {
                 {TABS.map((tab) => {
                     const Icon = tab.icon
                     const isActive = activeTab === tab.id
+
+                    if (tab.id === "menu" && menuCount === 0) return null
 
                     return (
                         <button
