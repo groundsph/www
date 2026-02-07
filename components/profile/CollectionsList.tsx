@@ -19,7 +19,7 @@ interface Collection {
     createdAt: string | null
 }
 
-export default function CollectionsListClient({
+export default function CollectionsList({
     initialCollections,
 }: {
     initialCollections: Collection[]

@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 import { getUserCollections } from "@/app/api/actions/collection"
-import CollectionsListClient from "./CollectionsListClient"
+import CollectionsList from "@/components/profile/CollectionsList"
 
 export const metadata: Metadata = {
     title: "My Collections",
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 export default async function MyCollectionsPage() {
     const collections = await getUserCollections()
 
-    return <CollectionsListClient initialCollections={collections} />
+    return <CollectionsList initialCollections={collections} />
 }

@@ -70,7 +70,7 @@ interface CafeData {
     note?: string
 }
 
-export default function CollectionEditorClient({
+export default function CollectionEditor({
     collection,
 }: {
     collection: Collection

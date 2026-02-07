@@ -126,7 +126,7 @@ const item = {
     transition: { duration: 0.5 },
 }
 
-export default function ProfileClient() {
+export default function Profile() {
     const router = useRouter()
     const { user, refreshProfile } = useAuth()
     const { addNotification } = useNotification()

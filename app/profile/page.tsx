@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import ProfileClient from "./ProfileClient"
+import Profile from "@/components/profile/Profile"
 
 export const metadata: Metadata = {
     title: "Your Profile",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function ProfilePage() {
-    return <ProfileClient />
+    return <Profile />
 }

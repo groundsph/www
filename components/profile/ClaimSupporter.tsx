@@ -15,7 +15,7 @@ import {
     ClaimResult,
 } from "@/app/api/actions/claim-supporter"
 
-export default function ClaimSupporterClient() {
+export default function ClaimSupporter() {
     const [email, setEmail] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [result, setResult] = useState<ClaimResult | null>(null)

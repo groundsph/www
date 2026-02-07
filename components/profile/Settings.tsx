@@ -45,7 +45,7 @@ type Passkey = Record<string, any>
 
 type TabType = "password" | "sessions" | "passkeys" | "connected-accounts"
 
-export default function SettingsClient() {
+export default function Settings() {
     const { addNotification } = useNotification()
     const searchParams = useSearchParams()
 

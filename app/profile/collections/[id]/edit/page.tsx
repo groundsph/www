@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { getCollectionForEdit } from "@/app/api/actions/collection"
-import CollectionEditorClient from "./CollectionEditorClient"
+import CollectionEditor from "@/components/profile/CollectionEditor"
 
 interface Props {
     params: Promise<{ id: string }>
@@ -29,5 +29,5 @@ export default async function EditCollectionPage({ params }: Props) {
         notFound()
     }
 
-    return <CollectionEditorClient collection={collection} />
+    return <CollectionEditor collection={collection} />
 }

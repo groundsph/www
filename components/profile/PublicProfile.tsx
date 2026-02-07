@@ -115,13 +115,13 @@ const item = {
     transition: { duration: 0.5 },
 }
 
-interface PublicProfileClientProps {
+interface PublicProfileProps {
     profile: ProfileWithBadges
 }
 
-export default function PublicProfileClient({
+export default function PublicProfile({
     profile,
-}: PublicProfileClientProps) {
+}: PublicProfileProps) {
     const { user } = useAuth()
     // States
     const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])

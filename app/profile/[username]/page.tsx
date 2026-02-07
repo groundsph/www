@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getProfileByUsername } from "@/app/api/actions/profile"
-import PublicProfileClient from "./PublicProfileClient"
+import PublicProfile from "@/components/profile/PublicProfile"
 
 interface Props {
     params: Promise<{
@@ -35,5 +35,5 @@ export default async function PublicProfilePage({ params }: Props) {
         notFound()
     }
 
-    return <PublicProfileClient profile={profile} />
+    return <PublicProfile profile={profile} />
 }

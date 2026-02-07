@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import ClaimSupporterClient from "./ClaimSupporterClient"
+import ClaimSupporter from "@/components/profile/ClaimSupporter"
 
 export const metadata: Metadata = {
     title: "Claim Supporter Badge | Grounds",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function ClaimSupporterPage() {
-    return <ClaimSupporterClient />
+    return <ClaimSupporter />
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
-import SettingsClient from "./SettingsClient"
+import Settings from "@/components/profile/Settings"
 
 export const dynamic = "force-dynamic"
 
@@ -11,5 +11,5 @@ export default async function SettingsPage() {
         redirect("/auth?redirect=/profile/settings")
     }
 
-    return <SettingsClient />
+    return <Settings />
 }
