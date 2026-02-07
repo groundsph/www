@@ -11,7 +11,7 @@ import RecentlyAddedSection from "@/components/RecentlyAddedSection"
 import SubmitCafeSection from "@/components/SubmitCafeSection"
 import StoriesEventsSection from "@/components/StoriesEventsSection"
 import RecentReviewsSection from "@/components/RecentReviewsSection"
-import ActivityFeedWrapper from "@/components/ActivityFeedWrapper"
+import ActivityFeedWrapper from "@/components/feed/ActivityFeedWrapper"
 import { CafeWithRatings } from "@/utils/types/extra"
 
 // Dynamic rendering for Dokploy build compatibility

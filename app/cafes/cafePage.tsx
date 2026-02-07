@@ -36,8 +36,8 @@ import {
 } from "@/utils/data/philippines"
 import { useEffect, useState, useTransition, useRef } from "react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
-import RandomCafeButton from "@/components/RandomCafeButton"
-import MiniSubmitCafeBanner from "@/components/MiniSubmitCafeBanner"
+import RandomCafeButton from "@/components/map/RandomCafeButton"
+import MiniSubmitCafeBanner from "@/components/ui/MiniSubmitCafeBanner"
 
 interface CafesPageClientProps {
     initialCafes?: CafeWithRatings[]

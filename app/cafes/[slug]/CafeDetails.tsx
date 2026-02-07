@@ -23,7 +23,7 @@ import ImageLightbox from "@/components/ImageLightbox"
 import ClaimCafeModal from "@/components/ClaimCafeModal"
 import ContributionHistoryModal from "@/components/history/ContributionHistoryModal"
 import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
-import MilestoneCelebration from "@/components/MilestoneCelebration"
+import MilestoneCelebration from "@/components/ui/MilestoneCelebration"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
 
 // Hooks

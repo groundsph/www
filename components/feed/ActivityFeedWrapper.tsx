@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/AuthProvider"
 import { getFollowedUsersCheckIns } from "@/app/api/actions/social"
-import ActivityFeedSection, { FeedCheckIn } from "@/components/ActivityFeedSection"
+import ActivityFeedSection, { FeedCheckIn } from "@/components/feed/ActivityFeedSection"
 
 export default function ActivityFeedWrapper() {
     const { user } = useAuth()
