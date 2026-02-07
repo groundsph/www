@@ -18,9 +18,9 @@ import {
 } from "@/components/cafe/CafeMobileContent"
 import ReviewModal from "@/components/reviews/ReviewModal"
 import ReviewItem from "@/components/reviews/ReviewItem"
-import MarkdownRender from "@/components/MarkdownRender"
-import ImageLightbox from "@/components/ImageLightbox"
-import ClaimCafeModal from "@/components/ClaimCafeModal"
+import MarkdownRender from "@/components/ui/MarkdownRender"
+import ImageLightbox from "@/components/modal/ImageLightbox"
+import ClaimCafeModal from "@/components/modal/ClaimCafeModal"
 import ContributionHistoryModal from "@/components/history/ContributionHistoryModal"
 import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
 import MilestoneCelebration from "@/components/ui/MilestoneCelebration"
@@ -29,7 +29,7 @@ import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
 import { trackCafePageView } from "@/utils/analytics"
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 
 export interface Review {
     id: string

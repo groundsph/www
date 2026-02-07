@@ -18,7 +18,7 @@ import {
 import { SUBSCRIPTION_TIERS, OwnedCafe } from "@/utils/types/owner"
 import { submitManualPayment } from "@/app/api/actions/subscription"
 import { uploadCafeImageWithProgress } from "@/utils/storage/client"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import Image from "next/image"
 import Link from "next/link"
 import { getOwnedCafes } from "@/app/api/actions/owner"

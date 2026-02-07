@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@/components/AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 import { useEffect, useState, useCallback } from "react"
 import type { CheckInResult } from "@/app/api/actions/profile"
 

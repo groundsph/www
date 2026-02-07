@@ -5,7 +5,7 @@ import { Pencil } from "lucide-react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import SuggestEditModal from "./SuggestEditModal"
 import Link from "next/link"
-import { useAuth } from "../AuthProvider"
+import { useAuth } from "@/components/layout/AuthProvider"
 
 interface SuggestEditButtonProps {
     cafe: CafeWithRatings

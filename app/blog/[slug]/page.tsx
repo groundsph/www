@@ -4,7 +4,7 @@ import {
     getPublishedBlogPosts,
 } from "@/app/api/actions/blog"
 import { BLOG_CATEGORIES, estimateReadingTime } from "@/utils/types/blog"
-import MarkdownRender from "@/components/MarkdownRender"
+import MarkdownRender from "@/components/ui/MarkdownRender"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"

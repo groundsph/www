@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 import {
     getProfilesForAdmin,
     deleteUserAsAdmin,

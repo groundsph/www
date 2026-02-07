@@ -1,5 +1,5 @@
 import { getAllCafes } from "@/app/api/actions/cafe"
-import CafeMapWrapper from "@/components/CafeMapWrapper"
+import CafeMapWrapper from "@/components/map/CafeMapWrapper"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { Metadata } from "next"
 

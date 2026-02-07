@@ -6,7 +6,7 @@ import { useState, useCallback, useRef } from "react"
 import { getCafesInBounds, MapBounds } from "@/app/api/actions/map"
 import { Store, Clock12 } from "lucide-react"
 
-const CafeMap = dynamic(() => import("@/components/CafeMap"), {
+const CafeMap = dynamic(() => import("@/components/map/CafeMap"), {
     ssr: false,
     loading: () => (
         <div className='w-full h-full min-h-[500px] flex items-center justify-center bg-secondary/20'>

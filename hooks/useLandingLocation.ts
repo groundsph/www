@@ -9,7 +9,7 @@ import {
     GeolocationError,
     LocationSource
 } from "@/hooks/useUserLocation"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 // ============================================================================
 // Types

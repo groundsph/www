@@ -81,7 +81,7 @@ const DAY_ORDER: OperatingHour["day"][] = [
 ]
 
 // Dynamic import for mini map
-const DynamicCafeMiniMap = dynamic(() => import("@/components/CafeMiniMap"), {
+const DynamicCafeMiniMap = dynamic(() => import("@/components/map/CafeMiniMap"), {
     ssr: false,
     loading: () => (
         <div className='w-full h-full min-h-[180px] flex items-center justify-center bg-secondary/20 rounded-xl'>

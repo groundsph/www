@@ -4,7 +4,7 @@ import { authClient } from "@/lib/auth-client"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useState } from "react"
-import { useNotification } from "@/components/NotificationProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 export default function ResetPasswordPage() {
     const { addNotification } = useNotification()
