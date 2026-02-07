@@ -360,6 +360,6 @@ export async function searchUsers(
 
         return { users: result }
     } catch (error) {
-        return { users: [], error: "Search failed" }
+        return { users: [], error: `Error searching users: ${error}` }
     }
 }
