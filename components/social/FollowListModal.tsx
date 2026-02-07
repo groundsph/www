@@ -67,7 +67,7 @@ export default function FollowListModal({
             // We'll trust the follow status check to handle it or assume the parent might need to pass it if critical.
             // For now, let's just use the API to check follow status which implicitly checks auth.
             // But to know if "Follow" button should be shown (not self), we need ID.
-            // Let's defer to the fact that `PublicProfileClient` uses `useAuth`.
+            // Let's defer to the fact that `PublicProfile` uses `useAuth`.
             // Ideally we should pass currentUserId as a prop.
             // For now, I'll fetch it or just handle "isFollowing" checks individually which will fail if not logged in.
         }
