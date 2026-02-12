@@ -16,7 +16,7 @@ export default function Footer() {
                             className='font-serif text-2xl md:text-3xl font-bold inline-flex items-center gap-2 group w-max'
                         >
                             <Coffee className='w-6 h-6 group-hover:rotate-12 transition-transform' />
-                            Grounds<span className='text-secondary'>.</span>
+                            Grounds.PH<span className='text-secondary'>.</span>
                         </Link>
                         <p className='text-background/70 text-sm leading-relaxed'>
                             Discover and explore the best cafes across the
@@ -158,7 +158,7 @@ export default function Footer() {
                 <div className='mt-12 pt-8 border-t border-background/20 max-w-4xl mx-auto'>
                     <div className='flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-background/50'>
                         <span suppressHydrationWarning>
-                            © {currentYear} Grounds. All rights reserved.
+                            © {currentYear} Grounds.PH. All rights reserved.
                         </span>
                         <span>Made with ☕ in Cebu, Philippines</span>
                     </div>
