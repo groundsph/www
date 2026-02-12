@@ -3,9 +3,10 @@
 import { getPHTime, getPHTodayStart } from "@/utils/featured"
 import { db } from "@/db"
 import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits } from "@/db/schema"
-import { eq, and, ne, desc, inArray, arrayContains, count, sql } from "drizzle-orm"
+import { eq, and, ne, desc, inArray, arrayContains, count, sql, asc } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
+import { applyTieRanking } from "@/utils/leaderboard"
 
 // Types for consolidated profile data
 export interface FullProfileData {
@@ -1685,12 +1686,23 @@ export async function getMonthlyLeaderboard(
 
         const results = await query
             .groupBy(cafeVisits.userId, profiles.id, profiles.username, profiles.displayName, profiles.avatarUrl)
-            .orderBy(desc(count()))
+            .orderBy(desc(count()), asc(profiles.username))
             .limit(limit)
 
+        // Apply tie-aware ranking
+        const rankedResults = applyTieRanking(
+            results.map((r) => ({
+                userId: r.userId,
+                username: r.username,
+                displayName: r.displayName,
+                avatarUrl: r.avatarUrl,
+                visitCount: r.visitCount,
+            }))
+        )
+
         // Build leaderboard with ranks
-        const leaderboard = results.map((r, i) => ({
-            rank: i + 1,
+        const leaderboard = rankedResults.map((r) => ({
+            rank: r.rank,
             userId: r.userId,
             username: r.username,
             displayName: r.displayName,
