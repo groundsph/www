@@ -2744,8 +2744,18 @@ export async function updateFeaturedSchedule(
     // Map snake_case to camelCase
     const drizzleUpdates: Record<string, unknown> = {}
     if (updates.cafe_id !== undefined) drizzleUpdates.cafeId = updates.cafe_id
-    if (updates.start_date !== undefined) drizzleUpdates.startDate = updates.start_date
-    if (updates.end_date !== undefined) drizzleUpdates.endDate = updates.end_date
+    if (updates.start_date !== undefined) {
+        const startDate = typeof updates.start_date === 'string' 
+            ? new Date(updates.start_date) 
+            : updates.start_date
+        drizzleUpdates.startDate = startDate
+    }
+    if (updates.end_date !== undefined) {
+        const endDate = typeof updates.end_date === 'string' 
+            ? new Date(updates.end_date) 
+            : updates.end_date
+        drizzleUpdates.endDate = endDate
+    }
     if (updates.region_context !== undefined) drizzleUpdates.regionContext = updates.region_context
     if (updates.is_active !== undefined) drizzleUpdates.isActive = updates.is_active
     if (updates.priority !== undefined) drizzleUpdates.priority = updates.priority
