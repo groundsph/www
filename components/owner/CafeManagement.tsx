@@ -485,7 +485,7 @@ export default function CafeManagement({
             id: "events" as Tab,
             label: "Events",
             icon: CalendarIcon,
-            locked: tier !== "premium",
+            locked: !canAccessFeature(tier, "events"),
             requiredTier: "Premium",
         },
         {
