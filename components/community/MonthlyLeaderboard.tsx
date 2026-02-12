@@ -9,6 +9,7 @@ import { getMonthlyLeaderboard } from "@/app/api/actions/profile"
 import { useUserLocation } from "@/hooks/useUserLocation"
 import { getLastNMonths, formatYearMonth } from "@/utils/date/leaderboard-months"
 import { groupByRank } from "./leaderboard-utils"
+import ExpandableRankCard from "./ExpandableRankCard"
 
 interface LeaderboardEntry {
     rank: number
@@ -357,74 +358,32 @@ export default function MonthlyLeaderboard({
                             .sort((a, b) => a - b)
                         const topRanks = sortedRanks.slice(0, 3)
 
+                        const getRankCardColor = (rank: number) => {
+                            switch (rank) {
+                                case 1:
+                                    return "bg-gradient-to-br from-amber-500 to-amber-600"
+                                case 2:
+                                    return "bg-gradient-to-br from-gray-400 to-gray-500"
+                                case 3:
+                                    return "bg-gradient-to-br from-amber-700 to-amber-800"
+                                default:
+                                    return "bg-gradient-to-br from-secondary to-secondary/80"
+                            }
+                        }
+
                         return (
                             <div className='grid gap-4 mb-8' style={{ gridTemplateColumns: `repeat(${topRanks.length}, minmax(0, 1fr))` }}>
                                 {topRanks.map((rank) => {
                                     const entries = grouped[rank]
-                                    const isTied = entries.length > 1
 
                                     return (
-                                        <div key={rank} className={`flex ${isTied ? 'flex-row gap-2' : 'flex-col'} items-stretch`}>
-                                            {entries.map((entry) => (
-                                                <Link
-                                                    key={entry.userId}
-                                                    href={`/profile/${entry.username}`}
-                                                    className={`group block bg-background border rounded-2xl p-6 text-center hover:shadow-lg transition-all ${getRankStyle(entry.rank)} ${isTied ? 'flex-1' : ''}`}
-                                                >
-                                                    {/* Rank Badge */}
-                                                    <div className='flex justify-center mb-4'>
-                                                        <div
-                                                            className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                                                entry.rank === 1
-                                                                    ? "bg-amber-500/20"
-                                                                    : entry.rank === 2
-                                                                        ? "bg-gray-400/20"
-                                                                        : "bg-amber-700/20"
-                                                            }`}
-                                                        >
-                                                            {getRankIcon(entry.rank)}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Avatar */}
-                                                    <div className='relative w-20 h-20 mx-auto mb-3'>
-                                                        {entry.avatarUrl ? (
-                                                            <Image
-                                                                src={entry.avatarUrl}
-                                                                alt={entry.displayName}
-                                                                width={80}
-                                                                height={80}
-                                                                className='rounded-full object-cover w-full h-full ring-4 ring-background'
-                                                            />
-                                                        ) : (
-                                                            <div className='w-full h-full rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary'>
-                                                                {entry.displayName
-                                                                    .charAt(0)
-                                                                    .toUpperCase()}
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Name */}
-                                                    <h4 className='font-semibold text-text group-hover:text-primary transition-colors'>
-                                                        {entry.displayName}
-                                                    </h4>
-                                                    <p className='text-sm text-text/50'>
-                                                        @{entry.username}
-                                                    </p>
-
-                                                    {/* Visit Count */}
-                                                    <div className='mt-3 inline-block px-4 py-1.5 bg-primary/10 rounded-full'>
-                                                        <span className='text-lg font-bold text-primary'>
-                                                            {entry.visitCount}
-                                                        </span>
-                                                        <span className='text-sm text-text/60 ml-1'>
-                                                            visits
-                                                        </span>
-                                                    </div>
-                                                </Link>
-                                            ))}
-                                        </div>
+                                        <ExpandableRankCard
+                                            key={rank}
+                                            rank={rank}
+                                            entries={entries}
+                                            rankColor={getRankCardColor(rank)}
+                                            rankIcon={getRankIcon(rank)}
+                                        />
                                     )
                                 })}
                             </div>
