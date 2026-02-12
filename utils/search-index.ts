@@ -94,6 +94,15 @@ export const quickActions: SearchResult[] = [
     priority: 95,
     keywords: ['>map', 'quick map']
   },
+  {
+    id: 'action-leaderboard',
+    type: 'action',
+    title: 'Quick: Leaderboard',
+    subtitle: "Type '>leaderboard' anywhere",
+    href: '/community',
+    priority: 95,
+    keywords: ['>leaderboard', 'leaderboard', 'rankings']
+  },
 ]
 
 export const quickActionHelp: QuickAction[] = [
