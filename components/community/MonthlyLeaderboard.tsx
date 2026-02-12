@@ -176,18 +176,7 @@ export default function MonthlyLeaderboard({
         }
     }
 
-    const getRankStyle = (rank: number) => {
-        switch (rank) {
-            case 1:
-                return "bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border-amber-500/20"
-            case 2:
-                return "bg-gradient-to-r from-gray-400/10 via-gray-300/5 to-transparent border-gray-400/20"
-            case 3:
-                return "bg-gradient-to-r from-amber-700/10 via-amber-600/5 to-transparent border-amber-700/20"
-            default:
-                return "bg-background border-secondary/20 hover:border-primary/30"
-        }
-    }
+
 
     // Get formatted month name for display
     const monthName = selectedMonth ? formatYearMonth(selectedMonth) : ""

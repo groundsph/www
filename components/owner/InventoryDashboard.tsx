@@ -8,7 +8,6 @@ import {
 } from "@/utils/types/inventory"
 import { InventoryFiltersState } from "./InventoryFilters"
 import { useNotification } from "@/components/layout/NotificationProvider"
-import { motion } from "motion/react"
 import { Plus, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
@@ -108,12 +107,6 @@ export default function InventoryDashboard({
     // Helper function to calculate stats from items array
     const calculateStats = useCallback(
         (currentItems: InventoryItem[]): InventoryStats => {
-            console.log(
-                "[calculateStats] Calculating for",
-                currentItems.length,
-                "items",
-            )
-
             const totalItems = currentItems.length
             const lowStockCount = currentItems.filter(
                 (item) =>
@@ -131,13 +124,8 @@ export default function InventoryDashboard({
                 ) {
                     const itemValue = item.stock * item.costPrice
                     valuation += itemValue
-                    console.log(
-                        `[calculateStats] ${item.name}: ${item.stock} × ${item.costPrice} = ${itemValue}`,
-                    )
                 }
             })
-
-            console.log("[calculateStats] Total valuation:", valuation)
 
             return {
                 totalItems,

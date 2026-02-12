@@ -183,7 +183,6 @@ export default function CafeManagement({
     // Inventory state
     const [inventoryStats, setInventoryStats] = useState<InventoryStats | null>(null)
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
-    const [inventoryCategories, setInventoryCategories] = useState<string[]>([])
     const [inventoryLoading, setInventoryLoading] = useState(false)
 
     // Fetch featured requests on load
@@ -458,9 +457,6 @@ export default function CafeManagement({
         }
         if (itemsResult.success && itemsResult.data) {
             setInventoryItems(itemsResult.data.items)
-            // Extract unique categories from items
-            const categories = [...new Set(itemsResult.data.items.map(item => item.category))].sort()
-            setInventoryCategories(categories)
         }
         setInventoryLoading(false)
     }

@@ -126,7 +126,7 @@ export default function CafesManagement({
     const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [claims, setClaims] = useState<CafeClaim[]>(initialClaims)
     const [subscriptions, setSubscriptions] = useState(manualSubscriptions)
-    const [featuredSchedules, setFeaturedSchedules] = useState(initialFeaturedSchedules)
+    const [featuredSchedules] = useState(initialFeaturedSchedules)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
         null

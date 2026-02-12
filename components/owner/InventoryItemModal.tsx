@@ -243,7 +243,7 @@ export default function InventoryItemModal({
                                         ))
                                     ) : categoryInput.trim() ? (
                                         <div className="px-3 py-2 text-sm text-text/60">
-                                            New category: "{categoryInput}"
+                                            New category: &ldquo;{categoryInput}&rdquo;
                                         </div>
                                     ) : (
                                         <div className="px-3 py-2 text-sm text-text/40">
