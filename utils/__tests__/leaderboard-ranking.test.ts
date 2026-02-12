@@ -2,14 +2,14 @@ import { describe, expect, it } from "bun:test"
 import { applyTieRanking } from "@/utils/leaderboard"
 
 describe("applyTieRanking", () => {
-  it("assigns same rank to equal counts and skips ranks", () => {
+  it("assigns same rank to equal counts (dense ranking)", () => {
     const input = [
       { userId: "a", visitCount: 10 },
       { userId: "b", visitCount: 10 },
       { userId: "c", visitCount: 8 },
     ]
     const result = applyTieRanking(input)
-    expect(result.map((r) => r.rank)).toEqual([1, 1, 3])
+    expect(result.map((r) => r.rank)).toEqual([1, 1, 2])
   })
 
   it("handles no ties correctly", () => {
@@ -22,7 +22,7 @@ describe("applyTieRanking", () => {
     expect(result.map((r) => r.rank)).toEqual([1, 2, 3])
   })
 
-  it("handles multiple ties", () => {
+  it("handles multiple ties with dense ranking", () => {
     const input = [
       { userId: "a", visitCount: 10 },
       { userId: "b", visitCount: 10 },
@@ -32,7 +32,8 @@ describe("applyTieRanking", () => {
       { userId: "f", visitCount: 5 },
     ]
     const result = applyTieRanking(input)
-    expect(result.map((r) => r.rank)).toEqual([1, 1, 1, 4, 4, 6])
+    // Dense ranking: 3 people tied for 1st, next 2 tied for 2nd, last is 3rd
+    expect(result.map((r) => r.rank)).toEqual([1, 1, 1, 2, 2, 3])
   })
 
   it("handles empty array", () => {
