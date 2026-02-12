@@ -87,9 +87,31 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
     // Derived categories from items
     const categories = Array.from(new Set(items.map((item) => item.category))).sort()
 
+    // Helper function to calculate stats from items array
+    const calculateStats = useCallback((currentItems: InventoryItem[]): InventoryStats => {
+        const totalItems = currentItems.length
+        const lowStockCount = currentItems.filter(
+            (item) => item.status === "active" && item.stock <= item.warningThreshold
+        ).length
+        // Valuation calculation - use a simple estimate based on unit cost if available
+        const valuation = currentItems.reduce((sum, item) => {
+            if (item.status === "active") {
+                // Use unit cost from restock history or default to 0
+                return sum + item.stock * 0
+            }
+            return sum
+        }, 0)
+
+        return {
+            totalItems,
+            lowStockCount,
+            valuation,
+        }
+    }, [])
+
     // Fetch data
-    const fetchData = useCallback(async () => {
-        setLoading(true)
+    const fetchData = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true)
         try {
             const [itemsResult, statsResult] = await Promise.all([
                 getInventoryItems(cafe.id, filters),
@@ -109,7 +131,7 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
             console.error("[InventoryDashboard] Error fetching data:", error)
             addNotification("Failed to load inventory data", "error")
         } finally {
-            setLoading(false)
+            if (!silent) setLoading(false)
         }
     }, [cafe.id, filters, addNotification])
 
@@ -130,6 +152,9 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
     // Create/Edit item
     const handleSaveItem = async (data: Partial<InventoryItem>): Promise<boolean> => {
         setSavingItem(true)
+        const previousItems = items
+        const previousStats = stats
+
         try {
             if (editingItem) {
                 // Update existing
@@ -143,16 +168,20 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
                 })
 
                 if (result.success) {
-                    setItems((prev) =>
-                        prev.map((item) =>
-                            item.id === editingItem.id
-                                ? { ...item, ...data } as InventoryItem
-                                : item
-                        )
+                    const updatedItems = previousItems.map((item) =>
+                        item.id === editingItem.id
+                            ? { ...item, ...data } as InventoryItem
+                            : item
                     )
+                    setItems(updatedItems)
+                    setStats(calculateStats(updatedItems))
                     addNotification("Item updated successfully", "success")
+                    // Silently fetch accurate server state
+                    fetchData(true)
                     return true
                 } else {
+                    setItems(previousItems)
+                    setStats(previousStats)
                     addNotification(result.error || "Failed to update item", "error")
                     return false
                 }
@@ -168,10 +197,16 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
                 })
 
                 if (result.success && result.data) {
-                    setItems((prev) => [result.data!.item, ...prev])
+                    const updatedItems = [result.data.item, ...previousItems]
+                    setItems(updatedItems)
+                    setStats(calculateStats(updatedItems))
                     addNotification("Item created successfully", "success")
+                    // Silently fetch accurate server state
+                    fetchData(true)
                     return true
                 } else {
+                    setItems(previousItems)
+                    setStats(previousStats)
                     addNotification(result.error || "Failed to create item", "error")
                     return false
                 }
@@ -183,30 +218,41 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
 
     // Delete/Restore item
     const handleDelete = async (item: InventoryItem) => {
+        const previousItems = items
+        const previousStats = stats
+
         if (item.status === "active") {
             if (!confirm(`Are you sure you want to delete "${item.name}"?`)) return
 
             const result = await softDeleteInventoryItem(item.id)
             if (result.success) {
-                setItems((prev) =>
-                    prev.map((it) =>
-                        it.id === item.id ? { ...it, status: "inactive" } : it
-                    )
+                const updatedItems = previousItems.map((it) =>
+                    it.id === item.id ? { ...it, status: "inactive" as const } : it
                 )
+                setItems(updatedItems)
+                setStats(calculateStats(updatedItems))
                 addNotification("Item deleted", "success")
+                // Silently fetch accurate server state
+                fetchData(true)
             } else {
+                setItems(previousItems)
+                setStats(previousStats)
                 addNotification(result.error || "Failed to delete item", "error")
             }
         } else {
             const result = await restoreInventoryItem(item.id)
             if (result.success) {
-                setItems((prev) =>
-                    prev.map((it) =>
-                        it.id === item.id ? { ...it, status: "active" } : it
-                    )
+                const updatedItems = previousItems.map((it) =>
+                    it.id === item.id ? { ...it, status: "active" as const } : it
                 )
+                setItems(updatedItems)
+                setStats(calculateStats(updatedItems))
                 addNotification("Item restored", "success")
+                // Silently fetch accurate server state
+                fetchData(true)
             } else {
+                setItems(previousItems)
+                setStats(previousStats)
                 addNotification(result.error || "Failed to restore item", "error")
             }
         }
@@ -216,11 +262,20 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
     const handlePermanentDelete = async (item: InventoryItem) => {
         if (!confirm(`WARNING: This will permanently delete "${item.name}" and all its history. This action cannot be undone.\n\nAre you absolutely sure?`)) return
 
+        const previousItems = items
+        const previousStats = stats
+
         const result = await deleteInventoryItem(item.id)
         if (result.success) {
-            setItems((prev) => prev.filter((it) => it.id !== item.id))
+            const updatedItems = previousItems.filter((it) => it.id !== item.id)
+            setItems(updatedItems)
+            setStats(calculateStats(updatedItems))
             addNotification("Item permanently deleted", "success")
+            // Silently fetch accurate server state
+            fetchData(true)
         } else {
+            setItems(previousItems)
+            setStats(previousStats)
             addNotification(result.error || "Failed to permanently delete item", "error")
         }
     }
@@ -236,15 +291,22 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
             return
         }
 
+        const previousItems = items
+        const previousStats = stats
+
         const result = await adjustInventoryStock(item.id, { quantity: Math.abs(qty) })
         if (result.success && result.data) {
-            setItems((prev) =>
-                prev.map((it) =>
-                    it.id === item.id ? result.data!.item : it
-                )
+            const updatedItems = previousItems.map((it) =>
+                it.id === item.id ? result.data!.item : it
             )
+            setItems(updatedItems)
+            setStats(calculateStats(updatedItems))
             addNotification(`Stock adjusted by ${qty > 0 ? "+" : ""}${qty}`, "success")
+            // Silently fetch accurate server state
+            fetchData(true)
         } else {
+            setItems(previousItems)
+            setStats(previousStats)
             addNotification(result.error || "Failed to adjust stock", "error")
         }
     }
@@ -262,6 +324,9 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
         if (!restockingItem) return false
 
         setSavingRestock(true)
+        const previousItems = items
+        const previousStats = stats
+
         try {
             const result = await restockInventoryItem(restockingItem.id, {
                 quantity: data.quantity,
@@ -271,14 +336,18 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
             })
 
             if (result.success && result.data) {
-                setItems((prev) =>
-                    prev.map((it) =>
-                        it.id === restockingItem!.id ? result.data!.item : it
-                    )
+                const updatedItems = previousItems.map((it) =>
+                    it.id === restockingItem!.id ? result.data!.item : it
                 )
+                setItems(updatedItems)
+                setStats(calculateStats(updatedItems))
                 addNotification(`Restocked ${data.quantity} units`, "success")
+                // Silently fetch accurate server state
+                fetchData(true)
                 return true
             } else {
+                setItems(previousItems)
+                setStats(previousStats)
                 addNotification(result.error || "Failed to restock", "error")
                 return false
             }

@@ -59,13 +59,29 @@ export default function InventoryTable({
             const button = buttonRefs.current.get(openDropdownId)
             if (button) {
                 const rect = button.getBoundingClientRect()
-                setDropdownPosition({
-                    top: rect.bottom + window.scrollY + 4,
-                    left: Math.min(
-                        rect.right + window.scrollX - 176, // Align right edge (176 = w-44)
-                        window.innerWidth - 190 // Prevent overflow on right
-                    ),
-                })
+                const dropdownHeight = 280
+                const spaceBelow = window.innerHeight - rect.bottom
+                const showAbove = spaceBelow < dropdownHeight
+
+                if (showAbove) {
+                    // Position above button
+                    setDropdownPosition({
+                        top: rect.top + window.scrollY - dropdownHeight - 4,
+                        left: Math.min(
+                            rect.right + window.scrollX - 176, // Align right edge (176 = w-44)
+                            window.innerWidth - 190 // Prevent overflow on right
+                        ),
+                    })
+                } else {
+                    // Position below button
+                    setDropdownPosition({
+                        top: rect.bottom + window.scrollY + 4,
+                        left: Math.min(
+                            rect.right + window.scrollX - 176, // Align right edge (176 = w-44)
+                            window.innerWidth - 190 // Prevent overflow on right
+                        ),
+                    })
+                }
             }
         }
         
