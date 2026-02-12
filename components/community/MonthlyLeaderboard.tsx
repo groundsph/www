@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Trophy, MapPin, Users, ChevronDown, Medal, Crown } from "lucide-react"
+import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Calendar } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getMonthlyLeaderboard } from "@/app/api/actions/profile"
 import { useUserLocation } from "@/hooks/useUserLocation"
+import { getLastNMonths, formatYearMonth } from "@/utils/date/leaderboard-months"
 
 interface LeaderboardEntry {
     rank: number
@@ -32,9 +33,15 @@ export default function MonthlyLeaderboard({
     >(null)
     const [isLoading, setIsLoading] = useState(true)
     const [showRegionDropdown, setShowRegionDropdown] = useState(false)
+    const [showMonthDropdown, setShowMonthDropdown] = useState(false)
+    const [selectedMonth, setSelectedMonth] = useState<string>("")
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const monthDropdownRef = useRef<HTMLDivElement>(null)
 
-    // Close dropdown when clicking outside
+    // Get available months (last 12 months)
+    const availableMonths = getLastNMonths(12)
+
+    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (
@@ -43,16 +50,22 @@ export default function MonthlyLeaderboard({
             ) {
                 setShowRegionDropdown(false)
             }
+            if (
+                monthDropdownRef.current &&
+                !monthDropdownRef.current.contains(event.target as Node)
+            ) {
+                setShowMonthDropdown(false)
+            }
         }
 
-        if (showRegionDropdown) {
+        if (showRegionDropdown || showMonthDropdown) {
             document.addEventListener("mousedown", handleClickOutside)
         }
 
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
         }
-    }, [showRegionDropdown])
+    }, [showRegionDropdown, showMonthDropdown])
 
     // Philippines regions for dropdown (matching database format)
     const regions = [
@@ -121,12 +134,23 @@ export default function MonthlyLeaderboard({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.region, locationLoading, userPreferredRegion])
 
-    // Fetch leaderboard when region changes
+    // Initialize selected month to current month
+    useEffect(() => {
+        if (!selectedMonth) {
+            const now = new Date()
+            const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`
+            setSelectedMonth(currentMonth)
+        }
+    }, [selectedMonth])
+
+    // Fetch leaderboard when region or month changes
     useEffect(() => {
         const fetchLeaderboard = async () => {
+            if (!selectedMonth) return
+
             setIsLoading(true)
             try {
-                const result = await getMonthlyLeaderboard(selectedRegion, 20)
+                const result = await getMonthlyLeaderboard(selectedRegion, 20, selectedMonth)
                 setLeaderboard(result.leaderboard)
                 setUserRank(result.userRank)
             } catch (error) {
@@ -136,7 +160,7 @@ export default function MonthlyLeaderboard({
             }
         }
         fetchLeaderboard()
-    }, [selectedRegion])
+    }, [selectedRegion, selectedMonth])
 
     const getRankIcon = (rank: number) => {
         switch (rank) {
@@ -164,11 +188,8 @@ export default function MonthlyLeaderboard({
         }
     }
 
-    // Get current month name
-    const monthName = new Date().toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-    })
+    // Get formatted month name for display
+    const monthName = selectedMonth ? formatYearMonth(selectedMonth) : ""
 
     return (
         <div className={`${className}`}>
@@ -184,7 +205,7 @@ export default function MonthlyLeaderboard({
                 </div>
             </div>
 
-            {/* Region Toggle */}
+            {/* Region and Month Toggle */}
             <div className='flex flex-wrap items-center gap-2 mb-8'>
                 <button
                     onClick={() => setSelectedRegion(null)}
@@ -255,6 +276,53 @@ export default function MonthlyLeaderboard({
                                         }`}
                                     >
                                         {region}
+                                    </button>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Month Selector */}
+                <div
+                    className='relative'
+                    ref={monthDropdownRef}
+                >
+                    <button
+                        onClick={() =>
+                            setShowMonthDropdown(!showMonthDropdown)
+                        }
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer bg-background border border-secondary/20 text-text/70 hover:border-primary/30 hover:text-text"
+                    >
+                        <Calendar className='w-4 h-4' />
+                        {selectedMonth ? formatYearMonth(selectedMonth) : "Select Month"}
+                        <ChevronDown
+                            className={`w-4 h-4 transition-transform ${showMonthDropdown ? "rotate-180" : ""}`}
+                        />
+                    </button>
+
+                    <AnimatePresence>
+                        {showMonthDropdown && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className='absolute top-full left-0 mt-2 w-48 bg-background border border-secondary/20 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto'
+                            >
+                                {availableMonths.map((month) => (
+                                    <button
+                                        key={month}
+                                        onClick={() => {
+                                            setSelectedMonth(month)
+                                            setShowMonthDropdown(false)
+                                        }}
+                                        className={`w-full px-4 py-2.5 text-left text-sm hover:bg-secondary/10 transition-colors ${
+                                            selectedMonth === month
+                                                ? "bg-primary/10 text-primary font-medium"
+                                                : "text-text/80"
+                                        }`}
+                                    >
+                                        {formatYearMonth(month)}
                                     </button>
                                 ))}
                             </motion.div>

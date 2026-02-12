@@ -7,6 +7,7 @@ import { eq, and, ne, desc, inArray, arrayContains, count, sql, asc } from "driz
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { applyTieRanking } from "@/utils/leaderboard"
+import { parseYearMonth, isFutureMonth, getMonthDateRange } from "@/utils/date/leaderboard-months"
 
 // Types for consolidated profile data
 export interface FullProfileData {
@@ -1624,10 +1625,12 @@ export async function getUserPreferredRegion(): Promise<string | null> {
  * Get monthly leaderboard of top visitors
  * @param region - Optional region filter (e.g., "NCR", "Region IV-A")
  * @param limit - Number of results to return (default 20)
+ * @param yearMonth - Optional YYYY-MM string to select a specific month
  */
 export async function getMonthlyLeaderboard(
     region?: string | null,
-    limit: number = 20
+    limit: number = 20,
+    yearMonth?: string | null
 ): Promise<{
     leaderboard: {
         rank: number
@@ -1639,18 +1642,29 @@ export async function getMonthlyLeaderboard(
     }[]
     userRank: number | null
     region: string | null
+    selectedMonth: string // YYYY-MM format
 }> {
     const user = await getCurrentUser()
 
     try {
-        // Get start of current month in PH time
-        const nowPH = getPHTime()
-        // Month start in PH (e.g. Jan 1 00:00 PH)
-        const monthStartPH = new Date(nowPH.getFullYear(), nowPH.getMonth(), 1)
-        // Convert to UTC (e.g. Dec 31 16:00 UTC)
-        const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
+        // Parse and validate yearMonth, default to current month
+        let selectedYearMonth = parseYearMonth(yearMonth || "")
+        if (!selectedYearMonth || isFutureMonth(selectedYearMonth)) {
+            // Default to current month if invalid or future
+            const nowPH = getPHTime()
+            selectedYearMonth = {
+                year: nowPH.getFullYear(),
+                month: nowPH.getMonth() + 1, // 1-12
+            }
+        }
 
-        // Build base query
+        // Get date range for the selected month
+        const { startDate: monthStartPH, endDate: monthEndPH } = getMonthDateRange(selectedYearMonth)
+        // Convert to UTC (subtract 8 hours for PH time)
+        const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
+        const monthEndUTC = new Date(monthEndPH.getTime() - 8 * 60 * 60 * 1000)
+
+        // Build base query with month range
         let query = db
             .select({
                 userId: cafeVisits.userId,
@@ -1661,7 +1675,12 @@ export async function getMonthlyLeaderboard(
             })
             .from(cafeVisits)
             .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
-            .where(sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`)
+            .where(
+                and(
+                    sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+                    sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
+                )
+            )
 
         // Add region filter if specified
         if (region) {
@@ -1679,6 +1698,7 @@ export async function getMonthlyLeaderboard(
                 .where(
                     and(
                         sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+                        sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
                         eq(cafes.region, region)
                     )
                 )
@@ -1728,6 +1748,7 @@ export async function getMonthlyLeaderboard(
                             and(
                                 eq(cafeVisits.userId, user.id),
                                 sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
                                 eq(cafes.region, region)
                             )
                         )
@@ -1737,7 +1758,8 @@ export async function getMonthlyLeaderboard(
                         .where(
                             and(
                                 eq(cafeVisits.userId, user.id),
-                                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`
+                                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+                                sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
                             )
                         )
 
@@ -1757,6 +1779,7 @@ export async function getMonthlyLeaderboard(
                                     .where(
                                         and(
                                             sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+                                            sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
                                             eq(cafes.region, region)
                                         )
                                     )
@@ -1770,7 +1793,12 @@ export async function getMonthlyLeaderboard(
                                 db
                                     .select({ userId: cafeVisits.userId, total: count() })
                                     .from(cafeVisits)
-                                    .where(sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`)
+                                    .where(
+                                        and(
+                                            sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+                                            sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
+                                        )
+                                    )
                                     .groupBy(cafeVisits.userId)
                                     .having(sql`count(*) > ${userVisitCount}`)
                                     .as("higher")
@@ -1782,17 +1810,25 @@ export async function getMonthlyLeaderboard(
             }
         }
 
+        // Format selected month as YYYY-MM string
+        const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
+
         return {
             leaderboard,
             userRank,
             region: region || null,
+            selectedMonth,
         }
     } catch (error) {
         console.error("Error getting monthly leaderboard:", error)
+        // Return current month on error
+        const nowPH = getPHTime()
+        const fallbackMonth = `${nowPH.getFullYear()}-${(nowPH.getMonth() + 1).toString().padStart(2, "0")}`
         return {
             leaderboard: [],
             userRank: null,
             region: region || null,
+            selectedMonth: fallbackMonth,
         }
     }
 }
