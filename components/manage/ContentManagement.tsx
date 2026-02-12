@@ -4,7 +4,6 @@ import { useState } from "react"
 import {
     FileText,
     Calendar,
-    Star,
     Plus,
     Trash2,
     Pencil,
@@ -14,9 +13,7 @@ import {
 } from "lucide-react"
 import { BlogPost } from "@/utils/types/blog"
 import { EventWithCafe } from "@/utils/types/extra"
-import { type FeaturedSchedule } from "@/app/api/actions/admin"
 import BlogEditor from "@/components/blog/BlogEditor"
-import FeaturedScheduleManager from "./FeaturedScheduleManager"
 import EventsManagement from "@/components/events/EventsManagement"
 import BlogReportsPanel from "./BlogReportsPanel"
 import Link from "next/link"
@@ -24,15 +21,13 @@ import Link from "next/link"
 interface ContentManagementProps {
     blogPosts: BlogPost[]
     events: EventWithCafe[]
-    featuredSchedules: FeaturedSchedule[]
 }
 
-type TabType = "blog" | "events" | "featured" | "reports"
+type TabType = "blog" | "events" | "reports"
 
 export default function ContentManagement({
     blogPosts: initialBlogPosts,
     events: initialEvents,
-    featuredSchedules,
 }: ContentManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("blog")
     const [blogPosts, setBlogPosts] = useState(initialBlogPosts)
@@ -87,12 +82,12 @@ export default function ContentManagement({
                     Content Management
                 </h1>
                 <p className='text-text/60 mt-1'>
-                    Create and manage blog posts, events, and featured cafes.
+                    Create and manage blog posts and events.
                 </p>
             </div>
 
             {/* Stats */}
-            <div className='grid grid-cols-2 lg:grid-cols-3 gap-4'>
+            <div className='grid grid-cols-2 gap-4'>
                 <div className='bg-background rounded-xl p-4 shadow-sm border border-tertiary/50'>
                     <div className='text-2xl font-bold'>{blogPosts.length}</div>
                     <div className='text-text/60 text-sm'>Blog Posts</div>
@@ -100,12 +95,6 @@ export default function ContentManagement({
                 <div className='bg-background rounded-xl p-4 shadow-sm border border-tertiary/50'>
                     <div className='text-2xl font-bold'>{events.length}</div>
                     <div className='text-text/60 text-sm'>Events</div>
-                </div>
-                <div className='bg-background rounded-xl p-4 shadow-sm border border-tertiary/50'>
-                    <div className='text-2xl font-bold'>
-                        {featuredSchedules.length}
-                    </div>
-                    <div className='text-text/60 text-sm'>Schedules</div>
                 </div>
             </div>
 
@@ -132,17 +121,6 @@ export default function ContentManagement({
                 >
                     <Calendar className='w-4 h-4' />
                     Events ({events.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("featured")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "featured"
-                            ? "bg-primary text-white"
-                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <Star className='w-4 h-4' />
-                    Featured
                 </button>
                 <button
                     onClick={() => setActiveTab("reports")}
@@ -255,11 +233,6 @@ export default function ContentManagement({
             {/* Events Tab */}
             {activeTab === "events" && (
                 <EventsManagement initialEvents={events} />
-            )}
-
-            {/* Featured Tab */}
-            {activeTab === "featured" && (
-                <FeaturedScheduleManager initialSchedules={featuredSchedules} />
             )}
 
             {/* Reports Tab */}
