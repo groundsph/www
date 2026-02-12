@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { createPortal } from "react-dom"
 import { InventoryItem } from "@/utils/types/inventory"
 import {
     MoreVertical,
@@ -38,58 +39,89 @@ export default function InventoryTable({
     onDelete,
     onPermanentDelete,
 }: InventoryTableProps) {
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+    const [openDropdownItem, setOpenDropdownItem] = useState<InventoryItem | null>(null)
     const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
-    const clickPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+    const dropdownRef = useRef<HTMLDivElement>(null)
 
+    // Handle click outside to close dropdown
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            const target = event.target as HTMLElement
-            // Close if clicking outside the dropdown
-            if (!target.closest('[data-dropdown="true"]')) {
-                setOpenDropdownId(null)
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setOpenDropdownItem(null)
                 setDropdownPosition(null)
             }
         }
 
-        if (openDropdownId) {
+        if (openDropdownItem) {
             document.addEventListener("mousedown", handleClickOutside)
-            
-            // Position dropdown at cursor location with bounds checking
-            const dropdownWidth = 176 // w-44
-            const dropdownHeight = 320 // Approximate max height with all options
-            
-            let left = clickPosition.current.x
-            let top = clickPosition.current.y
-            
-            // Prevent going off right edge
-            if (left + dropdownWidth > window.innerWidth) {
-                left = window.innerWidth - dropdownWidth - 16
-            }
-            
-            // Prevent going off bottom edge - show above cursor if needed
-            if (top + dropdownHeight > window.innerHeight + window.scrollY) {
-                top = top - dropdownHeight
-            }
-            
-            // Prevent going off left edge
-            if (left < 8) {
-                left = 8
-            }
-            
-            // Prevent going off top edge
-            if (top < window.scrollY + 8) {
-                top = window.scrollY + 8
-            }
-            
-            setDropdownPosition({
-                top: top + window.scrollY,
-                left: left,
-            })
         }
         
         return () => document.removeEventListener("mousedown", handleClickOutside)
-    }, [openDropdownId])
+    }, [openDropdownItem])
+
+    // Handle scroll to close dropdown
+    useEffect(() => {
+        function handleScroll() {
+            setOpenDropdownItem(null)
+            setDropdownPosition(null)
+        }
+
+        if (openDropdownItem) {
+            window.addEventListener("scroll", handleScroll, true)
+        }
+        
+        return () => window.removeEventListener("scroll", handleScroll, true)
+    }, [openDropdownItem])
+
+    const handleButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>, item: InventoryItem) => {
+        e.stopPropagation()
+        
+        if (openDropdownItem?.id === item.id) {
+            setOpenDropdownItem(null)
+            setDropdownPosition(null)
+            return
+        }
+
+        // Get click position relative to viewport
+        const rect = e.currentTarget.getBoundingClientRect()
+        const clickX = e.clientX
+        const clickY = e.clientY
+        
+        // Dropdown dimensions
+        const dropdownWidth = 176 // w-44
+        const dropdownHeight = 320 // Approximate height
+        
+        // Calculate position - try to position near the click but within viewport
+        let left = clickX - dropdownWidth + 20 // Offset slightly to the left of click
+        let top = clickY
+        
+        // Ensure dropdown stays within viewport
+        if (left < 8) left = 8
+        if (left + dropdownWidth > window.innerWidth - 8) {
+            left = window.innerWidth - dropdownWidth - 8
+        }
+        
+        // If too close to bottom, show above
+        if (top + dropdownHeight > window.innerHeight - 8) {
+            top = rect.top - dropdownHeight - 4
+        } else {
+            top = rect.bottom + 4
+        }
+        
+        // Ensure not above viewport
+        if (top < 8) top = 8
+        
+        setDropdownPosition({ top, left })
+        setOpenDropdownItem(item)
+    }, [openDropdownItem])
+
+    const handleAction = useCallback((action: (item: InventoryItem) => void) => {
+        if (openDropdownItem) {
+            action(openDropdownItem)
+            setOpenDropdownItem(null)
+            setDropdownPosition(null)
+        }
+    }, [openDropdownItem])
 
     if (loading) {
         return (
@@ -187,10 +219,7 @@ export default function InventoryTable({
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <button
-                                            onClick={(e) => {
-                                                clickPosition.current = { x: e.clientX, y: e.clientY }
-                                                setOpenDropdownId(openDropdownId === item.id ? null : item.id)
-                                            }}
+                                            onClick={(e) => handleButtonClick(e, item)}
                                             className="p-2 hover:bg-text/10 rounded-lg transition-colors"
                                         >
                                             <MoreVertical className="w-4 h-4" />
@@ -203,63 +232,48 @@ export default function InventoryTable({
                 </div>
             </div>
 
-            {/* Fixed Position Dropdown */}
-            {openDropdownId && dropdownPosition && (() => {
-                const item = items.find(i => i.id === openDropdownId)
-                if (!item) return null
-                return (
+            {/* Portal Dropdown */}
+            {openDropdownItem && dropdownPosition && typeof document !== "undefined" &&
+                createPortal(
                     <div
-                        className="fixed w-44 bg-background border border-text/10 rounded-lg shadow-lg z-[100] py-1"
+                        ref={dropdownRef}
+                        className="fixed w-44 bg-background border border-text/10 rounded-lg shadow-lg z-[9999] py-1"
                         style={{
                             top: `${dropdownPosition.top}px`,
                             left: `${dropdownPosition.left}px`,
                         }}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <button
-                            onClick={() => {
-                                onEdit(item)
-                                setOpenDropdownId(null)
-                            }}
+                            onClick={() => handleAction(onEdit)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-text/5 transition-colors flex items-center gap-2"
                         >
                             <Edit3 className="w-4 h-4" />
                             Edit
                         </button>
                         <button
-                            onClick={() => {
-                                onAdjustStock(item)
-                                setOpenDropdownId(null)
-                            }}
+                            onClick={() => handleAction(onAdjustStock)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-text/5 transition-colors flex items-center gap-2"
                         >
                             <SlidersHorizontal className="w-4 h-4" />
                             Adjust Stock
                         </button>
                         <button
-                            onClick={() => {
-                                onRestock(item)
-                                setOpenDropdownId(null)
-                            }}
+                            onClick={() => handleAction(onRestock)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-text/5 transition-colors flex items-center gap-2"
                         >
                             <PackagePlus className="w-4 h-4" />
                             Restock
                         </button>
                         <button
-                            onClick={() => {
-                                onDuplicate(item)
-                                setOpenDropdownId(null)
-                            }}
+                            onClick={() => handleAction(onDuplicate)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-text/5 transition-colors flex items-center gap-2"
                         >
                             <Copy className="w-4 h-4" />
                             Duplicate
                         </button>
                         <button
-                            onClick={() => {
-                                onHistory(item)
-                                setOpenDropdownId(null)
-                            }}
+                            onClick={() => handleAction(onHistory)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-text/5 transition-colors flex items-center gap-2"
                         >
                             <History className="w-4 h-4" />
@@ -267,32 +281,26 @@ export default function InventoryTable({
                         </button>
                         <div className="border-t border-text/10 my-1" />
                         <button
-                            onClick={() => {
-                                onDelete(item)
-                                setOpenDropdownId(null)
-                            }}
+                            onClick={() => handleAction(onDelete)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 transition-colors flex items-center gap-2"
                         >
                             <Trash2 className="w-4 h-4" />
-                            {item.status === "active" ? "Delete" : "Restore"}
+                            {openDropdownItem.status === "active" ? "Delete" : "Restore"}
                         </button>
                         
                         {/* Permanent Delete - only for inactive items */}
-                        {item.status === "inactive" && onPermanentDelete && (
+                        {openDropdownItem.status === "inactive" && onPermanentDelete && (
                             <button
-                                onClick={() => {
-                                    onPermanentDelete(item)
-                                    setOpenDropdownId(null)
-                                }}
+                                onClick={() => handleAction(onPermanentDelete)}
                                 className="w-full px-4 py-2 text-left text-sm hover:bg-red-100 text-red-700 transition-colors flex items-center gap-2"
                             >
                                 <Trash className="w-4 h-4" />
                                 Delete Permanently
                             </button>
                         )}
-                    </div>
-                )
-            })()}
+                    </div>,
+                    document.body
+                )}
         </>
     )
 }
