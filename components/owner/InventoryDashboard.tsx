@@ -89,17 +89,24 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
 
     // Helper function to calculate stats from items array
     const calculateStats = useCallback((currentItems: InventoryItem[]): InventoryStats => {
+        console.log("[calculateStats] Calculating for", currentItems.length, "items")
+        
         const totalItems = currentItems.length
         const lowStockCount = currentItems.filter(
             (item) => item.status === "active" && item.stock <= item.warningThreshold
         ).length
+        
         // Valuation calculation - sum of (stock * costPrice) for active items
-        const valuation = currentItems.reduce((sum, item) => {
-            if (item.status === "active" && item.costPrice) {
-                return sum + item.stock * item.costPrice
+        let valuation = 0
+        currentItems.forEach((item) => {
+            if (item.status === "active" && item.costPrice && item.costPrice > 0) {
+                const itemValue = item.stock * item.costPrice
+                valuation += itemValue
+                console.log(`[calculateStats] ${item.name}: ${item.stock} × ${item.costPrice} = ${itemValue}`)
             }
-            return sum
-        }, 0)
+        })
+        
+        console.log("[calculateStats] Total valuation:", valuation)
 
         return {
             totalItems,
@@ -119,20 +126,25 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
 
             if (itemsResult.success && itemsResult.data) {
                 setItems(itemsResult.data.items)
+                // Also recalculate stats from items to ensure consistency
+                setStats(calculateStats(itemsResult.data.items))
             } else {
                 addNotification(itemsResult.error || "Failed to fetch items", "error")
             }
 
             if (statsResult.success && statsResult.data) {
-                setStats(statsResult.data)
+                // Use server stats as source of truth, but only if items fetch succeeded
+                if (!itemsResult.success) {
+                    setStats(statsResult.data)
+                }
             }
         } catch (error) {
             console.error("[InventoryDashboard] Error fetching data:", error)
             addNotification("Failed to load inventory data", "error")
         } finally {
-            if (!silent) setLoading(false)
+            setLoading(false)
         }
-    }, [cafe.id, filters, addNotification])
+    }, [cafe.id, filters, addNotification, calculateStats])
 
     // Initial fetch
     useEffect(() => {
@@ -151,12 +163,22 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
     // Create/Edit item
     const handleSaveItem = async (data: Partial<InventoryItem>): Promise<boolean> => {
         setSavingItem(true)
-        const previousItems = items
+        
+        // Save previous state for rollback
+        const previousItems = [...items]
         const previousStats = stats
-
+        
         try {
             if (editingItem) {
-                // Update existing
+                // Update existing - optimistic update
+                const updatedItem = { ...editingItem, ...data } as InventoryItem
+                const updatedItems = items.map((item) =>
+                    item.id === editingItem.id ? updatedItem : item
+                )
+                setItems(updatedItems)
+                setStats(calculateStats(updatedItems))
+                
+                // Call API
                 const result = await updateInventoryItem(editingItem.id, {
                     name: data.name!,
                     category: data.category!,
@@ -167,25 +189,19 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
                 })
 
                 if (result.success) {
-                    const updatedItems = previousItems.map((item) =>
-                        item.id === editingItem.id
-                            ? { ...item, ...data } as InventoryItem
-                            : item
-                    )
-                    setItems(updatedItems)
-                    setStats(calculateStats(updatedItems))
                     addNotification("Item updated successfully", "success")
-                    // Silently fetch accurate server state
+                    // Silently refresh to get accurate server state
                     fetchData(true)
                     return true
                 } else {
+                    // Rollback
                     setItems(previousItems)
                     setStats(previousStats)
                     addNotification(result.error || "Failed to update item", "error")
                     return false
                 }
             } else {
-                // Create new
+                // Create new - wait for server since we need the ID
                 const result = await createInventoryItem(cafe.id, {
                     name: data.name!,
                     category: data.category!,
@@ -196,16 +212,15 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
                 })
 
                 if (result.success && result.data) {
-                    const updatedItems = [result.data.item, ...previousItems]
+                    const newItem = result.data.item
+                    const updatedItems = [newItem, ...items]
                     setItems(updatedItems)
                     setStats(calculateStats(updatedItems))
                     addNotification("Item created successfully", "success")
-                    // Silently fetch accurate server state
+                    // Silently refresh
                     fetchData(true)
                     return true
                 } else {
-                    setItems(previousItems)
-                    setStats(previousStats)
                     addNotification(result.error || "Failed to create item", "error")
                     return false
                 }
@@ -217,39 +232,46 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
 
     // Delete/Restore item
     const handleDelete = async (item: InventoryItem) => {
-        const previousItems = items
+        // Save previous state
+        const previousItems = [...items]
         const previousStats = stats
-
+        
         if (item.status === "active") {
             if (!confirm(`Are you sure you want to delete "${item.name}"?`)) return
 
+            // Optimistic update
+            const updatedItems = items.map((inventoryItem) =>
+                inventoryItem.id === item.id ? { ...inventoryItem, status: "inactive" as const } : inventoryItem
+            )
+            setItems(updatedItems)
+            setStats(calculateStats(updatedItems))
+
             const result = await softDeleteInventoryItem(item.id)
             if (result.success) {
-                const updatedItems = previousItems.map((it) =>
-                    it.id === item.id ? { ...it, status: "inactive" as const } : it
-                )
-                setItems(updatedItems)
-                setStats(calculateStats(updatedItems))
                 addNotification("Item deleted", "success")
-                // Silently fetch accurate server state
+                // Silently refresh
                 fetchData(true)
             } else {
+                // Rollback
                 setItems(previousItems)
                 setStats(previousStats)
                 addNotification(result.error || "Failed to delete item", "error")
             }
         } else {
+            // Optimistic update for restore
+            const updatedItems = items.map((inventoryItem) =>
+                inventoryItem.id === item.id ? { ...inventoryItem, status: "active" as const } : inventoryItem
+            )
+            setItems(updatedItems)
+            setStats(calculateStats(updatedItems))
+            
             const result = await restoreInventoryItem(item.id)
             if (result.success) {
-                const updatedItems = previousItems.map((it) =>
-                    it.id === item.id ? { ...it, status: "active" as const } : it
-                )
-                setItems(updatedItems)
-                setStats(calculateStats(updatedItems))
                 addNotification("Item restored", "success")
-                // Silently fetch accurate server state
+                // Silently refresh
                 fetchData(true)
             } else {
+                // Rollback
                 setItems(previousItems)
                 setStats(previousStats)
                 addNotification(result.error || "Failed to restore item", "error")
@@ -261,18 +283,22 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
     const handlePermanentDelete = async (item: InventoryItem) => {
         if (!confirm(`WARNING: This will permanently delete "${item.name}" and all its history. This action cannot be undone.\n\nAre you absolutely sure?`)) return
 
-        const previousItems = items
+        // Save previous state
+        const previousItems = [...items]
         const previousStats = stats
+        
+        // Optimistic update
+        const updatedItems = items.filter((inventoryItem) => inventoryItem.id !== item.id)
+        setItems(updatedItems)
+        setStats(calculateStats(updatedItems))
 
         const result = await deleteInventoryItem(item.id)
         if (result.success) {
-            const updatedItems = previousItems.filter((it) => it.id !== item.id)
-            setItems(updatedItems)
-            setStats(calculateStats(updatedItems))
             addNotification("Item permanently deleted", "success")
-            // Silently fetch accurate server state
+            // Silently refresh
             fetchData(true)
         } else {
+            // Rollback
             setItems(previousItems)
             setStats(previousStats)
             addNotification(result.error || "Failed to permanently delete item", "error")
@@ -281,7 +307,7 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
 
     // Adjust stock (quick adjustment without history)
     const handleAdjustStock = async (item: InventoryItem) => {
-        const quantity = prompt(`Adjust stock for &apos;${item.name}&apos;\n\nCurrent: ${item.stock}\n\nEnter quantity to add (positive) or remove (negative):`)
+        const quantity = prompt(`Adjust stock for '${item.name}'\n\nCurrent: ${item.stock}\n\nEnter quantity to add (positive) or remove (negative):`)
         if (quantity === null) return
 
         const qty = parseInt(quantity)
@@ -290,20 +316,26 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
             return
         }
 
-        const previousItems = items
+        // Save previous state
+        const previousItems = [...items]
         const previousStats = stats
+        
+        const newStock = Math.max(0, item.stock + qty)
+        
+        // Optimistic update
+        const updatedItems = items.map((inventoryItem) =>
+            inventoryItem.id === item.id ? { ...inventoryItem, stock: newStock } : inventoryItem
+        )
+        setItems(updatedItems)
+        setStats(calculateStats(updatedItems))
 
         const result = await adjustInventoryStock(item.id, { quantity: Math.abs(qty) })
         if (result.success && result.data) {
-            const updatedItems = previousItems.map((it) =>
-                it.id === item.id ? result.data!.item : it
-            )
-            setItems(updatedItems)
-            setStats(calculateStats(updatedItems))
             addNotification(`Stock adjusted by ${qty > 0 ? "+" : ""}${qty}`, "success")
-            // Silently fetch accurate server state
+            // Silently refresh
             fetchData(true)
         } else {
+            // Rollback
             setItems(previousItems)
             setStats(previousStats)
             addNotification(result.error || "Failed to adjust stock", "error")
@@ -323,8 +355,23 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
         if (!restockingItem) return false
 
         setSavingRestock(true)
-        const previousItems = items
+        
+        // Save previous state
+        const previousItems = [...items]
         const previousStats = stats
+        
+        // Calculate new stock and cost price
+        const newStock = restockingItem.stock + data.quantity
+        const newCostPrice = data.unitCost ?? restockingItem.costPrice
+        
+        // Optimistic update
+        const updatedItems = items.map((inventoryItem) =>
+            inventoryItem.id === restockingItem.id 
+                ? { ...inventoryItem, stock: newStock, costPrice: newCostPrice } 
+                : inventoryItem
+        )
+        setItems(updatedItems)
+        setStats(calculateStats(updatedItems))
 
         try {
             const result = await restockInventoryItem(restockingItem.id, {
@@ -335,16 +382,12 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
             })
 
             if (result.success && result.data) {
-                const updatedItems = previousItems.map((it) =>
-                    it.id === restockingItem!.id ? result.data!.item : it
-                )
-                setItems(updatedItems)
-                setStats(calculateStats(updatedItems))
                 addNotification(`Restocked ${data.quantity} units`, "success")
-                // Silently fetch accurate server state
+                // Silently refresh
                 fetchData(true)
                 return true
             } else {
+                // Rollback
                 setItems(previousItems)
                 setStats(previousStats)
                 addNotification(result.error || "Failed to restock", "error")
@@ -367,81 +410,78 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
         })
 
         if (result.success && result.data) {
-            setItems((prev) => [result.data!.item, ...prev])
+            const updatedItems = [result.data.item, ...items]
+            setItems(updatedItems)
+            setStats(calculateStats(updatedItems))
             addNotification("Item duplicated", "success")
+            // Silently refresh
+            fetchData(true)
         } else {
             addNotification(result.error || "Failed to duplicate item", "error")
         }
     }
 
-    // View history
+    // View restock history
     const handleHistory = async (item: InventoryItem) => {
         setHistoryItem(item)
         setHistoryModalOpen(true)
         setHistoryLoading(true)
 
-        try {
-            const result = await getRestockHistory(item.id)
-            if (result.success && result.data) {
-                setHistoryData(result.data.history)
-            } else {
-                addNotification(result.error || "Failed to fetch history", "error")
-            }
-        } finally {
-            setHistoryLoading(false)
+        const result = await getRestockHistory(item.id)
+        if (result.success && result.data) {
+            setHistoryData(result.data.history)
+        } else {
+            addNotification(result.error || "Failed to fetch history", "error")
         }
+
+        setHistoryLoading(false)
     }
 
-    // Export CSV
-    const handleExportCSV = async () => {
+    // Export to CSV
+    const handleExport = async () => {
         setExporting(true)
-        try {
-            const result = await exportInventoryToCSV(cafe.id, filters)
-            if (result.success && result.data) {
-                // Download the CSV
-                const blob = new Blob([result.data.csv], { type: "text/csv" })
-                const url = window.URL.createObjectURL(blob)
-                const link = document.createElement("a")
-                link.href = url
-                link.download = result.data.filename
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-                window.URL.revokeObjectURL(url)
-                addNotification("CSV exported successfully", "success")
-            } else {
-                addNotification(result.error || "Failed to export CSV", "error")
-            }
-        } finally {
-            setExporting(false)
+        const result = await exportInventoryToCSV(cafe.id, filters)
+        if (result.success && result.data) {
+            const blob = new Blob([result.data.csv], { type: "text/csv" })
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = result.data.filename
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            window.URL.revokeObjectURL(url)
+            addNotification("CSV exported successfully", "success")
+        } else {
+            addNotification(result.error || "Failed to export CSV", "error")
         }
+        setExporting(false)
     }
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-        >
-
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Inventory</h1>
-                    <p className="text-text/60">Manage your cafe&apos;s supplies and stock</p>
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => {
-                            setEditingItem(null)
-                            setItemModalOpen(true)
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                    <Link
+                        href="/owner"
+                        className="inline-flex items-center gap-1 text-sm text-text/60 hover:text-text mb-2"
                     >
-                        <Plus className="w-4 h-4" />
-                        New Item
-                    </button>
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Dashboard
+                    </Link>
+                    <h1 className="text-2xl font-bold">{cafe.name} - Inventory</h1>
                 </div>
+                <button
+                    onClick={() => {
+                        setEditingItem(null)
+                        setItemModalOpen(true)
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
+                >
+                    <Plus className="w-4 h-4" />
+                    Add Item
+                </button>
             </div>
 
             {/* Stats Cards */}
@@ -452,7 +492,7 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
                 filters={filters}
                 onFiltersChange={setFilters}
                 categories={categories}
-                onExportCSV={handleExportCSV}
+                onExportCSV={handleExport}
                 exporting={exporting}
             />
 
@@ -506,10 +546,10 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
                     setHistoryItem(null)
                     setHistoryData([])
                 }}
+                itemName={historyItem?.name ?? ""}
                 history={historyData}
-                itemName={historyItem?.name || ""}
                 loading={historyLoading}
             />
-        </motion.div>
+        </div>
     )
 }
