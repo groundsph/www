@@ -99,7 +99,7 @@ export const quickActions: SearchResult[] = [
     type: 'action',
     title: 'Quick: Leaderboard',
     subtitle: "Type '>leaderboard' anywhere",
-    href: '/community',
+    href: '/community?tab=leaderboard',
     priority: 95,
     keywords: ['>leaderboard', 'leaderboard', 'rankings']
   },
