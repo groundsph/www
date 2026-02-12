@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/layout/AuthProvider"
-import { getFollowedUsersCheckIns } from "@/app/api/actions/social"
-import ActivityFeedSection, { FeedCheckIn } from "@/components/feed/ActivityFeedSection"
+import { getLandingFeedGroupedByCafe, type GroupedCafeFeed } from "@/app/api/actions/social"
+import ActivityFeedSection from "@/components/feed/ActivityFeedSection"
 
 export default function ActivityFeedWrapper() {
     const { user } = useAuth()
-    const [checkIns, setCheckIns] = useState<FeedCheckIn[]>([])
+    const [groupedCheckIns, setGroupedCheckIns] = useState<GroupedCafeFeed[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -16,21 +16,21 @@ export default function ActivityFeedWrapper() {
             return
         }
 
-        // Fetch check-ins from followed users
-        getFollowedUsersCheckIns(10)
+        // Fetch grouped check-ins from followed users
+        getLandingFeedGroupedByCafe(10)
             .then((data) => {
-                setCheckIns(data.checkIns)
+                setGroupedCheckIns(data.groupedCheckIns)
                 setLoading(false)
             })
             .catch((error) => {
                 console.error("Error fetching activity feed:", error)
-                setCheckIns([])
+                setGroupedCheckIns([])
                 setLoading(false)
             })
     }, [user])
 
     // Hide if not authenticated or no check-ins available
-    if (!user || (!loading && checkIns.length === 0)) {
+    if (!user || (!loading && groupedCheckIns.length === 0)) {
         return null
     }
 
@@ -58,5 +58,5 @@ export default function ActivityFeedWrapper() {
         )
     }
 
-    return <ActivityFeedSection checkIns={checkIns} />
+    return <ActivityFeedSection variant="landing" groupedCheckIns={groupedCheckIns} />
 }
