@@ -40,6 +40,7 @@ import {
     Download,
     Copy,
     Gift,
+    Package,
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
@@ -63,6 +64,8 @@ import BlogEditor from "@/components/blog/BlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"
 import MenuItemModal from "@/components/cafe-editor/MenuItemModal"
 import { EventWithCafe } from "@/utils/types/extra"
+import { getInventoryStats } from "@/app/api/actions/inventory"
+import type { InventoryStats } from "@/utils/types/inventory"
 
 interface CafeManagementProps {
     cafe: CafeWithRatings
@@ -114,6 +117,7 @@ type Tab =
     | "analytics"
     | "blog"
     | "events"
+    | "inventory"
     | "settings"
 
 export default function CafeManagement({
@@ -174,6 +178,10 @@ export default function CafeManagement({
         FeaturedSlotRequest[]
     >([])
     const [, setIsLoadingRequests] = useState(false)
+
+    // Inventory state
+    const [inventoryStats, setInventoryStats] = useState<InventoryStats | null>(null)
+    const [inventoryLoading, setInventoryLoading] = useState(false)
 
     // Fetch featured requests on load
     useEffect(() => {
@@ -412,6 +420,9 @@ export default function CafeManagement({
         if (tab === "analytics" && !analytics) {
             loadAnalytics()
         }
+        if (tab === "inventory" && !inventoryStats) {
+            loadInventory()
+        }
     }
 
     // Load events for this cafe
@@ -430,6 +441,16 @@ export default function CafeManagement({
         const data = await getCafeAnalytics(cafe.id, days)
         setAnalytics(data)
         setAnalyticsLoading(false)
+    }
+
+    // Load inventory stats for this cafe
+    const loadInventory = async () => {
+        setInventoryLoading(true)
+        const result = await getInventoryStats(cafe.id)
+        if (result.success && result.data) {
+            setInventoryStats(result.data)
+        }
+        setInventoryLoading(false)
     }
 
     const tabs = [
@@ -466,6 +487,13 @@ export default function CafeManagement({
             icon: CalendarIcon,
             locked: tier !== "premium",
             requiredTier: "Premium",
+        },
+        {
+            id: "inventory" as Tab,
+            label: "Inventory",
+            icon: Package,
+            locked: !canAccessFeature(tier, "inventory"),
+            requiredTier: "Pro",
         },
         { id: "settings" as Tab, label: "Settings", icon: Settings },
     ]
@@ -2049,6 +2077,62 @@ export default function CafeManagement({
                                 )}
                             </motion.div>
                         )}
+
+                    {activeTab === "inventory" && (
+                        <motion.div
+                            key='inventory'
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className='space-y-6'
+                        >
+                            {inventoryLoading ? (
+                                <div className='flex items-center justify-center py-12'>
+                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
+                                </div>
+                            ) : (
+                                <div className='space-y-6'>
+                                    {/* Inventory Stats Preview */}
+                                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                            <p className='text-sm text-text/60 mb-1'>Total Items</p>
+                                            <p className='text-2xl font-semibold'>{inventoryStats?.totalItems ?? 0}</p>
+                                        </div>
+                                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                            <p className='text-sm text-text/60 mb-1'>Low Stock</p>
+                                            <p className={`text-2xl font-semibold ${(inventoryStats?.lowStockCount ?? 0) > 0 ? 'text-amber-600' : ''}`}>
+                                                {inventoryStats?.lowStockCount ?? 0}
+                                            </p>
+                                        </div>
+                                        <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
+                                            <p className='text-sm text-text/60 mb-1'>Valuation</p>
+                                            <p className='text-2xl font-semibold'>
+                                                ₱{inventoryStats?.valuation.toLocaleString() ?? 0}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Link to Full Inventory Page */}
+                                    <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                        <h3 className='font-semibold mb-4 flex items-center gap-2'>
+                                            <Package className='w-5 h-5 text-primary' />
+                                            Inventory Management
+                                        </h3>
+                                        <p className='text-text/60 mb-4'>
+                                            Manage your cafe inventory, track stock levels, view restock history, and export data.
+                                        </p>
+                                        <Link
+                                            href={`/owner/cafes/${cafe.slug}/inventory`}
+                                            className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                                        >
+                                            <ExternalLink className='w-4 h-4' />
+                                            Open Inventory Dashboard
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
 
                     {activeTab === "settings" && (
                         <motion.div

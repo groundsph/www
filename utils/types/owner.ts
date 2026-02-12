@@ -48,7 +48,7 @@ export const SUBSCRIPTION_TIERS = {
             'QR to Menu',
         ],
         menuLimit: 30,
-        enabledFeatures: ['menu', 'blog', 'analytics', 'verified_badge', 'qr_menu'] as TierFeature[],
+        enabledFeatures: ['menu', 'blog', 'analytics', 'verified_badge', 'qr_menu', 'inventory'] as TierFeature[],
     },
     premium: {
         name: 'Premium',
@@ -66,7 +66,7 @@ export const SUBSCRIPTION_TIERS = {
         ],
         menuLimit: Infinity,
         enabledFeatures: [
-            'menu', 'blog', 'analytics', 'verified_badge', 'qr_menu',
+            'menu', 'blog', 'analytics', 'verified_badge', 'qr_menu', 'inventory',
             'events', 'highlighted_pins', 'direct_support', 'featured_slot_request',
             'review_pinning', 'priority_ranking'
         ] as TierFeature[],
@@ -91,7 +91,8 @@ export type TierFeature =
     | 'review_pinning'
     | 'priority_ranking'
     | 'qr_menu'
-    | 'direct_support';
+    | 'direct_support'
+    | 'inventory';
 
 // ============================================
 // Beta Free Features Configuration
@@ -112,6 +113,7 @@ export const BETA_FREE_FEATURES: TierFeature[] = [
     'verified_badge', // Verified badge display
     'qr_menu',        // QR code to menu
     'direct_support', // Direct support channel
+    'inventory',      // Inventory management
 ];
 
 /**
