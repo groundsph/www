@@ -40,14 +40,13 @@ export default function InventoryTable({
 }: InventoryTableProps) {
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
     const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
-    const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+    const clickPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            const target = event.target as Node
-            // Check if click is outside all dropdowns and buttons
-            const isOutside = !Array.from(buttonRefs.current.values()).some(btn => btn.contains(target))
-            if (isOutside) {
+            const target = event.target as HTMLElement
+            // Close if clicking outside the dropdown
+            if (!target.closest('[data-dropdown="true"]')) {
                 setOpenDropdownId(null)
                 setDropdownPosition(null)
             }
@@ -55,34 +54,38 @@ export default function InventoryTable({
 
         if (openDropdownId) {
             document.addEventListener("mousedown", handleClickOutside)
-            // Calculate position
-            const button = buttonRefs.current.get(openDropdownId)
-            if (button) {
-                const rect = button.getBoundingClientRect()
-                const dropdownHeight = 280
-                const spaceBelow = window.innerHeight - rect.bottom
-                const showAbove = spaceBelow < dropdownHeight
-
-                if (showAbove) {
-                    // Position above button
-                    setDropdownPosition({
-                        top: rect.top + window.scrollY - dropdownHeight - 4,
-                        left: Math.min(
-                            rect.right + window.scrollX - 176, // Align right edge (176 = w-44)
-                            window.innerWidth - 190 // Prevent overflow on right
-                        ),
-                    })
-                } else {
-                    // Position below button
-                    setDropdownPosition({
-                        top: rect.bottom + window.scrollY + 4,
-                        left: Math.min(
-                            rect.right + window.scrollX - 176, // Align right edge (176 = w-44)
-                            window.innerWidth - 190 // Prevent overflow on right
-                        ),
-                    })
-                }
+            
+            // Position dropdown at cursor location with bounds checking
+            const dropdownWidth = 176 // w-44
+            const dropdownHeight = 320 // Approximate max height with all options
+            
+            let left = clickPosition.current.x
+            let top = clickPosition.current.y
+            
+            // Prevent going off right edge
+            if (left + dropdownWidth > window.innerWidth) {
+                left = window.innerWidth - dropdownWidth - 16
             }
+            
+            // Prevent going off bottom edge - show above cursor if needed
+            if (top + dropdownHeight > window.innerHeight + window.scrollY) {
+                top = top - dropdownHeight
+            }
+            
+            // Prevent going off left edge
+            if (left < 8) {
+                left = 8
+            }
+            
+            // Prevent going off top edge
+            if (top < window.scrollY + 8) {
+                top = window.scrollY + 8
+            }
+            
+            setDropdownPosition({
+                top: top + window.scrollY,
+                left: left,
+            })
         }
         
         return () => document.removeEventListener("mousedown", handleClickOutside)
@@ -184,10 +187,10 @@ export default function InventoryTable({
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <button
-                                            ref={(el) => {
-                                                if (el) buttonRefs.current.set(item.id, el)
+                                            onClick={(e) => {
+                                                clickPosition.current = { x: e.clientX, y: e.clientY }
+                                                setOpenDropdownId(openDropdownId === item.id ? null : item.id)
                                             }}
-                                            onClick={() => setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
                                             className="p-2 hover:bg-text/10 rounded-lg transition-colors"
                                         >
                                             <MoreVertical className="w-4 h-4" />

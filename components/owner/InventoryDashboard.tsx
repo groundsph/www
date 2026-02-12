@@ -93,11 +93,10 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
         const lowStockCount = currentItems.filter(
             (item) => item.status === "active" && item.stock <= item.warningThreshold
         ).length
-        // Valuation calculation - use a simple estimate based on unit cost if available
+        // Valuation calculation - sum of (stock * costPrice) for active items
         const valuation = currentItems.reduce((sum, item) => {
-            if (item.status === "active") {
-                // Use unit cost from restock history or default to 0
-                return sum + item.stock * 0
+            if (item.status === "active" && item.costPrice) {
+                return sum + item.stock * item.costPrice
             }
             return sum
         }, 0)
@@ -424,14 +423,6 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
         >
-            {/* Back Button */}
-            <Link
-                href={`/owner/cafes/${cafe.slug}`}
-                className="inline-flex items-center gap-1 text-text/60 hover:text-text mb-4 transition-colors"
-            >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Cafe Management
-            </Link>
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
