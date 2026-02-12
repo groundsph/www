@@ -5,6 +5,7 @@ export const createInventoryItemSchema = z.object({
   category: z.string().min(1, "Category is required"),
   stock: z.number().int().min(0, "Stock must be 0 or greater"),
   warningThreshold: z.number().int().min(0, "Warning threshold must be 0 or greater"),
+  costPrice: z.number().min(0, "Cost price must be 0 or greater").optional(),
   expiryDate: z.string().datetime().optional(),
   link: z.string().url("Must be a valid URL").optional(),
 })
@@ -14,6 +15,7 @@ export const updateInventoryItemSchema = z.object({
   category: z.string().min(1, "Category is required").optional(),
   stock: z.number().int().min(0, "Stock must be 0 or greater").optional(),
   warningThreshold: z.number().int().min(0, "Warning threshold must be 0 or greater").optional(),
+  costPrice: z.number().min(0, "Cost price must be 0 or greater").optional(),
   expiryDate: z.string().datetime().optional(),
   link: z.string().url("Must be a valid URL").optional(),
 })

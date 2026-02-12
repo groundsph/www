@@ -215,6 +215,7 @@ export async function createInventoryItem(
         category: input.category,
         stock: input.stock,
         warningThreshold: input.warningThreshold,
+        costPrice: input.costPrice ?? null,
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
         link: input.link,
         status: "active",
@@ -278,6 +279,7 @@ export async function updateInventoryItem(
     if (input.category !== undefined) updateData.category = input.category
     if (input.stock !== undefined) updateData.stock = input.stock
     if (input.warningThreshold !== undefined) updateData.warningThreshold = input.warningThreshold
+    if (input.costPrice !== undefined) updateData.costPrice = input.costPrice ?? null
     if (input.expiryDate !== undefined) {
       updateData.expiryDate = input.expiryDate ? new Date(input.expiryDate) : null
     }
