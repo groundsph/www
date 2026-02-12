@@ -77,7 +77,7 @@ export default function Navbar() {
                         draggable={false}
                         title='Go to Home'
                     >
-                        Grounds.PH
+                        Grounds<span className="text-secondary">.ph</span>
                     </Link>
 
                     {/* Desktop Navigation */}

@@ -13,10 +13,9 @@ export default function Footer() {
                     <div className='flex flex-col gap-4'>
                         <Link
                             href='/'
-                            className='font-serif text-2xl md:text-3xl font-bold inline-flex items-center gap-2 group w-max'
+                            className='font-serif text-2xl md:text-3xl font-bold inline-flex items-center group w-max'
                         >
-                            <Coffee className='w-6 h-6 group-hover:rotate-12 transition-transform' />
-                            Grounds.PH<span className='text-secondary'>.</span>
+                            Grounds<span className='text-secondary'>.ph</span>
                         </Link>
                         <p className='text-background/70 text-sm leading-relaxed'>
                             Discover and explore the best cafes across the
