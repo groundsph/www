@@ -313,6 +313,141 @@ export async function getFollowedUsersCheckIns(limit: number = 50): Promise<{
 }
 
 // ============================================================================
+// GROUPED LANDING FEED (by cafe)
+// ============================================================================
+
+export interface GroupedCafeFeed {
+    cafeId: string
+    cafeName: string
+    cafeSlug: string
+    cafeThumbnail: string | null
+    latestVisitedAt: string
+    visitors: { id: string; username: string; displayName: string; avatarUrl: string | null }[]
+    visitorCount: number
+}
+
+/**
+ * Group check-ins by cafe for the landing feed
+ */
+export async function groupCheckInsByCafe(checkIns: FeedCheckIn[]): Promise<GroupedCafeFeed[]> {
+    const cafeMap = new Map<string, GroupedCafeFeed>()
+
+    for (const checkIn of checkIns) {
+        const existing = cafeMap.get(checkIn.cafeId)
+
+        if (!existing) {
+            cafeMap.set(checkIn.cafeId, {
+                cafeId: checkIn.cafeId,
+                cafeName: checkIn.cafeName,
+                cafeSlug: checkIn.cafeSlug,
+                cafeThumbnail: checkIn.cafeThumbnail,
+                latestVisitedAt: checkIn.visitedAt,
+                visitors: [{
+                    id: checkIn.userId,
+                    username: checkIn.username,
+                    displayName: checkIn.displayName,
+                    avatarUrl: checkIn.avatarUrl,
+                }],
+                visitorCount: 1,
+            })
+        } else {
+            // Update latest visited at if this check-in is more recent
+            if (new Date(checkIn.visitedAt) > new Date(existing.latestVisitedAt)) {
+                existing.latestVisitedAt = checkIn.visitedAt
+            }
+
+            // Add visitor if not already in the list
+            const visitorExists = existing.visitors.some(v => v.id === checkIn.userId)
+            if (!visitorExists) {
+                existing.visitors.push({
+                    id: checkIn.userId,
+                    username: checkIn.username,
+                    displayName: checkIn.displayName,
+                    avatarUrl: checkIn.avatarUrl,
+                })
+                existing.visitorCount = existing.visitors.length
+            }
+        }
+    }
+
+    // Convert to array and sort by latestVisitedAt descending
+    const grouped = Array.from(cafeMap.values())
+    grouped.sort((a, b) => new Date(b.latestVisitedAt).getTime() - new Date(a.latestVisitedAt).getTime())
+
+    return grouped
+}
+
+/**
+ * Get landing feed grouped by cafe
+ */
+export async function getLandingFeedGroupedByCafe(limit: number = 10): Promise<{
+    groupedCheckIns: GroupedCafeFeed[]
+}> {
+    const user = await getCurrentUser()
+    if (!user) return { groupedCheckIns: [] }
+
+    try {
+        // Get IDs of users we're following
+        const followingResult = await db
+            .select({ followingId: userFollows.followingId })
+            .from(userFollows)
+            .where(eq(userFollows.followerId, user.id))
+
+        const followingIds = followingResult.map((f) => f.followingId)
+
+        if (followingIds.length === 0) {
+            return { groupedCheckIns: [] }
+        }
+
+        // Get recent check-ins from followed users (fetch more to allow for grouping)
+        const checkInsResult = await db
+            .select({
+                id: cafeVisits.id,
+                userId: cafeVisits.userId,
+                username: profiles.username,
+                displayName: profiles.displayName,
+                avatarUrl: profiles.avatarUrl,
+                cafeId: cafeVisits.cafeId,
+                cafeName: cafes.name,
+                cafeSlug: cafes.slug,
+                cafeThumbnail: cafes.thumbnail,
+                visitedAt: cafeVisits.visitedAt,
+                companions: cafeVisits.companions,
+            })
+            .from(cafeVisits)
+            .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
+            .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+            .where(inArray(cafeVisits.userId, followingIds))
+            .orderBy(desc(cafeVisits.visitedAt))
+            .limit(50) // Fetch more to allow for grouping
+
+        // Convert to FeedCheckIn format
+        const checkIns: FeedCheckIn[] = checkInsResult.map((c) => ({
+            id: c.id,
+            userId: c.userId,
+            username: c.username,
+            displayName: c.displayName,
+            avatarUrl: c.avatarUrl,
+            cafeId: c.cafeId,
+            cafeName: c.cafeName,
+            cafeSlug: c.cafeSlug,
+            cafeThumbnail: c.cafeThumbnail,
+            visitedAt: c.visitedAt?.toISOString() ?? new Date().toISOString(),
+            companions: [], // Companions not needed for landing feed
+        }))
+
+        // Group by cafe
+        const grouped = await groupCheckInsByCafe(checkIns)
+
+        // Return top N cafes
+        return { groupedCheckIns: grouped.slice(0, limit) }
+    } catch (error) {
+        console.error("Error getting landing feed grouped by cafe:", error)
+        return { groupedCheckIns: [] }
+    }
+}
+
+// ============================================================================
 // USER SEARCH (for companion tagging)
 // ============================================================================
 
