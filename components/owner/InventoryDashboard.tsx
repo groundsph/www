@@ -24,6 +24,7 @@ import {
     updateInventoryItem,
     softDeleteInventoryItem,
     restoreInventoryItem,
+    deleteInventoryItem,
     adjustInventoryStock,
     restockInventoryItem,
     getRestockHistory,
@@ -208,6 +209,19 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
             } else {
                 addNotification(result.error || "Failed to restore item", "error")
             }
+        }
+    }
+
+    // Permanently delete item
+    const handlePermanentDelete = async (item: InventoryItem) => {
+        if (!confirm(`WARNING: This will permanently delete "${item.name}" and all its history. This action cannot be undone.\n\nAre you absolutely sure?`)) return
+
+        const result = await deleteInventoryItem(item.id)
+        if (result.success) {
+            setItems((prev) => prev.filter((it) => it.id !== item.id))
+            addNotification("Item permanently deleted", "success")
+        } else {
+            addNotification(result.error || "Failed to permanently delete item", "error")
         }
     }
 
@@ -398,6 +412,7 @@ export default function InventoryDashboard({ cafe, items: initialItems, stats: i
                 onDuplicate={handleDuplicate}
                 onHistory={handleHistory}
                 onDelete={handleDelete}
+                onPermanentDelete={handlePermanentDelete}
             />
 
             {/* Modals */}

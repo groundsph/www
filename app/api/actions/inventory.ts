@@ -378,6 +378,51 @@ export async function restoreInventoryItem(itemId: string): Promise<ActionResult
 }
 
 /**
+ * Permanently delete an inventory item (cannot be undone)
+ */
+export async function deleteInventoryItem(itemId: string): Promise<ActionResult<void>> {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return { success: false, error: "Not authenticated" }
+  }
+
+  const isOwner = await checkItemOwnership(itemId, currentUser.id)
+  if (!isOwner) {
+    return { success: false, error: "Not authorized" }
+  }
+
+  try {
+    // Get cafeId before deleting for revalidation
+    const [item] = await db
+      .select({ cafeId: inventoryItems.cafeId })
+      .from(inventoryItems)
+      .where(eq(inventoryItems.id, itemId))
+      .limit(1)
+
+    if (!item) {
+      return { success: false, error: "Item not found" }
+    }
+
+    // Delete restock history first (cascade)
+    await db
+      .delete(inventoryRestockHistory)
+      .where(eq(inventoryRestockHistory.itemId, itemId))
+
+    // Delete the item
+    await db
+      .delete(inventoryItems)
+      .where(eq(inventoryItems.id, itemId))
+
+    revalidatePath(`/owner/cafes/${item.cafeId}/inventory`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("[deleteInventoryItem] Error:", error)
+    return { success: false, error: "Failed to permanently delete inventory item" }
+  }
+}
+
+/**
  * Adjust inventory stock (no history entry)
  */
 export async function adjustInventoryStock(

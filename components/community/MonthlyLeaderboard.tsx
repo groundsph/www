@@ -167,11 +167,10 @@ export default function MonthlyLeaderboard({
     const getRankIcon = (rank: number) => {
         switch (rank) {
             case 1:
-                return <Crown className='w-6 h-6 text-amber-500' />
+                return <Crown className='w-6 h-6' />
             case 2:
-                return <Medal className='w-6 h-6 text-gray-400' />
             case 3:
-                return <Medal className='w-6 h-6 text-amber-700' />
+                return <Medal className='w-6 h-6' />
             default:
                 return null
         }

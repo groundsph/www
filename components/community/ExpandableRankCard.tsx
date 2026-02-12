@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { ChevronDown, Users } from "lucide-react"
+import { ChevronDown, MedalIcon, Users } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -32,12 +32,12 @@ export default function ExpandableRankCard({
     const hasMultiple = entries.length > 1
 
     return (
-        <div className={`relative rounded-2xl p-6 ${rankColor} border-2 border-white/20 shadow-lg`}>
+        <div className={`relative rounded-2xl p-6 ${rankColor} border-2 border-white/20 shadow-lg overflow-clip`}>
             {/* Rank Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-xl">
-                        {rankIcon}
+                        {rankIcon ?? <MedalIcon className="w-6 h-6" />}
                     </div>
                     <div>
                         <h3 className="text-white font-bold text-lg">
