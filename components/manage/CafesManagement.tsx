@@ -64,7 +64,9 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import ImageLightbox from "@/components/modal/ImageLightbox"
 import SubscriptionsTable from "@/components/manage/SubscriptionsTable"
 import RejectCafeModal from "@/components/admin/RejectCafeModal"
-import { CreditCard } from "lucide-react"
+import FeaturedScheduleManager from "@/components/manage/FeaturedScheduleManager"
+import { CreditCard, Star } from "lucide-react"
+import { type FeaturedSchedule } from "@/app/api/actions/admin"
 
 interface CafesManagementProps {
     userRole: "admin" | "moderator"
@@ -79,6 +81,7 @@ interface CafesManagementProps {
     pendingClaims?: CafeClaim[]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     manualSubscriptions: any[]
+    featuredSchedules: FeaturedSchedule[]
 }
 
 type TabType =
@@ -87,6 +90,7 @@ type TabType =
     | "suggestions"
     | "claims"
     | "subscriptions"
+    | "featured"
 
 export default function CafesManagement({
     initialPendingCafes,
@@ -99,6 +103,7 @@ export default function CafesManagement({
     suggestions: initialSuggestions,
     pendingClaims: initialClaims = [],
     manualSubscriptions,
+    featuredSchedules: initialFeaturedSchedules,
 }: CafesManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
 
@@ -121,6 +126,7 @@ export default function CafesManagement({
     const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [claims, setClaims] = useState<CafeClaim[]>(initialClaims)
     const [subscriptions, setSubscriptions] = useState(manualSubscriptions)
+    const [featuredSchedules, setFeaturedSchedules] = useState(initialFeaturedSchedules)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
         null
@@ -555,6 +561,17 @@ export default function CafesManagement({
                     <CreditCard className='w-4 h-4' />
                     Subscriptions
                 </button>
+                <button
+                    onClick={() => setActiveTab("featured")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                        activeTab === "featured"
+                            ? "bg-primary text-white"
+                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
+                    }`}
+                >
+                    <Star className='w-4 h-4' />
+                    Featured
+                </button>
             </div>
 
             {/* Subscriptions Tab */}
@@ -562,6 +579,13 @@ export default function CafesManagement({
                 <SubscriptionsTable
                     key={refreshKey}
                     initialSubscriptions={subscriptions}
+                />
+            )}
+
+            {/* Featured Tab */}
+            {activeTab === "featured" && (
+                <FeaturedScheduleManager
+                    initialSchedules={featuredSchedules}
                 />
             )}
 
