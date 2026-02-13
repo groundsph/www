@@ -1,5 +1,6 @@
 import { getCafeCrawlBySlug } from "@/app/api/actions/cafe-crawls"
 import CrawlView from "@/components/crawls/CrawlView"
+import { buildCrawlShareMetadata } from "@/utils/og/metadata"
 import { notFound } from "next/navigation"
 
 export const dynamic = "force-dynamic"
@@ -18,15 +19,11 @@ export async function generateMetadata({
         }
     }
 
-    return {
-        title: `${crawl.title} | Grounds PH`,
+    return buildCrawlShareMetadata({
+        title: crawl.title,
         description: crawl.description ?? `A cafe crawl with ${crawl.itemCount} cafes`,
-        openGraph: {
-            title: crawl.title,
-            description: crawl.description ?? `A cafe crawl with ${crawl.itemCount} cafes`,
-            images: crawl.coverImage ? [crawl.coverImage] : [],
-        },
-    }
+        ogImageUrl: `/community/crawls/${crawl.slug}/opengraph-image`,
+    })
 }
 
 export default async function CrawlPage({
