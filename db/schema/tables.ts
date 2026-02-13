@@ -136,6 +136,7 @@ export const cafes = pgTable(
         hiddenGemGraduatedAt: timestamp("hidden_gem_graduated_at", { withTimezone: true }),
         isChain: boolean("is_chain").default(false),
         findingHint: text("finding_hint"),
+        badgeStampUrl: text("badge_stamp_url"),
         ownerIds: uuid("owner_ids").array(),
         contributorId: uuid("contributor_id").references(() => profiles.id, { onDelete: "set null" }),
         featuredUntil: timestamp("featured_until", { withTimezone: true }),

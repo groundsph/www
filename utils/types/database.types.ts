@@ -626,6 +626,7 @@ export type Database = {
           is_verified: boolean | null
           is_work_friendly: boolean | null
           finding_hint: string | null
+          badge_stamp_url: string | null
           lat: number | null
           lng: number | null
           membership_tier: Database["public"]["Enums"]["membership_tier"] | null
@@ -680,6 +681,7 @@ export type Database = {
           is_verified?: boolean | null
           is_work_friendly?: boolean | null
           finding_hint?: string | null
+          badge_stamp_url?: string | null
           lat?: number | null
           lng?: number | null
           membership_tier?:
@@ -736,6 +738,7 @@ export type Database = {
           is_verified?: boolean | null
           is_work_friendly?: boolean | null
           finding_hint?: string | null
+          badge_stamp_url?: string | null
           lat?: number | null
           lng?: number | null
           membership_tier?:
