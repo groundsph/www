@@ -16,13 +16,32 @@ import {
     Loader2,
     Star,
     Trophy,
+    MapPin,
 } from "lucide-react"
-import { getPublicCollections, searchUsers } from "@/app/api/actions/community"
+import { getPublicCollections, searchUsers, getPublicCafeCrawls } from "@/app/api/actions/community"
+import CrawlCard from "@/components/crawls/CrawlCard"
 import EventsPageClient from "@/components/events/EventsPageClient"
 import MonthlyLeaderboard from "@/components/community/MonthlyLeaderboard"
 import { EventWithCafe } from "@/utils/types/extra"
 
-type TabType = "collections" | "events" | "leaderboard"
+type TabType = "crawls" | "collections" | "events" | "leaderboard"
+
+interface Crawl {
+    id: string
+    title: string
+    slug: string
+    coverImage: string | null
+    itemCount: number
+    viewsCount: number
+    savesCount: number
+    createdAt: string
+    author: {
+        id: string
+        username: string
+        displayName: string
+        avatarUrl: string | null
+    }
+}
 
 interface PublicCollection {
     id: string
@@ -53,6 +72,8 @@ interface UserResult {
 
 interface CommunityPageProps {
     initialTab: string
+    initialCrawls: Crawl[]
+    initialCrawlsTotal: number
     initialCollections: PublicCollection[]
     initialCollectionsTotal: number
     initialEvents: EventWithCafe[]
@@ -61,6 +82,8 @@ interface CommunityPageProps {
 
 export default function CommunityPage({
     initialTab,
+    initialCrawls,
+    initialCrawlsTotal,
     initialCollections,
     initialCollectionsTotal,
     initialEvents,
@@ -69,8 +92,14 @@ export default function CommunityPage({
     const searchParamsHook = useSearchParams()
 
     const [activeTab, setActiveTab] = useState<TabType>(
-        (initialTab as TabType) || "collections"
+        (initialTab as TabType) || "crawls"
     )
+
+    // Crawls state
+    const [crawls, setCrawls] = useState(initialCrawls)
+    const [crawlsTotal, setCrawlsTotal] = useState(initialCrawlsTotal)
+    const [crawlsPage, setCrawlsPage] = useState(1)
+    const [loadingCrawls, setLoadingCrawls] = useState(false)
 
     // Collections state
     const [collections, setCollections] = useState(initialCollections)
@@ -93,7 +122,7 @@ export default function CommunityPage({
         const tabParam = searchParamsHook.get("tab")
         if (
             tabParam &&
-            ["collections", "events", "leaderboard"].includes(tabParam)
+            ["crawls", "collections", "events", "leaderboard"].includes(tabParam)
         ) {
             setActiveTab(tabParam as TabType)
         }
@@ -106,6 +135,23 @@ export default function CommunityPage({
         // Actually if I switch to Events, search might not apply there.
         // Let's just update tab.
         router.push(`/community?tab=${tab}`, { scroll: false })
+    }
+
+    // Load more crawls
+    const loadMoreCrawls = async () => {
+        if (loadingCrawls || crawls.length >= crawlsTotal) return
+        setLoadingCrawls(true)
+        try {
+            const nextPage = crawlsPage + 1
+            const data = await getPublicCafeCrawls(nextPage, 12, "recent")
+            setCrawls((prev) => [...prev, ...data.crawls])
+            setCrawlsTotal(data.total)
+            setCrawlsPage(nextPage)
+        } catch (err) {
+            console.error("Failed to load more crawls:", err)
+        } finally {
+            setLoadingCrawls(false)
+        }
     }
 
     // Load more collections
@@ -214,6 +260,7 @@ export default function CommunityPage({
     }, [searchQuery])
 
     const tabs = [
+        { id: "crawls" as TabType, label: "Crawls", icon: MapPin },
         { id: "collections" as TabType, label: "Collections", icon: Layers },
         { id: "events" as TabType, label: "Events", icon: Calendar },
         { id: "leaderboard" as TabType, label: "Leaderboard", icon: Trophy },
@@ -304,6 +351,49 @@ export default function CommunityPage({
                             {searchingUsers
                                 ? "Searching..."
                                 : "No users found. Try a different username."}
+                        </div>
+                    )}
+                </section>
+            ) : activeTab === "crawls" ? (
+                <section className='max-w-7xl mx-auto px-6 py-8'>
+                    {crawls.length > 0 ? (
+                        <>
+                            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                                {crawls.map((crawl) => (
+                                    <CrawlCard key={crawl.id} crawl={crawl} />
+                                ))}
+                            </div>
+
+                            {crawls.length < crawlsTotal && !searchQuery && (
+                                <div className='flex justify-center mt-8'>
+                                    <button
+                                        onClick={loadMoreCrawls}
+                                        disabled={loadingCrawls}
+                                        className='px-6 py-3 bg-text/5 hover:bg-text/10 rounded-full text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer'
+                                    >
+                                        {loadingCrawls ? (
+                                            <span className='flex items-center gap-2'>
+                                                <Loader2 className='w-4 h-4 animate-spin' />
+                                                Loading...
+                                            </span>
+                                        ) : (
+                                            "Load More"
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className='text-center py-16'>
+                            <MapPin className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
+                            <h3 className='text-xl font-serif font-semibold text-text mb-2'>
+                                {searchQuery ? "No crawls found" : "No crawls yet"}
+                            </h3>
+                            <p className='text-text/60'>
+                                {searchQuery
+                                    ? "Try searching for something else."
+                                    : "Be the first to create a public cafe crawl!"}
+                            </p>
                         </div>
                     )}
                 </section>

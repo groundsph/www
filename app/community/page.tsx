@@ -4,6 +4,7 @@ import CommunityPage from "@/components/community/CommunityPage"
 import {
     getPublicCollections,
     getFeaturedUsers,
+    getPublicCafeCrawls,
 } from "@/app/api/actions/community"
 import { getUpcomingEvents } from "@/app/api/actions/events"
 
@@ -26,10 +27,11 @@ export default async function Page({
     searchParams: Promise<{ tab?: string }>
 }) {
     const params = await searchParams
-    const initialTab = params.tab || "collections"
+    const initialTab = params.tab || "crawls"
 
     // Fetch initial data for all tabs in parallel
-    const [collectionsData, eventsData, featuredUsers] = await Promise.all([
+    const [crawlsData, collectionsData, eventsData, featuredUsers] = await Promise.all([
+        getPublicCafeCrawls(1, 12, "recent"),
         getPublicCollections(1, 12, "recent"),
         getUpcomingEvents(12),
         getFeaturedUsers(8),
@@ -39,6 +41,8 @@ export default async function Page({
         <Suspense fallback={<CommunityPageSkeleton />}>
             <CommunityPage
                 initialTab={initialTab}
+                initialCrawls={crawlsData.crawls}
+                initialCrawlsTotal={crawlsData.total}
                 initialCollections={collectionsData.collections}
                 initialCollectionsTotal={collectionsData.total}
                 initialEvents={eventsData}
