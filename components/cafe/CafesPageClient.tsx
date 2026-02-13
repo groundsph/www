@@ -256,7 +256,16 @@ export default function CafesPageClient() {
             setCurrentPage(page)
             restoreAppliedRef.current = true
 
-            await doInitialFetch(page, restoredFilterParams)
+            // Fetch all pages from 1 to the restored page so scroll position is accurate
+            const allCafes = []
+            for (let i = 1; i <= page; i++) {
+                const pageCafes = await getAllCafes(i, PAGE_SIZE, restoredFilterParams)
+                allCafes.push(...pageCafes)
+                if (pageCafes.length < PAGE_SIZE) break // Last page has fewer items
+            }
+            setCafes(allCafes)
+            setLoading(false)
+            setHasMore(allCafes.length === page * PAGE_SIZE)
 
             setShowRestoreNotice(true)
             setTimeout(() => {
