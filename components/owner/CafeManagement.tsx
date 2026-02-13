@@ -41,6 +41,9 @@ import {
     Copy,
     Gift,
     Package,
+    Upload,
+    X,
+    Stamp,
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
@@ -67,6 +70,9 @@ import { EventWithCafe } from "@/utils/types/extra"
 import { getInventoryStats, getInventoryItems } from "@/app/api/actions/inventory"
 import type { InventoryStats, InventoryItem } from "@/utils/types/inventory"
 import InventoryDashboard from "./InventoryDashboard"
+import { isBadgeStampFileValid } from "@/utils/validation/badge-stamp"
+import { uploadCafeBadgeStamp } from "@/utils/storage/client"
+import { setCafeBadgeStamp, removeCafeBadgeStamp } from "@/app/api/actions/owner"
 
 interface CafeManagementProps {
     cafe: CafeWithRatings
@@ -184,6 +190,12 @@ export default function CafeManagement({
     const [inventoryStats, setInventoryStats] = useState<InventoryStats | null>(null)
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
     const [inventoryLoading, setInventoryLoading] = useState(false)
+
+    // Badge stamp state
+    const [badgeStampUrl, setBadgeStampUrl] = useState<string | null>(
+        cafe.badge_stamp_url || null
+    )
+    const [uploadingBadgeStamp, setUploadingBadgeStamp] = useState(false)
 
     // Fetch featured requests on load
     useEffect(() => {
@@ -459,6 +471,51 @@ export default function CafeManagement({
             setInventoryItems(itemsResult.data.items)
         }
         setInventoryLoading(false)
+    }
+
+    // Badge stamp handlers
+    const handleBadgeStampUpload = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // Validate file
+        const validation = isBadgeStampFileValid(file)
+        if (!validation.valid) {
+            addNotification(validation.error || "Invalid file", "error")
+            e.target.value = ""
+            return
+        }
+
+        setUploadingBadgeStamp(true)
+        const result = await uploadCafeBadgeStamp(file, cafe.id)
+        if (result.success && result.url) {
+            const setResult = await setCafeBadgeStamp(cafe.id, result.url)
+            if (setResult.success) {
+                setBadgeStampUrl(result.url)
+                addNotification("Badge stamp uploaded successfully", "success")
+            } else {
+                addNotification(setResult.error || "Failed to set badge stamp", "error")
+            }
+        } else {
+            addNotification(result.error || "Failed to upload badge stamp", "error")
+        }
+        setUploadingBadgeStamp(false)
+        e.target.value = ""
+    }
+
+    const handleRemoveBadgeStamp = async () => {
+        if (!badgeStampUrl) return
+        if (!confirm("Remove badge stamp?")) return
+
+        const result = await removeCafeBadgeStamp(cafe.id)
+        if (result.success) {
+            setBadgeStampUrl(null)
+            addNotification("Badge stamp removed", "success")
+        } else {
+            addNotification(result.error || "Failed to remove badge stamp", "error")
+        }
     }
 
     const tabs = [
@@ -2143,6 +2200,75 @@ export default function CafeManagement({
                                     <Edit2 className='w-4 h-4' />
                                     Edit Cafe
                                 </Link>
+                            </div>
+
+                            {/* Badge Stamp */}
+                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                <div className='flex items-center gap-2 mb-4'>
+                                    <Stamp className='w-5 h-5 text-primary' />
+                                    <h3 className='font-semibold'>Badge Stamp</h3>
+                                </div>
+                                <p className='text-text/60 mb-4'>
+                                    Upload a custom badge stamp to display on your cafe page. This is shown as a mark of authenticity.
+                                </p>
+
+                                <div className='flex items-center gap-4'>
+                                    {/* Preview */}
+                                    <div className='w-20 h-20 rounded-lg bg-white border border-text/10 overflow-hidden flex items-center justify-center'>
+                                        {badgeStampUrl ? (
+                                            <Image
+                                                src={badgeStampUrl}
+                                                alt={`${cafe.name} badge stamp`}
+                                                width={80}
+                                                height={80}
+                                                className='object-contain'
+                                            />
+                                        ) : (
+                                            <div className='text-text/30 text-xs text-center'>
+                                                No stamp
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Controls */}
+                                    <div className='flex flex-col gap-2'>
+                                        <label className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'>
+                                            {uploadingBadgeStamp ? (
+                                                <>
+                                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                                    Uploading...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload className='w-4 h-4' />
+                                                    {badgeStampUrl ? "Change" : "Upload"}
+                                                </>
+                                            )}
+                                            <input
+                                                type='file'
+                                                accept='image/png'
+                                                className='hidden'
+                                                onChange={handleBadgeStampUpload}
+                                                disabled={uploadingBadgeStamp}
+                                            />
+                                        </label>
+
+                                        {badgeStampUrl && (
+                                            <button
+                                                onClick={handleRemoveBadgeStamp}
+                                                disabled={uploadingBadgeStamp}
+                                                className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-text/10 text-text rounded-lg font-medium hover:bg-text/20 transition-colors disabled:opacity-50'
+                                            >
+                                                <X className='w-4 h-4' />
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <p className='text-xs text-text/40 mt-3'>
+                                    PNG format only. Max 500KB.
+                                </p>
                             </div>
 
                             {/* Danger Zone */}
