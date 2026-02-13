@@ -136,6 +136,7 @@ export default function CafesPageClient() {
     // Track if user has manually toggled location filter
     const hasUserToggledLocation = useRef(false)
     const restoreAppliedRef = useRef(false)
+    const scrollSentinelRef = useRef<HTMLDivElement>(null)
 
     // Location State
     const [userLocation, setUserLocation] = useState<{
@@ -337,6 +338,8 @@ export default function CafesPageClient() {
 
     // Infinite scroll detection
     useEffect(() => {
+        if (!scrollSentinelRef.current || !hasMore || isLoadingMore) return
+
         const observer = new IntersectionObserver(
             async (entries) => {
                 const target = entries[0]
@@ -363,13 +366,10 @@ export default function CafesPageClient() {
             { threshold: INTERSECTION_OBSERVER_THRESHOLD, rootMargin: INTERSECTION_OBSERVER_ROOT_MARGIN }
         )
 
-        const sentinel = document.getElementById("scroll-sentinel")
-        if (sentinel) {
-            observer.observe(sentinel)
-        }
+        observer.observe(scrollSentinelRef.current)
 
         return () => observer.disconnect()
-    }, [currentPage, hasMore, isLoadingMore])
+    }, [currentPage, hasMore, isLoadingMore, getFilterParams])
 
     const toggleFilter = (key: keyof typeof filters) => {
         if (key === "near_me") {
@@ -1170,7 +1170,7 @@ export default function CafesPageClient() {
                     )}
 
                     {/* Scroll sentinel for infinite scroll */}
-                    {hasMore && !loading && <div id='scroll-sentinel' className='h-1' />}
+                    {hasMore && <div ref={scrollSentinelRef} className='h-1' />}
             </div>
         </section>
     )
