@@ -369,7 +369,7 @@ export default function CafesPageClient() {
         }
 
         return () => observer.disconnect()
-    }, [currentPage, hasMore, isLoadingMore, getFilterParams])
+    }, [currentPage, hasMore, isLoadingMore])
 
     const toggleFilter = (key: keyof typeof filters) => {
         if (key === "near_me") {
