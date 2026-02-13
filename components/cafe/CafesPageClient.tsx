@@ -99,6 +99,9 @@ const SESSION_STORAGE_SCROLL_POSITION_KEY = "cafes_scroll_position"
 const SESSION_STORAGE_TTL_MS = 10 * 60 * 1000
 const RESTORE_NOTICE_TIMEOUT_MS = 2500
 const SCROLL_RESTORATION_DELAY_MS = 400
+const SCROLL_RESTORATION_RETRY_INTERVAL_MS = 100
+const SCROLL_RESTORATION_MAX_RETRIES = 20
+const IS_SCROLL_RESTORE_ENABLED = false
 
 export default function CafesPageClient() {
     // States
@@ -218,6 +221,10 @@ export default function CafesPageClient() {
     }, [getFilterParams])
 
     const restoreFromSession = useCallback(async () => {
+        if (!IS_SCROLL_RESTORE_ENABLED) {
+            doInitialFetch(1)
+            return
+        }
         if (typeof window === "undefined") return
 
         try {
@@ -270,10 +277,27 @@ export default function CafesPageClient() {
             setShowRestoreNotice(true)
             setTimeout(() => {
                 if (typeof window !== "undefined" && cafeSlug) {
-                    const cafeElement = document.querySelector(`[data-cafe-slug="${cafeSlug}"]`)
-                    if (cafeElement) {
-                        cafeElement.scrollIntoView({ behavior: "auto", block: "center" })
+                    let attempts = 0
+                    const scrollToCafe = () => {
+                        const cafeElement = document.querySelector(
+                            `[data-cafe-slug="${cafeSlug}"]`
+                        )
+                        if (cafeElement) {
+                            cafeElement.scrollIntoView({
+                                behavior: "auto",
+                                block: "center",
+                            })
+                            return
+                        }
+                        attempts += 1
+                        if (attempts < SCROLL_RESTORATION_MAX_RETRIES) {
+                            setTimeout(
+                                scrollToCafe,
+                                SCROLL_RESTORATION_RETRY_INTERVAL_MS
+                            )
+                        }
                     }
+                    scrollToCafe()
                 }
                 sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
                 // Reset restoring state so filter changes work normally
@@ -400,6 +424,7 @@ export default function CafesPageClient() {
     }
 
     const handleCafeClick = (cafeSlug: string) => {
+        if (!IS_SCROLL_RESTORE_ENABLED) return
         if (typeof window !== "undefined") {
             try {
                 sessionStorage.setItem(
@@ -1175,25 +1200,25 @@ export default function CafesPageClient() {
                 </AnimatePresence>
 
                 {/* Loading more indicator */}
-                {isLoadingMore && (
-                    <div className='py-4 px-6 bg-background shadow-lg shadow-black/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
-                            <div className='flex-1 flex flex-col md:pr-24 gap-4'>
-                                <div className='flex flex-col gap-2'>
-                                    <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
-                                    <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
-                                </div>
-                                <div className='flex gap-2'>
-                                    <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
-                                    <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
-                                </div>
-                                <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
-                                <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
+                {(isLoadingMore || hasMore) && (
+                    <div className='py-4 px-6 bg-background/70 border border-text/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
+                        <div className='flex-1 flex flex-col md:pr-24 gap-4'>
+                            <div className='flex flex-col gap-2'>
+                                <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
+                                <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
                             </div>
+                            <div className='flex gap-2'>
+                                <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
+                                <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
+                            </div>
+                            <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
                         </div>
-                    )}
+                        <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
+                    </div>
+                )}
 
-                    {/* Scroll sentinel for infinite scroll */}
-                    {hasMore && <div ref={scrollSentinelRef} className='h-1' />}
+                {/* Scroll sentinel for infinite scroll */}
+                {hasMore && <div ref={scrollSentinelRef} className='h-1' />}
             </div>
         </section>
     )
