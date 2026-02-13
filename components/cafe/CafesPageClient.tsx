@@ -230,11 +230,11 @@ export default function CafesPageClient() {
             const parsedData = JSON.parse(storedData)
             const {
                 page,
-                scrollY,
                 filters: storedFilters,
                 search: storedSearch,
                 sortBy: storedSortBy,
                 timestamp,
+                cafeSlug,
             } = parsedData
 
             const isRecent = Date.now() - timestamp < SESSION_STORAGE_TTL_MS
@@ -269,8 +269,11 @@ export default function CafesPageClient() {
 
             setShowRestoreNotice(true)
             setTimeout(() => {
-                if (typeof window !== "undefined") {
-                    window.scrollTo(0, scrollY)
+                if (typeof window !== "undefined" && cafeSlug) {
+                    const cafeElement = document.querySelector(`[data-cafe-slug="${cafeSlug}"]`)
+                    if (cafeElement) {
+                        cafeElement.scrollIntoView({ behavior: "auto", block: "center" })
+                    }
                 }
                 sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
                 // Reset restoring state so filter changes work normally
@@ -396,7 +399,7 @@ export default function CafesPageClient() {
         setFilters((prev) => ({ ...prev, [key]: !prev[key] }))
     }
 
-    const handleCafeClick = () => {
+    const handleCafeClick = (cafeSlug: string) => {
         if (typeof window !== "undefined") {
             try {
                 sessionStorage.setItem(
@@ -408,6 +411,7 @@ export default function CafesPageClient() {
                         search: search,
                         sortBy: sortBy,
                         timestamp: Date.now(),
+                        cafeSlug: cafeSlug,
                     })
                 )
             } catch {
@@ -869,7 +873,8 @@ export default function CafesPageClient() {
                                     href={`/cafes/${cafe.slug}`}
                                     key={cafe.id}
                                     layout
-                                    onClick={handleCafeClick}
+                                    data-cafe-slug={cafe.slug}
+                                    onClick={() => handleCafeClick(cafe.slug)}
                                     className={`py-4 px-6 bg-background rounded-xl border-2 border-text/5 flex flex-col-reverse md:flex-row gap-4 md:gap-0 group ${
                                         cafe.membership_tier === "premium"
                                             ? "shadow-lg shadow-amber-500/30 border-amber-400/30 hover:shadow-amber-500/40"
