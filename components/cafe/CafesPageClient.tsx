@@ -97,7 +97,7 @@ const INTERSECTION_OBSERVER_ROOT_MARGIN = "200px"
 const ANIMATION_DELAY_MULTIPLIER = 0.2
 const SESSION_STORAGE_SCROLL_POSITION_KEY = "cafes_scroll_position"
 const SESSION_STORAGE_TTL_MS = 10 * 60 * 1000
-// Allow 400ms for DOM to render before restoring scroll position
+const RESTORE_NOTICE_TIMEOUT_MS = 2500
 const SCROLL_RESTORATION_DELAY_MS = 400
 
 export default function CafesPageClient() {
@@ -124,8 +124,7 @@ export default function CafesPageClient() {
         if (showRestoreNotice) {
             restoreNoticeTimeoutRef.current = setTimeout(() => {
                 setShowRestoreNotice(false)
-                restoreNoticeTimeoutRef.current = null
-            }, 2500)
+            }, RESTORE_NOTICE_TIMEOUT_MS)
         }
         return () => {
             if (restoreNoticeTimeoutRef.current) {
@@ -256,7 +255,9 @@ export default function CafesPageClient() {
 
             setShowRestoreNotice(true)
             setTimeout(() => {
-                window.scrollTo(0, scrollY)
+                if (typeof window !== "undefined") {
+                    window.scrollTo(0, scrollY)
+                }
                 sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
             }, SCROLL_RESTORATION_DELAY_MS)
         } catch (error) {
