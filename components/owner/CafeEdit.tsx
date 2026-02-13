@@ -23,8 +23,11 @@ import {
     updateCafeAsOwner,
     deleteCafeImageAsOwner,
     updateCafeStory,
+    setCafeBadgeStamp,
+    removeCafeBadgeStamp,
 } from "@/app/api/actions/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { deleteCafeBadgeStampAction } from "@/utils/storage/actions"
 import { CafeMenuItem } from "@/utils/types/owner"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { Database } from "@/utils/types/database.types"
@@ -465,6 +468,32 @@ export default function CafeEdit({
                                     await deleteCafeImageAsOwner(cafe.id, url)
                                 }}
                                 colorScheme='primary'
+                                badgeStampUrl={cafe.badge_stamp_url}
+                                onBadgeStampChange={async (url: string | null) => {
+                                    if (url) {
+                                        // Upload new badge stamp
+                                        const result = await setCafeBadgeStamp(cafe.id, url)
+                                        if (result.success) {
+                                            updateField("badge_stamp_url", url)
+                                            addNotification("Badge stamp updated", "success")
+                                        } else {
+                                            addNotification(result.error || "Failed to update badge stamp", "error")
+                                        }
+                                    } else {
+                                        // Remove badge stamp
+                                        const prevUrl = cafe.badge_stamp_url
+                                        if (prevUrl) {
+                                            await deleteCafeBadgeStampAction(prevUrl)
+                                        }
+                                        const result = await removeCafeBadgeStamp(cafe.id)
+                                        if (result.success) {
+                                            updateField("badge_stamp_url", null)
+                                            addNotification("Badge stamp removed", "success")
+                                        } else {
+                                            addNotification(result.error || "Failed to remove badge stamp", "error")
+                                        }
+                                    }
+                                }}
                             />
                         )}
 

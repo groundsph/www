@@ -24,7 +24,7 @@ import {
 } from "@/utils/hooks/cafe-form"
 import { useCoverImageUpload } from "@/utils/hooks/useCoverImageUpload"
 import { compressGalleryImage } from "@/utils/image-processing"
-import { uploadCafeImage } from "@/utils/storage/client"
+import { uploadCafeImage, uploadCafeBadgeStamp } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import ImageCropper from "@/components/ui/ImageCropper"
 
@@ -45,6 +45,10 @@ interface ImageSectionProps {
     onDeleteImage: (url: string) => Promise<void>
     /** Color scheme for theming */
     colorScheme?: ColorScheme
+    /** Current badge stamp URL (optional) */
+    badgeStampUrl?: string | null
+    /** Update badge stamp */
+    onBadgeStampChange?: (url: string | null) => void
 }
 
 /**
@@ -60,9 +64,12 @@ export default function ImageSection({
     onGalleryChange,
     onDeleteImage,
     colorScheme = "primary",
+    badgeStampUrl,
+    onBadgeStampChange,
 }: ImageSectionProps) {
     const colors = getColorClasses(colorScheme)
     const [uploadingGallery, setUploadingGallery] = useState(false)
+    const [uploadingBadgeStamp, setUploadingBadgeStamp] = useState(false)
 
     // Use the shared cover image upload hook
     const coverImage = useCoverImageUpload({
@@ -125,6 +132,46 @@ export default function ImageSection({
             await onDeleteImage(thumbnail)
         }
         onThumbnailChange(null)
+    }
+
+    // Handle badge stamp upload
+    const handleBadgeStampUpload = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0]
+        if (!file || !onBadgeStampChange) return
+
+        // Validate file type (PNG only)
+        if (file.type !== "image/png") {
+            alert("Please upload a PNG file only")
+            e.target.value = ""
+            return
+        }
+
+        // Validate file size (max 500KB)
+        if (file.size > 500 * 1024) {
+            alert("File size must be less than 500KB")
+            e.target.value = ""
+            return
+        }
+
+        setUploadingBadgeStamp(true)
+        const result = await uploadCafeBadgeStamp(file, cafeId)
+        if (result.success && result.url) {
+            onBadgeStampChange(result.url)
+        } else {
+            alert(result.error || "Failed to upload badge stamp")
+        }
+        setUploadingBadgeStamp(false)
+        e.target.value = ""
+    }
+
+    // Handle badge stamp removal
+    const handleRemoveBadgeStamp = async () => {
+        if (!confirm("Remove badge stamp?")) return
+        if (badgeStampUrl && onBadgeStampChange) {
+            onBadgeStampChange(null)
+        }
     }
 
     return (
@@ -288,6 +335,64 @@ export default function ImageSection({
                     </div>
                 )}
             </div>
+
+            {/* Badge Stamp */}
+            {onBadgeStampChange && (
+                <div>
+                    <label className='block text-sm font-medium text-text/60 mb-4'>
+                        Badge Stamp
+                    </label>
+                    <div className='relative group'>
+                        <div className='relative h-48 w-48 rounded-xl overflow-hidden bg-text/10 border border-text/10'>
+                            {badgeStampUrl ? (
+                                <img
+                                    src={badgeStampUrl}
+                                    alt={`${cafeName} badge stamp`}
+                                    className='w-full h-full object-contain'
+                                />
+                            ) : (
+                                <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
+                                    <ImagePlus className='w-12 h-12' />
+                                </div>
+                            )}
+
+                            {/* Overlay with actions */}
+                            <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-4'>
+                                <label
+                                    className={`cursor-pointer flex items-center gap-2 px-4 py-2 ${colors.bg} text-white rounded-lg hover:opacity-80 transition`}
+                                >
+                                    {uploadingBadgeStamp ? (
+                                        <Loader2 className='w-4 h-4 animate-spin' />
+                                    ) : (
+                                        <Upload className='w-4 h-4' />
+                                    )}
+                                    {badgeStampUrl ? "Change" : "Upload"}
+                                    <input
+                                        type='file'
+                                        accept='image/png'
+                                        className='hidden'
+                                        disabled={uploadingBadgeStamp}
+                                        onChange={handleBadgeStampUpload}
+                                    />
+                                </label>
+
+                                {badgeStampUrl && (
+                                    <button
+                                        type='button'
+                                        onClick={handleRemoveBadgeStamp}
+                                        className='p-2 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition'
+                                    >
+                                        <Trash2 className='w-4 h-4' />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <p className='mt-2 text-xs text-text/60'>
+                        512x512 PNG, transparent background, max 500KB
+                    </p>
+                </div>
+            )}
 
             {/* Image Cropper Modal */}
             <ImageCropper
