@@ -14,6 +14,7 @@ import {
     Key,
     Search,
     Boxes,
+    Stamp,
 } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -49,6 +50,12 @@ interface RoadmapItem {
 }
 
 const recentlyShipped: RoadmapItem[] = [
+    {
+        title: "Custom Cafe Stamps",
+        description:
+            "Owners can now create unique stamps for their cafes, adding a personal touch to their stamps and making them more collectible for users.",
+        icon: <Stamp className='w-5 h-5' />,
+    },
     {
         title: "Simple Inventory Management for Owners",
         description:
