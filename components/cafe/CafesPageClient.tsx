@@ -81,9 +81,11 @@ export default function CafesPageClient() {
     const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
+    const [showRestoreNotice, setShowRestoreNotice] = useState(false) // Task 5 will add notification UI
 
     // Track if user has manually toggled location filter
     const hasUserToggledLocation = useRef(false)
+    const restoreAppliedRef = useRef(false)
 
     // Location State
     const [userLocation, setUserLocation] = useState<{
@@ -172,11 +174,12 @@ export default function CafesPageClient() {
         )
     }, [])
 
-    // Initial fetch on mount - only runs once
+    // Scroll restoration on mount
     useEffect(() => {
-        const doFetch = async () => {
+        const doInitialFetch = async (page: number, filterParams?: ReturnType<typeof getFilterParams>) => {
             try {
-                const fetchedCafes = await getAllCafes(1, PAGE_SIZE, getFilterParams())
+                const params = filterParams || getFilterParams()
+                const fetchedCafes = await getAllCafes(page, PAGE_SIZE, params)
                 setCafes(fetchedCafes)
                 setLoading(false)
                 setHasMore(fetchedCafes.length === PAGE_SIZE)
@@ -186,7 +189,81 @@ export default function CafesPageClient() {
             }
         }
 
-        doFetch()
+        const restoreFromSession = async () => {
+            if (typeof window === "undefined") return
+
+            try {
+                const storedData = sessionStorage.getItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
+                if (!storedData) {
+                    doInitialFetch(1)
+                    return
+                }
+
+                const parsedData = JSON.parse(storedData)
+                const {
+                    page,
+                    scrollY,
+                    filters: storedFilters,
+                    search: storedSearch,
+                    sortBy: storedSortBy,
+                    timestamp,
+                } = parsedData
+
+                const TTL_MS = 10 * 60 * 1000
+                const isRecent = Date.now() - timestamp < TTL_MS
+
+                if (!isRecent) {
+                    sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
+                    doInitialFetch(1)
+                    return
+                }
+
+                const restoredFilterParams = {
+                    search: storedSearch,
+                    has_wifi: storedFilters.has_wifi,
+                    has_smoking: storedFilters.has_smoking,
+                    has_sockets: storedFilters.has_sockets,
+                    has_parking: storedFilters.has_parking,
+                    has_aircon: storedFilters.has_aircon,
+                    is_pet_friendly: storedFilters.is_pet_friendly,
+                    has_outdoor_seating: storedFilters.has_outdoor_seating,
+                    has_indoor_seating: storedFilters.has_indoor_seating,
+                    has_restroom: storedFilters.has_restroom,
+                    has_bidet: storedFilters.has_bidet,
+                    has_non_dairy: storedFilters.has_non_dairy,
+                    has_decaf: storedFilters.has_decaf,
+                    is_work_friendly: storedFilters.is_work_friendly,
+                    is_24_7: storedFilters.is_24_7 || undefined,
+                    price_level: storedFilters.price_level || undefined,
+                    coffee_style: storedFilters.coffee_style || undefined,
+                    region: storedFilters.region || undefined,
+                    tags: storedFilters.tags.length > 0 ? storedFilters.tags : undefined,
+                    sortBy: storedSortBy,
+                    include_chains: storedFilters.include_chains || undefined,
+                }
+
+                setFilters(storedFilters)
+                setSearch(storedSearch)
+                setSortBy(storedSortBy)
+                setCurrentPage(page)
+                restoreAppliedRef.current = true
+
+                await doInitialFetch(page, restoredFilterParams)
+
+                setShowRestoreNotice(true)
+                setTimeout(() => {
+                    window.scrollTo(0, scrollY)
+                    sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
+                }, 400)
+            } catch (error) {
+                console.error("Failed to restore from session:", error)
+                doInitialFetch(1)
+            }
+        }
+
+        if (!restoreAppliedRef.current) {
+            restoreFromSession()
+        }
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Filter Logic - reset pagination and fetch page 1 on filter changes
