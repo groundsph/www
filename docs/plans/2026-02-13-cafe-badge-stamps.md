@@ -471,11 +471,6 @@ Add a QA checklist to the implementation plan:
    - Check that visited cafes fall back to default SVG stamps
    - Confirm DB field is cleared (badge_stamp_url = null)
 
-6. **Storage Cleanup Protection**
-   - Run storage cleanup job or orphaned image cleanup
-   - Verify currently referenced stamp files are NOT deleted
-   - Confirm only truly orphaned files are removed
-
 **Step 3: Commit**
 
 ```bash
