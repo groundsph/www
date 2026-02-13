@@ -385,7 +385,7 @@ export default function VisitHistory({
                                             {index ===
                                                 sortedVisits.length - 1 && (
                                                 <>
-                                                    <span className='-z-10 animate-ping absolute inline-flex h-full w-full aspect-square rounded-full bg-primary/60 opacity-10'></span>
+                                                    <span className='-z-10 animate-ping absolute inline-flex h-auto w-full aspect-square rounded-full bg-primary/60 opacity-10'></span>
                                                 </>
                                             )}
                                             <Suspense

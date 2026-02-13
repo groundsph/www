@@ -126,9 +126,28 @@ export default function Passport({
                                     {visited.map((cafe, index) => (
                                         <motion.div
                                             key={cafe.slug}
-                                            initial={{ opacity: 0, scale: 0.8, rotate: -12 }}
-                                            animate={{ opacity: 1, scale: 1, rotate: -12 }}
-                                            whileHover={{ rotate: 0, scale: 1.05 }}
+                                            initial={{
+                                                opacity: 0,
+                                                scale: 0.8,
+                                                rotate: -12,
+                                            }}
+                                            animate={{
+                                                opacity: 1,
+                                                scale: 1,
+                                                rotate: (() => {
+                                                    const hash = cafe.name
+                                                        .split("")
+                                                        .reduce(
+                                                            (acc, char) =>
+                                                                acc +
+                                                                char.charCodeAt(
+                                                                    0,
+                                                                ),
+                                                            0,
+                                                        )
+                                                    return (hash % 24) - 12
+                                                })(),
+                                            }}
                                             transition={{
                                                 delay: index * 0.05,
                                                 duration: 0.3,
@@ -141,34 +160,42 @@ export default function Passport({
                                             >
                                                 {/* Stamp Visual */}
                                                 <div className='absolute inset-0 flex flex-col items-center justify-center p-4 text-center transition-all duration-300'>
-                                                <Coffee className='w-6 h-6 text-primary/50 mb-1' />
-                                                <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight max-w-4/5'>
-                                                    {cafe.name}
-                                                </span>
-                                                <span className='text-[10px] text-primary/40 mt-1 font-mono'>
-                                                    VISITED
-                                                </span>
-                                                {(() => {
-                                                    const customUrl = selectStampImage(cafe.name, cafe.badge_stamp_url)
-                                                    if (customUrl) {
+                                                    <Coffee className='w-6 h-6 text-primary/50 mb-1' />
+                                                    <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight max-w-4/5'>
+                                                        {cafe.name}
+                                                    </span>
+                                                    <span className='text-[10px] text-primary/40 mt-1 font-mono'>
+                                                        VISITED
+                                                    </span>
+                                                    {(() => {
+                                                        const customUrl =
+                                                            selectStampImage(
+                                                                cafe.name,
+                                                                cafe.badge_stamp_url,
+                                                            )
+                                                        if (customUrl) {
+                                                            return (
+                                                                <Image
+                                                                    src={
+                                                                        customUrl
+                                                                    }
+                                                                    alt={`${cafe.name} stamp`}
+                                                                    fill
+                                                                    className='object-contain'
+                                                                />
+                                                            )
+                                                        }
                                                         return (
                                                             <Image
-                                                                src={customUrl}
-                                                                alt={`${cafe.name} stamp`}
-                                                                fill
-                                                                className='object-contain'
+                                                                src={getStamp(
+                                                                    cafe.name,
+                                                                )}
+                                                                alt=''
+                                                                className='w-full h-full absolute inset-0 object-contain'
                                                             />
                                                         )
-                                                    }
-                                                    return (
-                                                        <Image
-                                                            src={getStamp(cafe.name)}
-                                                            alt=''
-                                                            className='w-full h-full absolute inset-0 object-contain'
-                                                        />
-                                                    )
-                                                })()}
-                                            </div>
+                                                    })()}
+                                                </div>
                                             </Link>
                                         </motion.div>
                                     ))}
