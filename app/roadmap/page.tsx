@@ -275,7 +275,7 @@ export default function RoadmapPage() {
                 {/* Footer Note */}
                 <div className='mt-16 pt-8 border-t border-text/10 text-center'>
                     <p className='text-text/50 text-sm'>
-                        Last updated: January 2026. Roadmap items are subject to
+                        Last updated: February 2026. Roadmap items are subject to
                         change.
                     </p>
                 </div>
