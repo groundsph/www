@@ -10,15 +10,11 @@ import {
     User,
     MapPin,
     Star,
-    Bookmark,
-    Share2,
     Pencil,
 } from "lucide-react"
-import { useState } from "react"
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
+import CrawlActions from "@/components/crawls/CrawlActions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
-import { useAuth } from "@/components/layout/AuthProvider"
-import { toggleSaveCafeCrawl } from "@/app/api/actions/cafe-crawls"
 
 interface CafeItem {
     id: string
@@ -63,12 +59,6 @@ interface CrawlViewProps {
 }
 
 export default function CrawlView({ crawl }: CrawlViewProps) {
-    const { user } = useAuth()
-    const [saved, setSaved] = useState(crawl.hasSaved ?? false)
-    const [savesCount, setSavesCount] = useState(crawl.savesCount ?? 0)
-    const [isSaving, setIsSaving] = useState(false)
-    const [copied, setCopied] = useState(false)
-
     const validCafes = crawl.cafes.filter(
         (c): c is CafeItem & { lat: number; lng: number } =>
             c != null && c.lat != null && c.lng != null
@@ -77,40 +67,6 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
     const mapPoints = validCafes
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((cafe) => ({ lat: cafe.lat, lng: cafe.lng }))
-
-    const handleSave = async () => {
-        if (!user) return
-        if (isSaving) return
-
-        setIsSaving(true)
-        try {
-            const result = await toggleSaveCafeCrawl(crawl.id)
-            setSaved(result.saved)
-            setSavesCount((prev) => (result.saved ? prev + 1 : prev - 1))
-        } catch (error) {
-            console.error("Failed to toggle save:", error)
-        } finally {
-            setIsSaving(false)
-        }
-    }
-
-    const handleShare = async () => {
-        const url = `${window.location.origin}/community/crawls/${crawl.slug}`
-        try {
-            await navigator.clipboard.writeText(url)
-            setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
-        } catch {
-            const input = document.createElement("input")
-            input.value = url
-            document.body.appendChild(input)
-            input.select()
-            document.execCommand("copy")
-            document.body.removeChild(input)
-            setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
-        }
-    }
 
     return (
         <div className="min-h-screen w-full bg-background">
@@ -200,11 +156,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                                 <Eye className="w-4 h-4" />
                                 <span>{crawl.viewsCount || 0} views</span>
                             </div>
-                            <div className="border-l border-text/10 pl-4 ml-2">
-                                <button className="text-xs px-2 py-1 text-text/60 hover:text-text transition-colors">
-                                    Report
-                                </button>
-                            </div>
+
                         </div>
                     </div>
 
@@ -220,28 +172,13 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                             </Link>
                         )}
 
-                        <button
-                            onClick={handleShare}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors"
-                        >
-                            <Share2 className="w-4 h-4" />
-                            {copied ? "Copied!" : "Share"}
-                        </button>
-
-                        <button
-                            onClick={handleSave}
-                            disabled={!user || isSaving}
-                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all ${
-                                saved
-                                    ? "bg-primary text-white"
-                                    : "text-text/70 hover:text-primary border border-secondary/30 hover:border-primary/50"
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                            <Bookmark
-                                className={`w-4 h-4 ${saved ? "fill-current" : ""}`}
-                            />
-                            <span>{savesCount}</span>
-                        </button>
+                        <CrawlActions
+                            crawlId={crawl.id}
+                            slug={crawl.slug}
+                            saved={crawl.hasSaved ?? false}
+                            savesCount={crawl.savesCount ?? 0}
+                            isOwner={crawl.isOwner ?? false}
+                        />
                     </div>
                 </header>
 
