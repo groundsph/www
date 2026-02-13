@@ -23,6 +23,7 @@ import {
     generateRootFilePath,
     type StorageBucket,
 } from "@/utils/storage"
+import { collectCafeStampUrls } from "@/utils/storage/cleanup"
 import { CAFE_PLACEHOLDER_URL } from "@/utils/extras"
 import { isOwnerOfCafe } from "@/app/api/actions/owner"
 
@@ -715,11 +716,13 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
 
         // Cafe Images
         const cafeImages = new Set<string>()
-        const cafesResult = await db.select({ thumbnail: cafes.thumbnail, gallery: cafes.gallery }).from(cafes)
+        const cafesResult = await db.select({ thumbnail: cafes.thumbnail, gallery: cafes.gallery, badgeStampUrl: cafes.badgeStampUrl }).from(cafes)
         for (const c of cafesResult) {
             if (c.thumbnail) cafeImages.add(c.thumbnail)
             if (c.gallery) c.gallery.forEach(url => cafeImages.add(url))
         }
+        // Collect cafe badge stamp URLs (stored in badges bucket)
+        const cafeStampUrls = collectCafeStampUrls(cafesResult)
 
         // Review Images
         const reviewImages = new Set<string>()
@@ -756,11 +759,15 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             if (m.imageUrl) menuImages.add(m.imageUrl)
         }
 
-        // Badge Images
+        // Badge Images (includes both badge definitions and cafe badge stamps)
         const badgeImages = new Set<string>()
         const badgeResult = await db.select({ imageUrl: badgeDefinitions.imageUrl }).from(badgeDefinitions).where(isNotNull(badgeDefinitions.imageUrl))
         for (const b of badgeResult) {
             if (b.imageUrl) badgeImages.add(b.imageUrl)
+        }
+        // Add cafe badge stamp URLs to valid badge images
+        for (const url of cafeStampUrls) {
+            badgeImages.add(url)
         }
 
         // Ownership Proofs
