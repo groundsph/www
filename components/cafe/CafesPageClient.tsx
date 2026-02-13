@@ -838,13 +838,13 @@ export default function CafesPageClient() {
                         filteredCafes.map((cafe, idx) => {
                             const openStatus = isOpenNow(cafe.operating_hours)
                             return (
-                                <motion.a
+                                    <motion.a
                                     initial={{ opacity: 0 }}
                                     animate={{
                                         opacity: 1,
                                         transition: {
-                                            duration: 0.5,
-                                            delay: ANIMATION_DELAY_MULTIPLIER * idx,
+                                            duration: 0.3,
+                                            delay: Math.min(ANIMATION_DELAY_MULTIPLIER * idx, 0.6),
                                         },
                                     }}
                                     exit={{ opacity: 0 }}
