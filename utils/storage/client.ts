@@ -15,6 +15,7 @@ import {
     uploadAvatarAction,
     uploadMenuPhotoAction,
     uploadOwnershipProofAction,
+    uploadCafeBadgeStampAction,
     type UploadResponse,
 } from "./actions"
 
@@ -208,4 +209,13 @@ export async function uploadOwnershipProofWithProgress(
         bucket: "ownership-proofs",
         onProgress,
     })
+}
+
+/**
+ * Upload a cafe badge stamp via server action
+ */
+export async function uploadCafeBadgeStamp(file: File, cafeId: string): Promise<ClientUploadResult> {
+    const formData = new FormData()
+    formData.append("image", file)
+    return uploadCafeBadgeStampAction(formData, cafeId)
 }

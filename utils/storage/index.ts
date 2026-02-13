@@ -62,6 +62,8 @@ export {
     removeAvatarAction,
     uploadBadgeImageAction,
     deleteBadgeImageAction,
+    uploadCafeBadgeStampAction,
+    deleteCafeBadgeStampAction,
     uploadBlogImageAction,
     deleteBlogImageAction,
     uploadEventImageAction,

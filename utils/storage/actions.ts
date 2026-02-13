@@ -24,6 +24,7 @@ import {
     type StorageBucket,
 } from "@/utils/storage"
 import { CAFE_PLACEHOLDER_URL } from "@/utils/extras"
+import { isOwnerOfCafe } from "@/app/api/actions/owner"
 
 // ============================================
 // Response Types
@@ -380,6 +381,100 @@ export async function deleteBadgeImageAction(imageUrl: string): Promise<DeleteRe
     const isAdmin = await isUserAdmin(user.id)
     if (!isAdmin) {
         return { success: false, error: "Admin access required" }
+    }
+
+    return deleteFiles(STORAGE_BUCKETS.BADGES, [imageUrl])
+}
+
+// ============================================
+// Cafe Badge Stamp Actions (Owner only)
+// ============================================
+
+/**
+ * Upload a cafe badge stamp image (Owner only)
+ * Uses the badges bucket with same constraints as badge images
+ */
+export async function uploadCafeBadgeStampAction(
+    formData: FormData,
+    cafeId: string
+): Promise<UploadResponse> {
+    const user = await getAuthenticatedUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Check if user is owner of this cafe
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: "Only cafe owners can upload badge stamps" }
+    }
+
+    const file = formData.get("image") as File | null
+    if (!file) {
+        return { success: false, error: "No file provided" }
+    }
+
+    // Badge-specific validation - PNG only
+    const ext = file.name.split(".").pop()?.toLowerCase()
+    if (ext !== "png" && file.type !== "image/png") {
+        return { success: false, error: "Badge stamp images must be PNG format" }
+    }
+
+    const validation = validateFile(file, STORAGE_BUCKETS.BADGES)
+    if (!validation.valid) {
+        return { success: false, error: validation.error }
+    }
+
+    // Validate dimensions (512x512)
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = new Uint8Array(arrayBuffer)
+
+    // PNG signature check
+    const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 &&
+        buffer[2] === 0x4E && buffer[3] === 0x47
+
+    if (!isPNG) {
+        return { success: false, error: "Invalid PNG file" }
+    }
+
+    // Extract dimensions from IHDR chunk
+    const width = (buffer[16] << 24) | (buffer[17] << 16) | (buffer[18] << 8) | buffer[19]
+    const height = (buffer[20] << 24) | (buffer[21] << 16) | (buffer[22] << 8) | buffer[23]
+
+    if (width !== 512 || height !== 512) {
+        return { success: false, error: `Badge stamp images must be 512x512px (got ${width}x${height})` }
+    }
+
+    // Use cafe-specific path for namespace isolation
+    const path = generateCafeFilePath(cafeId, file.name)
+    return uploadFile(STORAGE_BUCKETS.BADGES, path, file, { contentType: "image/png" })
+}
+
+/**
+ * Delete a cafe badge stamp image (Owner only)
+ */
+export async function deleteCafeBadgeStampAction(imageUrl: string): Promise<DeleteResponse> {
+    const user = await getAuthenticatedUser()
+    if (!user) {
+        return { success: false, error: "Not authenticated" }
+    }
+
+    // Extract cafeId from path to verify ownership
+    // Path format: cafeId/timestamp-random.png
+    const storage = await getStorageProvider()
+    const path = storage.extractPathFromUrl(imageUrl, STORAGE_BUCKETS.BADGES)
+    if (!path) {
+        return { success: false, error: "Invalid image URL" }
+    }
+
+    const cafeId = path.split("/")[0]
+    if (!cafeId) {
+        return { success: false, error: "Invalid image path" }
+    }
+
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: "Only cafe owners can delete badge stamps" }
     }
 
     return deleteFiles(STORAGE_BUCKETS.BADGES, [imageUrl])
