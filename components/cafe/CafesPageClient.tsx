@@ -67,10 +67,37 @@ const INITIAL_FILTERS = {
 
 type SortOption = "recommended" | "rating" | "reviews"
 
+const buildFilterParams = (search: string, filters: typeof INITIAL_FILTERS, sortBy: SortOption) => ({
+    search,
+    has_wifi: filters.has_wifi,
+    has_smoking: filters.has_smoking,
+    has_sockets: filters.has_sockets,
+    has_parking: filters.has_parking,
+    has_aircon: filters.has_aircon,
+    is_pet_friendly: filters.is_pet_friendly,
+    has_outdoor_seating: filters.has_outdoor_seating,
+    has_indoor_seating: filters.has_indoor_seating,
+    has_restroom: filters.has_restroom,
+    has_bidet: filters.has_bidet,
+    has_non_dairy: filters.has_non_dairy,
+    has_decaf: filters.has_decaf,
+    is_work_friendly: filters.is_work_friendly,
+    is_24_7: filters.is_24_7 || undefined,
+    price_level: filters.price_level || undefined,
+    coffee_style: filters.coffee_style || undefined,
+    region: filters.region || undefined,
+    tags: filters.tags.length > 0 ? filters.tags : undefined,
+    sortBy,
+    include_chains: filters.include_chains || undefined,
+})
+
 const INTERSECTION_OBSERVER_THRESHOLD = 0.1
 const INTERSECTION_OBSERVER_ROOT_MARGIN = "200px"
 const ANIMATION_DELAY_MULTIPLIER = 0.2
 const SESSION_STORAGE_SCROLL_POSITION_KEY = "cafes_scroll_position"
+const SESSION_STORAGE_TTL_MS = 10 * 60 * 1000
+// Allow 400ms for DOM to render before restoring scroll position
+const SCROLL_RESTORATION_DELAY_MS = 400
 
 export default function CafesPageClient() {
     // States
@@ -81,7 +108,16 @@ export default function CafesPageClient() {
     const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
-    const [showRestoreNotice, setShowRestoreNotice] = useState(false) // Task 5 will add notification UI
+    const [showRestoreNotice, setShowRestoreNotice] = useState(false)
+
+    useEffect(() => {
+        if (showRestoreNotice) {
+            const timeout = setTimeout(() => {
+                setShowRestoreNotice(false)
+            }, 2500)
+            return () => clearTimeout(timeout)
+        }
+    }, [showRestoreNotice])
 
     // Track if user has manually toggled location filter
     const hasUserToggledLocation = useRef(false)
@@ -98,29 +134,7 @@ export default function CafesPageClient() {
     const [sortBy, setSortBy] = useState<SortOption>("recommended")
     const [filters, setFilters] = useState(INITIAL_FILTERS)
 
-    const getFilterParams = useCallback(() => ({
-        search: debouncedSearch,
-        has_wifi: filters.has_wifi,
-        has_smoking: filters.has_smoking,
-        has_sockets: filters.has_sockets,
-        has_parking: filters.has_parking,
-        has_aircon: filters.has_aircon,
-        is_pet_friendly: filters.is_pet_friendly,
-        has_outdoor_seating: filters.has_outdoor_seating,
-        has_indoor_seating: filters.has_indoor_seating,
-        has_restroom: filters.has_restroom,
-        has_bidet: filters.has_bidet,
-        has_non_dairy: filters.has_non_dairy,
-        has_decaf: filters.has_decaf,
-        is_work_friendly: filters.is_work_friendly,
-        is_24_7: filters.is_24_7 || undefined,
-        price_level: filters.price_level || undefined,
-        coffee_style: filters.coffee_style || undefined,
-        region: filters.region || undefined,
-        tags: filters.tags.length > 0 ? filters.tags : undefined,
-        sortBy: sortBy,
-        include_chains: filters.include_chains || undefined,
-    }), [debouncedSearch, filters, sortBy])
+    const getFilterParams = useCallback(() => buildFilterParams(debouncedSearch, filters, sortBy), [debouncedSearch, filters, sortBy])
 
     // Location Detection - reuse cache from landing page
     useEffect(() => {
@@ -174,97 +188,73 @@ export default function CafesPageClient() {
         )
     }, [])
 
-    // Scroll restoration on mount
-    useEffect(() => {
-        const doInitialFetch = async (page: number, filterParams?: ReturnType<typeof getFilterParams>) => {
-            try {
-                const params = filterParams || getFilterParams()
-                const fetchedCafes = await getAllCafes(page, PAGE_SIZE, params)
-                setCafes(fetchedCafes)
-                setLoading(false)
-                setHasMore(fetchedCafes.length === PAGE_SIZE)
-            } catch (error) {
-                console.error("Failed to fetch cafes:", error)
-                setLoading(false)
-            }
+    const doInitialFetch = useCallback(async (page: number, filterParams?: ReturnType<typeof getFilterParams>) => {
+        try {
+            const params = filterParams || getFilterParams()
+            const fetchedCafes = await getAllCafes(page, PAGE_SIZE, params)
+            setCafes(fetchedCafes)
+            setLoading(false)
+            setHasMore(fetchedCafes.length === PAGE_SIZE)
+        } catch (error) {
+            console.error("Failed to fetch cafes:", error)
+            setLoading(false)
         }
+    }, [getFilterParams])
 
-        const restoreFromSession = async () => {
-            if (typeof window === "undefined") return
+    const restoreFromSession = useCallback(async () => {
+        if (typeof window === "undefined") return
 
-            try {
-                const storedData = sessionStorage.getItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
-                if (!storedData) {
-                    doInitialFetch(1)
-                    return
-                }
-
-                const parsedData = JSON.parse(storedData)
-                const {
-                    page,
-                    scrollY,
-                    filters: storedFilters,
-                    search: storedSearch,
-                    sortBy: storedSortBy,
-                    timestamp,
-                } = parsedData
-
-                const TTL_MS = 10 * 60 * 1000
-                const isRecent = Date.now() - timestamp < TTL_MS
-
-                if (!isRecent) {
-                    sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
-                    doInitialFetch(1)
-                    return
-                }
-
-                const restoredFilterParams = {
-                    search: storedSearch,
-                    has_wifi: storedFilters.has_wifi,
-                    has_smoking: storedFilters.has_smoking,
-                    has_sockets: storedFilters.has_sockets,
-                    has_parking: storedFilters.has_parking,
-                    has_aircon: storedFilters.has_aircon,
-                    is_pet_friendly: storedFilters.is_pet_friendly,
-                    has_outdoor_seating: storedFilters.has_outdoor_seating,
-                    has_indoor_seating: storedFilters.has_indoor_seating,
-                    has_restroom: storedFilters.has_restroom,
-                    has_bidet: storedFilters.has_bidet,
-                    has_non_dairy: storedFilters.has_non_dairy,
-                    has_decaf: storedFilters.has_decaf,
-                    is_work_friendly: storedFilters.is_work_friendly,
-                    is_24_7: storedFilters.is_24_7 || undefined,
-                    price_level: storedFilters.price_level || undefined,
-                    coffee_style: storedFilters.coffee_style || undefined,
-                    region: storedFilters.region || undefined,
-                    tags: storedFilters.tags.length > 0 ? storedFilters.tags : undefined,
-                    sortBy: storedSortBy,
-                    include_chains: storedFilters.include_chains || undefined,
-                }
-
-                setFilters(storedFilters)
-                setSearch(storedSearch)
-                setSortBy(storedSortBy)
-                setCurrentPage(page)
-                restoreAppliedRef.current = true
-
-                await doInitialFetch(page, restoredFilterParams)
-
-                setShowRestoreNotice(true)
-                setTimeout(() => {
-                    window.scrollTo(0, scrollY)
-                    sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
-                }, 400)
-            } catch (error) {
-                console.error("Failed to restore from session:", error)
+        try {
+            const storedData = sessionStorage.getItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
+            if (!storedData) {
                 doInitialFetch(1)
+                return
             }
-        }
 
+            const parsedData = JSON.parse(storedData)
+            const {
+                page,
+                scrollY,
+                filters: storedFilters,
+                search: storedSearch,
+                sortBy: storedSortBy,
+                timestamp,
+            } = parsedData
+
+            const isRecent = Date.now() - timestamp < SESSION_STORAGE_TTL_MS
+
+            if (!isRecent) {
+                sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
+                doInitialFetch(1)
+                return
+            }
+
+            const restoredFilterParams = buildFilterParams(storedSearch, storedFilters, storedSortBy)
+
+            setFilters(storedFilters)
+            setSearch(storedSearch)
+            setSortBy(storedSortBy)
+            setCurrentPage(page)
+            restoreAppliedRef.current = true
+
+            await doInitialFetch(page, restoredFilterParams)
+
+            setShowRestoreNotice(true)
+            setTimeout(() => {
+                window.scrollTo(0, scrollY)
+                sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
+            }, SCROLL_RESTORATION_DELAY_MS)
+        } catch (error) {
+            console.error("Failed to restore from session:", error)
+            doInitialFetch(1)
+        }
+    }, [doInitialFetch])
+
+    useEffect(() => {
         if (!restoreAppliedRef.current) {
             restoreFromSession()
         }
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [restoreFromSession])
 
     // Filter Logic - reset pagination and fetch page 1 on filter changes
     useEffect(() => {
@@ -485,6 +475,13 @@ export default function CafesPageClient() {
                     Find the perfect spot for your next brew or work session.
                 </p>
             </div>
+
+            {/* Restore notice */}
+            {showRestoreNotice && (
+                <div className='bg-secondary/20 text-secondary text-sm px-4 py-2 rounded-lg text-center'>
+                    Resuming from where you left off
+                </div>
+            )}
 
             <MiniSubmitCafeBanner />
 
