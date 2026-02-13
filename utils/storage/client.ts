@@ -109,6 +109,16 @@ export async function uploadCollectionCover(file: File): Promise<ClientUploadRes
     })
 }
 
+/**
+ * Upload a crawl cover image via API route
+ */
+export async function uploadCrawlCover(file: File): Promise<ClientUploadResult> {
+    return uploadWithProgress({
+        file,
+        bucket: "crawls",
+    })
+}
+
 // ============================================
 // Progress Upload via API Route
 // For cases where progress tracking is essential

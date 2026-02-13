@@ -773,6 +773,42 @@ export async function getUserCafeCrawls(userId?: string): Promise<CafeCrawlListI
 }
 
 // =============================================================================
+// SEARCH CAFES FOR CRAWL
+// =============================================================================
+
+export interface CafeSearchResult {
+    id: string
+    name: string
+    slug: string
+    thumbnail: string
+    cityMunicipality: string
+    region: string
+    lat: number | null
+    lng: number | null
+}
+
+export async function searchCafesForCrawl(query: string): Promise<CafeSearchResult[]> {
+    if (!query || query.length < 2) return []
+
+    const result = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            cityMunicipality: cafes.cityMunicipality,
+            region: cafes.region,
+            lat: cafes.lat,
+            lng: cafes.lng,
+        })
+        .from(cafes)
+        .where(and(eq(cafes.isPublished, true), sql`${cafes.name} ILIKE ${`%${query}%`}`))
+        .limit(10)
+
+    return result
+}
+
+// =============================================================================
 // DELETE CAFE CRAWL
 // =============================================================================
 
