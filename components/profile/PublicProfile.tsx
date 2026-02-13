@@ -136,6 +136,7 @@ export default function PublicProfile({
             slug: string
             thumbnail: string | null
             visited_at: string | null
+            badge_stamp_url?: string | null
         }[]
     >([])
     const [favoriteCafes, setFavoriteCafes] = useState<
@@ -772,6 +773,7 @@ export default function PublicProfile({
                         visited={visitedCafes.map((c) => ({
                             name: c.name,
                             slug: c.slug,
+                            badge_stamp_url: c.badge_stamp_url,
                         }))}
                         favorites={favoriteCafes}
                         wishlist={wishlistCafes}

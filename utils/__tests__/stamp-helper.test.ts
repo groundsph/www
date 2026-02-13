@@ -1,16 +1,17 @@
 import { describe, it, expect } from "bun:test"
-import { getStampFallback } from "@/utils/passport/stamp"
+import { selectStampImage } from "@/utils/passport/stamp"
 
-describe("stamp helper", () => {
-    it("uses custom url when present", () => {
-        expect(getStampFallback("Cafe", "https://x")).toBe("https://x")
+describe("selectStampImage", () => {
+    it("uses custom stamp url if provided", () => {
+        const result = selectStampImage("Cafe", "https://custom.png")
+        expect(result).toBe("https://custom.png")
     })
 
     it("returns null when no custom url", () => {
-        expect(getStampFallback("Cafe", null)).toBeNull()
+        expect(selectStampImage("Cafe", null)).toBeNull()
     })
 
     it("returns null when custom url is empty string", () => {
-        expect(getStampFallback("Cafe", "")).toBeNull()
+        expect(selectStampImage("Cafe", "")).toBeNull()
     })
 })

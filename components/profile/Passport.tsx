@@ -10,10 +10,12 @@ import stamp1 from "@/assets/stamps/1.svg"
 import stamp2 from "@/assets/stamps/2.svg"
 import stamp3 from "@/assets/stamps/3.svg"
 import Image from "next/image"
+import { selectStampImage } from "@/utils/passport/stamp"
 
 interface PassportCafe {
     name: string
     slug: string
+    badge_stamp_url?: string | null
 }
 
 interface PassportProps {
@@ -146,11 +148,26 @@ export default function Passport({
                                                 <span className='text-[10px] text-primary/40 mt-1 font-mono'>
                                                     VISITED
                                                 </span>
-                                                <Image
-                                                    src={getStamp(cafe.name)}
-                                                    alt=''
-                                                    className='w-full h-full absolute inset-0 object-contain'
-                                                />
+                                                {(() => {
+                                                    const customUrl = selectStampImage(cafe.name, cafe.badge_stamp_url)
+                                                    if (customUrl) {
+                                                        return (
+                                                            <Image
+                                                                src={customUrl}
+                                                                alt={`${cafe.name} stamp`}
+                                                                fill
+                                                                className='object-contain'
+                                                            />
+                                                        )
+                                                    }
+                                                    return (
+                                                        <Image
+                                                            src={getStamp(cafe.name)}
+                                                            alt=''
+                                                            className='w-full h-full absolute inset-0 object-contain'
+                                                        />
+                                                    )
+                                                })()}
                                             </div>
                                             </Link>
                                         </motion.div>
