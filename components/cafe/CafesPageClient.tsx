@@ -70,6 +70,7 @@ type SortOption = "recommended" | "rating" | "reviews"
 const INTERSECTION_OBSERVER_THRESHOLD = 0.1
 const INTERSECTION_OBSERVER_ROOT_MARGIN = "200px"
 const ANIMATION_DELAY_MULTIPLIER = 0.2
+const SESSION_STORAGE_SCROLL_POSITION_KEY = "cafes_scroll_position"
 
 export default function CafesPageClient() {
     // States
@@ -195,8 +196,8 @@ export default function CafesPageClient() {
             setHasMore(true)
             setCafes([])
 
-            if (typeof window !== "undefined" && sessionStorage.getItem("cafes_scroll_position")) {
-                sessionStorage.removeItem("cafes_scroll_position")
+            if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_STORAGE_SCROLL_POSITION_KEY)) {
+                sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
             }
 
             try {
@@ -296,17 +297,22 @@ export default function CafesPageClient() {
 
     const handleCafeClick = () => {
         if (typeof window !== "undefined") {
-            sessionStorage.setItem(
-                "cafes_scroll_position",
-                JSON.stringify({
-                    page: currentPage,
-                    scrollY: window.scrollY,
-                    filters: filters,
-                    search: search,
-                    sortBy: sortBy,
-                    timestamp: Date.now(),
-                })
-            )
+            try {
+                sessionStorage.setItem(
+                    SESSION_STORAGE_SCROLL_POSITION_KEY,
+                    JSON.stringify({
+                        page: currentPage,
+                        scrollY: window.scrollY,
+                        filters: filters,
+                        search: search,
+                        sortBy: sortBy,
+                        timestamp: Date.now(),
+                    })
+                )
+            } catch {
+                // Silently fail - sessionStorage may be unavailable or quota exceeded
+                // Non-critical feature, safe to ignore errors
+            }
         }
     }
 
