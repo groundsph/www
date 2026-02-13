@@ -1,6 +1,6 @@
 # Grounds Website - Agent Guide
 
-This file documents build/test commands and code conventions for agentic tools.
+This document is for coding agents working in this repo.
 Follow project rules first; if something conflicts, ask a human.
 
 ## Quick Commands
@@ -23,11 +23,16 @@ Follow project rules first; if something conflicts, ask a human.
 - `bun db-migrate` - Run migrations (prod).
 - `bun db-studio` - Open Drizzle Studio.
 
-## Project Conventions
+### Command Notes
+- Scripts live in `package.json`; use `bun <script>` or `bun run <script>`.
+- No Prettier config detected; keep existing formatting style.
+
+## Code Style Guidelines
 
 ### Imports
 - Use absolute imports with `@/` for internal modules.
 - Group imports: third-party, then internal, then relative.
+- Sort named imports alphabetically when convenient.
 - Add `"use server"` at the very top of server actions.
 - Add `"use client"` at the very top of client components.
 - Example:
@@ -37,13 +42,20 @@ Follow project rules first; if something conflicts, ask a human.
   import { getCafeBySlug } from "@/app/api/actions/cafe"
   ```
 
+### Formatting
+- Keep existing style (no Prettier).
+- Prefer double quotes in TS/TSX and JSON.
+- Use trailing commas where existing code does.
+- Avoid overly long lines in JSX; wrap props for readability.
+
 ### TypeScript and Types
 - Strict mode is enabled; always provide proper types.
 - Avoid `any`; use `unknown` when needed.
+- Prefer explicit return types for server actions and utilities.
 - Define shared types in `utils/types/`.
 - Use Drizzle ORM generated types for DB ops.
 - Use Zod for runtime validation.
-- Type server actions explicitly.
+- Prefer discriminated unions for action results when helpful.
 
 ### Naming
 - Components: PascalCase (e.g., `CafeMap`).
@@ -60,6 +72,7 @@ Follow project rules first; if something conflicts, ask a human.
 - Check auth at the start (use `getCurrentUser()` from `@/lib/auth`).
 - After mutations, call `revalidatePath()`.
 - Wrap DB ops in try/catch; return user-safe messages.
+- Do not throw raw errors to clients.
 
 ### Database
 - Use Drizzle ORM for all queries.

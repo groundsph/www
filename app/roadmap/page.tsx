@@ -15,6 +15,7 @@ import {
     Search,
     Boxes,
     Stamp,
+    Map,
 } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -107,6 +108,24 @@ const inProgress: RoadmapItem[] = [
             "Expanding our database with more cafes across the Philippines",
         icon: <Coffee className='w-5 h-5' />,
     },
+    {
+        title: "Proper Social Sharing w/ Previews",
+        description:
+            "Rich previews when sharing cafes on social media with custom graphics",
+        icon: <Share2 className='w-5 h-5' />,
+    },
+    {
+        title: "Cafe Crawls",
+        description:
+            "Organized tours of multiple cafes, perfect for discovering new spots with friends",
+        icon: <Map className='w-5 h-5' />,
+    },
+    {
+        title: "Dark Mode",
+        description:
+            "A sleek dark theme for night owls and low-light environments",
+        icon: <Palette className='w-5 h-5' />,
+    },
 ]
 
 const upNext: RoadmapItem[] = [
@@ -126,22 +145,10 @@ const exploring: RoadmapItem[] = [
         icon: <Rocket className='w-5 h-5' />,
     },
     {
-        title: "Proper Social Sharing",
-        description:
-            "Rich previews when sharing cafes on social media with custom graphics",
-        icon: <Share2 className='w-5 h-5' />,
-    },
-    {
         title: "Personalized Recommendations",
         description:
             "Cafe suggestions based on your preferences and visit history",
         icon: <Lightbulb className='w-5 h-5' />,
-    },
-    {
-        title: "Dark Mode",
-        description:
-            "A sleek dark theme for night owls and low-light environments",
-        icon: <Palette className='w-5 h-5' />,
     },
 ]
 
