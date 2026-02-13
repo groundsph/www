@@ -31,7 +31,7 @@ function ResultIcon({ result }: { result: SearchResult }) {
     return (
       <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
         <Image
-          src={result.imageUrl}
+          src={result.imageUrl !== 'placeholder' ? result.imageUrl : 'https://cdn.grounds.ph/cafes/placeholder.jpg'}
           alt={result.title}
           width={32}
           height={32}

@@ -1,5 +1,7 @@
 "use client"
 
+/* eslint-disable @next/next/no-img-element */
+
 /**
  * ImageSection - Shared component for cafe image management.
  * Used by CafeEditor (admin) and CafeEditClient (owner).
@@ -276,7 +278,6 @@ export default function ImageSection({
                                 value={url}
                                 className='relative h-48 w-auto shrink-0 rounded-lg overflow-hidden group cursor-move active:cursor-grabbing bg-gray-50 flex items-center justify-center border border-text/10'
                             >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src={url}
                                     alt={`Gallery ${idx + 1}`}

@@ -120,7 +120,7 @@ export const BETA_FREE_FEATURES: TierFeature[] = [
  * Get the beta notice text for UI display
  */
 export function getBetaNoticeText(): string {
-    return "Most features are free during our beta period. Some premium features (highlighted map pins, featured slots, review pinning, priority ranking) require a subscription. Features may become paid in the future to cover operational costs.";
+    return "Most features are free during our beta period. Premium features (highlighted map pins, featured slots, review pinning, priority ranking) require a subscription. Features may become paid in the future to cover operational costs.";
 }
 
 /**

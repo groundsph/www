@@ -67,12 +67,18 @@ import BlogEditor from "@/components/blog/BlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"
 import MenuItemModal from "@/components/cafe-editor/MenuItemModal"
 import { EventWithCafe } from "@/utils/types/extra"
-import { getInventoryStats, getInventoryItems } from "@/app/api/actions/inventory"
+import {
+    getInventoryStats,
+    getInventoryItems,
+} from "@/app/api/actions/inventory"
 import type { InventoryStats, InventoryItem } from "@/utils/types/inventory"
 import InventoryDashboard from "./InventoryDashboard"
 import { isBadgeStampFileValid } from "@/utils/validation/badge-stamp"
 import { uploadCafeBadgeStamp } from "@/utils/storage/client"
-import { setCafeBadgeStamp, removeCafeBadgeStamp } from "@/app/api/actions/owner"
+import {
+    setCafeBadgeStamp,
+    removeCafeBadgeStamp,
+} from "@/app/api/actions/owner"
 
 interface CafeManagementProps {
     cafe: CafeWithRatings
@@ -150,7 +156,7 @@ export default function CafeManagement({
     // Menu management state
     const [showMenuModal, setShowMenuModal] = useState(false)
     const [editingMenuItem, setEditingMenuItem] = useState<CafeMenuItem | null>(
-        null
+        null,
     )
 
     // Blog management state
@@ -187,13 +193,15 @@ export default function CafeManagement({
     const [, setIsLoadingRequests] = useState(false)
 
     // Inventory state
-    const [inventoryStats, setInventoryStats] = useState<InventoryStats | null>(null)
+    const [inventoryStats, setInventoryStats] = useState<InventoryStats | null>(
+        null,
+    )
     const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
     const [inventoryLoading, setInventoryLoading] = useState(false)
 
     // Badge stamp state
     const [badgeStampUrl, setBadgeStampUrl] = useState<string | null>(
-        cafe.badge_stamp_url || null
+        cafe.badge_stamp_url || null,
     )
     const [uploadingBadgeStamp, setUploadingBadgeStamp] = useState(false)
 
@@ -243,8 +251,8 @@ export default function CafeManagement({
                                   is_edited: false,
                               },
                           }
-                        : r
-                )
+                        : r,
+                ),
             )
             setRespondingTo(null)
             setResponseText("")
@@ -252,7 +260,7 @@ export default function CafeManagement({
         } else {
             addNotification(
                 result.error || "Failed to submit response",
-                "error"
+                "error",
             )
         }
         setIsSubmitting(false)
@@ -261,7 +269,7 @@ export default function CafeManagement({
     // Handle delete response
     const handleDeleteResponse = async (
         reviewId: string,
-        responseId: string
+        responseId: string,
     ) => {
         if (!confirm("Are you sure you want to delete this response?")) return
 
@@ -269,14 +277,14 @@ export default function CafeManagement({
         if (result.success) {
             setReviews((prev) =>
                 prev.map((r) =>
-                    r.id === reviewId ? { ...r, owner_response: null } : r
-                )
+                    r.id === reviewId ? { ...r, owner_response: null } : r,
+                ),
             )
             addNotification("Response deleted", "success")
         } else {
             addNotification(
                 result.error || "Failed to delete response",
-                "error"
+                "error",
             )
         }
     }
@@ -293,7 +301,7 @@ export default function CafeManagement({
     }
 
     const handleSaveMenuItem = async (
-        formData: MenuItemForm
+        formData: MenuItemForm,
     ): Promise<boolean> => {
         if (!formData.name.trim()) {
             addNotification("Please enter a name", "error")
@@ -314,8 +322,8 @@ export default function CafeManagement({
                     prev.map((item) =>
                         item.id === editingMenuItem.id
                             ? { ...item, ...formData }
-                            : item
-                    )
+                            : item,
+                    ),
                 )
                 addNotification("Menu item updated", "success")
                 setIsSubmitting(false)
@@ -359,8 +367,8 @@ export default function CafeManagement({
         // Optimistically update UI
         setMenuItems((prev) =>
             prev.map((i) =>
-                i.id === item.id ? { ...i, is_available: newAvailability } : i
-            )
+                i.id === item.id ? { ...i, is_available: newAvailability } : i,
+            ),
         )
 
         const result = await updateMenuItem(item.id, {
@@ -376,12 +384,12 @@ export default function CafeManagement({
                 prev.map((i) =>
                     i.id === item.id
                         ? { ...i, is_available: item.is_available }
-                        : i
-                )
+                        : i,
+                ),
             )
             addNotification(
                 result.error || "Failed to update availability",
-                "error"
+                "error",
             )
         }
     }
@@ -399,7 +407,7 @@ export default function CafeManagement({
                 status: p.status,
                 category: p.category,
                 created_at: p.created_at,
-            }))
+            })),
         )
         setBlogLoading(false)
     }
@@ -451,10 +459,16 @@ export default function CafeManagement({
     // Load analytics for this cafe
     const loadAnalytics = async (days: 7 | 30 | 90 = analyticsPeriod) => {
         setAnalyticsLoading(true)
-        const { getCafeAnalytics } = await import("@/app/api/actions/analytics")
-        const data = await getCafeAnalytics(cafe.id, days)
-        setAnalytics(data)
-        setAnalyticsLoading(false)
+        try {
+            const { getCafeAnalytics } = await import("@/app/api/actions/analytics")
+            const data = await getCafeAnalytics(cafe.id, days)
+            setAnalytics(data)
+        } catch (error) {
+            console.error("Failed to load analytics:", error)
+            setAnalytics(null)
+        } finally {
+            setAnalyticsLoading(false)
+        }
     }
 
     // Load inventory stats for this cafe
@@ -475,7 +489,7 @@ export default function CafeManagement({
 
     // Badge stamp handlers
     const handleBadgeStampUpload = async (
-        e: React.ChangeEvent<HTMLInputElement>
+        e: React.ChangeEvent<HTMLInputElement>,
     ) => {
         const file = e.target.files?.[0]
         if (!file) return
@@ -496,10 +510,16 @@ export default function CafeManagement({
                 setBadgeStampUrl(result.url)
                 addNotification("Badge stamp uploaded successfully", "success")
             } else {
-                addNotification(setResult.error || "Failed to set badge stamp", "error")
+                addNotification(
+                    setResult.error || "Failed to set badge stamp",
+                    "error",
+                )
             }
         } else {
-            addNotification(result.error || "Failed to upload badge stamp", "error")
+            addNotification(
+                result.error || "Failed to upload badge stamp",
+                "error",
+            )
         }
         setUploadingBadgeStamp(false)
         e.target.value = ""
@@ -514,7 +534,10 @@ export default function CafeManagement({
             setBadgeStampUrl(null)
             addNotification("Badge stamp removed", "success")
         } else {
-            addNotification(result.error || "Failed to remove badge stamp", "error")
+            addNotification(
+                result.error || "Failed to remove badge stamp",
+                "error",
+            )
         }
     }
 
@@ -720,7 +743,7 @@ export default function CafeManagement({
                                                         <Check className='w-4 h-4 text-green-500' />
                                                         {feature}
                                                     </li>
-                                                )
+                                                ),
                                             )}
                                         </ul>
                                     </div>
@@ -752,6 +775,334 @@ export default function CafeManagement({
                                     </div>
                                 </div>
                             )}
+
+                            {/* Badge Stamp */}
+                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                <div className='flex items-center gap-2 mb-4'>
+                                    <Stamp className='w-5 h-5 text-primary' />
+                                    <h3 className='font-semibold'>
+                                        Badge Stamp
+                                    </h3>
+                                </div>
+                                <p className='text-text/60 mb-4'>
+                                    Upload a custom badge stamp to display on
+                                    your cafe page. This is shown as a mark of
+                                    authenticity.
+                                </p>
+
+                                <div className='flex items-center gap-4'>
+                                    <div className='w-20 h-20 rounded-lg bg-white border border-text/10 overflow-hidden flex items-center justify-center'>
+                                        {badgeStampUrl ? (
+                                            <Image
+                                                src={badgeStampUrl}
+                                                alt={`${cafe.name} badge stamp`}
+                                                width={80}
+                                                height={80}
+                                                className='object-contain'
+                                            />
+                                        ) : (
+                                            <div className='text-text/30 text-xs text-center'>
+                                                No stamp
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className='flex flex-col gap-2'>
+                                        <label className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'>
+                                            {uploadingBadgeStamp ? (
+                                                <>
+                                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                                    Uploading...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload className='w-4 h-4' />
+                                                    {badgeStampUrl
+                                                        ? "Change"
+                                                        : "Upload"}
+                                                </>
+                                            )}
+                                            <input
+                                                type='file'
+                                                accept='image/png'
+                                                className='hidden'
+                                                onChange={
+                                                    handleBadgeStampUpload
+                                                }
+                                                disabled={uploadingBadgeStamp}
+                                            />
+                                        </label>
+
+                                        {badgeStampUrl && (
+                                            <button
+                                                onClick={handleRemoveBadgeStamp}
+                                                disabled={uploadingBadgeStamp}
+                                                className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-text/10 text-text rounded-lg font-medium hover:bg-text/20 transition-colors disabled:opacity-50'
+                                            >
+                                                <X className='w-4 h-4' />
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <p className='text-xs text-text/40 mt-3'>
+                                    PNG format only. Max 500KB.
+                                </p>
+                            </div>
+
+                            {/* Check-in QR Code */}
+                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                <h3 className='font-semibold mb-4 flex items-center gap-2'>
+                                    <QrCode className='w-5 h-5 text-primary' />
+                                    Check-in QR Code
+                                </h3>
+                                <div className='flex flex-col md:flex-row gap-6 items-center'>
+                                    <div className='bg-white p-4 rounded-xl'>
+                                        <div className='relative'>
+                                            <QRCodeSVG
+                                                value={`https://grounds.ph/cafes/${cafe.slug}`}
+                                                size={150}
+                                                level='H'
+                                                id='checkin-qr-code-svg'
+                                                bgColor='#ffffff'
+                                            />
+                                            {badgeStampUrl && (
+                                                <div className='absolute inset-0 flex items-center justify-center'>
+                                                    <div className='w-12 h-12 bg-white rounded-full p-1.5 shadow-lg'>
+                                                        <Image
+                                                            src={badgeStampUrl}
+                                                            alt={`${cafe.name} badge stamp`}
+                                                            width={48}
+                                                            height={48}
+                                                            className='w-full h-full object-contain'
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className='flex-1 text-center md:text-left'>
+                                        <p className='text-text/80 mb-3'>
+                                            Customers can scan this QR code to
+                                            visit your cafe page and check in.
+                                        </p>
+                                        <div className='flex flex-col sm:flex-row gap-2'>
+                                            <button
+                                                onClick={() => {
+                                                    const svg =
+                                                        document.getElementById(
+                                                            "checkin-qr-code-svg",
+                                                        )
+                                                    if (svg) {
+                                                        const canvas =
+                                                            document.createElement(
+                                                                "canvas",
+                                                            )
+                                                        const ctx =
+                                                            canvas.getContext(
+                                                                "2d",
+                                                            )
+                                                        const qrImg =
+                                                            new window.Image()
+                                                        const svgData =
+                                                            new XMLSerializer().serializeToString(
+                                                                svg,
+                                                            )
+                                                        const svgBlob =
+                                                            new Blob(
+                                                                [svgData],
+                                                                {
+                                                                    type: "image/svg+xml;charset=utf-8",
+                                                                },
+                                                            )
+                                                        const url =
+                                                            URL.createObjectURL(
+                                                                svgBlob,
+                                                            )
+
+                                                        let qrLoaded = false
+                                                        let stampLoaded =
+                                                            !badgeStampUrl
+                                                        let stampImg: HTMLImageElement | null =
+                                                            null
+
+                                                        const drawAndDownload =
+                                                            () => {
+                                                                if (
+                                                                    !qrLoaded ||
+                                                                    !stampLoaded
+                                                                )
+                                                                    return
+
+                                                                const padding = 40
+                                                                const qrSize = 300
+                                                                const textHeight = 50
+                                                                canvas.width =
+                                                                    qrSize +
+                                                                    padding * 2
+                                                                canvas.height =
+                                                                    qrSize +
+                                                                    padding *
+                                                                        2 +
+                                                                    textHeight
+
+                                                                if (ctx) {
+                                                                    ctx.fillStyle =
+                                                                        "#ffffff"
+                                                                    ctx.fillRect(
+                                                                        0,
+                                                                        0,
+                                                                        canvas.width,
+                                                                        canvas.height,
+                                                                    )
+                                                                }
+
+                                                                ctx?.drawImage(
+                                                                    qrImg,
+                                                                    padding,
+                                                                    padding,
+                                                                    qrSize,
+                                                                    qrSize,
+                                                                )
+
+                                                                // Draw badge stamp in center if exists
+                                                                if (
+                                                                    badgeStampUrl
+                                                                ) {
+                                                                    const stampSize = 48
+                                                                    const stampX =
+                                                                        padding +
+                                                                        (qrSize -
+                                                                            stampSize) /
+                                                                            2
+                                                                    const stampY =
+                                                                        padding +
+                                                                        (qrSize -
+                                                                            stampSize) /
+                                                                            2
+
+                                                                    // Draw white circular background for stamp
+                                                                    if (ctx) {
+                                                                        ctx.beginPath()
+                                                                        ctx.arc(
+                                                                            stampX +
+                                                                                stampSize /
+                                                                                    2,
+                                                                            stampY +
+                                                                                stampSize /
+                                                                                    2,
+                                                                            stampSize /
+                                                                                2 +
+                                                                                4,
+                                                                            0,
+                                                                            2 *
+                                                                                Math.PI,
+                                                                        )
+                                                                        ctx.fillStyle =
+                                                                            "#ffffff"
+                                                                        ctx.fill()
+                                                                    }
+
+                                                                    // Draw the stamp
+                                                                    if (
+                                                                        stampImg
+                                                                    ) {
+                                                                        ctx?.drawImage(
+                                                                            stampImg,
+                                                                            stampX,
+                                                                            stampY,
+                                                                            stampSize,
+                                                                            stampSize,
+                                                                        )
+                                                                    }
+                                                                }
+
+                                                                if (ctx) {
+                                                                    ctx.fillStyle =
+                                                                        "#1a1a1a"
+                                                                    ctx.font =
+                                                                        "bold 22px 'Playfair Display', Georgia, serif"
+                                                                    ctx.textAlign =
+                                                                        "center"
+                                                                    ctx.fillText(
+                                                                        cafe.name,
+                                                                        canvas.width /
+                                                                            2,
+                                                                        qrSize +
+                                                                            padding +
+                                                                            35,
+                                                                    )
+                                                                }
+
+                                                                const pngUrl =
+                                                                    canvas.toDataURL(
+                                                                        "image/png",
+                                                                    )
+                                                                const link =
+                                                                    document.createElement(
+                                                                        "a",
+                                                                    )
+                                                                link.download = `${cafe.slug}-checkin-qr.png`
+                                                                link.href =
+                                                                    pngUrl
+                                                                link.click()
+                                                                URL.revokeObjectURL(
+                                                                    url,
+                                                                )
+                                                            }
+
+                                                        qrImg.onload = () => {
+                                                            qrLoaded = true
+                                                            drawAndDownload()
+                                                        }
+
+                                                        if (badgeStampUrl) {
+                                                            stampImg =
+                                                                new window.Image()
+                                                            stampImg.crossOrigin =
+                                                                "anonymous"
+                                                            stampImg.onload =
+                                                                () => {
+                                                                    stampLoaded = true
+                                                                    drawAndDownload()
+                                                                }
+                                                            stampImg.onerror =
+                                                                () => {
+                                                                    stampLoaded = true
+                                                                    drawAndDownload()
+                                                                }
+                                                            stampImg.src =
+                                                                badgeStampUrl
+                                                        }
+
+                                                        qrImg.src = url
+                                                    }
+                                                }}
+                                                className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                                            >
+                                                <Download className='w-4 h-4' />
+                                                Download PNG
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(
+                                                        `https://grounds.ph/cafes/${cafe.slug}`,
+                                                    )
+                                                    addNotification(
+                                                        "Link copied to clipboard!",
+                                                        "success",
+                                                    )
+                                                }}
+                                                className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-text/10 rounded-lg font-medium hover:bg-text/20 transition-colors'
+                                            >
+                                                <Copy className='w-4 h-4' />
+                                                Copy Link
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* QR Code to Menu (Pro/Premium only) */}
                             {canAccessFeature(tier, "qr_menu") &&
@@ -788,16 +1139,16 @@ export default function CafeManagement({
                                                         onClick={() => {
                                                             const svg =
                                                                 document.getElementById(
-                                                                    "qr-code-svg"
+                                                                    "qr-code-svg",
                                                                 )
                                                             if (svg) {
                                                                 const canvas =
                                                                     document.createElement(
-                                                                        "canvas"
+                                                                        "canvas",
                                                                     )
                                                                 const ctx =
                                                                     canvas.getContext(
-                                                                        "2d"
+                                                                        "2d",
                                                                     )
                                                                 const qrImg =
                                                                     new window.Image()
@@ -805,7 +1156,7 @@ export default function CafeManagement({
                                                                     new window.Image()
                                                                 const svgData =
                                                                     new XMLSerializer().serializeToString(
-                                                                        svg
+                                                                        svg,
                                                                     )
                                                                 const svgBlob =
                                                                     new Blob(
@@ -814,11 +1165,11 @@ export default function CafeManagement({
                                                                         ],
                                                                         {
                                                                             type: "image/svg+xml;charset=utf-8",
-                                                                        }
+                                                                        },
                                                                     )
                                                                 const url =
                                                                     URL.createObjectURL(
-                                                                        svgBlob
+                                                                        svgBlob,
                                                                     )
 
                                                                 // Track load states
@@ -856,7 +1207,7 @@ export default function CafeManagement({
                                                                                 0,
                                                                                 0,
                                                                                 canvas.width,
-                                                                                canvas.height
+                                                                                canvas.height,
                                                                             )
                                                                         }
 
@@ -866,7 +1217,7 @@ export default function CafeManagement({
                                                                             padding,
                                                                             padding,
                                                                             qrSize,
-                                                                            qrSize
+                                                                            qrSize,
                                                                         )
 
                                                                         // Draw logo in center of QR
@@ -886,7 +1237,7 @@ export default function CafeManagement({
                                                                             logoX,
                                                                             logoY,
                                                                             logoSize,
-                                                                            logoSize
+                                                                            logoSize,
                                                                         )
 
                                                                         // Draw cafe name below
@@ -905,24 +1256,24 @@ export default function CafeManagement({
                                                                                     2,
                                                                                 qrSize +
                                                                                     padding +
-                                                                                    35
+                                                                                    35,
                                                                             )
                                                                         }
 
                                                                         const pngUrl =
                                                                             canvas.toDataURL(
-                                                                                "image/png"
+                                                                                "image/png",
                                                                             )
                                                                         const link =
                                                                             document.createElement(
-                                                                                "a"
+                                                                                "a",
                                                                             )
                                                                         link.download = `${cafe.slug}-menu-qr.png`
                                                                         link.href =
                                                                             pngUrl
                                                                         link.click()
                                                                         URL.revokeObjectURL(
-                                                                            url
+                                                                            url,
                                                                         )
                                                                     }
 
@@ -950,11 +1301,11 @@ export default function CafeManagement({
                                                     <button
                                                         onClick={() => {
                                                             navigator.clipboard.writeText(
-                                                                `https://grounds.ph/cafes/${cafe.slug}/menu`
+                                                                `https://grounds.ph/cafes/${cafe.slug}/menu`,
                                                             )
                                                             addNotification(
                                                                 "Link copied to clipboard!",
-                                                                "success"
+                                                                "success",
                                                             )
                                                         }}
                                                         className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-text/10 rounded-lg font-medium hover:bg-text/20 transition-colors'
@@ -981,7 +1332,7 @@ export default function CafeManagement({
                                     <p className='text-sm text-text/60'>
                                         {
                                             reviews.filter(
-                                                (r) => !r.owner_response
+                                                (r) => !r.owner_response,
                                             ).length
                                         }{" "}
                                         awaiting response
@@ -1091,14 +1442,14 @@ export default function CafeManagement({
                                                             new Date(
                                                                 year,
                                                                 month,
-                                                                1
+                                                                1,
                                                             )
                                                         const formattedMonth = `${year}-${String(month + 1).padStart(2, "0")}-01`
 
                                                         // Confirm dialog
                                                         if (
                                                             !confirm(
-                                                                `Request featured slot for ${nextMonthDate.toLocaleString("default", { month: "long", year: "numeric" })}?`
+                                                                `Request featured slot for ${nextMonthDate.toLocaleString("default", { month: "long", year: "numeric" })}?`,
                                                             )
                                                         )
                                                             return
@@ -1106,26 +1457,26 @@ export default function CafeManagement({
                                                         const result =
                                                             await requestFeaturedSlot(
                                                                 cafe.id,
-                                                                formattedMonth
+                                                                formattedMonth,
                                                             )
                                                         if (result.success) {
                                                             addNotification(
                                                                 "Request submitted successfully!",
-                                                                "success"
+                                                                "success",
                                                             )
                                                             // Refresh requests
                                                             const reqs =
                                                                 await getFeaturedSlotRequests(
-                                                                    cafe.id
+                                                                    cafe.id,
                                                                 )
                                                             setFeaturedRequests(
-                                                                reqs
+                                                                reqs,
                                                             )
                                                         } else {
                                                             addNotification(
                                                                 result.error ||
                                                                     "Failed to submit request",
-                                                                "error"
+                                                                "error",
                                                             )
                                                         }
                                                     }}
@@ -1146,13 +1497,13 @@ export default function CafeManagement({
                                                             >
                                                                 <span className='font-medium text-purple-900'>
                                                                     {new Date(
-                                                                        req.requested_month
+                                                                        req.requested_month,
                                                                     ).toLocaleString(
                                                                         "default",
                                                                         {
                                                                             month: "long",
                                                                             year: "numeric",
-                                                                        }
+                                                                        },
                                                                     )}
                                                                 </span>
                                                                 <span
@@ -1170,7 +1521,7 @@ export default function CafeManagement({
                                                                     {req.status}
                                                                 </span>
                                                             </div>
-                                                        )
+                                                        ),
                                                     )}
                                                 </div>
                                             )}
@@ -1255,7 +1606,7 @@ export default function CafeManagement({
                                                         <span>
                                                             {review.created_at &&
                                                                 new Date(
-                                                                    review.created_at
+                                                                    review.created_at,
                                                                 ).toLocaleDateString()}
                                                         </span>
                                                     </div>
@@ -1271,42 +1622,42 @@ export default function CafeManagement({
                                                             const result =
                                                                 await unpinReview(
                                                                     review.id,
-                                                                    cafe.id
+                                                                    cafe.id,
                                                                 )
                                                             if (
                                                                 result.success
                                                             ) {
                                                                 addNotification(
                                                                     "Review unpinned",
-                                                                    "success"
+                                                                    "success",
                                                                 )
                                                                 window.location.reload()
                                                             } else {
                                                                 addNotification(
                                                                     result.error ||
                                                                         "Failed to unpin",
-                                                                    "error"
+                                                                    "error",
                                                                 )
                                                             }
                                                         } else {
                                                             const result =
                                                                 await pinReview(
                                                                     review.id,
-                                                                    cafe.id
+                                                                    cafe.id,
                                                                 )
                                                             if (
                                                                 result.success
                                                             ) {
                                                                 addNotification(
                                                                     "Review pinned!",
-                                                                    "success"
+                                                                    "success",
                                                                 )
                                                                 window.location.reload()
                                                             } else {
                                                                 addNotification(
                                                                     result.error ||
                                                                         "Failed to pin",
-                                                                    "error"
+                                                                    "error",
                                                                 )
                                                             }
                                                         }
@@ -1347,7 +1698,7 @@ export default function CafeManagement({
                                                                 review.id,
                                                                 review
                                                                     .owner_response!
-                                                                    .id
+                                                                    .id,
                                                             )
                                                         }
                                                         className='p-1 text-text/40 hover:text-red-500 transition-colors'
@@ -1374,7 +1725,7 @@ export default function CafeManagement({
                                                     value={responseText}
                                                     onChange={(e) =>
                                                         setResponseText(
-                                                            e.target.value
+                                                            e.target.value,
                                                         )
                                                     }
                                                     placeholder='Write your response...'
@@ -1391,10 +1742,10 @@ export default function CafeManagement({
                                                         <button
                                                             onClick={() => {
                                                                 setRespondingTo(
-                                                                    null
+                                                                    null,
                                                                 )
                                                                 setResponseText(
-                                                                    ""
+                                                                    "",
                                                                 )
                                                             }}
                                                             className='px-3 py-1.5 text-sm text-text/60 hover:text-text'
@@ -1404,7 +1755,7 @@ export default function CafeManagement({
                                                         <button
                                                             onClick={() =>
                                                                 handleSubmitResponse(
-                                                                    review.id
+                                                                    review.id,
                                                                 )
                                                             }
                                                             disabled={
@@ -1485,8 +1836,8 @@ export default function CafeManagement({
                                     {[
                                         ...new Set(
                                             menuItems.map(
-                                                (item) => item.category
-                                            )
+                                                (item) => item.category,
+                                            ),
                                         ),
                                     ].map((category) => (
                                         <div key={category}>
@@ -1501,7 +1852,7 @@ export default function CafeManagement({
                                                         .filter(
                                                             (item) =>
                                                                 item.category ===
-                                                                category
+                                                                category,
                                                         )
                                                         .map((item) => (
                                                             <div
@@ -1529,7 +1880,7 @@ export default function CafeManagement({
                                                                 <span className='text-sm font-semibold text-primary mx-2'>
                                                                     +₱
                                                                     {item.price.toFixed(
-                                                                        0
+                                                                        0,
                                                                     )}
                                                                 </span>
                                                                 {/* Toggle + Actions */}
@@ -1537,7 +1888,7 @@ export default function CafeManagement({
                                                                     <button
                                                                         onClick={() =>
                                                                             handleToggleAvailability(
-                                                                                item
+                                                                                item,
                                                                             )
                                                                         }
                                                                         className={`relative w-8 h-4 rounded-full transition-colors ${
@@ -1562,7 +1913,7 @@ export default function CafeManagement({
                                                                     <button
                                                                         onClick={() =>
                                                                             openEditMenu(
-                                                                                item
+                                                                                item,
                                                                             )
                                                                         }
                                                                         className='p-1 text-text/40 hover:text-text transition-colors'
@@ -1573,7 +1924,7 @@ export default function CafeManagement({
                                                                     <button
                                                                         onClick={() =>
                                                                             handleDeleteMenuItem(
-                                                                                item.id
+                                                                                item.id,
                                                                             )
                                                                         }
                                                                         className='p-1 text-text/40 hover:text-red-500 transition-colors'
@@ -1592,7 +1943,7 @@ export default function CafeManagement({
                                                         .filter(
                                                             (item) =>
                                                                 item.category ===
-                                                                category
+                                                                category,
                                                         )
                                                         .map((item) => (
                                                             <div
@@ -1638,7 +1989,7 @@ export default function CafeManagement({
                                                                     <p className='text-sm font-semibold text-primary'>
                                                                         ₱
                                                                         {item.price.toFixed(
-                                                                            0
+                                                                            0,
                                                                         )}
                                                                     </p>
                                                                 </div>
@@ -1649,7 +2000,7 @@ export default function CafeManagement({
                                                                     <button
                                                                         onClick={() =>
                                                                             handleToggleAvailability(
-                                                                                item
+                                                                                item,
                                                                             )
                                                                         }
                                                                         className={`relative w-10 h-5 rounded-full transition-colors ${
@@ -1677,7 +2028,7 @@ export default function CafeManagement({
                                                                         <button
                                                                             onClick={() =>
                                                                                 openEditMenu(
-                                                                                    item
+                                                                                    item,
                                                                                 )
                                                                             }
                                                                             className='p-1.5 flex-1 items-center flex justify-center bg-accent/10 hover:bg-accent/20 text-text/40 hover:text-text transition-colors rounded'
@@ -1688,7 +2039,7 @@ export default function CafeManagement({
                                                                         <button
                                                                             onClick={() =>
                                                                                 handleDeleteMenuItem(
-                                                                                    item.id
+                                                                                    item.id,
                                                                                 )
                                                                             }
                                                                             className='p-1.5 flex-1 text-text/40 hover:text-red-500 transition-colors rounded bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center'
@@ -1786,7 +2137,7 @@ export default function CafeManagement({
                                                               (sum, r) =>
                                                                   sum +
                                                                   r.rating,
-                                                              0
+                                                              0,
                                                           ) / reviews.length
                                                       ).toFixed(1)
                                                     : "—"}
@@ -1805,15 +2156,15 @@ export default function CafeManagement({
                                                 .slice(
                                                     -Math.min(
                                                         analyticsPeriod,
-                                                        30
-                                                    )
+                                                        30,
+                                                    ),
                                                 )
                                                 .map((day) => {
                                                     const maxViews = Math.max(
                                                         ...analytics.viewsByDay.map(
-                                                            (d) => d.views
+                                                            (d) => d.views,
                                                         ),
-                                                        1
+                                                        1,
                                                     )
                                                     const height =
                                                         (day.views / maxViews) *
@@ -1832,13 +2183,13 @@ export default function CafeManagement({
                                                             />
                                                             <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-text text-background text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
                                                                 {new Date(
-                                                                    day.date
+                                                                    day.date,
                                                                 ).toLocaleDateString(
                                                                     "en-US",
                                                                     {
                                                                         month: "short",
                                                                         day: "numeric",
-                                                                    }
+                                                                    },
                                                                 )}
                                                                 : {day.views}{" "}
                                                                 views
@@ -1855,9 +2206,9 @@ export default function CafeManagement({
                                                             0,
                                                             analytics.viewsByDay
                                                                 .length -
-                                                                analyticsPeriod
+                                                                analyticsPeriod,
                                                         )
-                                                    ]?.date || ""
+                                                    ]?.date || "",
                                                 ).toLocaleDateString("en-US", {
                                                     month: "short",
                                                     day: "numeric",
@@ -1876,14 +2227,14 @@ export default function CafeManagement({
                                             </h3>
                                             <div className='space-y-3'>
                                                 {Object.entries(
-                                                    analytics.deviceBreakdown
+                                                    analytics.deviceBreakdown,
                                                 ).map(([device, count]) => {
                                                     const total =
                                                         Object.values(
-                                                            analytics.deviceBreakdown
+                                                            analytics.deviceBreakdown,
                                                         ).reduce(
                                                             (a, b) => a + b,
-                                                            0
+                                                            0,
                                                         ) || 1
                                                     const percentage =
                                                         (count / total) * 100
@@ -1914,7 +2265,7 @@ export default function CafeManagement({
                                                             <span className='w-16 text-right text-sm text-text/60'>
                                                                 {count} (
                                                                 {percentage.toFixed(
-                                                                    0
+                                                                    0,
                                                                 )}
                                                                 %)
                                                             </span>
@@ -1953,7 +2304,7 @@ export default function CafeManagement({
                                                                     {ref.count}
                                                                 </span>
                                                             </div>
-                                                        )
+                                                        ),
                                                     )}
                                                 </div>
                                             )}
@@ -1968,7 +2319,7 @@ export default function CafeManagement({
                                         <div className='space-y-3'>
                                             {[5, 4, 3, 2, 1].map((rating) => {
                                                 const count = reviews.filter(
-                                                    (r) => r.rating === rating
+                                                    (r) => r.rating === rating,
                                                 ).length
                                                 const percentage =
                                                     reviews.length > 0
@@ -2002,7 +2353,7 @@ export default function CafeManagement({
                                                             <span className='text-sm text-text/50 ml-1'>
                                                                 (
                                                                 {percentage.toFixed(
-                                                                    0
+                                                                    0,
                                                                 )}
                                                                 %)
                                                             </span>
@@ -2016,7 +2367,10 @@ export default function CafeManagement({
                             ) : (
                                 <div className='text-center py-12 text-text/60'>
                                     <BarChart3 className='w-12 h-12 mx-auto mb-3 opacity-30' />
-                                    <p>Loading analytics...</p>
+                                    <p>Analytics unavailable</p>
+                                    <p className='text-sm mt-2 text-text/40'>
+                                        Analytics data could not be loaded. Please try again later.
+                                    </p>
                                 </div>
                             )}
                         </motion.div>
@@ -2085,12 +2439,12 @@ export default function CafeManagement({
                                                 <p className='text-sm text-text/60 mt-1'>
                                                     {post.category.replace(
                                                         "_",
-                                                        " "
+                                                        " ",
                                                     )}{" "}
                                                     •{" "}
                                                     {post.created_at &&
                                                         new Date(
-                                                            post.created_at
+                                                            post.created_at,
                                                         ).toLocaleDateString()}
                                                 </p>
                                             </div>
@@ -2105,7 +2459,7 @@ export default function CafeManagement({
                                                 <button
                                                     onClick={() =>
                                                         handleDeleteBlogPost(
-                                                            post.id
+                                                            post.id,
                                                         )
                                                     }
                                                     className='p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition'
@@ -2200,75 +2554,6 @@ export default function CafeManagement({
                                     <Edit2 className='w-4 h-4' />
                                     Edit Cafe
                                 </Link>
-                            </div>
-
-                            {/* Badge Stamp */}
-                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
-                                <div className='flex items-center gap-2 mb-4'>
-                                    <Stamp className='w-5 h-5 text-primary' />
-                                    <h3 className='font-semibold'>Badge Stamp</h3>
-                                </div>
-                                <p className='text-text/60 mb-4'>
-                                    Upload a custom badge stamp to display on your cafe page. This is shown as a mark of authenticity.
-                                </p>
-
-                                <div className='flex items-center gap-4'>
-                                    {/* Preview */}
-                                    <div className='w-20 h-20 rounded-lg bg-white border border-text/10 overflow-hidden flex items-center justify-center'>
-                                        {badgeStampUrl ? (
-                                            <Image
-                                                src={badgeStampUrl}
-                                                alt={`${cafe.name} badge stamp`}
-                                                width={80}
-                                                height={80}
-                                                className='object-contain'
-                                            />
-                                        ) : (
-                                            <div className='text-text/30 text-xs text-center'>
-                                                No stamp
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Controls */}
-                                    <div className='flex flex-col gap-2'>
-                                        <label className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'>
-                                            {uploadingBadgeStamp ? (
-                                                <>
-                                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                                    Uploading...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload className='w-4 h-4' />
-                                                    {badgeStampUrl ? "Change" : "Upload"}
-                                                </>
-                                            )}
-                                            <input
-                                                type='file'
-                                                accept='image/png'
-                                                className='hidden'
-                                                onChange={handleBadgeStampUpload}
-                                                disabled={uploadingBadgeStamp}
-                                            />
-                                        </label>
-
-                                        {badgeStampUrl && (
-                                            <button
-                                                onClick={handleRemoveBadgeStamp}
-                                                disabled={uploadingBadgeStamp}
-                                                className='inline-flex items-center justify-center gap-2 px-4 py-2 bg-text/10 text-text rounded-lg font-medium hover:bg-text/20 transition-colors disabled:opacity-50'
-                                            >
-                                                <X className='w-4 h-4' />
-                                                Remove
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <p className='text-xs text-text/40 mt-3'>
-                                    PNG format only. Max 500KB.
-                                </p>
                             </div>
 
                             {/* Danger Zone */}

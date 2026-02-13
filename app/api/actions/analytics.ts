@@ -1,7 +1,8 @@
 "use server"
 
 import { db } from "@/db"
-import { cafes, cafeSubscriptions, cafePageViews } from "@/db/schema"
+import { cafes, cafePageViews } from "@/db/schema"
+// TODO: Re-import cafeSubscriptions after beta ends when re-enabling tier checks
 import { eq, and, gte, lte } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { parse } from "tldts"
@@ -50,20 +51,21 @@ export async function getCafeAnalytics(
         return null // Not an owner
     }
 
-    // Check subscription tier - analytics requires Pro or higher
-    const subscriptionResult = await db
-        .select({ tier: cafeSubscriptions.tier })
-        .from(cafeSubscriptions)
-        .where(eq(cafeSubscriptions.cafeId, cafeId))
-        .limit(1)
+    // Tier check disabled during beta - all features unlocked
+    // TODO: Re-enable after beta ends
+    // const subscriptionResult = await db
+    //     .select({ tier: cafeSubscriptions.tier })
+    //     .from(cafeSubscriptions)
+    //     .where(eq(cafeSubscriptions.cafeId, cafeId))
+    //     .limit(1)
 
-    const dbTier = subscriptionResult[0]?.tier || "free"
-    const displayTier = dbTier === "basic" ? "pro" : (dbTier as "free" | "pro" | "premium")
+    // const dbTier = subscriptionResult[0]?.tier || "free"
+    // const displayTier = dbTier === "basic" ? "pro" : (dbTier as "free" | "pro" | "premium")
 
     // Analytics requires Pro+ tier
-    if (displayTier === "free") {
-        return null
-    }
+    // if (displayTier === "free") {
+    //     return null
+    // }
 
     // Calculate date range
     const endDate = new Date()
