@@ -444,32 +444,11 @@ Skip (docs only).
 
 Add a QA checklist to the implementation plan:
 
-1. **Upload PNG in Cafe Edit**
-   - Navigate to Cafe Edit > Images
-   - Upload PNG 512x512 under 500KB
-   - Verify preview appears immediately
-   - Save and confirm badge stamp URL is persisted in DB
-
-2. **Owner Dashboard Settings Panel**
-   - Navigate to Owner Dashboard > Settings tab
-   - Verify same stamp shows as in Cafe Edit
-   - Upload new stamp and confirm it syncs across both locations
-
-3. **Private Profile Display**
-   - Visit user's own profile (private)
-   - Verify custom stamp appears on visited cafe badges
-   - Confirm stamp renders with correct styling (object-contain for transparency)
-
-4. **Public Profile Display**
-   - View public profile URL (incognito or as different user)
-   - Verify same custom stamps appear as in private profile
-   - Confirm fallback to default SVG stamps if no custom stamp set
-
-5. **Remove Stamp Flow**
-   - Remove stamp from either Cafe Edit or Owner Settings
-   - Verify preview clears immediately
-   - Check that visited cafes fall back to default SVG stamps
-   - Confirm DB field is cleared (badge_stamp_url = null)
+1. Upload PNG 512x512 under 500KB in Cafe Edit > Images; preview appears.
+2. Same stamp shows in Owner Dashboard Settings panel.
+3. Visit profile (private) shows custom stamp; public profile shows same.
+4. Remove stamp clears preview and fallback to default SVG stamps.
+5. Storage cleanup does not delete referenced stamp.
 
 **Step 3: Commit**
 
