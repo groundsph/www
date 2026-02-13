@@ -258,6 +258,7 @@ function mapCafeToCafeWithRatings(cafe: any, contributor?: any, ratings?: any): 
         is_hidden_gem: cafe.isHiddenGem ?? false,
         finding_hint: cafe.findingHint ?? null,
         is_chain: cafe.isChain ?? false,
+        badge_stamp_url: cafe.badgeStampUrl ?? null,
         contributor: contributor ? {
             id: contributor.id,
             username: contributor.username,
