@@ -31,6 +31,7 @@ import {
 } from "@/utils/types/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
+import { revalidatePath } from "next/cache"
 
 // ============================================
 // Permission Checks
@@ -351,6 +352,7 @@ export async function updateCafeAsOwner(
         socials: unknown
         is_hidden_gem: boolean
         finding_hint: string | null
+        badge_stamp_url: string | null
     }>
 ): Promise<OwnerActionResult> {
     const isOwner = await isOwnerOfCafe(cafeId)
@@ -404,6 +406,7 @@ export async function updateCafeAsOwner(
         website_url: 'websiteUrl',
         is_hidden_gem: 'isHiddenGem',
         finding_hint: 'findingHint',
+        badge_stamp_url: 'badgeStampUrl',
     }
 
     for (const [key, value] of Object.entries(updates)) {
@@ -1326,4 +1329,71 @@ export async function getFeaturedSlotRequests(
         created_at: r.createdAt?.toISOString() ?? '',
         processed_at: r.processedAt?.toISOString() ?? null,
     }))
+}
+
+// ============================================
+// Badge Stamp Management
+// ============================================
+
+/**
+ * Set the badge stamp URL for a cafe (owner only)
+ */
+export async function setCafeBadgeStamp(
+    cafeId: string,
+    imageUrl: string
+): Promise<OwnerActionResult> {
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized to manage this cafe' }
+    }
+
+    try {
+        await db.update(cafes)
+            .set({
+                badgeStampUrl: imageUrl,
+                updatedAt: new Date(),
+            })
+            .where(eq(cafes.id, cafeId))
+
+        // Revalidate the cafe profile and public pages
+        revalidatePath(`/cafe/[slug]`, 'page')
+        revalidatePath(`/owner/cafe/${cafeId}`, 'page')
+        revalidatePath('/owner', 'page')
+    } catch (error) {
+        console.error('Error setting badge stamp:', error)
+        return { success: false, error: 'Failed to set badge stamp' }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Remove the badge stamp URL from a cafe (owner only)
+ */
+export async function removeCafeBadgeStamp(
+    cafeId: string
+): Promise<OwnerActionResult> {
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized to manage this cafe' }
+    }
+
+    try {
+        await db.update(cafes)
+            .set({
+                badgeStampUrl: null,
+                updatedAt: new Date(),
+            })
+            .where(eq(cafes.id, cafeId))
+
+        // Revalidate the cafe profile and public pages
+        revalidatePath(`/cafe/[slug]`, 'page')
+        revalidatePath(`/owner/cafe/${cafeId}`, 'page')
+        revalidatePath('/owner', 'page')
+    } catch (error) {
+        console.error('Error removing badge stamp:', error)
+        return { success: false, error: 'Failed to remove badge stamp' }
+    }
+
+    return { success: true }
 }
