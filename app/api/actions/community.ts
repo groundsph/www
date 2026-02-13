@@ -3,6 +3,7 @@
 import { db } from "@/db"
 import { collections, profiles } from "@/db/schema"
 import { eq, desc, or, sql, inArray, ilike, and, gt } from "drizzle-orm"
+import { getPublicCafeCrawls } from "@/app/api/actions/cafe-crawls"
 
 // =============================================================================
 // PUBLIC COLLECTIONS
@@ -209,3 +210,9 @@ export async function getFeaturedUsers(limit: number = 8): Promise<UserSearchRes
         isSupporter: u.isSupporter ?? false,
     }))
 }
+
+// =============================================================================
+// PUBLIC CAFE CRAWLS (re-exported for community page)
+// =============================================================================
+
+export { getPublicCafeCrawls }
