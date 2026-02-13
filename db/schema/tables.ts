@@ -541,6 +541,81 @@ export const cafeReports = pgTable("cafe_reports", {
 })
 
 // ============================================================================
+// CAFE CRAWL TABLES
+// ============================================================================
+
+export const cafeCrawls = pgTable(
+    "cafe_crawls",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => profiles.id, { onDelete: "cascade" }),
+        title: text("title").notNull(),
+        slug: text("slug").notNull().unique(),
+        description: text("description"),
+        coverImage: text("cover_image"),
+        status: enums.crawlStatusEnum("status").default("draft"),
+        isPublic: boolean("is_public").default(true),
+        itemCount: integer("item_count").default(0),
+        viewsCount: integer("views_count").default(0),
+        savesCount: integer("saves_count").default(0),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+    },
+    (table) => ({
+        slugIdx: uniqueIndex("cafe_crawls_slug_idx").on(table.slug),
+    })
+)
+
+export const cafeCrawlItems = pgTable("cafe_crawl_items", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    crawlId: uuid("crawl_id")
+        .notNull()
+        .references(() => cafeCrawls.id, { onDelete: "cascade" }),
+    cafeId: uuid("cafe_id")
+        .notNull()
+        .references(() => cafes.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").default(0),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+export const cafeCrawlSaves = pgTable(
+    "cafe_crawl_saves",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        crawlId: uuid("crawl_id")
+            .notNull()
+            .references(() => cafeCrawls.id, { onDelete: "cascade" }),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => profiles.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    },
+    (t) => ({
+        uniqueSaveIdx: uniqueIndex("crawl_saves_user_crawl_unique").on(t.userId, t.crawlId),
+    })
+)
+
+export const cafeCrawlReports = pgTable("cafe_crawl_reports", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    crawlId: uuid("crawl_id")
+        .notNull()
+        .references(() => cafeCrawls.id, { onDelete: "cascade" }),
+    reporterId: uuid("reporter_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(),
+    details: text("details"),
+    status: text("status").default("pending"),
+    adminNotes: text("admin_notes"),
+    reviewedBy: uuid("reviewed_by").references(() => profiles.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+})
+
+// ============================================================================
 // SOCIAL TABLES
 // ============================================================================
 
