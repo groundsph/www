@@ -13,6 +13,7 @@ import {
     Zap,
     Key,
     Search,
+    Boxes,
 } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -48,6 +49,12 @@ interface RoadmapItem {
 }
 
 const recentlyShipped: RoadmapItem[] = [
+    {
+        title: "Simple Inventory Management for Owners",
+        description:
+            "Cafe owners can now easily add and manage their internal inventory, making it easier to keep their cafe listings up-to-date.",
+        icon: <Boxes className='w-5 h-5' />,
+    },
     {
         title: "Smart Login & Security",
         description:
