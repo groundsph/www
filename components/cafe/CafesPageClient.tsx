@@ -25,6 +25,7 @@ import {
     Cigarette,
     Store,
     Clock12,
+    X,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
@@ -109,13 +110,27 @@ export default function CafesPageClient() {
     const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [showRestoreNotice, setShowRestoreNotice] = useState(false)
+    const restoreNoticeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    const dismissRestoreNotice = useCallback(() => {
+        if (restoreNoticeTimeoutRef.current) {
+            clearTimeout(restoreNoticeTimeoutRef.current)
+            restoreNoticeTimeoutRef.current = null
+        }
+        setShowRestoreNotice(false)
+    }, [])
 
     useEffect(() => {
         if (showRestoreNotice) {
-            const timeout = setTimeout(() => {
+            restoreNoticeTimeoutRef.current = setTimeout(() => {
                 setShowRestoreNotice(false)
+                restoreNoticeTimeoutRef.current = null
             }, 2500)
-            return () => clearTimeout(timeout)
+        }
+        return () => {
+            if (restoreNoticeTimeoutRef.current) {
+                clearTimeout(restoreNoticeTimeoutRef.current)
+            }
         }
     }, [showRestoreNotice])
 
@@ -477,11 +492,27 @@ export default function CafesPageClient() {
             </div>
 
             {/* Restore notice */}
-            {showRestoreNotice && (
-                <div className='bg-secondary/20 text-secondary text-sm px-4 py-2 rounded-lg text-center'>
-                    Resuming from where you left off
-                </div>
-            )}
+            <AnimatePresence>
+                {showRestoreNotice && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className='fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-secondary/10 backdrop-blur-sm border border-secondary/20 text-secondary px-4 py-2.5 rounded-lg shadow-lg text-sm'
+                    >
+                        <Clock12 size={16} />
+                        <span className='font-medium'>Resuming from where you left off</span>
+                        <button
+                            onClick={dismissRestoreNotice}
+                            className='p-1 hover:bg-secondary/20 rounded-md transition-colors'
+                            aria-label='Dismiss notification'
+                        >
+                            <X size={14} />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <MiniSubmitCafeBanner />
 
