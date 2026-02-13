@@ -13,7 +13,7 @@ import {
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { and, eq, desc, inArray, sql, count as drizzleCount } from "drizzle-orm"
+import { and, eq, desc, inArray, or, sql, count as drizzleCount } from "drizzle-orm"
 import {
     createCafeCrawlSchema,
     updateCafeCrawlSchema,
@@ -244,9 +244,6 @@ export async function getPublicCafeCrawls(
     }
 }
 
-// Need to import 'or' from drizzle-orm
-import { or } from "drizzle-orm"
-
 // =============================================================================
 // GET CAFE CRAWL BY SLUG
 // =============================================================================
@@ -262,6 +259,8 @@ export interface CafeCrawlDetail extends CafeCrawlListItem {
         thumbnail: string | null
         cityMunicipality: string
         region: string
+        lat: number | null
+        lng: number | null
         averageRating: number | null
         totalReviews: number | null
         sortOrder: number
@@ -325,6 +324,8 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
             cafeThumbnail: cafes.thumbnail,
             cafeCity: cafes.cityMunicipality,
             cafeRegion: cafes.region,
+            cafeLat: cafes.lat,
+            cafeLng: cafes.lng,
             averageRating: cafeRatingStats.averageRating,
             totalReviews: cafeRatingStats.totalReviews,
         })
@@ -354,7 +355,7 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
         itemCount: crawl.itemCount ?? 0,
         viewsCount: crawl.viewsCount ?? 0,
         savesCount: crawl.savesCount ?? 0,
-        status: crawl.status,
+        status: crawl.status ?? "draft",
         createdAt: crawl.createdAt?.toISOString() ?? new Date().toISOString(),
         updatedAt: crawl.updatedAt?.toISOString() ?? new Date().toISOString(),
         author: {
@@ -371,6 +372,8 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
             thumbnail: item.cafeThumbnail,
             cityMunicipality: item.cafeCity,
             region: item.cafeRegion,
+            lat: item.cafeLat,
+            lng: item.cafeLng,
             averageRating: item.averageRating,
             totalReviews: item.totalReviews,
             sortOrder: item.sortOrder ?? 0,
@@ -553,6 +556,7 @@ export async function toggleSaveCafeCrawl(crawlId: string): Promise<ToggleSaveCa
                 .update(cafeCrawls)
                 .set({ savesCount: sql`${cafeCrawls.savesCount} - 1` })
                 .where(eq(cafeCrawls.id, crawlId))
+            revalidatePath("/crawls")
             return { success: true, saved: false }
         } else {
             // Save
@@ -564,6 +568,7 @@ export async function toggleSaveCafeCrawl(crawlId: string): Promise<ToggleSaveCa
                 .update(cafeCrawls)
                 .set({ savesCount: sql`${cafeCrawls.savesCount} + 1` })
                 .where(eq(cafeCrawls.id, crawlId))
+            revalidatePath("/crawls")
             return { success: true, saved: true }
         }
     } catch (error) {
