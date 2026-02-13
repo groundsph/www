@@ -18,6 +18,7 @@ interface PublicCollection {
     itemCount: number
     viewsCount: number
     likesCount: number
+    isPublic: boolean
     createdAt: string
     author: {
         id: string
@@ -116,6 +117,7 @@ export async function getPublicCollections(
             itemCount: c.itemCount ?? 0,
             viewsCount: c.viewsCount ?? 0,
             likesCount: c.likesCount ?? 0,
+            isPublic: true,
             createdAt: c.createdAt?.toISOString() ?? new Date().toISOString(),
             author: authorMap.get(c.userId) ?? {
                 id: c.userId,

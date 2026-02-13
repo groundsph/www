@@ -186,6 +186,6 @@ describe("reorderCafeCrawlSchema", () => {
         const result = reorderCafeCrawlSchema.safeParse({
             items: [],
         })
-        expect(result.success).toBe(true)
+        expect(result.success).toBe(false)
     })
 })

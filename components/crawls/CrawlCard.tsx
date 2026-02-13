@@ -27,6 +27,7 @@ export default function CrawlCard({ crawl }: CrawlCardProps) {
                         alt={crawl.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-accent/20">

@@ -23,7 +23,7 @@ export const reorderCafeCrawlSchema = z.object({
             cafeId: z.string().uuid(),
             sortOrder: z.number().int().min(0),
         })
-    ),
+    ).min(1, "At least one item is required"),
 })
 
 export type CreateCafeCrawlInput = z.infer<typeof createCafeCrawlSchema>

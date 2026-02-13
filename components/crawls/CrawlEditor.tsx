@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -98,9 +98,13 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
     const [isUploadingCover, setIsUploadingCover] = useState(false)
 
     // Get map points from items
-    const mapPoints = items
-        .filter((item) => item.lat && item.lng)
-        .map((item) => ({ lat: item.lat!, lng: item.lng! }))
+    const mapPoints = useMemo(
+        () =>
+            items
+                .filter((item) => item.lat && item.lng)
+                .map((item) => ({ lat: item.lat!, lng: item.lng! })),
+        [items]
+    )
 
     // Debounced search for cafes
     useEffect(() => {
@@ -155,10 +159,10 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
 
     // Move cafe up/down
     const moveCafe = useCallback((index: number, direction: "up" | "down") => {
-        if (direction === "up" && index === 0) return
-        if (direction === "down" && index === items.length - 1) return
-
         setItems((prev) => {
+            if (direction === "up" && index === 0) return prev
+            if (direction === "down" && index === prev.length - 1) return prev
+
             const newItems = [...prev]
             const targetIndex = direction === "up" ? index - 1 : index + 1
             const [removed] = newItems.splice(index, 1)
@@ -166,7 +170,7 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
             // Update sortOrder
             return newItems.map((item, idx) => ({ ...item, sortOrder: idx }))
         })
-    }, [items.length])
+    }, [])
 
     // Update cafe note
     const updateNote = (cafeId: string, note: string) => {
@@ -570,7 +574,7 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
                                 <div className="space-y-3">
                                     {items.map((item, index) => (
                                         <div
-                                            key={item.cafeId}
+                                            key={`${item.cafeId}-${index}`}
                                             className="flex items-start gap-3 p-4 bg-secondary/5 rounded-xl"
                                         >
                                             {/* Index */}

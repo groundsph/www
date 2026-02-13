@@ -21,7 +21,7 @@ export async function generateMetadata({
 
     return buildCrawlShareMetadata({
         title: crawl.title,
-        description: crawl.description ?? `A cafe crawl with ${crawl.itemCount} cafes`,
+        description: crawl.description ?? `A cafe crawl with ${crawl.itemCount ?? 0} cafes`,
         ogImageUrl: `/community/crawls/${crawl.slug}/opengraph-image`,
     })
 }

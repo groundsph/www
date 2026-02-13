@@ -1,14 +1,5 @@
 import CrawlCard from "./CrawlCard"
-
-export interface Crawl {
-    id: string
-    title: string
-    slug: string
-    coverImage?: string | null
-    itemCount?: number
-    viewsCount?: number
-    savesCount?: number
-}
+import { Crawl } from "@/utils/types/cafe-crawls"
 
 export interface CrawlListProps {
     crawls: Crawl[]

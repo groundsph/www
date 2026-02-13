@@ -10,8 +10,6 @@ import {
     Users,
     Search,
     Coffee,
-    Heart,
-    Eye,
     User,
     Loader2,
     Star,
@@ -20,28 +18,13 @@ import {
 } from "lucide-react"
 import { getPublicCollections, searchUsers, getPublicCafeCrawls } from "@/app/api/actions/community"
 import CrawlCard from "@/components/crawls/CrawlCard"
+import CollectionCard from "@/components/collections/CollectionCard"
+import { Crawl } from "@/utils/types/cafe-crawls"
 import EventsPageClient from "@/components/events/EventsPageClient"
 import MonthlyLeaderboard from "@/components/community/MonthlyLeaderboard"
 import { EventWithCafe } from "@/utils/types/extra"
 
 type TabType = "crawls" | "collections" | "events" | "leaderboard"
-
-interface Crawl {
-    id: string
-    title: string
-    slug: string
-    coverImage: string | null
-    itemCount: number
-    viewsCount: number
-    savesCount: number
-    createdAt: string
-    author: {
-        id: string
-        username: string
-        displayName: string
-        avatarUrl: string | null
-    }
-}
 
 interface PublicCollection {
     id: string
@@ -52,6 +35,7 @@ interface PublicCollection {
     itemCount: number
     viewsCount: number
     likesCount: number
+    isPublic: boolean
     createdAt: string
     author: {
         id: string
@@ -87,6 +71,7 @@ export default function CommunityPage({
     initialCollections,
     initialCollectionsTotal,
     initialEvents,
+    initialFeaturedUsers,
 }: CommunityPageProps) {
     const router = useRouter()
     const searchParamsHook = useSearchParams()
@@ -406,6 +391,12 @@ export default function CommunityPage({
                                     <CollectionCard
                                         key={collection.id}
                                         collection={collection}
+                                        showAuthor
+                                        author={{
+                                            displayName: collection.author.displayName,
+                                            username: collection.author.username,
+                                            avatarUrl: collection.author.avatarUrl,
+                                        }}
                                     />
                                 ))}
                             </div>
@@ -459,81 +450,6 @@ export default function CommunityPage({
                 />
             )}
         </div>
-    )
-}
-
-// Collection Card Component
-function CollectionCard({ collection }: { collection: PublicCollection }) {
-    return (
-        <Link
-            href={`/community/${collection.slug}`}
-            className='group block bg-background border border-secondary/20 rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all'
-        >
-            {/* Cover */}
-            <div className='relative aspect-16/10 bg-secondary/10'>
-                {collection.coverImage ? (
-                    <Image
-                        src={collection.coverImage}
-                        alt={collection.title}
-                        fill
-                        className='object-cover group-hover:scale-105 transition-transform duration-300'
-                        sizes='(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw'
-                    />
-                ) : (
-                    <div className='w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-accent/20'>
-                        <Layers className='w-12 h-12 text-primary/40' />
-                    </div>
-                )}
-            </div>
-
-            {/* Content */}
-            <div className='p-4'>
-                <h3 className='font-serif font-semibold text-lg text-text group-hover:text-primary transition-colors line-clamp-1'>
-                    {collection.title}
-                </h3>
-                {collection.description && (
-                    <p className='text-sm text-text/60 line-clamp-2 mt-1'>
-                        {collection.description}
-                    </p>
-                )}
-
-                {/* Author */}
-                <div className='flex items-center gap-2 mt-3'>
-                    {collection.author.avatarUrl ? (
-                        <Image
-                            src={collection.author.avatarUrl}
-                            alt={collection.author.displayName}
-                            width={24}
-                            height={24}
-                            className='rounded-full'
-                        />
-                    ) : (
-                        <div className='w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center'>
-                            <User className='w-3 h-3 text-primary' />
-                        </div>
-                    )}
-                    <span className='text-sm text-text/60'>
-                        {collection.author.displayName}
-                    </span>
-                </div>
-
-                {/* Stats */}
-                <div className='flex items-center gap-4 mt-3 text-sm text-text/50'>
-                    <span className='flex items-center gap-1'>
-                        <Coffee className='w-3.5 h-3.5' />
-                        {collection.itemCount}
-                    </span>
-                    <span className='flex items-center gap-1'>
-                        <Eye className='w-3.5 h-3.5' />
-                        {collection.viewsCount}
-                    </span>
-                    <span className='flex items-center gap-1'>
-                        <Heart className='w-3.5 h-3.5' />
-                        {collection.likesCount}
-                    </span>
-                </div>
-            </div>
-        </Link>
     )
 }
 

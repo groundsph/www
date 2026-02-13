@@ -142,7 +142,9 @@ export default async function Image({
                             fontSize: 160,
                             fontWeight: 700,
                         }}
-                    />
+                    >
+                        ☕
+                    </div>
                 )}
             </div>
 
