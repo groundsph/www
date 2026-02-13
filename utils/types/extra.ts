@@ -67,6 +67,7 @@ export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials
     total_reviews: number | null;
     rating_distribution?: { [key: string]: number } | null;
     story?: Tables<'cafe_stories'> | null;
+    badge_stamp_url?: string | null;
     // Contributor (who submitted the cafe)
     contributor?: {
         id: string;

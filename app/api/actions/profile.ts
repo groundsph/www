@@ -37,7 +37,7 @@ export interface FullProfileData {
         total_reviews: number | null
     }[]
     passportCafes: {
-        visited: { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
+        visited: { name: string; slug: string; thumbnail: string | null; badge_stamp_url: string | null; visited_at: string | null }[]
         favorites: { name: string; slug: string }[]
         wishlist: { name: string; slug: string }[]
     }
@@ -135,7 +135,7 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
     }
 
     // 4. Get passport cafes
-    let visitedCafes: { name: string; slug: string; thumbnail: string | null; visited_at: string | null; visitCount?: number }[] = []
+    let visitedCafes: { name: string; slug: string; thumbnail: string | null; badge_stamp_url: string | null; visited_at: string | null; visitCount?: number }[] = []
     let favoriteCafes: { name: string; slug: string }[] = []
     let wishlistCafes: { name: string; slug: string }[] = []
 
@@ -148,18 +148,20 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
             cafeName: cafes.name,
             cafeSlug: cafes.slug,
             cafeThumbnail: cafes.thumbnail,
+            cafeBadgeStampUrl: cafes.badgeStampUrl,
             visitCount: count(),
             firstVisit: sql<string>`MIN(${cafeVisits.visitedAt})`,
         })
         .from(cafeVisits)
         .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
         .where(eq(cafeVisits.userId, userId))
-        .groupBy(cafeVisits.cafeId, cafes.id, cafes.name, cafes.slug, cafes.thumbnail)
+        .groupBy(cafeVisits.cafeId, cafes.id, cafes.name, cafes.slug, cafes.thumbnail, cafes.badgeStampUrl)
 
     visitedCafes = visitedCafesResult.map((r) => ({
         name: r.cafeName,
         slug: r.cafeSlug,
         thumbnail: r.cafeThumbnail,
+        badge_stamp_url: r.cafeBadgeStampUrl,
         visited_at: r.firstVisit,
         visitCount: r.visitCount,
     }))
@@ -289,7 +291,7 @@ export interface PublicProfileData {
         user_id: string
     }[]
     passportCafes: {
-        visited: { name: string; slug: string; thumbnail: string | null; visited_at: string | null }[]
+        visited: { name: string; slug: string; thumbnail: string | null; badge_stamp_url: string | null; visited_at: string | null }[]
         favorites: { name: string; slug: string }[]
         wishlist: { name: string; slug: string }[]
     }
@@ -357,17 +359,19 @@ export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?
                     cafeName: cafes.name,
                     cafeSlug: cafes.slug,
                     cafeThumbnail: cafes.thumbnail,
+                    cafeBadgeStampUrl: cafes.badgeStampUrl,
                     firstVisit: sql<string>`MIN(${cafeVisits.visitedAt})`,
                 })
                 .from(cafeVisits)
                 .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
                 .where(eq(cafeVisits.userId, profile.id))
-                .groupBy(cafeVisits.cafeId, cafes.id, cafes.name, cafes.slug, cafes.thumbnail)
+                .groupBy(cafeVisits.cafeId, cafes.id, cafes.name, cafes.slug, cafes.thumbnail, cafes.badgeStampUrl)
 
             const result = visitedCafesResult.map((r) => ({
                 name: r.cafeName,
                 slug: r.cafeSlug,
                 thumbnail: r.cafeThumbnail,
+                badge_stamp_url: r.cafeBadgeStampUrl,
                 visited_at: r.firstVisit,
             }))
 
