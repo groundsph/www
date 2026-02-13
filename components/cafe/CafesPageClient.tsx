@@ -110,6 +110,7 @@ export default function CafesPageClient() {
     const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [showRestoreNotice, setShowRestoreNotice] = useState(false)
+    const [isRestoring, setIsRestoring] = useState(false)
     const restoreNoticeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     const dismissRestoreNotice = useCallback(() => {
@@ -246,6 +247,9 @@ export default function CafesPageClient() {
 
             const restoredFilterParams = buildFilterParams(storedSearch, storedFilters, storedSortBy)
 
+            // Set restoring state BEFORE state updates to prevent filter useEffect from running
+            setIsRestoring(true)
+            
             setFilters(storedFilters)
             setSearch(storedSearch)
             setSortBy(storedSortBy)
@@ -260,6 +264,8 @@ export default function CafesPageClient() {
                     window.scrollTo(0, scrollY)
                 }
                 sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
+                // Reset restoring state so filter changes work normally
+                setIsRestoring(false)
             }, SCROLL_RESTORATION_DELAY_MS)
         } catch (error) {
             console.error("Failed to restore from session:", error)
@@ -274,7 +280,10 @@ export default function CafesPageClient() {
     }, [restoreFromSession])
 
     // Filter Logic - reset pagination and fetch page 1 on filter changes
+    // Skip if restoration is in progress to avoid race conditions
     useEffect(() => {
+        if (isRestoring) return
+        
         startTransition(async () => {
             setCurrentPage(1)
             setHasMore(true)
@@ -294,7 +303,7 @@ export default function CafesPageClient() {
                 setLoading(false)
             }
         })
-    }, [debouncedSearch, sortBy, filters, getFilterParams])
+    }, [debouncedSearch, sortBy, filters, getFilterParams, isRestoring])
 
     // Client-side filtering for open_now and near_me
     const filteredCafes = cafes.filter((cafe) => {
