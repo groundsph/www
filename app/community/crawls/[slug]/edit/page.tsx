@@ -6,20 +6,20 @@ import CrawlEditor from "@/components/crawls/CrawlEditor"
 
 interface EditCrawlPageProps {
     params: Promise<{
-        id: string
+        slug: string
     }>
 }
 
 export default async function EditCrawlPage({ params }: EditCrawlPageProps) {
-    const { id } = await params
+    const { slug } = await params
     const session = await auth.api.getSession({ headers: await headers() })
     
     if (!session?.user) {
-        redirect(`/auth/sign-in?callbackUrl=/community/crawls/${id}/edit`)
+        redirect(`/auth/sign-in?callbackUrl=/community/crawls/${slug}/edit`)
     }
 
-    // Fetch crawl data - id can be either UUID or slug
-    const crawl = await getCafeCrawlBySlug(id)
+    // Fetch crawl data - slug can be either UUID or slug
+    const crawl = await getCafeCrawlBySlug(slug)
     
     if (!crawl) {
         notFound()

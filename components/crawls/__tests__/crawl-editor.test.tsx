@@ -14,7 +14,7 @@ describe("CrawlEditor", () => {
     })
 
     it("Edit page file exists", () => {
-        const filePath = join(process.cwd(), "app", "community", "crawls", "[id]", "edit", "page.tsx")
+        const filePath = join(process.cwd(), "app", "community", "crawls", "[slug]", "edit", "page.tsx")
         expect(existsSync(filePath)).toBe(true)
     })
 })
