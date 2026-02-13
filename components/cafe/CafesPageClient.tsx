@@ -1149,10 +1149,11 @@ export default function CafesPageClient() {
                             </button>
                         </motion.div>
                     )}
+                </AnimatePresence>
 
-                    {/* Loading more indicator */}
-                    {isLoadingMore && (
-                        <div className='py-4 px-6 bg-background shadow-lg shadow-black/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
+                {/* Loading more indicator */}
+                {isLoadingMore && (
+                    <div className='py-4 px-6 bg-background shadow-lg shadow-black/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
                             <div className='flex-1 flex flex-col md:pr-24 gap-4'>
                                 <div className='flex flex-col gap-2'>
                                     <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
@@ -1163,14 +1164,13 @@ export default function CafesPageClient() {
                                     <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
                                 </div>
                                 <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
+                                <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
                             </div>
-                            <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
                         </div>
                     )}
 
-                    {/* Scroll sentinel for infinite loading */}
+                    {/* Scroll sentinel for infinite scroll */}
                     {hasMore && !loading && <div id='scroll-sentinel' className='h-1' />}
-                </AnimatePresence>
             </div>
         </section>
     )
