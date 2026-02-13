@@ -34,21 +34,50 @@ import {
     COFFEE_STYLES,
     CAFE_VIBE_TAGS,
 } from "@/utils/data/philippines"
-import { useEffect, useState, useTransition, useRef } from "react"
+import { useCallback, useEffect, useState, useTransition, useRef } from "react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
 import RandomCafeButton from "@/components/map/RandomCafeButton"
 import MiniSubmitCafeBanner from "@/components/ui/MiniSubmitCafeBanner"
 
-interface CafesPageClientProps {
-    initialCafes?: CafeWithRatings[]
+const PAGE_SIZE = 10
+
+const INITIAL_FILTERS = {
+    has_wifi: false,
+    has_smoking: false,
+    has_sockets: false,
+    has_parking: false,
+    has_aircon: false,
+    is_pet_friendly: false,
+    has_outdoor_seating: false,
+    has_indoor_seating: false,
+    has_restroom: false,
+    has_bidet: false,
+    has_non_dairy: false,
+    has_decaf: false,
+    is_work_friendly: false,
+    is_24_7: false,
+    open_now: false,
+    price_level: "" as "" | "low" | "medium" | "high",
+    coffee_style: "" as "" | "classic" | "artisan",
+    region: "",
+    near_me: false,
+    tags: [] as string[],
+    include_chains: false,
 }
 
-export default function CafesPageClient({
-    initialCafes = [],
-}: CafesPageClientProps) {
+type SortOption = "recommended" | "rating" | "reviews"
+
+const INTERSECTION_OBSERVER_THRESHOLD = 0.1
+const INTERSECTION_OBSERVER_ROOT_MARGIN = "200px"
+const ANIMATION_DELAY_MULTIPLIER = 0.2
+
+export default function CafesPageClient() {
     // States
-    const [cafes, setCafes] = useState<CafeWithRatings[]>(initialCafes)
-    const [loading, setLoading] = useState(initialCafes.length === 0)
+    const [cafes, setCafes] = useState<CafeWithRatings[]>([])
+    const [loading, setLoading] = useState(true)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [hasMore, setHasMore] = useState(true)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -61,34 +90,34 @@ export default function CafesPageClient({
         region?: string
     } | null>(null)
 
-    // Search & Filter State
     const [search, setSearch] = useState("")
     const debouncedSearch = useDebounce(search, 300)
-    const [sortBy, setSortBy] = useState("recommended")
-    const [filters, setFilters] = useState({
-        has_wifi: false,
-        has_smoking: false,
-        has_sockets: false,
+    const [sortBy, setSortBy] = useState<SortOption>("recommended")
+    const [filters, setFilters] = useState(INITIAL_FILTERS)
 
-        has_parking: false,
-        has_aircon: false,
-        is_pet_friendly: false,
-        has_outdoor_seating: false,
-        has_indoor_seating: false,
-        has_restroom: false,
-        has_bidet: false,
-        has_non_dairy: false,
-        has_decaf: false,
-        is_work_friendly: false,
-        is_24_7: false,
-        open_now: false,
-        price_level: "" as "" | "low" | "medium" | "high",
-        coffee_style: "" as "" | "classic" | "artisan",
-        region: "",
-        near_me: false,
-        tags: [] as string[],
-        include_chains: false,
-    })
+    const getFilterParams = useCallback(() => ({
+        search: debouncedSearch,
+        has_wifi: filters.has_wifi,
+        has_smoking: filters.has_smoking,
+        has_sockets: filters.has_sockets,
+        has_parking: filters.has_parking,
+        has_aircon: filters.has_aircon,
+        is_pet_friendly: filters.is_pet_friendly,
+        has_outdoor_seating: filters.has_outdoor_seating,
+        has_indoor_seating: filters.has_indoor_seating,
+        has_restroom: filters.has_restroom,
+        has_bidet: filters.has_bidet,
+        has_non_dairy: filters.has_non_dairy,
+        has_decaf: filters.has_decaf,
+        is_work_friendly: filters.is_work_friendly,
+        is_24_7: filters.is_24_7 || undefined,
+        price_level: filters.price_level || undefined,
+        coffee_style: filters.coffee_style || undefined,
+        region: filters.region || undefined,
+        tags: filters.tags.length > 0 ? filters.tags : undefined,
+        sortBy: sortBy,
+        include_chains: filters.include_chains || undefined,
+    }), [debouncedSearch, filters, sortBy])
 
     // Location Detection - reuse cache from landing page
     useEffect(() => {
@@ -98,7 +127,6 @@ export default function CafesPageClient({
             try {
                 const { city, region } = JSON.parse(cachedLocation)
                 if (city || region) {
-                    // eslint-disable-next-line react-hooks/set-state-in-effect
                     setUserLocation({ city, region })
                     // Auto-enable near_me filter if user hasn't manually toggled it
                     if (!hasUserToggledLocation.current) {
@@ -143,36 +171,45 @@ export default function CafesPageClient({
         )
     }, [])
 
-    // Filter Logic - uses debouncedSearch for search queries
+    // Initial fetch on mount - only runs once
+    useEffect(() => {
+        const doFetch = async () => {
+            try {
+                const fetchedCafes = await getAllCafes(1, PAGE_SIZE, getFilterParams())
+                setCafes(fetchedCafes)
+                setLoading(false)
+                setHasMore(fetchedCafes.length === PAGE_SIZE)
+            } catch (error) {
+                console.error("Failed to fetch cafes:", error)
+                setLoading(false)
+            }
+        }
+
+        doFetch()
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Filter Logic - reset pagination and fetch page 1 on filter changes
     useEffect(() => {
         startTransition(async () => {
-            const fetchedCafes = await getAllCafes(1, 40, {
-                search: debouncedSearch,
-                has_wifi: filters.has_wifi,
-                has_smoking: filters.has_smoking,
-                has_sockets: filters.has_sockets,
-                has_parking: filters.has_parking,
-                has_aircon: filters.has_aircon,
-                is_pet_friendly: filters.is_pet_friendly,
-                has_outdoor_seating: filters.has_outdoor_seating,
-                has_indoor_seating: filters.has_indoor_seating,
-                has_restroom: filters.has_restroom,
-                has_bidet: filters.has_bidet,
-                has_non_dairy: filters.has_non_dairy,
-                has_decaf: filters.has_decaf,
-                is_work_friendly: filters.is_work_friendly,
-                is_24_7: filters.is_24_7 || undefined,
-                price_level: filters.price_level || undefined,
-                coffee_style: filters.coffee_style || undefined,
-                region: filters.region || undefined,
-                tags: filters.tags.length > 0 ? filters.tags : undefined,
-                sortBy: sortBy as "recommended" | "rating" | "reviews",
-                include_chains: filters.include_chains || undefined,
-            })
-            setCafes(fetchedCafes)
-            setLoading(false)
+            setCurrentPage(1)
+            setHasMore(true)
+            setCafes([])
+
+            if (typeof window !== "undefined" && sessionStorage.getItem("cafes_scroll_position")) {
+                sessionStorage.removeItem("cafes_scroll_position")
+            }
+
+            try {
+                const fetchedCafes = await getAllCafes(1, PAGE_SIZE, getFilterParams())
+                setCafes(fetchedCafes)
+                setLoading(false)
+                setHasMore(fetchedCafes.length === PAGE_SIZE)
+            } catch (error) {
+                console.error("Failed to fetch cafes:", error)
+                setLoading(false)
+            }
         })
-    }, [debouncedSearch, sortBy, filters])
+    }, [debouncedSearch, sortBy, filters, getFilterParams])
 
     // Client-side filtering for open_now and near_me
     const filteredCafes = cafes.filter((cafe) => {
@@ -210,11 +247,45 @@ export default function CafesPageClient({
             cafes.length > 0 &&
             !hasUserToggledLocation.current
         ) {
-            setTimeout(() => {
-                setFilters((prev) => ({ ...prev, near_me: false }))
-            }, 0)
+            setFilters((prev) => ({ ...prev, near_me: false }))
         }
     }, [filteredCafes.length, cafes.length, filters.near_me])
+
+    // Infinite scroll detection
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            async (entries) => {
+                const target = entries[0]
+                if (target.isIntersecting && hasMore && !isLoadingMore) {
+                    const nextPage = currentPage + 1
+                    setCurrentPage(nextPage)
+                    setIsLoadingMore(true)
+
+                    try {
+                        const fetchedCafes = await getAllCafes(
+                            nextPage,
+                            PAGE_SIZE,
+                            getFilterParams()
+                        )
+                        setCafes((prev) => [...prev, ...fetchedCafes])
+                        setHasMore(fetchedCafes.length === PAGE_SIZE)
+                    } catch (error) {
+                        console.error("Failed to fetch more cafes:", error)
+                    } finally {
+                        setIsLoadingMore(false)
+                    }
+                }
+            },
+            { threshold: INTERSECTION_OBSERVER_THRESHOLD, rootMargin: INTERSECTION_OBSERVER_ROOT_MARGIN }
+        )
+
+        const sentinel = document.getElementById("scroll-sentinel")
+        if (sentinel) {
+            observer.observe(sentinel)
+        }
+
+        return () => observer.disconnect()
+    }, [currentPage, hasMore, isLoadingMore, getFilterParams])
 
     const toggleFilter = (key: keyof typeof filters) => {
         if (key === "near_me") {
@@ -346,7 +417,7 @@ export default function CafesPageClient({
                     </button>
                     <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
+                        onChange={(e) => setSortBy(e.target.value as SortOption)}
                         className='px-3 py-2 rounded-lg border border-text/20 bg-background focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all cursor-pointer text-sm'
                     >
                         <option value='recommended'>Recommended</option>
@@ -395,30 +466,7 @@ export default function CafesPageClient({
                                         <button
                                             onClick={() => {
                                                 hasUserToggledLocation.current = false
-                                                setFilters({
-                                                    has_wifi: false,
-                                                    has_smoking: false,
-                                                    has_sockets: false,
-
-                                                    has_parking: false,
-                                                    has_aircon: false,
-                                                    is_pet_friendly: false,
-                                                    has_outdoor_seating: false,
-                                                    has_indoor_seating: false,
-                                                    has_restroom: false,
-                                                    has_bidet: false,
-                                                    has_non_dairy: false,
-                                                    has_decaf: false,
-                                                    is_work_friendly: false,
-                                                    is_24_7: false,
-                                                    open_now: false,
-                                                    price_level: "",
-                                                    coffee_style: "",
-                                                    region: "",
-                                                    near_me: false,
-                                                    tags: [],
-                                                    include_chains: false,
-                                                })
+                                                setFilters(INITIAL_FILTERS)
                                             }}
                                             className='text-xs text-text/60 hover:text-text cursor-pointer'
                                         >
@@ -668,7 +716,7 @@ export default function CafesPageClient({
                                         opacity: 1,
                                         transition: {
                                             duration: 0.5,
-                                            delay: 0.2 * idx,
+                                            delay: ANIMATION_DELAY_MULTIPLIER * idx,
                                         },
                                     }}
                                     exit={{ opacity: 0 }}
@@ -964,30 +1012,7 @@ export default function CafesPageClient({
                             <button
                                 onClick={() => {
                                     setSearch("")
-                                    setFilters({
-                                        has_wifi: false,
-                                        has_smoking: false,
-                                        has_sockets: false,
-
-                                        has_parking: false,
-                                        has_aircon: false,
-                                        is_pet_friendly: false,
-                                        has_outdoor_seating: false,
-                                        has_indoor_seating: false,
-                                        has_restroom: false,
-                                        has_bidet: false,
-                                        has_non_dairy: false,
-                                        has_decaf: false,
-                                        is_work_friendly: false,
-                                        is_24_7: false,
-                                        open_now: false,
-                                        price_level: "",
-                                        coffee_style: "",
-                                        region: "",
-                                        near_me: false,
-                                        tags: [],
-                                        include_chains: false,
-                                    })
+                                    setFilters(INITIAL_FILTERS)
                                 }}
                                 className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'
                             >
@@ -995,6 +1020,27 @@ export default function CafesPageClient({
                             </button>
                         </motion.div>
                     )}
+
+                    {/* Loading more indicator */}
+                    {isLoadingMore && (
+                        <div className='py-4 px-6 bg-background shadow-lg shadow-black/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
+                            <div className='flex-1 flex flex-col md:pr-24 gap-4'>
+                                <div className='flex flex-col gap-2'>
+                                    <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
+                                    <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
+                                </div>
+                                <div className='flex gap-2'>
+                                    <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
+                                    <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
+                                </div>
+                                <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
+                            </div>
+                            <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
+                        </div>
+                    )}
+
+                    {/* Scroll sentinel for infinite loading */}
+                    {hasMore && !loading && <div id='scroll-sentinel' className='h-1' />}
                 </AnimatePresence>
             </div>
         </section>
