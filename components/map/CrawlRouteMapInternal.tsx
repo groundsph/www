@@ -13,7 +13,6 @@ interface CrawlRouteMapProps {
 
 const markerIcon = (point: CrawlRouteMapProps["points"][number]) =>
     new DivIcon({
-        className: "crawl-marker",
         html: buildCrawlMarkerHtml({ imageUrl: point.imageUrl ?? null, label: point.label }),
         iconSize: [40, 40],
         iconAnchor: [20, 40],
