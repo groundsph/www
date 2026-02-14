@@ -40,6 +40,23 @@ function MapResizeHandler() {
     return null
 }
 
+function MapBounds({ points }: { points: { lat: number; lng: number }[] }) {
+    const map = useMap()
+
+    useEffect(() => {
+        if (points.length === 0) return
+        if (points.length === 1) {
+            map.setView([points[0].lat, points[0].lng], Math.max(map.getZoom(), 13))
+            return
+        }
+
+        const bounds = points.map((p) => [p.lat, p.lng]) as [number, number][]
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 })
+    }, [points, map])
+
+    return null
+}
+
 interface CrawlRouteMapProps {
     points: { lat: number; lng: number; imageUrl?: string | null; label?: string; index?: number }[]
     focusPoint?: { lat: number; lng: number } | null
@@ -160,6 +177,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />
                 <MapResizeHandler />
+                <MapBounds points={points} />
                 {showUserLocation && <UserLocationMarker />}
             </MapContainer>
             {gapCount > 0 && (
