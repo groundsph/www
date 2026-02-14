@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet"
 import { DivIcon } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
 import { buildCrawlMarkerHtml } from "@/utils/map/crawl-marker"
 import { getCrawlSegmentStyle } from "@/utils/map/crawl-route-style"
+import { invalidateMapSize } from "@/utils/map/leaflet"
 
 function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | null }) {
     const map = useMap()
@@ -14,6 +15,28 @@ function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | n
         if (!focusPoint) return
         map.flyTo([focusPoint.lat, focusPoint.lng], Math.max(map.getZoom(), 13), { duration: 0.8 })
     }, [focusPoint, map])
+    return null
+}
+
+function MapResizeHandler() {
+    const map = useMap()
+    const observerRef = useRef<ResizeObserver | null>(null)
+
+    useEffect(() => {
+        invalidateMapSize(map)
+        const container = map.getContainer()
+        observerRef.current = new ResizeObserver(() => invalidateMapSize(map))
+        observerRef.current.observe(container)
+
+        const handle = () => invalidateMapSize(map)
+        window.addEventListener("orientationchange", handle)
+
+        return () => {
+            observerRef.current?.disconnect()
+            window.removeEventListener("orientationchange", handle)
+        }
+    }, [map])
+
     return null
 }
 
@@ -109,6 +132,7 @@ export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps
                     />
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />
+                <MapResizeHandler />
             </MapContainer>
             {gapCount > 0 && (
                 <div className="absolute top-3 right-3 bg-background/90 border border-secondary/30 text-xs text-text/70 px-3 py-2 rounded-lg shadow-sm">
