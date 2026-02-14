@@ -38,6 +38,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
+import ProfileLocationMap from "@/components/profile/ProfileLocationMap"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { getUserCollections, getSavedCollections } from "@/app/api/actions/collection"
@@ -1491,6 +1492,15 @@ export default function Profile() {
                         wishlist={wishlistCafes}
                         isOwnProfile={true}
                     />
+                </motion.section>
+
+                {/* Your Location Section */}
+                <motion.section variants={item} className='mt-10'>
+                    <div className='flex items-center gap-2 mb-4'>
+                        <MapPin className='w-5 h-5' />
+                        <h2 className='text-xl font-semibold font-serif'>Your Location</h2>
+                    </div>
+                    <ProfileLocationMap />
                 </motion.section>
 
                 {/* Collections Section */}

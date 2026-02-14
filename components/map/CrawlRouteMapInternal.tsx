@@ -43,6 +43,7 @@ function MapResizeHandler() {
 interface CrawlRouteMapProps {
     points: { lat: number; lng: number; imageUrl?: string | null; label?: string; index?: number }[]
     focusPoint?: { lat: number; lng: number } | null
+    showUserLocation?: boolean
 }
 
 const markerIcon = (point: CrawlRouteMapProps["points"][number]) =>
@@ -53,7 +54,33 @@ const markerIcon = (point: CrawlRouteMapProps["points"][number]) =>
         iconAnchor: [22, 44],
     })
 
-export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps) {
+// Component to show user's current location on the map
+function UserLocationMarker() {
+    const [position, setPosition] = useState<[number, number] | null>(null)
+    const map = useMap()
+
+    useEffect(() => {
+        map.locate({ setView: false, maxZoom: 14 })
+        map.on("locationfound", (e) => setPosition([e.latlng.lat, e.latlng.lng]))
+    }, [map])
+
+    if (!position) return null
+    return (
+        <Marker
+            position={position}
+            icon={
+                new DivIcon({
+                    className: "user-location-marker",
+                    html: `<div style="width: 14px; height: 14px; background: #4285F4; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7],
+                })
+            }
+        />
+    )
+}
+
+export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: CrawlRouteMapProps) {
     const [segments, setSegments] = useState<[number, number][][]>([])
     const [gapCount, setGapCount] = useState(0)
 
@@ -133,6 +160,7 @@ export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />
                 <MapResizeHandler />
+                {showUserLocation && <UserLocationMarker />}
             </MapContainer>
             {gapCount > 0 && (
                 <div className="absolute top-3 right-3 bg-background/90 border border-secondary/30 text-xs text-text/70 px-3 py-2 rounded-lg shadow-sm">
