@@ -92,8 +92,12 @@ export default function CollectionView({
         setIsSaving(true)
         try {
             const result = await toggleSaveCollection(collection.id)
-            setSaved(result.saved)
-            setSavesCount((prev) => (result.saved ? prev + 1 : prev - 1))
+            if (result.success) {
+                setSaved(result.saved)
+                setSavesCount((prev) => (result.saved ? prev + 1 : prev - 1))
+            } else {
+                console.error("Failed to toggle save:", result.error)
+            }
         } catch (error) {
             console.error("Failed to toggle save:", error)
         } finally {

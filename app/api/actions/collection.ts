@@ -520,25 +520,61 @@ export async function searchCafesForCollection(query: string) {
 // =============================================================================
 // TOGGLE SAVE COLLECTION
 // =============================================================================
-export async function toggleSaveCollection(collectionId: string) {
+
+export interface ToggleSaveCollectionResult {
+    success: boolean
+    saved: boolean
+    error?: string
+}
+
+export async function toggleSaveCollection(collectionId: string): Promise<ToggleSaveCollectionResult> {
     const user = await getCurrentUser()
-    if (!user) throw new Error("You must be logged in to save a collection")
-
-    const existing = await db
-        .select({ id: collectionSaves.id })
-        .from(collectionSaves)
-        .where(and(eq(collectionSaves.collectionId, collectionId), eq(collectionSaves.userId, user.id)))
-        .limit(1)
-
-    if (existing.length > 0) {
-        await db.delete(collectionSaves).where(eq(collectionSaves.id, existing[0].id))
-        await db.update(collections).set({ savesCount: sql`${collections.savesCount} - 1` }).where(eq(collections.id, collectionId))
-        return { saved: false }
+    if (!user) {
+        return { success: false, error: "You must be logged in to save a collection", saved: false }
     }
 
-    await db.insert(collectionSaves).values({ collectionId, userId: user.id })
-    await db.update(collections).set({ savesCount: sql`${collections.savesCount} + 1` }).where(eq(collections.id, collectionId))
-    return { saved: true }
+    try {
+        // Get collection slug for revalidation
+        const collectionResult = await db
+            .select({ slug: collections.slug })
+            .from(collections)
+            .where(eq(collections.id, collectionId))
+            .limit(1)
+
+        const collectionSlug = collectionResult[0]?.slug
+
+        // Use transaction for atomic check-then-act to prevent race conditions
+        const result = await db.transaction(async (tx) => {
+            const existing = await tx
+                .select({ id: collectionSaves.id })
+                .from(collectionSaves)
+                .where(and(eq(collectionSaves.collectionId, collectionId), eq(collectionSaves.userId, user.id)))
+                .limit(1)
+
+            if (existing.length > 0) {
+                // Unsave
+                await tx.delete(collectionSaves).where(eq(collectionSaves.id, existing[0].id))
+                await tx.update(collections).set({ savesCount: sql`${collections.savesCount} - 1` }).where(eq(collections.id, collectionId))
+                return { saved: false }
+            } else {
+                // Save
+                await tx.insert(collectionSaves).values({ collectionId, userId: user.id })
+                await tx.update(collections).set({ savesCount: sql`${collections.savesCount} + 1` }).where(eq(collections.id, collectionId))
+                return { saved: true }
+            }
+        })
+
+        // Revalidate paths
+        revalidatePath("/profile/collections/saved")
+        if (collectionSlug) {
+            revalidatePath(`/community/${collectionSlug}`)
+        }
+
+        return { success: true, saved: result.saved }
+    } catch (error) {
+        console.error("Error toggling save:", error)
+        return { success: false, error: "Failed to save collection", saved: false }
+    }
 }
 
 // Type for collection list items (used by SavedCollectionsList)
