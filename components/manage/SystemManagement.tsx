@@ -331,7 +331,9 @@ export default function SystemManagement({
                 result.deleted.events +
                 result.deleted.menuPhotos +
                 result.deleted.badges +
-                result.deleted.ownershipProofs
+                result.deleted.ownershipProofs +
+                result.deleted.collections +
+                result.deleted.crawls
 
             const parts = []
             if (result.deleted.cafes > 0)
@@ -346,8 +348,12 @@ export default function SystemManagement({
                 parts.push(`${result.deleted.events} event images`)
             if (result.deleted.menuPhotos > 0)
                 parts.push(`${result.deleted.menuPhotos} menu photos`)
+            if (result.deleted.collections > 0)
+                parts.push(`${result.deleted.collections} collection images`)
+            if (result.deleted.crawls > 0)
+                parts.push(`${result.deleted.crawls} crawl covers`)
             if (result.deleted.badges > 0)
-                parts.push(`${result.deleted.badges} badge images`)
+                parts.push(`${result.deleted.badges} badge images (incl cafe stamps)`)
             if (result.deleted.ownershipProofs > 0)
                 parts.push(`${result.deleted.ownershipProofs} ownership proofs`)
 

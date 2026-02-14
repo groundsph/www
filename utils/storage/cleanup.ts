@@ -15,3 +15,17 @@ export function collectCafeStampUrls(cafes: CafeWithBadgeStamp[]): Set<string> {
     }
     return urls
 }
+
+interface CrawlWithCoverImage {
+    coverImage: string | null
+}
+
+export function collectCrawlCoverUrls(crawls: CrawlWithCoverImage[]): Set<string> {
+    const urls = new Set<string>()
+    for (const crawl of crawls) {
+        if (crawl.coverImage) {
+            urls.add(crawl.coverImage)
+        }
+    }
+    return urls
+}

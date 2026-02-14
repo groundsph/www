@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Add crawl cover storage + cleanup visibility
+### Task 1: Add crawl cover storage + cleanup visibility (incl cafe stamps)
 
 **Files:**
 - Modify: `utils/storage/types.ts`
@@ -161,6 +161,7 @@ const total =
 
 if (result.deleted.collections > 0) parts.push(`${result.deleted.collections} collection images`)
 if (result.deleted.crawls > 0) parts.push(`${result.deleted.crawls} crawl covers`)
+if (result.deleted.badges > 0) parts.push(`${result.deleted.badges} badge images (incl cafe stamps)`)
 ```
 
 **Step 4: Run test to verify it passes**

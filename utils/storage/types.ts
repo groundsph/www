@@ -126,6 +126,7 @@ export const STORAGE_BUCKETS = {
     BADGES: 'badges',
     OWNERSHIP_PROOFS: 'ownership-proofs',
     COLLECTIONS: 'collections',
+    CRAWLS: 'crawls',
 } as const
 
 export type StorageBucket = typeof STORAGE_BUCKETS[keyof typeof STORAGE_BUCKETS]
@@ -186,6 +187,12 @@ export const BUCKET_CONFIGS: Record<StorageBucket, BucketConfig> = {
         name: STORAGE_BUCKETS.COLLECTIONS,
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024, // 5MB
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+    },
+    [STORAGE_BUCKETS.CRAWLS]: {
+        name: STORAGE_BUCKETS.CRAWLS,
+        isPublic: true,
+        maxFileSize: 5 * 1024 * 1024,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
     },
 }

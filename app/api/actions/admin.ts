@@ -1584,6 +1584,8 @@ export async function adminCleanupOrphanedImages(): Promise<{
         menuPhotos: number
         badges: number
         ownershipProofs: number
+        collections: number
+        crawls: number
     }
     error?: string
 }> {

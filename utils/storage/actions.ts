@@ -12,7 +12,7 @@
 
 import { getCurrentUser } from "@/lib/auth"
 import { db } from "@/db"
-import { profiles, cafes, reviews, blogPosts, events, badgeDefinitions, cafeClaims, cafeMenuItems, collections, avatarDeletionQueue } from "@/db/schema"
+import { profiles, cafes, reviews, blogPosts, events, badgeDefinitions, cafeClaims, cafeMenuItems, collections, avatarDeletionQueue, cafeCrawls } from "@/db/schema"
 import { eq, sql, isNotNull } from "drizzle-orm"
 import {
     getStorageProvider,
@@ -23,7 +23,7 @@ import {
     generateRootFilePath,
     type StorageBucket,
 } from "@/utils/storage"
-import { collectCafeStampUrls } from "@/utils/storage/cleanup"
+import { collectCafeStampUrls, collectCrawlCoverUrls } from "@/utils/storage/cleanup"
 import { CAFE_PLACEHOLDER_URL } from "@/utils/extras"
 import { isOwnerOfCafe } from "@/app/api/actions/owner"
 
@@ -682,6 +682,8 @@ export interface CleanupResult {
         menuPhotos: number
         badges: number
         ownershipProofs: number
+        collections: number
+        crawls: number
     }
     error?: string
 }
@@ -784,6 +786,12 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
             if (c.coverImage) collectionImages.add(c.coverImage)
         }
 
+        // Crawl Cover Images
+        const crawlsResult = await db
+            .select({ coverImage: cafeCrawls.coverImage })
+            .from(cafeCrawls)
+            .where(isNotNull(cafeCrawls.coverImage))
+        const crawlImages = collectCrawlCoverUrls(crawlsResult)
 
         // ---------------------------------------------------------
         // 2. Iterate Storage and Delete Orphans
@@ -851,6 +859,7 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
         await processBucket(STORAGE_BUCKETS.BADGES, badgeImages, 'badges')
         await processBucket(STORAGE_BUCKETS.OWNERSHIP_PROOFS, proofImages, 'ownershipProofs')
         await processBucket(STORAGE_BUCKETS.COLLECTIONS, collectionImages, 'collections')
+        await processBucket(STORAGE_BUCKETS.CRAWLS, crawlImages, 'crawls')
 
         return { success: true, deleted }
     } catch (error) {
@@ -870,6 +879,7 @@ function createEmptyCleanupStats() {
         badges: 0,
         ownershipProofs: 0,
         collections: 0,
+        crawls: 0,
     }
 }
 
