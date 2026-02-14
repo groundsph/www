@@ -39,11 +39,12 @@ function transformCafesToMapPoints(cafes: TestCafeItem[]) {
 
     return validCafes
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((cafe) => ({
+        .map((cafe, index) => ({
             lat: cafe.lat,
             lng: cafe.lng,
             imageUrl: cafe.thumbnail ? getCafeThumbnailUrl(cafe.thumbnail) : null,
             label: cafe.name,
+            index: index + 1,
         }))
 }
 

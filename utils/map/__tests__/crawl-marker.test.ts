@@ -52,4 +52,10 @@ describe("crawl marker", () => {
         expect(html).toContain("&amp;")
         expect(html).not.toContain(" & Coffee")
     })
+
+    it("renders a number when index is provided", () => {
+        const html = buildCrawlMarkerHtml({ imageUrl: "https://example.com/img.jpg", label: "Cafe", index: 3 })
+        expect(html).toContain("crawl-marker-number")
+        expect(html).toContain(">3<")
+    })
 })

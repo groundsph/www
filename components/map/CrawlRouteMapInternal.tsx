@@ -17,15 +17,16 @@ function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | n
 }
 
 interface CrawlRouteMapProps {
-    points: { lat: number; lng: number; imageUrl?: string | null; label?: string }[]
+    points: { lat: number; lng: number; imageUrl?: string | null; label?: string; index?: number }[]
     focusPoint?: { lat: number; lng: number } | null
 }
 
 const markerIcon = (point: CrawlRouteMapProps["points"][number]) =>
     new DivIcon({
-        html: buildCrawlMarkerHtml({ imageUrl: point.imageUrl ?? null, label: point.label }),
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
+        className: "crawl-marker-icon",
+        html: buildCrawlMarkerHtml({ imageUrl: point.imageUrl ?? null, label: point.label, index: point.index }),
+        iconSize: [44, 44],
+        iconAnchor: [22, 44],
     })
 
 export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps) {

@@ -108,9 +108,15 @@
 }
 
 /* Crawl route markers with cafe thumbnails */
+.crawl-marker-icon {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
 .crawl-marker-pin {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     background: linear-gradient(135deg, #74512d 0%, #543310 100%);
     border: 3px solid #f8f4e1;
     border-radius: 50% 50% 50% 0;
@@ -119,14 +125,33 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .crawl-marker-circle {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background-position: center;
     background-size: cover;
     transform: rotate(45deg);
-    border: 2px solid #f8f4e1;
+    border: none;
+}
+
+.crawl-marker-number {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #f8f4e1;
+    color: #543310;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }

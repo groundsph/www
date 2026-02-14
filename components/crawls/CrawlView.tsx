@@ -68,11 +68,12 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
 
     const mapPoints = validCafes
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((cafe) => ({
+        .map((cafe, index) => ({
             lat: cafe.lat,
             lng: cafe.lng,
             imageUrl: cafe.thumbnail ? getCafeThumbnailUrl(cafe.thumbnail) : null,
             label: cafe.name,
+            index: index + 1,
         }))
 
     return (
