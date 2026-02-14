@@ -1610,7 +1610,7 @@ export default function Profile() {
                                 No saved crawls yet
                             </p>
                             <Link
-                                href='/community/crawls'
+                                href='/community?tab=crawls'
                                 className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
                             >
                                 <Bookmark className='w-4 h-4' />

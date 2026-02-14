@@ -341,6 +341,15 @@ export default function CommunityPage({
                 </section>
             ) : activeTab === "crawls" ? (
                 <section className='max-w-7xl mx-auto px-6 py-8'>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-semibold text-text">Latest Crawls</h2>
+                        <Link
+                            href="/community/crawls/create"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+                        >
+                            Create Crawl
+                        </Link>
+                    </div>
                     {crawls.length > 0 ? (
                         <>
                             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>

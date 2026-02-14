@@ -46,7 +46,7 @@ export default function SavedCrawlsList({ crawls }: SavedCrawlsListProps) {
                             Explore and save cafe crawls from the community.
                         </p>
                         <Link
-                            href='/community/crawls'
+                            href='/community?tab=crawls'
                             className='inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors'
                         >
                             <Bookmark className='w-5 h-5' />

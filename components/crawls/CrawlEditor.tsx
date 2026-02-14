@@ -237,7 +237,7 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
             const result = await deleteCafeCrawl(crawl.id)
             if (result.success) {
                 addNotification("Crawl deleted", "success")
-                router.push("/community/crawls")
+                router.push("/community?tab=crawls")
             } else {
                 addNotification(result.error || "Failed to delete crawl", "error")
                 setIsDeleting(false)
@@ -306,7 +306,7 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
                 <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <Link
-                            href={mode === "create" ? "/community/crawls" : `/community/crawls/${crawl.id || ""}`}
+                            href={mode === "create" ? "/community?tab=crawls" : `/community/crawls/${crawl.id || ""}`}
                             className="p-2 -ml-2 text-text/60 hover:text-text transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
