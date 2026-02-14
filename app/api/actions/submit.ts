@@ -91,7 +91,8 @@ export async function submitCafe(
                 day: h.day,
                 open: h.open,
                 close: h.close,
-                is_closed: h.is_closed || false
+                is_closed: h.is_closed || false,
+                is_24_hours: h.is_24_hours || false,
             }))
             : null
 
