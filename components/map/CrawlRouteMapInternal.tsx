@@ -1,15 +1,28 @@
 "use client"
 
 import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet"
+import { DivIcon } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
+import { buildCrawlMarkerHtml } from "@/utils/map/crawl-marker"
 
 interface CrawlRouteMapProps {
-    points: { lat: number; lng: number }[]
+    points: { lat: number; lng: number; imageUrl?: string | null; label?: string }[]
+    focusPoint?: { lat: number; lng: number } | null
 }
 
-export default function CrawlRouteMap({ points }: CrawlRouteMapProps) {
-    const defaultCenter: [number, number] = [12.8797, 121.774]
+const markerIcon = (point: CrawlRouteMapProps["points"][number]) =>
+    new DivIcon({
+        className: "crawl-marker",
+        html: buildCrawlMarkerHtml({ imageUrl: point.imageUrl ?? null, label: point.label }),
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+    })
+
+export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps) {
+    const defaultCenter: [number, number] = focusPoint
+        ? [focusPoint.lat, focusPoint.lng]
+        : [12.8797, 121.774]
 
     return (
         <MapContainer
@@ -21,12 +34,13 @@ export default function CrawlRouteMap({ points }: CrawlRouteMapProps) {
         >
             <TileLayer
                 attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
             />
             {points.map((p, idx) => (
                 <Marker
                     key={`${p.lat}-${p.lng}-${idx}`}
                     position={[p.lat, p.lng]}
+                    icon={markerIcon(p)}
                 />
             ))}
             {points.length >= 2 && (

@@ -18,9 +18,10 @@ const CrawlRouteMapInternal = dynamic(
 )
 
 interface CrawlRouteMapProps {
-    points: { lat: number; lng: number }[]
+    points: { lat: number; lng: number; imageUrl?: string | null; label?: string }[]
+    focusPoint?: { lat: number; lng: number } | null
 }
 
-export default function CrawlRouteMap({ points }: CrawlRouteMapProps) {
-    return <CrawlRouteMapInternal points={points} />
+export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps) {
+    return <CrawlRouteMapInternal points={points} focusPoint={focusPoint} />
 }
