@@ -6,6 +6,7 @@ import { DivIcon } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
 import { buildCrawlMarkerHtml } from "@/utils/map/crawl-marker"
+import { getCrawlSegmentStyle } from "@/utils/map/crawl-route-style"
 
 function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | null }) {
     const map = useMap()
@@ -104,7 +105,7 @@ export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps
                     <Polyline
                         key={`seg-${idx}`}
                         positions={segment}
-                        pathOptions={{ color: "#74512d", weight: 4, opacity: 0.8 }}
+                        pathOptions={getCrawlSegmentStyle(idx)}
                     />
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />
