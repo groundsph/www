@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet"
 import { DivIcon } from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -19,35 +20,84 @@ const markerIcon = (point: CrawlRouteMapProps["points"][number]) =>
     })
 
 export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps) {
+    const [segments, setSegments] = useState<[number, number][][]>([])
+    const [gapCount, setGapCount] = useState(0)
+
     const defaultCenter: [number, number] = focusPoint
         ? [focusPoint.lat, focusPoint.lng]
         : [12.8797, 121.774]
 
+    useEffect(() => {
+        let cancelled = false
+        const run = async () => {
+            if (points.length < 2) {
+                setSegments([])
+                setGapCount(0)
+                return
+            }
+            const requests = points.slice(0, -1).map((p, idx) => ({
+                start: p,
+                end: points[idx + 1],
+            }))
+
+            const results = await Promise.all(
+                requests.map(async ({ start, end }) => {
+                    const res = await fetch("/api/routes/osrm", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ start, end, profile: "driving" }),
+                    })
+                    if (!res.ok) return null
+                    const json = await res.json()
+                    if (!json?.geometry?.coordinates) return null
+                    return json.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]])
+                })
+            )
+
+            if (cancelled) return
+            setGapCount(results.filter((r) => !r).length)
+            setSegments(results.filter(Boolean) as [number, number][][])
+        }
+
+        run()
+        return () => {
+            cancelled = true
+        }
+    }, [points])
+
     return (
-        <MapContainer
-            center={defaultCenter}
-            zoom={6}
-            scrollWheelZoom
-            className="h-full w-full"
-            style={{ minHeight: "420px" }}
-        >
-            <TileLayer
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
-            />
-            {points.map((p, idx) => (
-                <Marker
-                    key={`${p.lat}-${p.lng}-${idx}`}
-                    position={[p.lat, p.lng]}
-                    icon={markerIcon(p)}
+        <div className="relative h-full w-full">
+            <MapContainer
+                center={defaultCenter}
+                zoom={6}
+                scrollWheelZoom
+                className="h-full w-full"
+                style={{ minHeight: "420px" }}
+            >
+                <TileLayer
+                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                    url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
                 />
-            ))}
-            {points.length >= 2 && (
-                <Polyline
-                    positions={points.map((p) => [p.lat, p.lng])}
-                    pathOptions={{ color: "#74512d", weight: 4, opacity: 0.8 }}
-                />
+                {points.map((p, idx) => (
+                    <Marker
+                        key={`${p.lat}-${p.lng}-${idx}`}
+                        position={[p.lat, p.lng]}
+                        icon={markerIcon(p)}
+                    />
+                ))}
+                {segments.map((segment, idx) => (
+                    <Polyline
+                        key={`seg-${idx}`}
+                        positions={segment}
+                        pathOptions={{ color: "#74512d", weight: 4, opacity: 0.8 }}
+                    />
+                ))}
+            </MapContainer>
+            {gapCount > 0 && (
+                <div className="absolute top-3 right-3 bg-background/90 border border-secondary/30 text-xs text-text/70 px-3 py-2 rounded-lg shadow-sm">
+                    {gapCount} route gap{gapCount > 1 ? "s" : ""} (no road path)
+                </div>
             )}
-        </MapContainer>
+        </div>
     )
 }
