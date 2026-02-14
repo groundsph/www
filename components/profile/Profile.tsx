@@ -40,7 +40,7 @@ import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
-import { getUserCollections } from "@/app/api/actions/collection"
+import { getUserCollections, getSavedCollections } from "@/app/api/actions/collection"
 import { getSavedCafeCrawls } from "@/app/api/actions/cafe-crawls"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
@@ -220,6 +220,22 @@ export default function Profile() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Crawl type from cafe-crawls actions
     const [savedCrawls, setSavedCrawls] = useState<any[]>([])
 
+    // Saved Collections
+    const [savedCollections, setSavedCollections] = useState<
+        {
+            id: string
+            title: string
+            slug: string
+            description: string | null
+            coverImage: string | null
+            itemCount: number | null
+            isPublic: boolean | null
+            viewsCount: number | null
+            likesCount: number | null
+            createdAt: string | null
+        }[]
+    >([])
+
     // Redirect if not authenticated
     useEffect(() => {
         if (!user && !loading) {
@@ -286,6 +302,20 @@ export default function Profile() {
             }
         }
         fetchSavedCrawls()
+    }, [user])
+
+    // Fetch saved collections separately
+    useEffect(() => {
+        const fetchSavedCollections = async () => {
+            if (!user) return
+            try {
+                const data = await getSavedCollections()
+                setSavedCollections(data)
+            } catch (error) {
+                console.error("Error fetching saved collections:", error)
+            }
+        }
+        fetchSavedCollections()
     }, [user])
 
     // Stable handlers for FollowCounts
@@ -1615,6 +1645,85 @@ export default function Profile() {
                             >
                                 <Bookmark className='w-4 h-4' />
                                 Browse Crawls
+                            </Link>
+                        </div>
+                    )}
+                </motion.section>
+
+                {/* Saved Collections Section */}
+                <motion.section
+                    variants={item}
+                    className='mt-10'
+                >
+                    <div className='flex items-center gap-2 mb-4'>
+                        <Bookmark className='w-5 h-5' />
+                        <h2 className='text-xl font-semibold font-serif'>
+                            Saved Collections
+                        </h2>
+                        <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                            {savedCollections.length}
+                        </span>
+                    </div>
+
+                    {savedCollections.length > 0 ? (
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                {savedCollections.slice(0, 3).map((collection) => (
+                                    <motion.div
+                                        key={collection.id}
+                                        whileHover={{ scale: 1.02, y: -2 }}
+                                    >
+                                        <Link
+                                            href={`/community/${collection.slug}`}
+                                            className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                        >
+                                            {collection.coverImage ? (
+                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                    <Image
+                                                        src={collection.coverImage}
+                                                        alt={collection.title}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                    <Bookmark className='w-5 h-5 text-primary/60' />
+                                                </div>
+                                            )}
+                                            <div className='flex-1 min-w-0'>
+                                                <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                    {collection.title}
+                                                </p>
+                                                <p className='text-xs text-text/50'>
+                                                    {collection.itemCount ?? 0} cafes
+                                                </p>
+                                            </div>
+                                        </Link>
+                                    </motion.div>
+                                ))}
+                            </div>
+
+                            <Link
+                                href='/profile/collections/saved'
+                                className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                            >
+                                <Bookmark className='w-4 h-4' />
+                                View Saved Collections
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                            <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                            <p className='text-text/60 font-medium mb-4'>
+                                No saved collections yet
+                            </p>
+                            <Link
+                                href='/community?tab=collections'
+                                className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                            >
+                                <Bookmark className='w-4 h-4' />
+                                Browse Collections
                             </Link>
                         </div>
                     )}

@@ -13,9 +13,10 @@ import {
     User,
     Lock,
     Pencil,
+    Bookmark,
 } from "lucide-react"
 import { useState } from "react"
-import { toggleLikeCollection } from "@/app/api/actions/collection"
+import { toggleLikeCollection, toggleSaveCollection } from "@/app/api/actions/collection"
 import { useAuth } from "@/components/layout/AuthProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
@@ -28,6 +29,7 @@ interface CollectionData {
     itemCount: number | null
     viewsCount: number | null
     likesCount: number | null
+    savesCount: number | null
     isPublic: boolean | null
     createdAt: string | null
     updatedAt: string | null
@@ -49,6 +51,7 @@ interface CollectionData {
         note?: string
     } | null)[]
     hasLiked: boolean
+    hasSaved: boolean
     isOwner: boolean
 }
 
@@ -61,6 +64,9 @@ export default function CollectionView({
     const [liked, setLiked] = useState(collection.hasLiked)
     const [likesCount, setLikesCount] = useState(collection.likesCount ?? 0)
     const [isLiking, setIsLiking] = useState(false)
+    const [saved, setSaved] = useState(collection.hasSaved)
+    const [savesCount, setSavesCount] = useState(collection.savesCount ?? 0)
+    const [isSaving, setIsSaving] = useState(false)
     const [copied, setCopied] = useState(false)
 
     const handleLike = async () => {
@@ -76,6 +82,22 @@ export default function CollectionView({
             console.error("Failed to toggle like:", error)
         } finally {
             setIsLiking(false)
+        }
+    }
+
+    const handleSave = async () => {
+        if (!user) return
+        if (isSaving) return
+
+        setIsSaving(true)
+        try {
+            const result = await toggleSaveCollection(collection.id)
+            setSaved(result.saved)
+            setSavesCount((prev) => (result.saved ? prev + 1 : prev - 1))
+        } catch (error) {
+            console.error("Failed to toggle save:", error)
+        } finally {
+            setIsSaving(false)
         }
     }
 
@@ -220,6 +242,21 @@ export default function CollectionView({
                     )}
 
                     <button
+                        onClick={handleSave}
+                        disabled={!user || isSaving}
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                            saved
+                                ? "bg-secondary text-white"
+                                : "text-text/70 hover:text-secondary border border-secondary/30 hover:border-secondary/50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        <Bookmark
+                            className={`w-3.5 h-3.5 ${saved ? "fill-current" : ""}`}
+                        />
+                        <span>{savesCount}</span>
+                    </button>
+
+                    <button
                         onClick={handleLike}
                         disabled={!user || isLiking}
                         className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
@@ -253,6 +290,21 @@ export default function CollectionView({
                     >
                         <Share2 className='w-4 h-4' />
                         {copied ? "Copied!" : "Share"}
+                    </button>
+
+                    <button
+                        onClick={handleSave}
+                        disabled={!user || isSaving}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all ${
+                            saved
+                                ? "bg-secondary text-white"
+                                : "text-text/70 hover:text-secondary border border-secondary/30 hover:border-secondary/50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        <Bookmark
+                            className={`w-4 h-4 ${saved ? "fill-current" : ""}`}
+                        />
+                        <span>{savesCount}</span>
                     </button>
 
                     <button

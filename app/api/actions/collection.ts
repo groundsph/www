@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { collections, collectionLikes, cafes, cafeRatingStats, profiles } from "@/db/schema"
+import { collections, collectionLikes, collectionSaves, cafes, cafeRatingStats, profiles } from "@/db/schema"
 import { eq, and, desc, sql, inArray } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
@@ -206,6 +206,7 @@ export async function getCollectionBySlug(slug: string) {
             isPublic: collections.isPublic,
             viewsCount: collections.viewsCount,
             likesCount: collections.likesCount,
+            savesCount: collections.savesCount,
             createdAt: collections.createdAt,
             updatedAt: collections.updatedAt,
             authorDisplayName: profiles.displayName,
@@ -290,6 +291,17 @@ export async function getCollectionBySlug(slug: string) {
         hasLiked = like.length > 0
     }
 
+    // Check if current user has saved
+    let hasSaved = false
+    if (user) {
+        const save = await db
+            .select({ id: collectionSaves.id })
+            .from(collectionSaves)
+            .where(and(eq(collectionSaves.collectionId, collection.id), eq(collectionSaves.userId, user.id)))
+            .limit(1)
+        hasSaved = save.length > 0
+    }
+
     return {
         id: collection.id,
         title: collection.title,
@@ -299,6 +311,7 @@ export async function getCollectionBySlug(slug: string) {
         itemCount: collection.itemCount,
         viewsCount: collection.viewsCount,
         likesCount: collection.likesCount,
+        savesCount: collection.savesCount,
         isPublic: collection.isPublic,
         createdAt: collection.createdAt?.toISOString() ?? null,
         updatedAt: collection.updatedAt?.toISOString() ?? null,
@@ -310,6 +323,7 @@ export async function getCollectionBySlug(slug: string) {
         },
         cafes: orderedCafes,
         hasLiked,
+        hasSaved,
         isOwner: user?.id === collection.userId,
     }
 }
@@ -335,6 +349,7 @@ export async function getUserCollections(userId?: string) {
             isPublic: collections.isPublic,
             viewsCount: collections.viewsCount,
             likesCount: collections.likesCount,
+            savesCount: collections.savesCount,
             createdAt: collections.createdAt,
         })
         .from(collections)
@@ -500,5 +515,73 @@ export async function searchCafesForCollection(query: string) {
         .limit(10)
 
     return result
+}
+
+// =============================================================================
+// TOGGLE SAVE COLLECTION
+// =============================================================================
+export async function toggleSaveCollection(collectionId: string) {
+    const user = await getCurrentUser()
+    if (!user) throw new Error("You must be logged in to save a collection")
+
+    const existing = await db
+        .select({ id: collectionSaves.id })
+        .from(collectionSaves)
+        .where(and(eq(collectionSaves.collectionId, collectionId), eq(collectionSaves.userId, user.id)))
+        .limit(1)
+
+    if (existing.length > 0) {
+        await db.delete(collectionSaves).where(eq(collectionSaves.id, existing[0].id))
+        await db.update(collections).set({ savesCount: sql`${collections.savesCount} - 1` }).where(eq(collections.id, collectionId))
+        return { saved: false }
+    }
+
+    await db.insert(collectionSaves).values({ collectionId, userId: user.id })
+    await db.update(collections).set({ savesCount: sql`${collections.savesCount} + 1` }).where(eq(collections.id, collectionId))
+    return { saved: true }
+}
+
+// Type for collection list items (used by SavedCollectionsList)
+export interface CollectionListItem {
+    id: string
+    title: string
+    slug: string
+    description: string | null
+    coverImage: string | null
+    itemCount: number | null
+    viewsCount: number | null
+    likesCount: number | null
+    savesCount: number | null
+    isPublic: boolean | null
+    createdAt: string | null
+}
+
+// =============================================================================
+// GET SAVED COLLECTIONS
+// =============================================================================
+export async function getSavedCollections(): Promise<CollectionListItem[]> {
+    const user = await getCurrentUser()
+    if (!user) return []
+
+    const results = await db
+        .select({
+            id: collections.id,
+            title: collections.title,
+            slug: collections.slug,
+            description: collections.description,
+            coverImage: collections.coverImage,
+            itemCount: collections.itemCount,
+            viewsCount: collections.viewsCount,
+            likesCount: collections.likesCount,
+            savesCount: collections.savesCount,
+            isPublic: collections.isPublic,
+            createdAt: collections.createdAt,
+        })
+        .from(collectionSaves)
+        .innerJoin(collections, eq(collectionSaves.collectionId, collections.id))
+        .where(eq(collectionSaves.userId, user.id))
+        .orderBy(desc(collectionSaves.createdAt))
+
+    return results.map((c) => ({ ...c, createdAt: c.createdAt?.toISOString() ?? null }))
 }
 

@@ -503,6 +503,7 @@ export const collections = pgTable(
         isPublic: boolean("is_public").default(true),
         viewsCount: integer("views_count").default(0),
         likesCount: integer("likes_count").default(0),
+        savesCount: integer("saves_count").default(0),
         createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
     },
@@ -521,6 +522,23 @@ export const collectionLikes = pgTable("collection_likes", {
         .references(() => profiles.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
+
+export const collectionSaves = pgTable(
+    "collection_saves",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        collectionId: uuid("collection_id")
+            .notNull()
+            .references(() => collections.id, { onDelete: "cascade" }),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => profiles.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    },
+    (t) => ({
+        uniqueSaveIdx: uniqueIndex("collection_saves_user_collection_unique").on(t.userId, t.collectionId),
+    })
+)
 
 // ============================================================================
 // REPORTING TABLES

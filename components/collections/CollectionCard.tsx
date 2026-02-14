@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Heart, Eye, Coffee, Layers } from "lucide-react"
+import { Heart, Eye, Coffee, Layers, Bookmark } from "lucide-react"
 
 interface CollectionCardProps {
     collection: {
@@ -14,6 +14,7 @@ interface CollectionCardProps {
         itemCount: number | null
         viewsCount: number | null
         likesCount: number | null
+        savesCount?: number | null
         isPublic: boolean | null
         createdAt: string | null
     }
@@ -104,6 +105,12 @@ export default function CollectionCard({
 
                 {/* Stats */}
                 <div className='flex items-center gap-4 mt-2 pt-2 border-t border-secondary/10'>
+                    <div className='flex items-center gap-1.5 text-text/50'>
+                        <Bookmark className='w-3.5 h-3.5' />
+                        <span className='text-xs'>
+                            {collection.savesCount ?? 0}
+                        </span>
+                    </div>
                     <div className='flex items-center gap-1.5 text-text/50'>
                         <Heart className='w-3.5 h-3.5' />
                         <span className='text-xs'>
