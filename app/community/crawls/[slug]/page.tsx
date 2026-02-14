@@ -47,6 +47,7 @@ export default async function CrawlPage({
         itemCount: crawl.itemCount,
         viewsCount: crawl.viewsCount,
         savesCount: crawl.savesCount,
+        likesCount: crawl.likesCount,
         createdAt: crawl.createdAt,
         updatedAt: crawl.updatedAt,
         status: crawl.status,
@@ -68,6 +69,7 @@ export default async function CrawlPage({
             lng: item.lng,
         })),
         hasSaved: crawl.hasSaved,
+        hasLiked: crawl.hasLiked,
         isOwner: crawl.isOwner,
     }
 

@@ -87,6 +87,7 @@ async function getStorageStats(): Promise<{
         events: 0,
         ownership_proofs: 0,
         collections: 0,
+        crawls: 0,
     }
 
     const bucketKeyMap: Record<StorageBucket, keyof typeof bucketSizes> = {
@@ -99,6 +100,7 @@ async function getStorageStats(): Promise<{
         events: "events",
         "ownership-proofs": "ownership_proofs",
         collections: "collections",
+        crawls: "crawls",
     }
 
     for (const bucket of buckets) {
@@ -128,6 +130,7 @@ async function getStorageStats(): Promise<{
             events: number
             ownership_proofs: number
             collections: number
+            crawls: number
         },
         provider: storage.name,
     }
