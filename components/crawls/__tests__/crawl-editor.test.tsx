@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { existsSync } from "fs"
+import { existsSync, readFileSync } from "fs"
 import { join } from "path"
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 
@@ -43,5 +43,20 @@ describe("CrawlRouteMap focusPoint", () => {
             focusPoint: undefined,
         })
         expect(element).toBeDefined()
+    })
+})
+
+describe("CrawlEditor Layout", () => {
+    it("orders sections: cover/title/desc, route, add cafes, list", () => {
+        const filePath = join(process.cwd(), "components", "crawls", "CrawlEditor.tsx")
+        const source = readFileSync(filePath, "utf-8")
+        const coverIndex = source.indexOf("Cover Image")
+        const routeIndex = source.indexOf("Route Preview")
+        const addIndex = source.indexOf("Add Cafes")
+        const listIndex = source.indexOf("Cafes (")
+        expect(coverIndex).toBeGreaterThan(-1)
+        expect(routeIndex).toBeGreaterThan(coverIndex)
+        expect(addIndex).toBeGreaterThan(routeIndex)
+        expect(listIndex).toBeGreaterThan(addIndex)
     })
 })

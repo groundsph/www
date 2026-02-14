@@ -378,334 +378,334 @@ export default function CrawlEditor({
             </div>
 
             <div className='max-w-6xl w-full mx-auto px-6 py-8'>
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-                    {/* Left: Details */}
-                    <div className='lg:col-span-1 space-y-6'>
-                        {/* Cover Image */}
-                        <div>
-                            <label className='block text-sm font-medium text-text mb-2'>
-                                Cover Image
-                            </label>
-                            <input
-                                ref={fileInputRef}
-                                type='file'
-                                accept='image/*'
-                                onChange={handleFileSelect}
-                                className='hidden'
-                            />
-                            <div
-                                onClick={() => fileInputRef.current?.click()}
-                                className='relative aspect-video rounded-xl border-2 border-dashed border-secondary/30 hover:border-primary/50 cursor-pointer overflow-hidden transition-colors group'
-                            >
-                                {isUploadingCover ? (
-                                    <div className='w-full h-full flex flex-col items-center justify-center'>
-                                        <Loader2 className='w-8 h-8 text-primary animate-spin' />
-                                        <span className='text-sm text-text/60 mt-2'>
-                                            Uploading...
-                                        </span>
-                                    </div>
-                                ) : coverImage ? (
-                                    <>
-                                        <Image
-                                            src={coverImage}
-                                            alt='Cover'
-                                            fill
-                                            className='object-cover'
-                                        />
-                                        <div className='absolute inset-0 bg-text/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center'>
-                                            <span className='text-white text-sm font-medium'>
-                                                Change
+                <div className='space-y-8'>
+                    {/* Top row: Cover + Details */}
+                    <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+                        <div className='lg:col-span-1'>
+                            {/* Cover Image */}
+                            <div>
+                                <label className='block text-sm font-medium text-text mb-2'>
+                                    Cover Image
+                                </label>
+                                <input
+                                    ref={fileInputRef}
+                                    type='file'
+                                    accept='image/*'
+                                    onChange={handleFileSelect}
+                                    className='hidden'
+                                />
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className='relative aspect-video rounded-xl border-2 border-dashed border-secondary/30 hover:border-primary/50 cursor-pointer overflow-hidden transition-colors group'
+                                >
+                                    {isUploadingCover ? (
+                                        <div className='w-full h-full flex flex-col items-center justify-center'>
+                                            <Loader2 className='w-8 h-8 text-primary animate-spin' />
+                                            <span className='text-sm text-text/60 mt-2'>
+                                                Uploading...
                                             </span>
                                         </div>
-                                    </>
-                                ) : (
-                                    <div className='w-full h-full flex flex-col items-center justify-center text-text/40 group-hover:text-primary/60 transition-colors'>
-                                        <ImageIcon className='w-10 h-10 mb-2' />
-                                        <span className='text-sm'>
-                                            Add cover image
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Title */}
-                        <div>
-                            <label className='block text-sm font-medium text-text mb-2'>
-                                Title <span className='text-primary'>*</span>
-                            </label>
-                            <input
-                                type='text'
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className='w-full px-4 py-3 bg-background border border-secondary/30 rounded-xl text-text focus:outline-none focus:border-primary/50 transition-colors'
-                                maxLength={100}
-                                placeholder='e.g., Metro Manila Coffee Trail'
-                            />
-                        </div>
-
-                        {/* Description */}
-                        <div>
-                            <label className='block text-sm font-medium text-text mb-2'>
-                                Description
-                            </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={4}
-                                className='w-full px-4 py-3 bg-background border border-secondary/30 rounded-xl text-text focus:outline-none focus:border-primary/50 transition-colors resize-none'
-                                maxLength={500}
-                                placeholder='Describe your coffee crawl route...'
-                            />
-                        </div>
-
-                        {/* Visibility */}
-                        <div className='flex items-center justify-between p-4 bg-secondary/5 rounded-xl'>
-                            <div className='flex items-center gap-3'>
-                                {isPublic ? (
-                                    <Eye className='w-5 h-5 text-primary' />
-                                ) : (
-                                    <EyeOff className='w-5 h-5 text-text/50' />
-                                )}
-                                <div>
-                                    <p className='text-sm font-medium text-text'>
-                                        {isPublic ? "Public" : "Private"}
-                                    </p>
-                                    <p className='text-xs text-text/60'>
-                                        {isPublic
-                                            ? "Anyone can view"
-                                            : "Only you can view"}
-                                    </p>
+                                    ) : coverImage ? (
+                                        <>
+                                            <Image
+                                                src={coverImage}
+                                                alt='Cover'
+                                                fill
+                                                className='object-cover'
+                                            />
+                                            <div className='absolute inset-0 bg-text/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center'>
+                                                <span className='text-white text-sm font-medium'>
+                                                    Change
+                                                </span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className='w-full h-full flex flex-col items-center justify-center text-text/40 group-hover:text-primary/60 transition-colors'>
+                                            <ImageIcon className='w-10 h-10 mb-2' />
+                                            <span className='text-sm'>
+                                                Add cover image
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setIsPublic(!isPublic)}
-                                className={`w-12 h-6 rounded-full transition-colors ${
-                                    isPublic ? "bg-primary" : "bg-secondary/30"
-                                }`}
-                            >
-                                <div
-                                    className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                                        isPublic
-                                            ? "translate-x-6"
-                                            : "translate-x-0.5"
-                                    }`}
+                        </div>
+                        <div className='lg:col-span-2 space-y-4'>
+                            <div className='flex flex-col lg:flex-row lg:items-end gap-4'>
+                                <div className='flex-1'>
+                                    {/* Title */}
+                                    <label className='block text-sm font-medium text-text mb-2'>
+                                        Title <span className='text-primary'>*</span>
+                                    </label>
+                                    <input
+                                        type='text'
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className='w-full px-4 py-3 bg-background border border-secondary/30 rounded-xl text-text focus:outline-none focus:border-primary/50 transition-colors'
+                                        maxLength={100}
+                                        placeholder='e.g., Metro Manila Coffee Trail'
+                                    />
+                                </div>
+                                <div className='lg:pb-1'>
+                                    {/* Visibility Toggle */}
+                                    <div className='flex items-center gap-3'>
+                                        {isPublic ? (
+                                            <Eye className='w-5 h-5 text-primary' />
+                                        ) : (
+                                            <EyeOff className='w-5 h-5 text-text/50' />
+                                        )}
+                                        <div>
+                                            <p className='text-sm font-medium text-text'>
+                                                {isPublic ? "Public" : "Private"}
+                                            </p>
+                                            <p className='text-xs text-text/60'>
+                                                {isPublic
+                                                    ? "Anyone can view"
+                                                    : "Only you can view"}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsPublic(!isPublic)}
+                                            className={`w-12 h-6 rounded-full transition-colors ${
+                                                isPublic ? "bg-primary" : "bg-secondary/30"
+                                            }`}
+                                        >
+                                            <div
+                                                className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                                                    isPublic
+                                                        ? "translate-x-6"
+                                                        : "translate-x-0.5"
+                                                }`}
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                {/* Description */}
+                                <label className='block text-sm font-medium text-text mb-2'>
+                                    Description
+                                </label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    rows={4}
+                                    className='w-full px-4 py-3 bg-background border border-secondary/30 rounded-xl text-text focus:outline-none focus:border-primary/50 transition-colors resize-none'
+                                    maxLength={500}
+                                    placeholder='Describe your coffee crawl route...'
                                 />
-                            </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Right: Cafes + Map */}
-                    <div className='lg:col-span-2 space-y-6'>
-                        {/* Search */}
-                        <div>
-                            <label className='block text-sm font-medium text-text mb-2'>
-                                Add Cafes
+                    {/* Route Preview */}
+                    <div>
+                        <div className='flex items-center justify-between mb-3'>
+                            <label className='text-sm font-medium text-text'>
+                                Route Preview
                             </label>
-                            <div className='relative'>
-                                <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
-                                <input
-                                    type='text'
-                                    value={searchQuery}
-                                    onChange={(e) =>
-                                        setSearchQuery(e.target.value)
-                                    }
-                                    placeholder='Search cafes to add...'
-                                    className='w-full pl-12 pr-4 py-3 bg-background border border-secondary/30 rounded-xl text-text placeholder:text-text/40 focus:outline-none focus:border-primary/50 transition-colors'
-                                />
-                                {isSearching && (
-                                    <Loader2 className='absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin' />
-                                )}
-                            </div>
-
-                            {/* Search Results */}
-                            {searchResults.length > 0 && (
-                                <div className='mt-2 border border-secondary/20 rounded-xl overflow-hidden divide-y divide-secondary/10'>
-                                    {searchResults.map((cafe) => (
-                                        <button
-                                            key={cafe.id}
-                                            onClick={() => addCafe(cafe)}
-                                            className='w-full flex items-center gap-3 p-3 hover:bg-secondary/5 transition-colors text-left'
-                                        >
-                                            <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-secondary/10 shrink-0'>
-                                                {cafe.thumbnail ? (
-                                                    <Image
-                                                        src={getCafeThumbnailUrl(
-                                                            cafe.thumbnail,
-                                                        )}
-                                                        alt={cafe.name}
-                                                        fill
-                                                        className='object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-full h-full flex items-center justify-center'>
-                                                        <Coffee className='w-5 h-5 text-secondary/40' />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className='flex-1 min-w-0'>
-                                                <p className='text-sm font-medium text-text truncate'>
-                                                    {cafe.name}
-                                                </p>
-                                                <p className='text-xs text-text/60 truncate'>
-                                                    {cafe.cityMunicipality},{" "}
-                                                    {cafe.region}
-                                                </p>
-                                            </div>
-                                            <Plus className='w-5 h-5 text-primary shrink-0' />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <button
+                                className='lg:hidden text-sm text-primary'
+                                onClick={() => setShowMobileMap((v) => !v)}
+                            >
+                                {showMobileMap ? "Hide Map" : "Preview Map"}
+                            </button>
                         </div>
 
-                        {/* Map - Desktop always visible, Mobile toggle */}
-                        <div>
-                            <div className='flex items-center justify-between mb-3'>
-                                <label className='text-sm font-medium text-text'>
-                                    Route Preview
-                                </label>
-                                <button
-                                    className='lg:hidden text-sm text-primary'
-                                    onClick={() => setShowMobileMap((v) => !v)}
-                                >
-                                    {showMobileMap ? "Hide Map" : "Preview Map"}
-                                </button>
-                            </div>
+                        {/* Desktop Map - always visible */}
+                        <div className='hidden lg:block rounded-2xl overflow-hidden border border-secondary/20'>
+                            <CrawlRouteMap
+                                points={mapPoints}
+                                focusPoint={focusPoint}
+                            />
+                        </div>
 
-                            {/* Desktop Map - always visible */}
-                            <div className='hidden lg:block rounded-2xl overflow-hidden border border-secondary/20'>
+                        {/* Mobile Map - toggleable */}
+                        {showMobileMap && (
+                            <div className='lg:hidden rounded-2xl overflow-hidden border border-secondary/20'>
                                 <CrawlRouteMap
                                     points={mapPoints}
                                     focusPoint={focusPoint}
                                 />
                             </div>
+                        )}
+                    </div>
 
-                            {/* Mobile Map - toggleable */}
-                            {showMobileMap && (
-                                <div className='lg:hidden rounded-2xl overflow-hidden border border-secondary/20'>
-                                    <CrawlRouteMap
-                                        points={mapPoints}
-                                        focusPoint={focusPoint}
-                                    />
-                                </div>
+                    {/* Add Cafes */}
+                    <div>
+                        <label className='block text-sm font-medium text-text mb-2'>
+                            Add Cafes
+                        </label>
+                        <div className='relative'>
+                            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
+                            <input
+                                type='text'
+                                value={searchQuery}
+                                onChange={(e) =>
+                                    setSearchQuery(e.target.value)
+                                }
+                                placeholder='Search cafes to add...'
+                                className='w-full pl-12 pr-4 py-3 bg-background border border-secondary/30 rounded-xl text-text placeholder:text-text/40 focus:outline-none focus:border-primary/50 transition-colors'
+                            />
+                            {isSearching && (
+                                <Loader2 className='absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin' />
                             )}
                         </div>
 
-                        {/* Cafes List */}
-                        <div>
-                            <div className='flex items-center justify-between mb-3'>
-                                <label className='text-sm font-medium text-text'>
-                                    Cafes ({items.length})
-                                </label>
-                            </div>
-
-                            {items.length === 0 ? (
-                                <div className='text-center py-12 border border-dashed border-secondary/30 rounded-xl'>
-                                    <MapIcon className='w-10 h-10 text-secondary/40 mx-auto mb-3' />
-                                    <p className='text-text/60'>
-                                        No cafes added yet
-                                    </p>
-                                    <p className='text-sm text-text/40'>
-                                        Search above to add cafes to your route
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className='space-y-3'>
-                                    {items.map((item, index) => (
-                                        <div
-                                            key={`${item.cafeId}-${index}`}
-                                            className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl'
-                                        >
-                                            {/* Index */}
-                                            <div className='flex flex-col items-center gap-1 pt-1'>
-                                                <span className='w-6 h-6 flex items-center justify-center bg-primary text-white text-xs font-bold rounded-full'>
-                                                    {index + 1}
-                                                </span>
-                                            </div>
-
-                                            {/* Thumbnail */}
-                                            <div className='relative w-14 h-14 rounded-lg overflow-hidden bg-secondary/10 shrink-0'>
-                                                {item.thumbnail ? (
-                                                    <Image
-                                                        src={getCafeThumbnailUrl(
-                                                            item.thumbnail,
-                                                        )}
-                                                        alt={item.name || ""}
-                                                        fill
-                                                        className='object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-full h-full flex items-center justify-center'>
-                                                        <Coffee className='w-6 h-6 text-secondary/40' />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Info */}
-                                            <div className='flex-1 min-w-0'>
-                                                <p className='font-medium text-text truncate'>
-                                                    {item.name || "Loading..."}
-                                                </p>
-                                                <p className='text-sm text-text/60 truncate'>
-                                                    {item.cityMunicipality &&
-                                                    item.region
-                                                        ? `${item.cityMunicipality}, ${item.region}`
-                                                        : ""}
-                                                </p>
-                                                {/* Note input */}
-                                                <input
-                                                    type='text'
-                                                    value={item.note || ""}
-                                                    onChange={(e) =>
-                                                        updateNote(
-                                                            item.cafeId,
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder='Add a note about this stop...'
-                                                    className='mt-2 w-full px-3 py-1.5 text-sm bg-background border border-secondary/20 rounded-lg text-text placeholder:text-text/30 focus:outline-none focus:border-primary/50'
-                                                    maxLength={200}
+                        {/* Search Results */}
+                        {searchResults.length > 0 && (
+                            <div className='mt-2 border border-secondary/20 rounded-xl overflow-hidden divide-y divide-secondary/10'>
+                                {searchResults.map((cafe) => (
+                                    <button
+                                        key={cafe.id}
+                                        onClick={() => addCafe(cafe)}
+                                        className='w-full flex items-center gap-3 p-3 hover:bg-secondary/5 transition-colors text-left'
+                                    >
+                                        <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-secondary/10 shrink-0'>
+                                            {cafe.thumbnail ? (
+                                                <Image
+                                                    src={getCafeThumbnailUrl(
+                                                        cafe.thumbnail,
+                                                    )}
+                                                    alt={cafe.name}
+                                                    fill
+                                                    className='object-cover'
                                                 />
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className='flex flex-col gap-1'>
-                                                <button
-                                                    onClick={() =>
-                                                        moveCafe(index, "up")
-                                                    }
-                                                    disabled={index === 0}
-                                                    className='p-1 text-text/40 hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors'
-                                                >
-                                                    ▲
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        moveCafe(index, "down")
-                                                    }
-                                                    disabled={
-                                                        index ===
-                                                        items.length - 1
-                                                    }
-                                                    className='p-1 text-text/40 hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors'
-                                                >
-                                                    ▼
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        removeCafe(item.cafeId)
-                                                    }
-                                                    className='p-1 text-red-400 hover:text-red-500 transition-colors'
-                                                >
-                                                    <X className='w-4 h-4' />
-                                                </button>
-                                            </div>
+                                            ) : (
+                                                <div className='w-full h-full flex items-center justify-center'>
+                                                    <Coffee className='w-5 h-5 text-secondary/40' />
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                        <div className='flex-1 min-w-0'>
+                                            <p className='text-sm font-medium text-text truncate'>
+                                                {cafe.name}
+                                            </p>
+                                            <p className='text-xs text-text/60 truncate'>
+                                                {cafe.cityMunicipality},{" "}
+                                                {cafe.region}
+                                            </p>
+                                        </div>
+                                        <Plus className='w-5 h-5 text-primary shrink-0' />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Cafes List */}
+                    <div>
+                        <div className='flex items-center justify-between mb-3'>
+                            <label className='text-sm font-medium text-text'>
+                                Cafes ({items.length})
+                            </label>
                         </div>
+
+                        {items.length === 0 ? (
+                            <div className='text-center py-12 border border-dashed border-secondary/30 rounded-xl'>
+                                <MapIcon className='w-10 h-10 text-secondary/40 mx-auto mb-3' />
+                                <p className='text-text/60'>
+                                    No cafes added yet
+                                </p>
+                                <p className='text-sm text-text/40'>
+                                    Search above to add cafes to your route
+                                </p>
+                            </div>
+                        ) : (
+                            <div className='space-y-3'>
+                                {items.map((item, index) => (
+                                    <div
+                                        key={`${item.cafeId}-${index}`}
+                                        className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl'
+                                    >
+                                        {/* Index */}
+                                        <div className='flex flex-col items-center gap-1 pt-1'>
+                                            <span className='w-6 h-6 flex items-center justify-center bg-primary text-white text-xs font-bold rounded-full'>
+                                                {index + 1}
+                                            </span>
+                                        </div>
+
+                                        {/* Thumbnail */}
+                                        <div className='relative w-14 h-14 rounded-lg overflow-hidden bg-secondary/10 shrink-0'>
+                                            {item.thumbnail ? (
+                                                <Image
+                                                    src={getCafeThumbnailUrl(
+                                                        item.thumbnail,
+                                                    )}
+                                                    alt={item.name || ""}
+                                                    fill
+                                                    className='object-cover'
+                                                />
+                                            ) : (
+                                                <div className='w-full h-full flex items-center justify-center'>
+                                                    <Coffee className='w-6 h-6 text-secondary/40' />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className='flex-1 min-w-0'>
+                                            <p className='font-medium text-text truncate'>
+                                                {item.name || "Loading..."}
+                                            </p>
+                                            <p className='text-sm text-text/60 truncate'>
+                                                {item.cityMunicipality &&
+                                                item.region
+                                                    ? `${item.cityMunicipality}, ${item.region}`
+                                                    : ""}
+                                            </p>
+                                            {/* Note input */}
+                                            <input
+                                                type='text'
+                                                value={item.note || ""}
+                                                onChange={(e) =>
+                                                    updateNote(
+                                                        item.cafeId,
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder='Add a note about this stop...'
+                                                className='mt-2 w-full px-3 py-1.5 text-sm bg-background border border-secondary/20 rounded-lg text-text placeholder:text-text/30 focus:outline-none focus:border-primary/50'
+                                                maxLength={200}
+                                            />
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className='flex flex-col gap-1'>
+                                            <button
+                                                onClick={() =>
+                                                    moveCafe(index, "up")
+                                                }
+                                                disabled={index === 0}
+                                                className='p-1 text-text/40 hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors'
+                                            >
+                                                ▲
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    moveCafe(index, "down")
+                                                }
+                                                disabled={
+                                                    index ===
+                                                    items.length - 1
+                                                }
+                                                className='p-1 text-text/40 hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors'
+                                            >
+                                                ▼
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    removeCafe(item.cafeId)
+                                                }
+                                                className='p-1 text-red-400 hover:text-red-500 transition-colors'
+                                            >
+                                                <X className='w-4 h-4' />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
