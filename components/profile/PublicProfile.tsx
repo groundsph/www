@@ -10,6 +10,7 @@ import {
     ChevronDown,
     Coffee,
     Compass,
+    Layers,
     MapPin,
     Medal,
     MessageSquare,
@@ -31,6 +32,7 @@ import ContributionTimeline from "@/components/profile/ContributionTimeline"
 import FollowButton from "@/components/social/FollowButton"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
+import CollectionCard from "@/components/collections/CollectionCard"
 
 type BadgeDefinition = Tables<"badge_definitions">
 
@@ -146,6 +148,10 @@ export default function PublicProfile({
         { name: string; slug: string }[]
     >([])
 
+    // Collections data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [collections, setCollections] = useState<any[]>([])
+
     // Badge display
     const [showAllBadges, setShowAllBadges] = useState(false)
 
@@ -171,6 +177,7 @@ export default function PublicProfile({
                 setVisitedCafes(data.passportCafes.visited)
                 setFavoriteCafes(data.passportCafes.favorites)
                 setWishlistCafes(data.passportCafes.wishlist)
+                setCollections(data.collections || [])
             } catch (error) {
                 console.error("Error fetching public profile details:", error)
             } finally {
@@ -778,6 +785,37 @@ export default function PublicProfile({
                         favorites={favoriteCafes}
                         wishlist={wishlistCafes}
                     />
+                </motion.section>
+
+                {/* Collections Section */}
+                <motion.section variants={item} className='mt-10'>
+                    <div className='flex items-center gap-2 mb-4'>
+                        <Layers className='w-5 h-5' />
+                        <h2 className='text-xl font-semibold font-serif'>
+                            Collections
+                        </h2>
+                        <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                            {collections.length}
+                        </span>
+                    </div>
+
+                    {collections.length > 0 ? (
+                        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                            {collections.map((collection) => (
+                                <CollectionCard
+                                    key={collection.id}
+                                    collection={collection}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                            <Layers className='w-12 h-12 mx-auto text-text/20 mb-3' />
+                            <p className='text-text/60 font-medium'>
+                                No public collections yet
+                            </p>
+                        </div>
+                    )}
                 </motion.section>
 
                 {/* Contribution History */}

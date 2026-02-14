@@ -2,7 +2,7 @@
 
 import { getPHTime, getPHTodayStart } from "@/utils/featured"
 import { db } from "@/db"
-import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits } from "@/db/schema"
+import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits, collections } from "@/db/schema"
 import { eq, and, ne, desc, inArray, arrayContains, count, sql, asc } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
@@ -295,6 +295,19 @@ export interface PublicProfileData {
         favorites: { name: string; slug: string }[]
         wishlist: { name: string; slug: string }[]
     }
+    collections: {
+        id: string
+        title: string
+        slug: string
+        description: string | null
+        coverImage: string | null
+        itemCount: number | null
+        viewsCount: number | null
+        likesCount: number | null
+        savesCount: number | null
+        isPublic: boolean | null
+        createdAt: string | null
+    }[]
 }
 
 /**
@@ -311,6 +324,7 @@ export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?
         visitedCafes,
         favoriteCafes,
         wishlistCafes,
+        collectionsResult,
     ] = await Promise.all([
         // All badge definitions
         db.select().from(badgeDefinitions),
@@ -394,6 +408,27 @@ export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?
         passport?.wishlist_ids?.length
             ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(inArray(cafes.id, passport.wishlist_ids))
             : Promise.resolve([]),
+
+        // Collections - public collections by this user
+        db.select({
+            id: collections.id,
+            title: collections.title,
+            slug: collections.slug,
+            description: collections.description,
+            coverImage: collections.coverImage,
+            itemCount: collections.itemCount,
+            viewsCount: collections.viewsCount,
+            likesCount: collections.likesCount,
+            savesCount: collections.savesCount,
+            isPublic: collections.isPublic,
+            createdAt: collections.createdAt,
+        })
+            .from(collections)
+            .where(and(
+                eq(collections.userId, profile.id),
+                eq(collections.isPublic, true)
+            ))
+            .orderBy(desc(collections.createdAt)),
     ])
 
     return {
@@ -423,6 +458,19 @@ export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?
             favorites: favoriteCafes,
             wishlist: wishlistCafes,
         },
+        collections: collectionsResult.map((c) => ({
+            id: c.id,
+            title: c.title,
+            slug: c.slug,
+            description: c.description ?? null,
+            coverImage: c.coverImage ?? null,
+            itemCount: c.itemCount ?? 0,
+            viewsCount: c.viewsCount ?? 0,
+            likesCount: c.likesCount ?? 0,
+            savesCount: c.savesCount ?? 0,
+            isPublic: c.isPublic ?? true,
+            createdAt: c.createdAt?.toISOString() ?? null,
+        })),
     }
 }
 
