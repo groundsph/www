@@ -149,7 +149,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
     }, [points])
 
     return (
-        <div className="relative h-full w-full">
+        <div className="relative h-full w-full z-0">
             <MapContainer
                 center={defaultCenter}
                 zoom={6}

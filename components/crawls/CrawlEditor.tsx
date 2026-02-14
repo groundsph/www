@@ -361,6 +361,39 @@ export default function CrawlEditor({
                             </button>
                         )}
 
+                        {/* Visibility Toggle */}
+                        <div className='flex items-center gap-3 mr-2 border border-secondary/20 rounded-full shadow-sm px-3 py-1 select-none'>
+                            {isPublic ? (
+                                <Eye className='w-5 h-5 text-primary' />
+                            ) : (
+                                <EyeOff className='w-5 h-5 text-text/50' />
+                            )}
+                            <div>
+                                <p className='text-sm font-medium text-text'>
+                                    {isPublic ? "Public" : "Private"}
+                                </p>
+                                <p className='text-xs text-text/60'>
+                                    {isPublic
+                                        ? "Anyone can view"
+                                        : "Only you can view"}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsPublic(!isPublic)}
+                                className={`w-12 h-6 rounded-full transition-colors ${
+                                    isPublic ? "bg-primary" : "bg-secondary/30"
+                                }`}
+                            >
+                                <div
+                                    className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                                        isPublic
+                                            ? "translate-x-6"
+                                            : "translate-x-0.5"
+                                    }`}
+                                />
+                            </button>
+                        </div>
+
                         <button
                             onClick={handleSave}
                             disabled={isSaving}
@@ -395,7 +428,9 @@ export default function CrawlEditor({
                                     className='hidden'
                                 />
                                 <div
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={() =>
+                                        fileInputRef.current?.click()
+                                    }
                                     className='relative aspect-video rounded-xl border-2 border-dashed border-secondary/30 hover:border-primary/50 cursor-pointer overflow-hidden transition-colors group'
                                 >
                                     {isUploadingCover ? (
@@ -431,55 +466,20 @@ export default function CrawlEditor({
                             </div>
                         </div>
                         <div className='lg:col-span-2 space-y-4'>
-                            <div className='flex flex-col lg:flex-row lg:items-end gap-4'>
-                                <div className='flex-1'>
-                                    {/* Title */}
-                                    <label className='block text-sm font-medium text-text mb-2'>
-                                        Title <span className='text-primary'>*</span>
-                                    </label>
-                                    <input
-                                        type='text'
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        className='w-full px-4 py-3 bg-background border border-secondary/30 rounded-xl text-text focus:outline-none focus:border-primary/50 transition-colors'
-                                        maxLength={100}
-                                        placeholder='e.g., Metro Manila Coffee Trail'
-                                    />
-                                </div>
-                                <div className='lg:pb-1'>
-                                    {/* Visibility Toggle */}
-                                    <div className='flex items-center gap-3'>
-                                        {isPublic ? (
-                                            <Eye className='w-5 h-5 text-primary' />
-                                        ) : (
-                                            <EyeOff className='w-5 h-5 text-text/50' />
-                                        )}
-                                        <div>
-                                            <p className='text-sm font-medium text-text'>
-                                                {isPublic ? "Public" : "Private"}
-                                            </p>
-                                            <p className='text-xs text-text/60'>
-                                                {isPublic
-                                                    ? "Anyone can view"
-                                                    : "Only you can view"}
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => setIsPublic(!isPublic)}
-                                            className={`w-12 h-6 rounded-full transition-colors ${
-                                                isPublic ? "bg-primary" : "bg-secondary/30"
-                                            }`}
-                                        >
-                                            <div
-                                                className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                                                    isPublic
-                                                        ? "translate-x-6"
-                                                        : "translate-x-0.5"
-                                                }`}
-                                            />
-                                        </button>
-                                    </div>
-                                </div>
+                            <div className='flex-1'>
+                                {/* Title */}
+                                <label className='block text-sm font-medium text-text mb-2'>
+                                    Title{" "}
+                                    <span className='text-primary'>*</span>
+                                </label>
+                                <input
+                                    type='text'
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className='w-full px-4 py-3 bg-background border border-secondary/30 rounded-xl text-text focus:outline-none focus:border-primary/50 transition-colors'
+                                    maxLength={100}
+                                    placeholder='e.g., Metro Manila Coffee Trail'
+                                />
                             </div>
                             <div>
                                 {/* Description */}
@@ -488,8 +488,10 @@ export default function CrawlEditor({
                                 </label>
                                 <textarea
                                     value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    rows={4}
+                                    onChange={(e) =>
+                                        setDescription(e.target.value)
+                                    }
+                                    rows={3}
                                     className='w-full px-4 py-3 bg-background border border-secondary/30 rounded-xl text-text focus:outline-none focus:border-primary/50 transition-colors resize-none'
                                     maxLength={500}
                                     placeholder='Describe your coffee crawl route...'
@@ -541,9 +543,7 @@ export default function CrawlEditor({
                             <input
                                 type='text'
                                 value={searchQuery}
-                                onChange={(e) =>
-                                    setSearchQuery(e.target.value)
-                                }
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder='Search cafes to add...'
                                 className='w-full pl-12 pr-4 py-3 bg-background border border-secondary/30 rounded-xl text-text placeholder:text-text/40 focus:outline-none focus:border-primary/50 transition-colors'
                             />
@@ -686,8 +686,7 @@ export default function CrawlEditor({
                                                     moveCafe(index, "down")
                                                 }
                                                 disabled={
-                                                    index ===
-                                                    items.length - 1
+                                                    index === items.length - 1
                                                 }
                                                 className='p-1 text-text/40 hover:text-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors'
                                             >
