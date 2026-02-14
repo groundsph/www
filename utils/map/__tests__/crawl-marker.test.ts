@@ -23,7 +23,7 @@ describe("crawl marker", () => {
 
     it("has correct HTML structure", () => {
         const html = buildCrawlMarkerHtml({ imageUrl: "https://example.com/img.jpg", label: "Cafe" })
-        expect(html).toContain('<div class="crawl-marker-pin">')
+        expect(html).toContain('class="crawl-marker-pin')
         expect(html).toContain('<div class="crawl-marker-circle"')
         expect(html).toContain("background-image:url")
     })

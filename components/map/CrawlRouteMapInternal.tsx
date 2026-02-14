@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet"
 import { DivIcon } from "leaflet"
+import { useRouter } from "next/navigation"
 import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
 import { buildCrawlMarkerHtml } from "@/utils/map/crawl-marker"
@@ -58,15 +59,21 @@ function MapBounds({ points }: { points: { lat: number; lng: number }[] }) {
 }
 
 interface CrawlRouteMapProps {
-    points: { lat: number; lng: number; imageUrl?: string | null; label?: string; index?: number }[]
+    points: { lat: number; lng: number; imageUrl?: string | null; label?: string; index?: number; cafeSlug?: string }[]
     focusPoint?: { lat: number; lng: number } | null
     showUserLocation?: boolean
 }
 
-const markerIcon = (point: CrawlRouteMapProps["points"][number]) =>
+const markerIcon = (point: CrawlRouteMapProps["points"][number], showTooltip: boolean) =>
     new DivIcon({
         className: "crawl-marker-icon",
-        html: buildCrawlMarkerHtml({ imageUrl: point.imageUrl ?? null, label: point.label, index: point.index }),
+        html: buildCrawlMarkerHtml({ 
+            imageUrl: point.imageUrl ?? null, 
+            label: point.label, 
+            index: point.index,
+            cafeSlug: point.cafeSlug,
+            showTooltip 
+        }),
         iconSize: [44, 44],
         iconAnchor: [22, 44],
     })
@@ -93,6 +100,67 @@ function UserLocationMarker() {
                     iconAnchor: [7, 7],
                 })
             }
+        />
+    )
+}
+
+// Individual marker component with click/tap handling
+function CrawlMarker({ 
+    point, 
+    index 
+}: { 
+    point: CrawlRouteMapProps["points"][number]
+    index: number 
+}) {
+    const router = useRouter()
+    const [showTooltip, setShowTooltip] = useState(false)
+    const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    const handleClick = () => {
+        if (!point.cafeSlug) return
+        
+        // Check if it's a mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+        )
+        
+        if (isMobile) {
+            // On mobile: first tap shows tooltip, second tap opens cafe
+            if (!showTooltip) {
+                setShowTooltip(true)
+                // Auto-hide tooltip after 3 seconds
+                if (tooltipTimeoutRef.current) {
+                    clearTimeout(tooltipTimeoutRef.current)
+                }
+                tooltipTimeoutRef.current = setTimeout(() => {
+                    setShowTooltip(false)
+                }, 3000)
+            } else {
+                // Second tap - navigate to cafe
+                router.push(`/cafes/${point.cafeSlug}`)
+            }
+        } else {
+            // On desktop: click opens cafe directly
+            router.push(`/cafes/${point.cafeSlug}`)
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            if (tooltipTimeoutRef.current) {
+                clearTimeout(tooltipTimeoutRef.current)
+            }
+        }
+    }, [])
+
+    return (
+        <Marker
+            key={`${point.lat}-${point.lng}-${index}`}
+            position={[point.lat, point.lng]}
+            icon={markerIcon(point, showTooltip)}
+            eventHandlers={{
+                click: handleClick,
+            }}
         />
     )
 }
@@ -162,10 +230,10 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
                     url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
                 />
                 {points.map((p, idx) => (
-                    <Marker
+                    <CrawlMarker
                         key={`${p.lat}-${p.lng}-${idx}`}
-                        position={[p.lat, p.lng]}
-                        icon={markerIcon(p)}
+                        point={p}
+                        index={idx}
                     />
                 ))}
                 {segments.map((segment, idx) => (

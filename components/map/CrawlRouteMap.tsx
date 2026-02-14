@@ -21,6 +21,7 @@ interface CrawlRouteMapProps {
         imageUrl?: string | null
         label?: string
         index?: number
+        cafeSlug?: string
     }[]
     focusPoint?: { lat: number; lng: number } | null
     showUserLocation?: boolean

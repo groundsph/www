@@ -38,7 +38,6 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
-import ProfileLocationMap from "@/components/profile/ProfileLocationMap"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
 import {
@@ -49,7 +48,6 @@ import {
     getSavedCafeCrawls,
     getUserCafeCrawls,
 } from "@/app/api/actions/cafe-crawls"
-import { cn } from "@/utils/cn"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
 

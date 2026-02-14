@@ -3,7 +3,6 @@ import { Suspense } from "react"
 import CommunityPage from "@/components/community/CommunityPage"
 import {
     getPublicCollections,
-    getFeaturedUsers,
     getPublicCafeCrawls,
 } from "@/app/api/actions/community"
 import { getUpcomingEvents } from "@/app/api/actions/events"
@@ -30,11 +29,10 @@ export default async function Page({
     const initialTab = params.tab || "crawls"
 
     // Fetch initial data for all tabs in parallel
-    const [crawlsData, collectionsData, eventsData, featuredUsers] = await Promise.all([
+    const [crawlsData, collectionsData, eventsData] = await Promise.all([
         getPublicCafeCrawls(1, 12, "recent"),
         getPublicCollections(1, 12, "recent"),
         getUpcomingEvents(12),
-        getFeaturedUsers(8),
     ])
 
     return (
@@ -46,7 +44,6 @@ export default async function Page({
                 initialCollections={collectionsData.collections}
                 initialCollectionsTotal={collectionsData.total}
                 initialEvents={eventsData}
-                initialFeaturedUsers={featuredUsers}
             />
         </Suspense>
     )

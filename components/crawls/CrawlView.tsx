@@ -74,6 +74,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
             imageUrl: cafe.thumbnail ? getCafeThumbnailUrl(cafe.thumbnail) : null,
             label: cafe.name,
             index: index + 1,
+            cafeSlug: cafe.slug,
         }))
 
     return (

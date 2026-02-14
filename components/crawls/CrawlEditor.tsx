@@ -117,6 +117,7 @@ export default function CrawlEditor({
                         : null,
                     label: item.name || "",
                     index: index + 1,
+                    cafeSlug: item.slug,
                 })),
         [items],
     )

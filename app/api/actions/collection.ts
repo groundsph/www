@@ -228,12 +228,16 @@ export async function getCollectionBySlug(slug: string) {
         return null
     }
 
-    // Increment view count (async, don't wait)
-    db.update(collections)
-        .set({ viewsCount: sql`${collections.viewsCount} + 1` })
-        .where(eq(collections.id, collection.id))
-        .then(() => { })
-        .catch(() => { })
+    // Increment view count (async, don't wait) - Skip on localhost
+    const headersList = await headers()
+    const host = headersList.get("host") || ""
+    if (!host.includes("localhost") && !host.includes("127.0.0.1")) {
+        db.update(collections)
+            .set({ viewsCount: sql`${collections.viewsCount} + 1` })
+            .where(eq(collections.id, collection.id))
+            .then(() => { })
+            .catch(() => { })
+    }
 
     // Fetch cafe details for items
     const items = (collection.items as { cafeId: string; note?: string }[]) || []

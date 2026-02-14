@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { blogPosts, profiles, cafes, cafeSubscriptions } from "@/db/schema"
 import { eq, and, desc, count, sql, ne, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
+import { headers } from "next/headers"
 import {
     BlogPost,
     BlogPostInput,
@@ -277,6 +278,13 @@ export async function getFeaturedPosts(limit: number = 5): Promise<BlogPost[]> {
 }
 
 export async function incrementViewCount(postId: string): Promise<void> {
+    // Skip view tracking on localhost to prevent false views
+    const headersList = await headers()
+    const host = headersList.get("host") || ""
+    if (host.includes("localhost") || host.includes("127.0.0.1")) {
+        return
+    }
+
     await db.update(blogPosts)
         .set({ viewsCount: sql`COALESCE(${blogPosts.viewsCount}, 0) + 1` })
         .where(eq(blogPosts.id, postId))

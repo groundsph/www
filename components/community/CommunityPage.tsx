@@ -61,7 +61,6 @@ interface CommunityPageProps {
     initialCollections: PublicCollection[]
     initialCollectionsTotal: number
     initialEvents: EventWithCafe[]
-    initialFeaturedUsers: UserResult[]
 }
 
 export default function CommunityPage({
@@ -71,7 +70,6 @@ export default function CommunityPage({
     initialCollections,
     initialCollectionsTotal,
     initialEvents,
-    initialFeaturedUsers,
 }: CommunityPageProps) {
     const router = useRouter()
     const searchParamsHook = useSearchParams()

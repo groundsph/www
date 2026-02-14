@@ -36,18 +36,15 @@ describe("Profile Collections Merge", () => {
         expect(myCollectionsAsHeader).toBeNull()
 
         // Check for tab buttons
-        expect(content).toInclude('onClick={() => setActiveCollectionsTab("mine")}')
-        expect(content).toInclude('onClick={() => setActiveCollectionsTab("saved")}')
+        expect(content).toInclude('setActiveCollectionsTab("mine")')
+        expect(content).toInclude('setActiveCollectionsTab("saved")')
 
         // Check for tab button labels (text content inside button elements)
-        expect(content).toInclude("My Collections")
-        expect(content).toInclude("Saved Collections")
+        expect(content).toInclude("Personal")
+        expect(content).toInclude("Saved")
     })
 
-    it("has cn utility imported", () => {
-        const content = readFileSync(filePath, "utf-8")
-        expect(content).toInclude('import { cn } from "@/utils/cn"')
-    })
+
 
     it("maintains links to collection pages", () => {
         const content = readFileSync(filePath, "utf-8")

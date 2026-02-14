@@ -871,12 +871,18 @@ export default function PublicProfile({
                                             <span className='text-xs text-text/60'>
                                                 Review for
                                             </span>
-                                            <Link
-                                                href={`/cafes/${review.cafe.slug}`}
-                                                className='font-bold text-lg hover:text-primary transition-colors leading-tight'
-                                            >
-                                                {review.cafe.name}
-                                            </Link>
+                                            {review.cafe ? (
+                                                <Link
+                                                    href={`/cafes/${review.cafe.slug}`}
+                                                    className='font-bold text-lg hover:text-primary transition-colors leading-tight'
+                                                >
+                                                    {review.cafe.name}
+                                                </Link>
+                                            ) : (
+                                                <span className='font-bold text-lg text-text/40'>
+                                                    Unknown Cafe
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -892,7 +898,7 @@ export default function PublicProfile({
                                             // Handle is_liked from our fetch
                                             review_interactions:
                                                 review.is_liked && user
-                                                    ? [{ user_id: user.id }]
+                                                    ? [{ user_id: user.id, interaction_type: 'like' }]
                                                     : [],
                                         }}
                                         currentUser={user}

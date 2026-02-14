@@ -311,12 +311,16 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
         return null
     }
 
-    // Increment view count (async, don't wait)
-    db.update(cafeCrawls)
-        .set({ viewsCount: sql`${cafeCrawls.viewsCount} + 1` })
-        .where(eq(cafeCrawls.id, crawl.id))
-        .then(() => {})
-        .catch(() => {})
+    // Increment view count (async, don't wait) - Skip on localhost
+    const headersList = await headers()
+    const host = headersList.get("host") || ""
+    if (!host.includes("localhost") && !host.includes("127.0.0.1")) {
+        db.update(cafeCrawls)
+            .set({ viewsCount: sql`${cafeCrawls.viewsCount} + 1` })
+            .where(eq(cafeCrawls.id, crawl.id))
+            .then(() => {})
+            .catch(() => {})
+    }
 
     // Fetch items with cafe details
     const itemsResult = await db
