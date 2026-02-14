@@ -76,7 +76,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
         }))
 
     return (
-        <div className="min-h-screen w-full bg-background">
+        <>
             {/* Cover Image Section */}
             {crawl.coverImage && (
                 <div className="relative w-full aspect-21/9 md:aspect-3/1 bg-text/5">
@@ -90,7 +90,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                 </div>
             )}
 
-            <article className="max-w-6xl mx-auto px-4 py-8 md:py-12">
+            <article className="max-w-6xl px-4 py-8 md:py-12 w-full">
                 {/* Back Link */}
                 <Link
                     href="/community"
@@ -301,6 +301,6 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                     )}
                 </section>
             </article>
-        </div>
+        </>
     )
 }

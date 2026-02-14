@@ -25,12 +25,12 @@ export async function generateMetadata({
 
     if (!post) {
         return {
-            title: "Post Not Found | Grounds PH",
+            title: "Post Not Found",
         }
     }
 
     return {
-        title: `${post.title} | Grounds PH Blog`,
+        title: `${post.title}`,
         description: post.excerpt || post.content.substring(0, 160),
         openGraph: {
             title: post.title,
