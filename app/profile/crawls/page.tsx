@@ -1,14 +1,13 @@
 import { Metadata } from "next"
-import { getSavedCafeCrawls } from "@/app/api/actions/cafe-crawls"
-import SavedCrawlsList from "@/components/crawls/SavedCrawlsList"
+import { getUserCafeCrawls } from "@/app/api/actions/cafe-crawls"
+import UserCrawlsList from "@/components/crawls/UserCrawlsList"
 
 export const metadata: Metadata = {
-    title: "Saved Crawls",
-    description: "View your saved cafe crawls",
+    title: "My Crawls",
+    description: "View and manage your cafe crawls",
 }
 
-export default async function SavedCrawlsPage() {
-    const crawls = await getSavedCafeCrawls()
-
-    return <SavedCrawlsList crawls={crawls} />
+export default async function MyCrawlsPage() {
+    const crawls = await getUserCafeCrawls()
+    return <UserCrawlsList crawls={crawls} />
 }

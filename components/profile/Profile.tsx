@@ -42,7 +42,7 @@ import ProfileLocationMap from "@/components/profile/ProfileLocationMap"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { getUserCollections, getSavedCollections } from "@/app/api/actions/collection"
-import { getSavedCafeCrawls } from "@/app/api/actions/cafe-crawls"
+import { getSavedCafeCrawls, getUserCafeCrawls } from "@/app/api/actions/cafe-crawls"
 import { cn } from "@/utils/cn"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
@@ -189,6 +189,13 @@ export default function Profile() {
     // Collections tab state
     const [activeCollectionsTab, setActiveCollectionsTab] = useState<"mine" | "saved">("mine")
 
+    // Crawls tab state
+    const [activeCrawlsTab, setActiveCrawlsTab] = useState<"mine" | "saved">("mine")
+
+    // User Crawls
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Crawl type from cafe-crawls actions
+    const [userCrawls, setUserCrawls] = useState<any[]>([])
+
     // Owned cafes (for cafe owners)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OwnedCafe type from owner actions
     const [ownedCafes, setOwnedCafes] = useState<any[]>([])
@@ -307,6 +314,20 @@ export default function Profile() {
             }
         }
         fetchSavedCrawls()
+    }, [user])
+
+    // Fetch user crawls separately
+    useEffect(() => {
+        const fetchUserCrawls = async () => {
+            if (!user) return
+            try {
+                const data = await getUserCafeCrawls(user.id)
+                setUserCrawls(data)
+            } catch (error) {
+                console.error("Error fetching user crawls:", error)
+            }
+        }
+        fetchUserCrawls()
     }, [user])
 
     // Fetch saved collections separately
@@ -1673,7 +1694,7 @@ export default function Profile() {
                     )}
                 </motion.section>
 
-                {/* Saved Crawls Section */}
+                {/* Crawls Section */}
                 <motion.section
                     variants={item}
                     className='mt-10'
@@ -1681,74 +1702,164 @@ export default function Profile() {
                     <div className='flex items-center gap-2 mb-4'>
                         <Bookmark className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
-                            Saved Crawls
+                            Crawls
                         </h2>
                         <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
-                            {savedCrawls.length}
+                            {activeCrawlsTab === "mine" ? userCrawls.length : savedCrawls.length}
                         </span>
                     </div>
 
-                    {savedCrawls.length > 0 ? (
-                        <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
-                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-                                {savedCrawls.slice(0, 3).map((crawl) => (
-                                    <motion.div
-                                        key={crawl.id}
-                                        whileHover={{ scale: 1.02, y: -2 }}
-                                    >
-                                        <Link
-                                            href={`/community/crawls/${crawl.slug}`}
-                                            className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
-                                        >
-                                            {crawl.coverImage ? (
-                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
-                                                    <Image
-                                                        src={crawl.coverImage}
-                                                        alt={crawl.title}
-                                                        fill
-                                                        className='object-cover'
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                    <Bookmark className='w-5 h-5 text-primary/60' />
-                                                </div>
-                                            )}
-                                            <div className='flex-1 min-w-0'>
-                                                <p className='font-semibold truncate group-hover:text-primary transition-colors'>
-                                                    {crawl.title}
-                                                </p>
-                                                <p className='text-xs text-text/50'>
-                                                    {crawl.itemCount ?? 0} cafes
-                                                </p>
-                                            </div>
-                                        </Link>
-                                    </motion.div>
-                                ))}
-                            </div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <button
+                            onClick={() => setActiveCrawlsTab("mine")}
+                            className={cn(
+                                "px-3 py-1.5 text-sm rounded-full border transition-colors",
+                                activeCrawlsTab === "mine"
+                                    ? "bg-primary text-white border-primary"
+                                    : "bg-background border-text/10 text-text/60",
+                            )}
+                        >
+                            My Crawls
+                        </button>
+                        <button
+                            onClick={() => setActiveCrawlsTab("saved")}
+                            className={cn(
+                                "px-3 py-1.5 text-sm rounded-full border transition-colors",
+                                activeCrawlsTab === "saved"
+                                    ? "bg-primary text-white border-primary"
+                                    : "bg-background border-text/10 text-text/60",
+                            )}
+                        >
+                            Saved Crawls
+                        </button>
+                    </div>
 
-                            <Link
-                                href='/profile/crawls'
-                                className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
-                            >
-                                <Bookmark className='w-4 h-4' />
-                                View Saved Crawls
-                            </Link>
-                        </div>
+                    {activeCrawlsTab === "mine" ? (
+                        userCrawls.length > 0 ? (
+                            <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                    {userCrawls.slice(0, 3).map((crawl) => (
+                                        <motion.div
+                                            key={crawl.id}
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                        >
+                                            <Link
+                                                href={`/community/crawls/${crawl.slug}`}
+                                                className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                            >
+                                                {crawl.coverImage ? (
+                                                    <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                        <Image
+                                                            src={crawl.coverImage}
+                                                            alt={crawl.title}
+                                                            fill
+                                                            className='object-cover'
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                        <Bookmark className='w-5 h-5 text-primary/60' />
+                                                    </div>
+                                                )}
+                                                <div className='flex-1 min-w-0'>
+                                                    <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                        {crawl.title}
+                                                    </p>
+                                                    <p className='text-xs text-text/50'>
+                                                        {crawl.itemCount ?? 0} cafes
+                                                    </p>
+                                                </div>
+                                            </Link>
+                                        </motion.div>
+                                    ))}
+                                </div>
+
+                                <Link
+                                    href='/profile/crawls'
+                                    className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                                >
+                                    <Bookmark className='w-4 h-4' />
+                                    Manage Crawls
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                                <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                                <p className='text-text/60 font-medium mb-4'>
+                                    No crawls yet
+                                </p>
+                                <Link
+                                    href='/crawls/new'
+                                    className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                                >
+                                    <Bookmark className='w-4 h-4' />
+                                    Create Crawl
+                                </Link>
+                            </div>
+                        )
                     ) : (
-                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                            <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
-                            <p className='text-text/60 font-medium mb-4'>
-                                No saved crawls yet
-                            </p>
-                            <Link
-                                href='/community?tab=crawls'
-                                className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
-                            >
-                                <Bookmark className='w-4 h-4' />
-                                Browse Crawls
-                            </Link>
-                        </div>
+                        savedCrawls.length > 0 ? (
+                            <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                    {savedCrawls.slice(0, 3).map((crawl) => (
+                                        <motion.div
+                                            key={crawl.id}
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                        >
+                                            <Link
+                                                href={`/community/crawls/${crawl.slug}`}
+                                                className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                            >
+                                                {crawl.coverImage ? (
+                                                    <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                        <Image
+                                                            src={crawl.coverImage}
+                                                            alt={crawl.title}
+                                                            fill
+                                                            className='object-cover'
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                        <Bookmark className='w-5 h-5 text-primary/60' />
+                                                    </div>
+                                                )}
+                                                <div className='flex-1 min-w-0'>
+                                                    <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                        {crawl.title}
+                                                    </p>
+                                                    <p className='text-xs text-text/50'>
+                                                        {crawl.itemCount ?? 0} cafes
+                                                    </p>
+                                                </div>
+                                            </Link>
+                                        </motion.div>
+                                    ))}
+                                </div>
+
+                                <Link
+                                    href='/profile/crawls/saved'
+                                    className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                                >
+                                    <Bookmark className='w-4 h-4' />
+                                    View Saved Crawls
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                                <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                                <p className='text-text/60 font-medium mb-4'>
+                                    No saved crawls yet
+                                </p>
+                                <Link
+                                    href='/community?tab=crawls'
+                                    className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                                >
+                                    <Bookmark className='w-4 h-4' />
+                                    Browse Crawls
+                                </Link>
+                            </div>
+                        )
                     )}
                 </motion.section>
 
