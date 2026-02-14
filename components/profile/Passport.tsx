@@ -47,44 +47,53 @@ export default function Passport({
         <div className={`w-full ${className} [&_button]:cursor-pointer`}>
             {/* Header / Tabs */}
             <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6'>
-                <div className='flex items-center gap-2'>
+                <div className='flex items-center gap-2 flex-wrap'>
                     <MapPin className='w-4 h-4 sm:w-5 sm:h-5' />
                     <h2 className='text-lg sm:text-xl font-semibold font-serif'>
                         Coffee Passport
                     </h2>
                 </div>
+                <div className='flex items-center gap-2 ml-auto w-full sm:w-auto'>
+                    <div className='ml-auto flex bg-text/5 p-1 rounded-lg w-full sm:w-auto'>
+                        <button
+                            onClick={() => setActiveTab("visited")}
+                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                                activeTab === "visited"
+                                    ? "bg-background shadow-xs text-primary"
+                                    : "text-text/60 hover:text-text/80"
+                            }`}
+                        >
+                            Visited
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("favorites")}
+                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                                activeTab === "favorites"
+                                    ? "bg-background shadow-xs text-red-500"
+                                    : "text-text/60 hover:text-text/80"
+                            }`}
+                        >
+                            Favorites
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("wishlist")}
+                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                                activeTab === "wishlist"
+                                    ? "bg-background shadow-xs text-secondary"
+                                    : "text-text/60 hover:text-text/80"
+                            }`}
+                        >
+                            Wishlist
+                        </button>
+                    </div>
 
-                <div className='flex bg-text/5 p-1 rounded-lg w-full sm:w-auto'>
-                    <button
-                        onClick={() => setActiveTab("visited")}
-                        className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                            activeTab === "visited"
-                                ? "bg-background shadow-xs text-primary"
-                                : "text-text/60 hover:text-text/80"
-                        }`}
-                    >
-                        Visited
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("favorites")}
-                        className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                            activeTab === "favorites"
-                                ? "bg-background shadow-xs text-red-500"
-                                : "text-text/60 hover:text-text/80"
-                        }`}
-                    >
-                        Favorites
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("wishlist")}
-                        className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                            activeTab === "wishlist"
-                                ? "bg-background shadow-xs text-secondary"
-                                : "text-text/60 hover:text-text/80"
-                        }`}
-                    >
-                        Wishlist
-                    </button>
+                    <span className='bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                        {activeTab === "visited"
+                            ? visited.length
+                            : activeTab === "favorites"
+                              ? favorites.length
+                              : wishlist.length}
+                    </span>
                 </div>
             </div>
 
@@ -115,9 +124,6 @@ export default function Passport({
                                 </div>
                                 <span className='font-semibold text-text'>
                                     Stamps Collected
-                                </span>
-                                <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
-                                    {visited.length}
                                 </span>
                             </div>
 

@@ -41,8 +41,14 @@ import VisitHistory from "@/components/profile/VisitHistory"
 import ProfileLocationMap from "@/components/profile/ProfileLocationMap"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
-import { getUserCollections, getSavedCollections } from "@/app/api/actions/collection"
-import { getSavedCafeCrawls, getUserCafeCrawls } from "@/app/api/actions/cafe-crawls"
+import {
+    getUserCollections,
+    getSavedCollections,
+} from "@/app/api/actions/collection"
+import {
+    getSavedCafeCrawls,
+    getUserCafeCrawls,
+} from "@/app/api/actions/cafe-crawls"
 import { cn } from "@/utils/cn"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
@@ -187,10 +193,14 @@ export default function Profile() {
     const [showAllBadges, setShowAllBadges] = useState(false)
 
     // Collections tab state
-    const [activeCollectionsTab, setActiveCollectionsTab] = useState<"mine" | "saved">("mine")
+    const [activeCollectionsTab, setActiveCollectionsTab] = useState<
+        "mine" | "saved"
+    >("mine")
 
     // Crawls tab state
-    const [activeCrawlsTab, setActiveCrawlsTab] = useState<"mine" | "saved">("mine")
+    const [activeCrawlsTab, setActiveCrawlsTab] = useState<"mine" | "saved">(
+        "mine",
+    )
 
     // User Crawls
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Crawl type from cafe-crawls actions
@@ -345,10 +355,13 @@ export default function Profile() {
     }, [user])
 
     // Stable handlers for FollowCounts
-    const handleCountsChange = useCallback((followers: number, following: number) => {
-        setFollowersCount(followers)
-        setFollowingCount(following)
-    }, [])
+    const handleCountsChange = useCallback(
+        (followers: number, following: number) => {
+            setFollowersCount(followers)
+            setFollowingCount(following)
+        },
+        [],
+    )
 
     const handleFollowersClick = useCallback(() => {
         setFollowModalType("followers")
@@ -1516,93 +1529,109 @@ export default function Profile() {
                 </motion.section>
 
                 {/* Your Location Section */}
-                <motion.section variants={item} className='mt-10'>
+                {/* <motion.section variants={item} className='mt-10'>
                     <div className='flex items-center gap-2 mb-4'>
                         <MapPin className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>Your Location</h2>
                     </div>
                     <ProfileLocationMap />
-                </motion.section>
+                </motion.section> */}
 
                 {/* Collections Section */}
                 <motion.section
                     variants={item}
                     className='mt-10'
                 >
-                    <div className='flex items-center gap-2 mb-4'>
+                    <div className='flex items-center gap-2 mb-4 flex-wrap'>
                         <Layers className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
                             Collections
                         </h2>
-                        <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
-                            {activeCollectionsTab === "mine" ? collections.length : savedCollections.length}
-                        </span>
-                    </div>
+                        <div className='flex items-center gap-2 ml-auto w-full sm:w-auto'>
+                            <div className='ml-auto flex bg-text/5 p-1 rounded-lg w-full sm:w-auto'>
+                                <button
+                                    onClick={() =>
+                                        setActiveCollectionsTab("mine")
+                                    }
+                                    className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                                        activeCollectionsTab === "mine"
+                                            ? "text-primary bg-background shadow-xl"
+                                            : "text-text/60 hover:text-text/80"
+                                    }`}
+                                >
+                                    Personal
+                                </button>
+                                <button
+                                    onClick={() =>
+                                        setActiveCollectionsTab("saved")
+                                    }
+                                    className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                                        activeCollectionsTab === "saved"
+                                            ? "text-primary bg-background shadow-xl"
+                                            : "text-text/60 hover:text-text/80"
+                                    }`}
+                                >
+                                    Saved
+                                </button>
+                            </div>
 
-                    <div className="flex items-center gap-2 mb-4">
-                        <button
-                            onClick={() => setActiveCollectionsTab("mine")}
-                            className={cn(
-                                "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                                activeCollectionsTab === "mine"
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-background border-text/10 text-text/60",
-                            )}
-                        >
-                            My Collections
-                        </button>
-                        <button
-                            onClick={() => setActiveCollectionsTab("saved")}
-                            className={cn(
-                                "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                                activeCollectionsTab === "saved"
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-background border-text/10 text-text/60",
-                            )}
-                        >
-                            Saved Collections
-                        </button>
+                            <span className='bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                                {activeCollectionsTab === "mine"
+                                    ? collections.length
+                                    : savedCollections.length}
+                            </span>
+                        </div>
                     </div>
 
                     {activeCollectionsTab === "mine" ? (
                         collections.length > 0 ? (
                             <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
                                 <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-                                    {collections.slice(0, 3).map((collection) => (
-                                        <motion.div
-                                            key={collection.id}
-                                            whileHover={{ scale: 1.02, y: -2 }}
-                                        >
-                                            <Link
-                                                href={`/community/${collection.slug}`}
-                                                className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                    {collections
+                                        .slice(0, 3)
+                                        .map((collection) => (
+                                            <motion.div
+                                                key={collection.id}
+                                                whileHover={{
+                                                    scale: 1.02,
+                                                    y: -2,
+                                                }}
                                             >
-                                                {collection.coverImage ? (
-                                                    <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
-                                                        <Image
-                                                            src={collection.coverImage}
-                                                            alt={collection.title}
-                                                            fill
-                                                            className='object-cover'
-                                                        />
+                                                <Link
+                                                    href={`/community/${collection.slug}`}
+                                                    className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                                >
+                                                    {collection.coverImage ? (
+                                                        <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                            <Image
+                                                                src={
+                                                                    collection.coverImage
+                                                                }
+                                                                alt={
+                                                                    collection.title
+                                                                }
+                                                                fill
+                                                                className='object-cover'
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                            <Layers className='w-5 h-5 text-primary/60' />
+                                                        </div>
+                                                    )}
+                                                    <div className='flex-1 min-w-0'>
+                                                        <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                            {collection.title}
+                                                        </p>
+                                                        <p className='text-xs text-text/50'>
+                                                            {collection.itemCount ??
+                                                                0}{" "}
+                                                            cafes
+                                                        </p>
                                                     </div>
-                                                ) : (
-                                                    <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                        <Layers className='w-5 h-5 text-primary/60' />
-                                                    </div>
-                                                )}
-                                                <div className='flex-1 min-w-0'>
-                                                    <p className='font-semibold truncate group-hover:text-primary transition-colors'>
-                                                        {collection.title}
-                                                    </p>
-                                                    <p className='text-xs text-text/50'>
-                                                        {collection.itemCount ?? 0}{" "}
-                                                        cafes
-                                                    </p>
-                                                </div>
-                                            </Link>
-                                        </motion.div>
-                                    ))}
+                                                </Link>
+                                            </motion.div>
+                                        ))}
                                 </div>
 
                                 <Link
@@ -1628,11 +1657,12 @@ export default function Profile() {
                                 </Link>
                             </div>
                         )
-                    ) : (
-                        savedCollections.length > 0 ? (
-                            <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
-                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-                                    {savedCollections.slice(0, 3).map((collection) => (
+                    ) : savedCollections.length > 0 ? (
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                {savedCollections
+                                    .slice(0, 3)
+                                    .map((collection) => (
                                         <motion.div
                                             key={collection.id}
                                             whileHover={{ scale: 1.02, y: -2 }}
@@ -1644,8 +1674,12 @@ export default function Profile() {
                                                 {collection.coverImage ? (
                                                     <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
                                                         <Image
-                                                            src={collection.coverImage}
-                                                            alt={collection.title}
+                                                            src={
+                                                                collection.coverImage
+                                                            }
+                                                            alt={
+                                                                collection.title
+                                                            }
                                                             fill
                                                             className='object-cover'
                                                         />
@@ -1660,37 +1694,38 @@ export default function Profile() {
                                                         {collection.title}
                                                     </p>
                                                     <p className='text-xs text-text/50'>
-                                                        {collection.itemCount ?? 0} cafes
+                                                        {collection.itemCount ??
+                                                            0}{" "}
+                                                        cafes
                                                     </p>
                                                 </div>
                                             </Link>
                                         </motion.div>
                                     ))}
-                                </div>
+                            </div>
 
-                                <Link
-                                    href='/profile/collections/saved'
-                                    className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
-                                >
-                                    <Bookmark className='w-4 h-4' />
-                                    View Saved Collections
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                                <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
-                                <p className='text-text/60 font-medium mb-4'>
-                                    No saved collections yet
-                                </p>
-                                <Link
-                                    href='/community?tab=collections'
-                                    className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
-                                >
-                                    <Bookmark className='w-4 h-4' />
-                                    Browse Collections
-                                </Link>
-                            </div>
-                        )
+                            <Link
+                                href='/profile/collections/saved'
+                                className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                            >
+                                <Bookmark className='w-4 h-4' />
+                                View Saved Collections
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                            <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                            <p className='text-text/60 font-medium mb-4'>
+                                No saved collections yet
+                            </p>
+                            <Link
+                                href='/community?tab=collections'
+                                className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                            >
+                                <Bookmark className='w-4 h-4' />
+                                Browse Collections
+                            </Link>
+                        </div>
                     )}
                 </motion.section>
 
@@ -1699,39 +1734,40 @@ export default function Profile() {
                     variants={item}
                     className='mt-10'
                 >
-                    <div className='flex items-center gap-2 mb-4'>
+                    <div className='flex items-center gap-2 mb-4 flex-wrap'>
                         <Bookmark className='w-5 h-5' />
                         <h2 className='text-xl font-semibold font-serif'>
                             Crawls
                         </h2>
-                        <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
-                            {activeCrawlsTab === "mine" ? userCrawls.length : savedCrawls.length}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-4">
-                        <button
-                            onClick={() => setActiveCrawlsTab("mine")}
-                            className={cn(
-                                "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                                activeCrawlsTab === "mine"
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-background border-text/10 text-text/60",
-                            )}
-                        >
-                            My Crawls
-                        </button>
-                        <button
-                            onClick={() => setActiveCrawlsTab("saved")}
-                            className={cn(
-                                "px-3 py-1.5 text-sm rounded-full border transition-colors",
-                                activeCrawlsTab === "saved"
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-background border-text/10 text-text/60",
-                            )}
-                        >
-                            Saved Crawls
-                        </button>
+                        <div className='flex items-center gap-2 ml-auto w-full sm:w-auto'>
+                            <div className='ml-auto flex bg-text/5 p-1 rounded-lg w-full sm:w-auto'>
+                                <button
+                                    onClick={() => setActiveCrawlsTab("mine")}
+                                    className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                                        activeCrawlsTab === "mine"
+                                            ? "text-primary bg-background shadow-xl"
+                                            : "text-text/60 hover:text-text/80"
+                                    }`}
+                                >
+                                    Personal
+                                </button>
+                                <button
+                                    onClick={() => setActiveCrawlsTab("saved")}
+                                    className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                                        activeCrawlsTab === "saved"
+                                            ? "text-primary bg-background shadow-xl"
+                                            : "text-text/60 hover:text-text/80"
+                                    }`}
+                                >
+                                    Saved
+                                </button>
+                            </div>
+                            <span className='bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                                {activeCrawlsTab === "mine"
+                                    ? userCrawls.length
+                                    : savedCrawls.length}
+                            </span>
+                        </div>
                     </div>
 
                     {activeCrawlsTab === "mine" ? (
@@ -1750,7 +1786,9 @@ export default function Profile() {
                                                 {crawl.coverImage ? (
                                                     <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
                                                         <Image
-                                                            src={crawl.coverImage}
+                                                            src={
+                                                                crawl.coverImage
+                                                            }
                                                             alt={crawl.title}
                                                             fill
                                                             className='object-cover'
@@ -1766,7 +1804,8 @@ export default function Profile() {
                                                         {crawl.title}
                                                     </p>
                                                     <p className='text-xs text-text/50'>
-                                                        {crawl.itemCount ?? 0} cafes
+                                                        {crawl.itemCount ?? 0}{" "}
+                                                        cafes
                                                     </p>
                                                 </div>
                                             </Link>
@@ -1797,69 +1836,67 @@ export default function Profile() {
                                 </Link>
                             </div>
                         )
-                    ) : (
-                        savedCrawls.length > 0 ? (
-                            <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
-                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-                                    {savedCrawls.slice(0, 3).map((crawl) => (
-                                        <motion.div
-                                            key={crawl.id}
-                                            whileHover={{ scale: 1.02, y: -2 }}
+                    ) : savedCrawls.length > 0 ? (
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                {savedCrawls.slice(0, 3).map((crawl) => (
+                                    <motion.div
+                                        key={crawl.id}
+                                        whileHover={{ scale: 1.02, y: -2 }}
+                                    >
+                                        <Link
+                                            href={`/community/crawls/${crawl.slug}`}
+                                            className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
                                         >
-                                            <Link
-                                                href={`/community/crawls/${crawl.slug}`}
-                                                className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
-                                            >
-                                                {crawl.coverImage ? (
-                                                    <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
-                                                        <Image
-                                                            src={crawl.coverImage}
-                                                            alt={crawl.title}
-                                                            fill
-                                                            className='object-cover'
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                        <Bookmark className='w-5 h-5 text-primary/60' />
-                                                    </div>
-                                                )}
-                                                <div className='flex-1 min-w-0'>
-                                                    <p className='font-semibold truncate group-hover:text-primary transition-colors'>
-                                                        {crawl.title}
-                                                    </p>
-                                                    <p className='text-xs text-text/50'>
-                                                        {crawl.itemCount ?? 0} cafes
-                                                    </p>
+                                            {crawl.coverImage ? (
+                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                    <Image
+                                                        src={crawl.coverImage}
+                                                        alt={crawl.title}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
                                                 </div>
-                                            </Link>
-                                        </motion.div>
-                                    ))}
-                                </div>
+                                            ) : (
+                                                <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                    <Bookmark className='w-5 h-5 text-primary/60' />
+                                                </div>
+                                            )}
+                                            <div className='flex-1 min-w-0'>
+                                                <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                    {crawl.title}
+                                                </p>
+                                                <p className='text-xs text-text/50'>
+                                                    {crawl.itemCount ?? 0} cafes
+                                                </p>
+                                            </div>
+                                        </Link>
+                                    </motion.div>
+                                ))}
+                            </div>
 
-                                <Link
-                                    href='/profile/crawls/saved'
-                                    className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
-                                >
-                                    <Bookmark className='w-4 h-4' />
-                                    View Saved Crawls
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                                <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
-                                <p className='text-text/60 font-medium mb-4'>
-                                    No saved crawls yet
-                                </p>
-                                <Link
-                                    href='/community?tab=crawls'
-                                    className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
-                                >
-                                    <Bookmark className='w-4 h-4' />
-                                    Browse Crawls
-                                </Link>
-                            </div>
-                        )
+                            <Link
+                                href='/profile/crawls/saved'
+                                className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                            >
+                                <Bookmark className='w-4 h-4' />
+                                View Saved Crawls
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                            <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                            <p className='text-text/60 font-medium mb-4'>
+                                No saved crawls yet
+                            </p>
+                            <Link
+                                href='/community?tab=crawls'
+                                className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                            >
+                                <Bookmark className='w-4 h-4' />
+                                Browse Crawls
+                            </Link>
+                        </div>
                     )}
                 </motion.section>
 
@@ -1942,8 +1979,12 @@ export default function Profile() {
                     ) : (
                         <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
                             <p className='text-text/60 font-medium'>
-                                You haven&apos;t written any reviews yet.<br/>
-                                <span className="text-sm opacity-60 italic">Get started by sharing your thoughts on cafes you&apos;ve visited!</span>
+                                You haven&apos;t written any reviews yet.
+                                <br />
+                                <span className='text-sm opacity-60 italic'>
+                                    Get started by sharing your thoughts on
+                                    cafes you&apos;ve visited!
+                                </span>
                             </p>
                         </div>
                     )}
