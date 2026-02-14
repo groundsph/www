@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Coffee, Eye, Bookmark } from "lucide-react"
+import { Coffee, Eye, Bookmark, Heart } from "lucide-react"
 
 export interface CrawlCardProps {
     crawl: {
@@ -11,6 +11,7 @@ export interface CrawlCardProps {
         itemCount?: number
         viewsCount?: number
         savesCount?: number
+        likesCount?: number
     }
 }
 
@@ -47,6 +48,10 @@ export default function CrawlCard({ crawl }: CrawlCardProps) {
                     <span className="flex items-center gap-1">
                         <Eye className="w-3.5 h-3.5" />
                         {crawl.viewsCount ?? 0}
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <Heart className="w-3.5 h-3.5" />
+                        {crawl.likesCount ?? 0}
                     </span>
                     <span className="flex items-center gap-1">
                         <Bookmark className="w-3.5 h-3.5" />

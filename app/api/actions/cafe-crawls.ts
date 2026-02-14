@@ -5,6 +5,7 @@ import {
     cafeCrawls,
     cafeCrawlItems,
     cafeCrawlSaves,
+    cafeCrawlLikes,
     cafeCrawlReports,
     cafes,
     cafeRatingStats,
@@ -134,6 +135,7 @@ export interface CafeCrawlListItem {
     itemCount: number
     viewsCount: number
     savesCount: number
+    likesCount: number
     createdAt: string
     author: {
         id: string
@@ -175,6 +177,7 @@ export async function getPublicCafeCrawls(
             itemCount: cafeCrawls.itemCount,
             viewsCount: cafeCrawls.viewsCount,
             savesCount: cafeCrawls.savesCount,
+            likesCount: cafeCrawls.likesCount,
             createdAt: cafeCrawls.createdAt,
             userId: cafeCrawls.userId,
         })
@@ -232,6 +235,7 @@ export async function getPublicCafeCrawls(
             itemCount: c.itemCount ?? 0,
             viewsCount: c.viewsCount ?? 0,
             savesCount: c.savesCount ?? 0,
+            likesCount: c.likesCount ?? 0,
             createdAt: c.createdAt?.toISOString() ?? new Date().toISOString(),
             author: authorMap.get(c.userId) ?? {
                 id: c.userId,
@@ -267,6 +271,7 @@ export interface CafeCrawlDetail extends CafeCrawlListItem {
         note: string | null
     }[]
     hasSaved: boolean
+    hasLiked: boolean
     isOwner: boolean
 }
 
@@ -284,6 +289,7 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
             itemCount: cafeCrawls.itemCount,
             viewsCount: cafeCrawls.viewsCount,
             savesCount: cafeCrawls.savesCount,
+            likesCount: cafeCrawls.likesCount,
             createdAt: cafeCrawls.createdAt,
             updatedAt: cafeCrawls.updatedAt,
             authorDisplayName: profiles.displayName,
@@ -335,8 +341,9 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
         .where(eq(cafeCrawlItems.crawlId, crawl.id))
         .orderBy(cafeCrawlItems.sortOrder)
 
-    // Check if user has saved
+    // Check if user has saved or liked
     let hasSaved = false
+    let hasLiked = false
     if (user) {
         const saveResult = await db
             .select({ id: cafeCrawlSaves.id })
@@ -344,6 +351,13 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
             .where(and(eq(cafeCrawlSaves.crawlId, crawl.id), eq(cafeCrawlSaves.userId, user.id)))
             .limit(1)
         hasSaved = saveResult.length > 0
+
+        const likeResult = await db
+            .select({ id: cafeCrawlLikes.id })
+            .from(cafeCrawlLikes)
+            .where(and(eq(cafeCrawlLikes.crawlId, crawl.id), eq(cafeCrawlLikes.userId, user.id)))
+            .limit(1)
+        hasLiked = likeResult.length > 0
     }
 
     return {
@@ -355,6 +369,7 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
         itemCount: crawl.itemCount ?? 0,
         viewsCount: crawl.viewsCount ?? 0,
         savesCount: crawl.savesCount ?? 0,
+        likesCount: crawl.likesCount ?? 0,
         status: crawl.status ?? "draft",
         createdAt: crawl.createdAt?.toISOString() ?? new Date().toISOString(),
         updatedAt: crawl.updatedAt?.toISOString() ?? new Date().toISOString(),
@@ -380,6 +395,7 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
             note: item.note,
         })),
         hasSaved,
+        hasLiked,
         isOwner: user?.id === crawl.userId,
     }
 }
@@ -578,6 +594,58 @@ export async function toggleSaveCafeCrawl(crawlId: string): Promise<ToggleSaveCa
 }
 
 // =============================================================================
+// TOGGLE LIKE CAFE CRAWL
+// =============================================================================
+
+export interface ToggleLikeCafeCrawlResult {
+    success: boolean
+    liked: boolean
+    error?: string
+}
+
+export async function toggleLikeCafeCrawl(crawlId: string): Promise<ToggleLikeCafeCrawlResult> {
+    const user = await getCurrentUser()
+    if (!user) {
+        return { success: false, error: "You must be logged in.", liked: false }
+    }
+
+    try {
+        // Check if already liked
+        const existingLike = await db
+            .select({ id: cafeCrawlLikes.id })
+            .from(cafeCrawlLikes)
+            .where(and(eq(cafeCrawlLikes.crawlId, crawlId), eq(cafeCrawlLikes.userId, user.id)))
+            .limit(1)
+
+        if (existingLike.length > 0) {
+            // Unlike
+            await db.delete(cafeCrawlLikes).where(eq(cafeCrawlLikes.id, existingLike[0].id))
+            await db
+                .update(cafeCrawls)
+                .set({ likesCount: sql`${cafeCrawls.likesCount} - 1` })
+                .where(eq(cafeCrawls.id, crawlId))
+            revalidatePath("/crawls")
+            return { success: true, liked: false }
+        } else {
+            // Like
+            await db.insert(cafeCrawlLikes).values({
+                crawlId,
+                userId: user.id,
+            })
+            await db
+                .update(cafeCrawls)
+                .set({ likesCount: sql`${cafeCrawls.likesCount} + 1` })
+                .where(eq(cafeCrawls.id, crawlId))
+            revalidatePath("/crawls")
+            return { success: true, liked: true }
+        }
+    } catch (error) {
+        console.error("Error toggling like:", error)
+        return { success: false, error: "Failed to like crawl", liked: false }
+    }
+}
+
+// =============================================================================
 // REPORT CAFE CRAWL
 // =============================================================================
 
@@ -662,6 +730,7 @@ export async function getSavedCafeCrawls(): Promise<CafeCrawlListItem[]> {
             itemCount: cafeCrawls.itemCount,
             viewsCount: cafeCrawls.viewsCount,
             savesCount: cafeCrawls.savesCount,
+            likesCount: cafeCrawls.likesCount,
             createdAt: cafeCrawls.createdAt,
             userId: cafeCrawls.userId,
         })
@@ -693,6 +762,7 @@ export async function getSavedCafeCrawls(): Promise<CafeCrawlListItem[]> {
         itemCount: c.itemCount ?? 0,
         viewsCount: c.viewsCount ?? 0,
         savesCount: c.savesCount ?? 0,
+        likesCount: c.likesCount ?? 0,
         createdAt: c.createdAt?.toISOString() ?? new Date().toISOString(),
         author: authorMap.get(c.userId) ?? {
             id: c.userId,
@@ -724,6 +794,7 @@ export async function getUserCafeCrawls(userId?: string): Promise<CafeCrawlListI
             itemCount: cafeCrawls.itemCount,
             viewsCount: cafeCrawls.viewsCount,
             savesCount: cafeCrawls.savesCount,
+            likesCount: cafeCrawls.likesCount,
             createdAt: cafeCrawls.createdAt,
             userId: cafeCrawls.userId,
         })
@@ -762,6 +833,7 @@ export async function getUserCafeCrawls(userId?: string): Promise<CafeCrawlListI
         itemCount: c.itemCount ?? 0,
         viewsCount: c.viewsCount ?? 0,
         savesCount: c.savesCount ?? 0,
+        likesCount: c.likesCount ?? 0,
         createdAt: c.createdAt?.toISOString() ?? new Date().toISOString(),
         author: authorMap.get(c.userId) ?? {
             id: c.userId,

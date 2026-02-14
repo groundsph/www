@@ -560,6 +560,7 @@ export const cafeCrawls = pgTable(
         itemCount: integer("item_count").default(0),
         viewsCount: integer("views_count").default(0),
         savesCount: integer("saves_count").default(0),
+        likesCount: integer("likes_count").default(0),
         createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
     },
@@ -595,6 +596,23 @@ export const cafeCrawlSaves = pgTable(
     },
     (t) => ({
         uniqueSaveIdx: uniqueIndex("crawl_saves_user_crawl_unique").on(t.userId, t.crawlId),
+    })
+)
+
+export const cafeCrawlLikes = pgTable(
+    "cafe_crawl_likes",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        crawlId: uuid("crawl_id")
+            .notNull()
+            .references(() => cafeCrawls.id, { onDelete: "cascade" }),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => profiles.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    },
+    (t) => ({
+        uniqueLikeIdx: uniqueIndex("crawl_likes_user_crawl_unique").on(t.userId, t.crawlId),
     })
 )
 

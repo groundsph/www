@@ -38,6 +38,7 @@ export interface Crawl {
     itemCount?: number
     viewsCount?: number
     savesCount?: number
+    likesCount?: number
     createdAt?: string
     author?: {
         id: string

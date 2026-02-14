@@ -42,6 +42,7 @@ interface CrawlViewProps {
         itemCount: number
         viewsCount: number
         savesCount: number
+        likesCount: number
         createdAt: string
         updatedAt?: string
         status?: string
@@ -54,6 +55,7 @@ interface CrawlViewProps {
         }
         cafes: CafeItem[]
         hasSaved?: boolean
+        hasLiked?: boolean
         isOwner?: boolean
     }
 }
@@ -177,6 +179,8 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                             slug={crawl.slug}
                             saved={crawl.hasSaved ?? false}
                             savesCount={crawl.savesCount ?? 0}
+                            liked={crawl.hasLiked ?? false}
+                            likesCount={crawl.likesCount ?? 0}
                             isOwner={crawl.isOwner ?? false}
                         />
                     </div>

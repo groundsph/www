@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Bookmark, Share2 } from "lucide-react"
-import { toggleSaveCafeCrawl } from "@/app/api/actions/cafe-crawls"
+import { Bookmark, Share2, Heart } from "lucide-react"
+import { toggleSaveCafeCrawl, toggleLikeCafeCrawl } from "@/app/api/actions/cafe-crawls"
 import { useAuth } from "@/components/layout/AuthProvider"
 import CrawlReportButton from "./CrawlReportButton"
 
@@ -11,6 +11,8 @@ interface CrawlActionsProps {
     slug: string
     saved: boolean
     savesCount: number
+    liked: boolean
+    likesCount: number
     isOwner?: boolean
 }
 
@@ -19,12 +21,17 @@ export default function CrawlActions({
     slug,
     saved: initialSaved,
     savesCount: initialSavesCount,
+    liked: initialLiked,
+    likesCount: initialLikesCount,
     isOwner = false,
 }: CrawlActionsProps) {
     const { user } = useAuth()
     const [saved, setSaved] = useState(initialSaved)
     const [savesCount, setSavesCount] = useState(initialSavesCount)
+    const [liked, setLiked] = useState(initialLiked)
+    const [likesCount, setLikesCount] = useState(initialLikesCount)
     const [isSaving, setIsSaving] = useState(false)
+    const [isLiking, setIsLiking] = useState(false)
     const [copied, setCopied] = useState(false)
 
     const handleSave = async () => {
@@ -42,6 +49,24 @@ export default function CrawlActions({
             console.error("Failed to toggle save:", error)
         } finally {
             setIsSaving(false)
+        }
+    }
+
+    const handleLike = async () => {
+        if (!user) return
+        if (isLiking) return
+
+        setIsLiking(true)
+        try {
+            const result = await toggleLikeCafeCrawl(crawlId)
+            if (result.success) {
+                setLiked(result.liked)
+                setLikesCount((prev) => (result.liked ? prev + 1 : prev - 1))
+            }
+        } catch (error) {
+            console.error("Failed to toggle like:", error)
+        } finally {
+            setIsLiking(false)
         }
     }
 
@@ -72,6 +97,21 @@ export default function CrawlActions({
             >
                 <Share2 className='w-4 h-4' />
                 {copied ? "Copied!" : "Share"}
+            </button>
+
+            <button
+                onClick={handleLike}
+                disabled={!user || isLiking}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all ${
+                    liked
+                        ? "bg-red-500 text-white"
+                        : "text-text/70 hover:text-red-500 border border-secondary/30 hover:border-red-400/50"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+                <Heart
+                    className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
+                />
+                <span>{likesCount}</span>
             </button>
 
             <button
