@@ -1,6 +1,6 @@
 "use client"
 
-import { getPublicProfileData } from "@/app/api/actions/profile"
+import { getPublicProfileData, type PublicProfileData } from "@/app/api/actions/profile"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { motion, AnimatePresence } from "motion/react"
@@ -128,8 +128,7 @@ export default function PublicProfile({
     // States
     const [allBadges, setAllBadges] = useState<BadgeDefinition[]>([])
     const [loading, setLoading] = useState(true)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Reviews include dynamic interaction data
-    const [reviews, setReviews] = useState<any[]>([])
+    const [reviews, setReviews] = useState<PublicProfileData["reviews"]>([])
 
     // Passport cafe data
     const [visitedCafes, setVisitedCafes] = useState<
@@ -149,8 +148,7 @@ export default function PublicProfile({
     >([])
 
     // Collections data
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [collections, setCollections] = useState<any[]>([])
+    const [collections, setCollections] = useState<PublicProfileData["collections"]>([])
 
     // Badge display
     const [showAllBadges, setShowAllBadges] = useState(false)
