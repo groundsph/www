@@ -23,6 +23,7 @@ export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps
     const [segments, setSegments] = useState<[number, number][][]>([])
     const [gapCount, setGapCount] = useState(0)
 
+    // Default center: Philippines (used when no focus point is provided)
     const defaultCenter: [number, number] = focusPoint
         ? [focusPoint.lat, focusPoint.lng]
         : [12.8797, 121.774]
@@ -47,9 +48,13 @@ export default function CrawlRouteMap({ points, focusPoint }: CrawlRouteMapProps
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ start, end, profile: "driving" }),
                     })
-                    if (!res.ok) return null
+                    if (!res.ok) {
+                        console.error(`[CrawlRouteMap] Failed to fetch route: ${res.status}`)
+                        return null
+                    }
                     const json = await res.json()
                     if (!json?.geometry?.coordinates) return null
+                    // Transform GeoJSON [lng,lat] to Leaflet [lat,lng]
                     return json.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]])
                 })
             )
