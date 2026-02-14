@@ -172,7 +172,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                     <div className="flex items-center gap-2 mt-4">
                         {crawl.isOwner && (
                             <Link
-                                href={`/profile/crawls/${crawl.id}/edit`}
+                                href={`/community/crawls/${crawl.slug}/edit`}
                                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text/70 hover:text-text border border-secondary/30 rounded-full hover:bg-secondary/10 transition-colors"
                             >
                                 <Pencil className="w-4 h-4" />
