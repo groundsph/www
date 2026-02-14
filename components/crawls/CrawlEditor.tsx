@@ -103,7 +103,12 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
         () =>
             items
                 .filter((item) => item.lat && item.lng)
-                .map((item) => ({ lat: item.lat!, lng: item.lng! })),
+                .map((item) => ({
+                    lat: item.lat!,
+                    lng: item.lng!,
+                    imageUrl: item.thumbnail ? getCafeThumbnailUrl(item.thumbnail) : null,
+                    label: item.name || "",
+                })),
         [items]
     )
 

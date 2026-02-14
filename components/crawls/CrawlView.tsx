@@ -68,7 +68,12 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
 
     const mapPoints = validCafes
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((cafe) => ({ lat: cafe.lat, lng: cafe.lng }))
+        .map((cafe) => ({
+            lat: cafe.lat,
+            lng: cafe.lng,
+            imageUrl: cafe.thumbnail ? getCafeThumbnailUrl(cafe.thumbnail) : null,
+            label: cafe.name,
+        }))
 
     return (
         <div className="min-h-screen w-full bg-background">
