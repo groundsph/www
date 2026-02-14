@@ -91,6 +91,7 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
     const [searchResults, setSearchResults] = useState<CafeSearchResult[]>([])
     const [isSearching, setIsSearching] = useState(false)
     const [showMobileMap, setShowMobileMap] = useState(false)
+    const [focusPoint, setFocusPoint] = useState<{ lat: number; lng: number } | null>(null)
 
     // Image cropper state
     const [croppingImage, setCroppingImage] = useState<File | null>(null)
@@ -146,6 +147,9 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
         setItems((prev) => [...prev, newItem])
         setSearchQuery("")
         setSearchResults([])
+        if (cafe.lat && cafe.lng) {
+            setFocusPoint({ lat: cafe.lat, lng: cafe.lng })
+        }
     }
 
     // Remove cafe from crawl
@@ -541,13 +545,13 @@ export default function CrawlEditor({ crawl, mode = "edit" }: CrawlEditorProps) 
                             
                             {/* Desktop Map - always visible */}
                             <div className="hidden lg:block rounded-2xl overflow-hidden border border-secondary/20">
-                                <CrawlRouteMap points={mapPoints} />
+                                <CrawlRouteMap points={mapPoints} focusPoint={focusPoint} />
                             </div>
                             
                             {/* Mobile Map - toggleable */}
                             {showMobileMap && (
                                 <div className="lg:hidden rounded-2xl overflow-hidden border border-secondary/20">
-                                    <CrawlRouteMap points={mapPoints} />
+                                    <CrawlRouteMap points={mapPoints} focusPoint={focusPoint} />
                                 </div>
                             )}
                         </div>
