@@ -6,6 +6,7 @@ import {
     getPublicCafeCrawls,
 } from "@/app/api/actions/community"
 import { getUpcomingEvents } from "@/app/api/actions/events"
+import { getFeaturedPosts, getPublishedBlogPosts } from "@/app/api/actions/blog"
 
 export const dynamic = "force-dynamic"
 
@@ -23,16 +24,19 @@ export const metadata: Metadata = {
 export default async function Page({
     searchParams,
 }: {
-    searchParams: Promise<{ tab?: string }>
+    searchParams: Promise<{ tab?: string; page?: string }>
 }) {
     const params = await searchParams
-    const initialTab = params.tab || "crawls"
+    const initialTab = params.tab || "blogs"
+    const blogsPage = parseInt(params.page || "1")
 
     // Fetch initial data for all tabs in parallel
-    const [crawlsData, collectionsData, eventsData] = await Promise.all([
+    const [crawlsData, collectionsData, eventsData, featuredResult, postsResult] = await Promise.all([
         getPublicCafeCrawls(1, 12, "recent"),
         getPublicCollections(1, 12, "recent"),
         getUpcomingEvents(12),
+        blogsPage === 1 ? getFeaturedPosts(3) : Promise.resolve([]),
+        getPublishedBlogPosts({ page: blogsPage, pageSize: 12 }),
     ])
 
     return (
@@ -44,6 +48,11 @@ export default async function Page({
                 initialCollections={collectionsData.collections}
                 initialCollectionsTotal={collectionsData.total}
                 initialEvents={eventsData}
+                initialFeaturedPosts={featuredResult}
+                initialPosts={postsResult.posts}
+                initialPostsTotal={postsResult.total}
+                initialPostsHasMore={postsResult.hasMore}
+                initialPostsPage={blogsPage}
             />
         </Suspense>
     )

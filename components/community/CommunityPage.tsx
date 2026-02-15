@@ -15,6 +15,7 @@ import {
     Star,
     Trophy,
     MapPin,
+    BookOpen,
 } from "lucide-react"
 import { getPublicCollections, searchUsers, getPublicCafeCrawls } from "@/app/api/actions/community"
 import CrawlCard from "@/components/crawls/CrawlCard"
@@ -23,8 +24,10 @@ import { Crawl } from "@/utils/types/cafe-crawls"
 import EventsPageClient from "@/components/events/EventsPageClient"
 import MonthlyLeaderboard from "@/components/community/MonthlyLeaderboard"
 import { EventWithCafe } from "@/utils/types/extra"
+import CommunityBlogsTab from "@/components/blog/CommunityBlogsTab"
+import { BlogPost } from "@/utils/types/blog"
 
-type TabType = "crawls" | "collections" | "events" | "leaderboard"
+type TabType = "blogs" | "crawls" | "collections" | "events" | "leaderboard"
 
 interface PublicCollection {
     id: string
@@ -61,6 +64,11 @@ interface CommunityPageProps {
     initialCollections: PublicCollection[]
     initialCollectionsTotal: number
     initialEvents: EventWithCafe[]
+    initialFeaturedPosts: BlogPost[]
+    initialPosts: BlogPost[]
+    initialPostsTotal: number
+    initialPostsHasMore: boolean
+    initialPostsPage: number
 }
 
 export default function CommunityPage({
@@ -70,6 +78,11 @@ export default function CommunityPage({
     initialCollections,
     initialCollectionsTotal,
     initialEvents,
+    initialFeaturedPosts,
+    initialPosts,
+    initialPostsTotal,
+    initialPostsHasMore,
+    initialPostsPage,
 }: CommunityPageProps) {
     const router = useRouter()
     const searchParamsHook = useSearchParams()
@@ -92,6 +105,13 @@ export default function CommunityPage({
     const [collectionsPage, setCollectionsPage] = useState(1)
     const [loadingCollections, setLoadingCollections] = useState(false)
 
+    // Blogs state
+    const [featuredPosts, setFeaturedPosts] = useState(initialFeaturedPosts)
+    const [posts, setPosts] = useState(initialPosts)
+    const [postsTotal, setPostsTotal] = useState(initialPostsTotal)
+    const [postsPage, setPostsPage] = useState(initialPostsPage)
+    const [postsHasMore, setPostsHasMore] = useState(initialPostsHasMore)
+
     // Search state
     const [searchQuery, setSearchQuery] = useState("")
     const [isUserSearch, setIsUserSearch] = useState(false)
@@ -105,7 +125,7 @@ export default function CommunityPage({
         const tabParam = searchParamsHook.get("tab")
         if (
             tabParam &&
-            ["crawls", "collections", "events", "leaderboard"].includes(tabParam)
+            ["blogs", "crawls", "collections", "events", "leaderboard"].includes(tabParam)
         ) {
             setActiveTab(tabParam as TabType)
         }
@@ -243,32 +263,66 @@ export default function CommunityPage({
     }, [searchQuery])
 
     const tabs = [
+        { id: "blogs" as TabType, label: "Blogs", icon: BookOpen },
         { id: "crawls" as TabType, label: "Crawls", icon: MapPin },
         { id: "collections" as TabType, label: "Collections", icon: Layers },
         { id: "events" as TabType, label: "Events", icon: Calendar },
         { id: "leaderboard" as TabType, label: "Leaderboard", icon: Trophy },
     ]
 
+    const heroContent = {
+        blogs: {
+            tag: "Grounds Editorial",
+            title: "The Grounds Blog",
+            description: "Discover stories, brewing guides, cafe updates, and news from the Philippine community.",
+            icon: BookOpen,
+        },
+        crawls: {
+            tag: "Connect & Discover",
+            title: "Community",
+            description: "Explore curated collections, discover events, and connect with fellow coffee enthusiasts across the Philippines.",
+            icon: Coffee,
+        },
+        collections: {
+            tag: "Connect & Discover",
+            title: "Community",
+            description: "Explore curated collections, discover events, and connect with fellow coffee enthusiasts across the Philippines.",
+            icon: Coffee,
+        },
+        events: {
+            tag: "Connect & Discover",
+            title: "Community",
+            description: "Explore curated collections, discover events, and connect with fellow coffee enthusiasts across the Philippines.",
+            icon: Coffee,
+        },
+        leaderboard: {
+            tag: "Connect & Discover",
+            title: "Community",
+            description: "Explore curated collections, discover events, and connect with fellow coffee enthusiasts across the Philippines.",
+            icon: Coffee,
+        },
+    }
+
+    const currentHero = heroContent[activeTab]
+
     return (
         <div className='min-h-screen w-full bg-background'>
             {/* Hero */}
             <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-16 overflow-hidden'>
                 <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
-                    <Coffee className='absolute -top-6 -right-6 w-48 h-48 text-primary/5 rotate-12' />
+                    <currentHero.icon className='absolute -top-6 -right-6 w-48 h-48 text-primary/5 rotate-12' />
                     <Users className='absolute -bottom-12 -left-12 w-64 h-64 text-secondary opacity-5 -rotate-12' />
                 </div>
 
                 <div className='max-w-7xl mx-auto px-6 relative z-10'>
                     <span className='inline-block px-3 py-1 mb-4 bg-background/50 backdrop-blur-sm border border-text/5 rounded-full text-xs font-medium text-text/60 uppercase tracking-wider'>
-                        Connect & Discover
+                        {currentHero.tag}
                     </span>
                     <h1 className='text-5xl md:text-6xl font-bold font-serif text-text mb-4 tracking-tight'>
-                        Community
+                        {currentHero.title}
                     </h1>
                     <p className='text-xl text-text/70 max-w-2xl font-light'>
-                        Explore curated collections, discover events, and
-                        connect with fellow coffee enthusiasts across the
-                        Philippines.
+                        {currentHero.description}
                     </p>
                 </div>
             </section>
@@ -336,6 +390,16 @@ export default function CommunityPage({
                                 : "No users found. Try a different username."}
                         </div>
                     )}
+                </section>
+            ) : activeTab === "blogs" ? (
+                <section className='max-w-7xl mx-auto px-6 py-8'>
+                    <CommunityBlogsTab
+                        featuredPosts={featuredPosts}
+                        posts={posts}
+                        total={postsTotal}
+                        hasMore={postsHasMore}
+                        page={postsPage}
+                    />
                 </section>
             ) : activeTab === "crawls" ? (
                 <section className='max-w-7xl mx-auto px-6 py-8'>

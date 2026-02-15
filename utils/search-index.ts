@@ -42,7 +42,7 @@ export const staticPages: SearchResult[] = [
     type: 'page',
     title: 'Blog',
     subtitle: 'Articles and updates',
-    href: '/blog',
+    href: '/community?tab=blogs',
     priority: 75,
     keywords: ['articles', 'news', 'posts']
   },

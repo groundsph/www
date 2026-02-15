@@ -18,12 +18,24 @@ export const routes: Route[] = [
         href: '/community',
         children: [
             {
-                title: 'discover',
-                href: '/community',
+                title: 'blogs',
+                href: '/community?tab=blogs',
             },
             {
-                title: 'blog',
-                href: '/blog',
+                title: 'crawls',
+                href: '/community?tab=crawls',
+            },
+            {
+                title: 'collections',
+                href: '/community?tab=collections',
+            },
+            {
+                title: 'events',
+                href: '/community?tab=events',
+            },
+            {
+                title: 'leaderboard',
+                href: '/community?tab=leaderboard',
             },
         ],
     },
