@@ -52,6 +52,12 @@ interface RoadmapItem {
 
 const recentlyShipped: RoadmapItem[] = [
     {
+        title: "Cafe Crawls",
+        description:
+            "Organized tours of multiple cafes, perfect for discovering new spots with friends",
+        icon: <Map className='w-5 h-5' />,
+    },
+    {
         title: "Custom Cafe Stamps",
         description:
             "Owners can now create unique stamps for their cafes, adding a personal touch to their stamps and making them more collectible for users.",
@@ -113,12 +119,6 @@ const inProgress: RoadmapItem[] = [
         description:
             "Rich previews when sharing cafes on social media with custom graphics",
         icon: <Share2 className='w-5 h-5' />,
-    },
-    {
-        title: "Cafe Crawls",
-        description:
-            "Organized tours of multiple cafes, perfect for discovering new spots with friends",
-        icon: <Map className='w-5 h-5' />,
     },
     {
         title: "Dark Mode",
@@ -275,8 +275,8 @@ export default function RoadmapPage() {
                 {/* Footer Note */}
                 <div className='mt-16 pt-8 border-t border-text/10 text-center'>
                     <p className='text-text/50 text-sm'>
-                        Last updated: February 2026. Roadmap items are subject to
-                        change.
+                        Last updated: February 2026. Roadmap items are subject
+                        to change.
                     </p>
                 </div>
             </div>
