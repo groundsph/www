@@ -37,6 +37,9 @@ export interface BlogPostInput {
     status: BlogStatus
     tags?: string[]
     featured?: boolean
+    images?: string[]
+    tagged_cafe_ids?: string[]
+    crawl_id?: string | null
 }
 
 // Blog category metadata

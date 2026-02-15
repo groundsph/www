@@ -79,6 +79,9 @@ function mapBlogPost(
         category: string | null
         status: string | null
         tags: string[] | null
+        images: string[] | null
+        taggedCafeIds: string[] | null
+        crawlId: string | null
         featured: boolean | null
         viewsCount: number | null
         publishedAt: Date | null
@@ -100,6 +103,9 @@ function mapBlogPost(
         category: b.category as BlogCategory,
         status: b.status as BlogStatus,
         tags: b.tags,
+        images: b.images,
+        tagged_cafe_ids: b.taggedCafeIds,
+        crawl_id: b.crawlId,
         featured: b.featured ?? false,
         views_count: b.viewsCount ?? 0,
         published_at: b.publishedAt?.toISOString() ?? null,
@@ -152,7 +158,8 @@ export async function getPublishedBlogPosts(
                 id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
                 content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
                 cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-                tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+                tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds,
+                crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
                 publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
             })
             .from(blogPosts)
@@ -167,7 +174,8 @@ export async function getPublishedBlogPosts(
                 id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
                 content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
                 cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-                tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+                tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds,
+                crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
                 publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
             })
                 .from(blogPosts)
@@ -212,7 +220,7 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
         content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
     })
         .from(blogPosts)
@@ -247,7 +255,7 @@ export async function getFeaturedPosts(limit: number = 5): Promise<BlogPost[]> {
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
         content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
     })
         .from(blogPosts)
@@ -323,7 +331,7 @@ export async function getAdminBlogPosts(params: AdminBlogParams = {}): Promise<P
             id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
             content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
             cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-            tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+            tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
             publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
         })
             .from(blogPosts)
@@ -387,7 +395,7 @@ export async function getWriterBlogPosts(params: AdminBlogParams = {}): Promise<
             id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
             content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
             cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-            tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+            tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
             publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
         })
             .from(blogPosts)
@@ -427,7 +435,7 @@ export async function getWriterBlogPostById(id: string): Promise<BlogPost | null
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
         content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
     })
         .from(blogPosts)
@@ -453,7 +461,7 @@ export async function getOwnerBlogPosts(cafeId: string): Promise<BlogPost[]> {
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
         content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
     })
         .from(blogPosts)
@@ -538,6 +546,9 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
         category: input.category,
         status: input.status,
         tags: input.tags || [],
+        images: input.images || [],
+        taggedCafeIds: input.tagged_cafe_ids || [],
+        crawlId: input.crawl_id || null,
         featured: input.featured || false,
         publishedAt: input.status === "published" ? new Date() : null,
     }).returning()
@@ -592,6 +603,9 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     if (input.category !== undefined) updateData.category = input.category
     if (input.status !== undefined) updateData.status = input.status
     if (input.tags !== undefined) updateData.tags = input.tags
+    if (input.images !== undefined) updateData.images = input.images
+    if (input.tagged_cafe_ids !== undefined) updateData.taggedCafeIds = input.tagged_cafe_ids
+    if (input.crawl_id !== undefined) updateData.crawlId = input.crawl_id
     if (input.featured !== undefined) updateData.featured = input.featured
     if (isPublishing) updateData.publishedAt = new Date()
 
@@ -642,7 +656,7 @@ export async function getBlogPostById(postId: string): Promise<BlogPost | null> 
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
         content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-        tags: blogPosts.tags, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
     })
         .from(blogPosts)

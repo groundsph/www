@@ -76,13 +76,16 @@ export type Database = {
           content: string
           cover_image: string | null
           created_at: string | null
+          crawl_id: string | null
           excerpt: string | null
           featured: boolean | null
           id: string
+          images: string[] | null
           published_at: string | null
           search_vector: unknown
           slug: string
           status: Database["public"]["Enums"]["blog_status"]
+          tagged_cafe_ids: string[] | null
           tags: string[] | null
           title: string
           updated_at: string | null
@@ -95,13 +98,16 @@ export type Database = {
           content: string
           cover_image?: string | null
           created_at?: string | null
+          crawl_id?: string | null
           excerpt?: string | null
           featured?: boolean | null
           id?: string
+          images?: string[] | null
           published_at?: string | null
           search_vector?: unknown
           slug: string
           status?: Database["public"]["Enums"]["blog_status"]
+          tagged_cafe_ids?: string[] | null
           tags?: string[] | null
           title: string
           updated_at?: string | null
@@ -114,13 +120,16 @@ export type Database = {
           content?: string
           cover_image?: string | null
           created_at?: string | null
+          crawl_id?: string | null
           excerpt?: string | null
           featured?: boolean | null
           id?: string
+          images?: string[] | null
           published_at?: string | null
           search_vector?: unknown
           slug?: string
           status?: Database["public"]["Enums"]["blog_status"]
+          tagged_cafe_ids?: string[] | null
           tags?: string[] | null
           title?: string
           updated_at?: string | null
