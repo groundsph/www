@@ -192,7 +192,7 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
                         <span className='text-sm font-medium flex-1'>
                             {cafe.address_display}
                         </span>
-                        <ExternalLink className='w-4 h-4 text-text/40' />
+                        <ExternalLink className='w-4 h-4 text-text opacity-40' />
                     </a>
                 </>
             ) : (

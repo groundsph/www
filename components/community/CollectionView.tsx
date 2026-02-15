@@ -158,7 +158,7 @@ export default function CollectionView({
                             />
                         ) : (
                             <div className='w-full h-full bg-linear-to-br from-primary/30 via-accent/20 to-secondary/30 flex items-center justify-center'>
-                                <Coffee className='w-8 md:w-16 h-8 md:h-16 text-primary/40' />
+                                <Coffee className='w-8 md:w-16 h-8 md:h-16 text-primary opacity-40' />
                             </div>
                         )}
                         {!collection.isPublic && (
@@ -332,7 +332,7 @@ export default function CollectionView({
             <div className='max-w-5xl mx-auto px-4 md:px-6 pb-8'>
                 {validCafes.length === 0 ? (
                     <div className='text-center py-16'>
-                        <Coffee className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
+                        <Coffee className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
                         <h3 className='text-xl font-serif font-semibold text-text mb-2'>
                             No cafes yet
                         </h3>
@@ -369,7 +369,7 @@ export default function CollectionView({
                                         />
                                     ) : (
                                         <div className='w-full h-full flex items-center justify-center'>
-                                            <Coffee className='w-6 h-6 md:w-8 md:h-8 text-secondary/40' />
+                                            <Coffee className='w-6 h-6 md:w-8 md:h-8 text-secondary opacity-40' />
                                         </div>
                                     )}
 

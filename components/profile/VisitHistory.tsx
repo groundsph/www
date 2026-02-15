@@ -175,7 +175,7 @@ export default function VisitHistory({
                     </h2>
                 </div>
                 <div className='bg-text/5 border border-text/10 rounded-xl p-8 flex flex-col items-center justify-center min-h-[200px]'>
-                    <Coffee className='w-12 h-12 text-text/20 mb-3' />
+                    <Coffee className='w-12 h-12 text-text opacity-20 mb-3' />
                     <p className='text-text/60 font-medium'>No visits yet</p>
                     <p className='text-text/40 text-sm'>
                         Start exploring cafes to build your journey!

@@ -123,7 +123,7 @@ export default function BlogCrawlEmbed({ crawl }: BlogCrawlEmbedProps) {
                                             {item.cityMunicipality}, {item.region}
                                         </p>
                                     </div>
-                                    <Coffee className="w-4 h-4 text-text/30 group-hover:text-primary transition-colors" />
+                                    <Coffee className="w-4 h-4 text-text opacity-30 group-hover:text-primary transition-colors" />
                                 </Link>
                             </motion.div>
                         ))}

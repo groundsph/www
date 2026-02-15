@@ -74,7 +74,7 @@ export default function MiniSubmitCafeBanner({
                                     className='p-1.5 hover:bg-text/10 rounded-lg transition-colors cursor-pointer'
                                     aria-label='Dismiss banner'
                                 >
-                                    <X className='w-4 h-4 text-text/50' />
+                                    <X className='w-4 h-4 text-text opacity-50' />
                                 </button>
                             </div>
                         </div>

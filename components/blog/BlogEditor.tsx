@@ -662,7 +662,7 @@ export default function BlogEditor({
                     {/* Gallery Images */}
                     <div className='space-y-3'>
                         <label className='flex items-center gap-2 text-sm font-medium text-text'>
-                            <Images className='w-4 h-4 text-text/50' />
+                            <Images className='w-4 h-4 text-text opacity-50' />
                             Gallery Images
                         </label>
 
@@ -722,7 +722,7 @@ export default function BlogEditor({
                     {/* Tagged Cafes */}
                     <div className='space-y-2'>
                         <label className='flex items-center gap-2 text-sm font-medium text-text'>
-                            <MapPin className='w-4 h-4 text-text/50' />
+                            <MapPin className='w-4 h-4 text-text opacity-50' />
                             Tagged Cafes
                         </label>
                         <BlogCafePicker
@@ -735,7 +735,7 @@ export default function BlogEditor({
                     {/* Linked Crawl */}
                     <div className='space-y-2'>
                         <label className='flex items-center gap-2 text-sm font-medium text-text'>
-                            <Route className='w-4 h-4 text-text/50' />
+                            <Route className='w-4 h-4 text-text opacity-50' />
                             Linked Crawl
                         </label>
                         <BlogCrawlPicker

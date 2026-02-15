@@ -35,7 +35,7 @@ export default function RecentCard({
                 >
                     <div className='absolute inset-0 bg-linear-to-r from-transparent via-secondary/30 to-transparent animate-shimmer' />
                     <div className='w-full h-full flex items-center justify-center'>
-                        <Coffee className='w-8 h-8 text-secondary/40' />
+                        <Coffee className='w-8 h-8 text-secondary opacity-40' />
                     </div>
                 </div>
 
@@ -51,7 +51,7 @@ export default function RecentCard({
                     />
                 ) : (
                     <div className='w-full h-full flex items-center justify-center bg-linear-to-br from-secondary/30 to-primary/20'>
-                        <Coffee className='w-12 h-12 text-primary/40' />
+                        <Coffee className='w-12 h-12 text-primary opacity-40' />
                     </div>
                 )}
                 {/* Warm overlay gradient */}

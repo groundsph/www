@@ -328,7 +328,7 @@ export default function MonthlyLeaderboard({
                 </div>
             ) : leaderboard.length === 0 ? (
                 <div className='text-center py-16'>
-                    <Trophy className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
+                    <Trophy className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
                     <h3 className='text-xl font-serif font-semibold text-text mb-2'>
                         No check-ins this month
                     </h3>

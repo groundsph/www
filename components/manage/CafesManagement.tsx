@@ -594,7 +594,7 @@ export default function CafesManagement({
                 <div className='space-y-3'>
                     {/* Search bar */}
                     <div className='relative'>
-                        <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
+                        <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text opacity-40' />
                         <input
                             type='text'
                             value={searchQuery}
@@ -616,7 +616,7 @@ export default function CafesManagement({
                     <div className='flex gap-3 flex-wrap'>
                         {/* Province filter */}
                         <div className='relative'>
-                            <Filter className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <Filter className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                             <select
                                 value={provinceFilter}
                                 onChange={(e) =>
@@ -634,13 +634,13 @@ export default function CafesManagement({
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40 pointer-events-none' />
                         </div>
 
                         {/* City filter */}
                         {provinceFilter && cities.length > 0 && (
                             <div className='relative'>
-                                <MapPin className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                <MapPin className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                 <select
                                     value={cityFilter}
                                     onChange={(e) =>
@@ -658,7 +658,7 @@ export default function CafesManagement({
                                         </option>
                                     ))}
                                 </select>
-                                <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40 pointer-events-none' />
                             </div>
                         )}
 
@@ -666,7 +666,7 @@ export default function CafesManagement({
 
                         {/* Sort dropdown */}
                         <div className='relative'>
-                            <ArrowUpDown className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <ArrowUpDown className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                             <select
                                 value={sortBy}
                                 onChange={(e) =>
@@ -681,12 +681,12 @@ export default function CafesManagement({
                                     Sort by Province
                                 </option>
                             </select>
-                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40 pointer-events-none' />
                         </div>
 
                         {/* Chain filter */}
                         <div className='relative'>
-                            <Store className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <Store className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                             <select
                                 value={chainFilter}
                                 onChange={(e) =>
@@ -702,7 +702,7 @@ export default function CafesManagement({
                                     Exclude Chains
                                 </option>
                             </select>
-                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 pointer-events-none' />
+                            <ChevronDown className='absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40 pointer-events-none' />
                         </div>
 
                         {/* Clear filters */}
@@ -1265,9 +1265,9 @@ export default function CafesManagement({
                                                     <X className='w-5 h-5' />
                                                 </button>
                                                 {isExpanded ? (
-                                                    <ChevronUp className='w-5 h-5 text-text/40' />
+                                                    <ChevronUp className='w-5 h-5 text-text opacity-40' />
                                                 ) : (
-                                                    <ChevronDown className='w-5 h-5 text-text/40' />
+                                                    <ChevronDown className='w-5 h-5 text-text opacity-40' />
                                                 )}
                                             </div>
                                         </div>
@@ -1476,9 +1476,9 @@ export default function CafesManagement({
                                                     <X className='w-5 h-5' />
                                                 </button>
                                                 {isExpanded ? (
-                                                    <ChevronUp className='w-5 h-5 text-text/40' />
+                                                    <ChevronUp className='w-5 h-5 text-text opacity-40' />
                                                 ) : (
-                                                    <ChevronDown className='w-5 h-5 text-text/40' />
+                                                    <ChevronDown className='w-5 h-5 text-text opacity-40' />
                                                 )}
                                             </div>
                                         </div>

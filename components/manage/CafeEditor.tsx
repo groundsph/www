@@ -870,7 +870,7 @@ export default function CafeEditor({
                                 Add Cafe Owner/Manager
                             </label>
                             <div className='relative'>
-                                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                 <input
                                     type='text'
                                     value={ownerSearchQuery}
@@ -881,7 +881,7 @@ export default function CafeEditor({
                                     className='w-full pl-10 pr-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
                                 />
                                 {ownerSearchLoading && (
-                                    <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-text/40' />
+                                    <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-text opacity-40' />
                                 )}
                             </div>
 
@@ -904,7 +904,7 @@ export default function CafeEditor({
                                                     />
                                                 ) : (
                                                     <div className='w-8 h-8 rounded-full bg-text/10 flex items-center justify-center'>
-                                                        <Users className='w-4 h-4 text-text/40' />
+                                                        <Users className='w-4 h-4 text-text opacity-40' />
                                                     </div>
                                                 )}
                                                 <div>
@@ -935,7 +935,7 @@ export default function CafeEditor({
                             </label>
                             {ownersLoading ? (
                                 <div className='flex items-center justify-center py-8'>
-                                    <Loader2 className='w-6 h-6 animate-spin text-text/40' />
+                                    <Loader2 className='w-6 h-6 animate-spin text-text opacity-40' />
                                 </div>
                             ) : owners.length > 0 ? (
                                 <div className='bg-background border border-text/10 rounded-lg divide-y divide-text/10'>
@@ -955,7 +955,7 @@ export default function CafeEditor({
                                                     />
                                                 ) : (
                                                     <div className='w-10 h-10 rounded-full bg-text/10 flex items-center justify-center'>
-                                                        <Users className='w-5 h-5 text-text/40' />
+                                                        <Users className='w-5 h-5 text-text opacity-40' />
                                                     </div>
                                                 )}
                                                 <div>

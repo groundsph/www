@@ -341,7 +341,7 @@ export default function AwardBadgeModal({
                                 <div className='space-y-4'>
                                     {/* Search Box */}
                                     <div className='relative'>
-                                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                         <input
                                             type='text'
                                             value={searchQuery}
@@ -353,7 +353,7 @@ export default function AwardBadgeModal({
                                             autoFocus
                                         />
                                         {isSearching && (
-                                            <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-text/40' />
+                                            <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-text opacity-40' />
                                         )}
                                     </div>
 
@@ -468,7 +468,7 @@ export default function AwardBadgeModal({
                                     {/* Holder Search */}
                                     {holders.length > 0 && (
                                         <div className='relative'>
-                                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                             <input
                                                 type='text'
                                                 value={holderSearchQuery}
@@ -492,7 +492,7 @@ export default function AwardBadgeModal({
                                         </div>
                                     ) : holders.length === 0 ? (
                                         <div className='text-center py-12 bg-text/5 rounded-xl border border-dashed border-text/20'>
-                                            <Users className='w-10 h-10 mx-auto text-text/20 mb-3' />
+                                            <Users className='w-10 h-10 mx-auto text-text opacity-20 mb-3' />
                                             <p className='text-text/60 font-medium text-sm'>
                                                 No one has this badge yet
                                             </p>

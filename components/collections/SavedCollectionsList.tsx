@@ -38,7 +38,7 @@ export default function SavedCollectionsList({ collections }: SavedCollectionsLi
             <div className='max-w-6xl mx-auto px-6 py-8'>
                 {collections.length === 0 ? (
                     <div className='text-center py-16'>
-                        <Bookmark className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
+                        <Bookmark className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
                         <h3 className='text-xl font-serif font-semibold text-text mb-2'>
                             No saved collections yet
                         </h3>

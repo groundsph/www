@@ -73,7 +73,7 @@ export default function InventoryFilters({
             <div className="flex flex-col md:flex-row gap-3">
                 {/* Search Input */}
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
                     <input
                         type="text"
                         value={filters.search}

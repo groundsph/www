@@ -93,7 +93,7 @@ export default function MilestoneCelebration({
                             }}
                             className='absolute top-3 right-3 p-1.5 rounded-full hover:bg-text/10 transition-colors'
                         >
-                            <X className='w-4 h-4 text-text/50' />
+                            <X className='w-4 h-4 text-text opacity-50' />
                         </button>
 
                         {/* Icon */}

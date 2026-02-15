@@ -622,7 +622,7 @@ export default function Profile() {
                                     className='object-cover'
                                 />
                             ) : (
-                                <User className='w-12 h-12 text-text/40' />
+                                <User className='w-12 h-12 text-text opacity-40' />
                             )}
                             {/* Upload overlay */}
                             {isEditing && (
@@ -872,7 +872,7 @@ export default function Profile() {
                                                 </div>
                                             ) : (
                                                 <div className='w-12 h-12 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
-                                                    <Coffee className='w-5 h-5 text-text/40' />
+                                                    <Coffee className='w-5 h-5 text-text opacity-40' />
                                                 </div>
                                             )}
                                             <div className='flex-1 min-w-0'>
@@ -963,7 +963,7 @@ export default function Profile() {
                             if (earnedBadges.length === 0 && !showAllBadges) {
                                 return (
                                     <div className='flex flex-col items-center justify-center py-12 text-center opacity-60'>
-                                        <Award className='w-16 h-16 text-text/20 mb-4' />
+                                        <Award className='w-16 h-16 text-text opacity-20 mb-4' />
                                         <p className='text-lg font-medium'>
                                             No badges yet
                                         </p>
@@ -1081,7 +1081,7 @@ export default function Profile() {
                                                                 } else {
                                                                     return (
                                                                         <Award
-                                                                            className={`w-7 h-7 ${isEarned ? "text-primary" : "text-text/20"}`}
+                                                                            className={`w-7 h-7 ${isEarned ? "text-primary" : "text-text opacity-20"}`}
                                                                         />
                                                                     )
                                                                 }
@@ -1612,10 +1612,10 @@ export default function Profile() {
                                                                 className='object-cover'
                                                             />
                                                         </div>
-                                                    ) : (
-                                                        <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                            <Layers className='w-5 h-5 text-primary/60' />
-                                                        </div>
+                                                ) : (
+                                                    <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                        <Bookmark className='w-5 h-5 text-primary opacity-60' />
+                                                    </div>
                                                     )}
                                                     <div className='flex-1 min-w-0'>
                                                         <p className='font-semibold truncate group-hover:text-primary transition-colors'>
@@ -1642,7 +1642,7 @@ export default function Profile() {
                             </div>
                         ) : (
                             <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                                <Layers className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                                <Layers className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
                                 <p className='text-text/60 font-medium mb-4'>
                                     No collections yet
                                 </p>
@@ -1684,7 +1684,7 @@ export default function Profile() {
                                                     </div>
                                                 ) : (
                                                     <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                        <Bookmark className='w-5 h-5 text-primary/60' />
+                                                        <Bookmark className='w-5 h-5 text-primary opacity-60' />
                                                     </div>
                                                 )}
                                                 <div className='flex-1 min-w-0'>
@@ -1712,7 +1712,7 @@ export default function Profile() {
                         </div>
                     ) : (
                         <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                            <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                            <Bookmark className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
                             <p className='text-text/60 font-medium mb-4'>
                                 No saved collections yet
                             </p>
@@ -1794,7 +1794,7 @@ export default function Profile() {
                                                     </div>
                                                 ) : (
                                                     <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                        <Bookmark className='w-5 h-5 text-primary/60' />
+                                                        <Bookmark className='w-5 h-5 text-primary opacity-60' />
                                                     </div>
                                                 )}
                                                 <div className='flex-1 min-w-0'>
@@ -1821,7 +1821,7 @@ export default function Profile() {
                             </div>
                         ) : (
                             <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                                <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                                <Bookmark className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
                                 <p className='text-text/60 font-medium mb-4'>
                                     No crawls yet
                                 </p>
@@ -1855,10 +1855,10 @@ export default function Profile() {
                                                         className='object-cover'
                                                     />
                                                 </div>
-                                            ) : (
-                                                <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
-                                                    <Bookmark className='w-5 h-5 text-primary/60' />
-                                                </div>
+                                                ) : (
+                                                    <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                        <Bookmark className='w-5 h-5 text-primary opacity-60' />
+                                                    </div>
                                             )}
                                             <div className='flex-1 min-w-0'>
                                                 <p className='font-semibold truncate group-hover:text-primary transition-colors'>
@@ -1881,11 +1881,11 @@ export default function Profile() {
                                 View Saved Crawls
                             </Link>
                         </div>
-                    ) : (
-                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                            <Bookmark className='w-12 h-12 text-text/20 mx-auto mb-3' />
-                            <p className='text-text/60 font-medium mb-4'>
-                                No saved crawls yet
+                        ) : (
+                            <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                                <Bookmark className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
+                                <p className='text-text/60 font-medium mb-4'>
+                                    No saved crawls yet
                             </p>
                             <Link
                                 href='/community?tab=crawls'

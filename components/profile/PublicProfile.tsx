@@ -246,7 +246,7 @@ export default function PublicProfile({
                                     className='object-cover'
                                 />
                             ) : (
-                                <User className='w-12 h-12 text-text/40' />
+                                <User className='w-12 h-12 text-text opacity-40' />
                             )}
                         </div>
                         {profile.is_supporter && (
@@ -431,7 +431,7 @@ export default function PublicProfile({
                             if (earnedBadges.length === 0 && !showAllBadges) {
                                 return (
                                     <div className='flex flex-col items-center justify-center py-12 text-center opacity-60'>
-                                        <Award className='w-16 h-16 text-text/20 mb-4' />
+                                        <Award className='w-16 h-16 text-text opacity-20 mb-4' />
                                         <p className='text-lg font-medium'>
                                             No badges yet
                                         </p>
@@ -808,7 +808,7 @@ export default function PublicProfile({
                         </div>
                     ) : (
                         <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
-                            <Layers className='w-12 h-12 mx-auto text-text/20 mb-3' />
+                            <Layers className='w-12 h-12 mx-auto text-text opacity-20 mb-3' />
                             <p className='text-text/60 font-medium'>
                                 No public collections yet
                             </p>

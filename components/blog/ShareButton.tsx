@@ -25,7 +25,7 @@ export default function ShareButton({ title }: ShareButtonProps) {
             className='p-2 rounded-full bg-text/5 hover:bg-text/10 transition-colors'
             aria-label='Share this article'
         >
-            <Share2 className='w-5 h-5 text-text/70' />
+            <Share2 className='w-5 h-5 text-text opacity-70' />
         </button>
     )
 }

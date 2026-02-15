@@ -266,7 +266,7 @@ export default function GroupCheckInModal({
                                     className='w-full flex items-center justify-between px-4 py-3 hover:bg-text/5 transition-colors'
                                 >
                                     <div className='flex items-center gap-2'>
-                                        <Users className='w-4 h-4 text-text/60' />
+                                        <Users className='w-4 h-4 text-text opacity-60' />
                                         <span className='text-sm font-medium'>
                                             Add Companions
                                             {selectedCompanions.length > 0 && (
@@ -277,9 +277,9 @@ export default function GroupCheckInModal({
                                         </span>
                                     </div>
                                     {showCompanions ? (
-                                        <ChevronUp className='w-4 h-4 text-text/40' />
+                                        <ChevronUp className='w-4 h-4 text-text opacity-40' />
                                     ) : (
-                                        <ChevronDown className='w-4 h-4 text-text/40' />
+                                        <ChevronDown className='w-4 h-4 text-text opacity-40' />
                                     )}
                                 </button>
 

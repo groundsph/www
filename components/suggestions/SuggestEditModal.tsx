@@ -792,7 +792,7 @@ export default function SuggestEditModal({
 
                                                             <div className='flex gap-2'>
                                                                 <div className='flex-1 relative'>
-                                                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text/40' />
+                                                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text opacity-40' />
                                                                     <input
                                                                         type='text'
                                                                         value={
@@ -895,7 +895,7 @@ export default function SuggestEditModal({
 
                                                             <div className='flex gap-2'>
                                                                 <div className='flex-1 relative'>
-                                                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text/40' />
+                                                                    <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text opacity-40' />
                                                                     <input
                                                                         type='text'
                                                                         value={

@@ -70,7 +70,7 @@ export default function SocialLinksEditor({
 
                             {/* URL input */}
                             <div className='flex-1 relative'>
-                                <LinkIcon className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                <LinkIcon className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                 <input
                                     type='url'
                                     value={social.url}

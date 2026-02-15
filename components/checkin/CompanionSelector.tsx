@@ -126,7 +126,7 @@ export default function CompanionSelector({
             {canAddMore && (
                 <div className='relative'>
                     <div className='relative'>
-                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                        <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                         <input
                             type='text'
                             value={query}
@@ -165,7 +165,7 @@ export default function CompanionSelector({
                                         />
                                     ) : (
                                         <div className='w-8 h-8 rounded-full bg-text/10 flex items-center justify-center'>
-                                            <User className='w-4 h-4 text-text/40' />
+                                            <User className='w-4 h-4 text-text opacity-40' />
                                         </div>
                                     )}
                                     <div className='flex-1 min-w-0'>

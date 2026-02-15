@@ -68,7 +68,7 @@ export default function CollectionsList({
             <div className='max-w-6xl mx-auto px-6 py-8'>
                 {collections.length === 0 ? (
                     <div className='text-center py-16'>
-                        <Layers className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
+                        <Layers className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
                         <h3 className='text-xl font-serif font-semibold text-text mb-2'>
                             No collections yet
                         </h3>
@@ -104,7 +104,7 @@ export default function CollectionsList({
                                         />
                                     ) : (
                                         <div className='w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-accent/20'>
-                                            <Layers className='w-6 h-6 text-primary/40' />
+                                            <Layers className='w-6 h-6 text-primary opacity-40' />
                                         </div>
                                     )}
                                     {!collection.isPublic && (

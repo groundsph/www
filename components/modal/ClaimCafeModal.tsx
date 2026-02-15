@@ -237,7 +237,7 @@ export default function ClaimCafeModal({
                                                         htmlFor='modal-proof-upload'
                                                         className='cursor-pointer flex flex-col items-center justify-center'
                                                     >
-                                                        <Upload className='w-6 h-6 text-text/40 mb-2' />
+                                                        <Upload className='w-6 h-6 text-text opacity-40 mb-2' />
                                                         <span className='text-sm font-medium text-text/70'>
                                                             Upload Business
                                                             Permit / ID

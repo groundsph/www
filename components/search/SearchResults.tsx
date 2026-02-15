@@ -118,7 +118,7 @@ export function SearchResults({ results, selectedIndex, onSelect, query }: Searc
                       </p>
                     )}
                   </div>
-                  {isSelected && <CornerDownRight className="w-4 h-4 text-text/40" />}
+                  {isSelected && <CornerDownRight className="w-4 h-4 text-text opacity-40" />}
                 </motion.button>
               )
             })}

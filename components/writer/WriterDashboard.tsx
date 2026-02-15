@@ -121,7 +121,7 @@ export default function WriterDashboard({
                     onSubmit={handleSearch}
                     className='flex-1 max-w-md relative'
                 >
-                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                    <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                     <input
                         type='text'
                         placeholder='Search stories...'
@@ -141,7 +141,7 @@ export default function WriterDashboard({
             {/* Posts List */}
             {isLoading ? (
                 <div className='flex justify-center py-20'>
-                    <Loader2 className='w-8 h-8 animate-spin text-text/20' />
+                    <Loader2 className='w-8 h-8 animate-spin text-text opacity-20' />
                 </div>
             ) : posts.length === 0 ? (
                 <div className='text-center py-20 bg-text/5 rounded-2xl border border-dashed border-text/10'>

@@ -240,7 +240,7 @@ export default function SupportersSection() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className='bg-text/5 border border-text/10 rounded-2xl p-8 text-center'
                     >
-                        <Heart className='w-10 h-10 text-primary/30 mx-auto mb-3' />
+                        <Heart className='w-10 h-10 text-primary opacity-30 mx-auto mb-3' />
                         <h3 className='font-serif text-xl font-semibold text-text mb-2'>
                             Be Our First Supporter
                         </h3>

@@ -109,14 +109,14 @@ export default function InventoryHistoryModal({
                                     <div className="mt-3 pt-3 border-t border-text/10 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {entry.invoiceNumber && (
                                             <div className="flex items-center gap-2 text-sm">
-                                                <Receipt className="w-3.5 h-3.5 text-text/40" />
+                                                <Receipt className="w-3.5 h-3.5 text-text opacity-40" />
                                                 <span className="text-text/60">Invoice:</span>
                                                 <span className="font-medium">{entry.invoiceNumber}</span>
                                             </div>
                                         )}
                                         {entry.orderReference && (
                                             <div className="flex items-center gap-2 text-sm">
-                                                <FileText className="w-3.5 h-3.5 text-text/40" />
+                                                <FileText className="w-3.5 h-3.5 text-text opacity-40" />
                                                 <span className="text-text/60">Order Ref:</span>
                                                 <span className="font-medium">{entry.orderReference}</span>
                                             </div>

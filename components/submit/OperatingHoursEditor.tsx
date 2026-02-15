@@ -214,7 +214,7 @@ export default function OperatingHoursEditor({
                             {!hours.is_closed && !hours.is_24_hours && (
                                 <>
                                     <div className='flex items-center gap-2 ml-auto'>
-                                        <Clock className='w-4 h-4 text-text/40' />
+                                        <Clock className='w-4 h-4 text-text opacity-40' />
                                         <input
                                             type='time'
                                             value={hours.open}

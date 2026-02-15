@@ -967,7 +967,7 @@ export default function CafeSubmissionForm({
                                             placeholder='Type the cafe name to search...'
                                             className='w-full px-4 py-3 pl-11 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
                                         />
-                                        <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                        <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                         {isSearching && (
                                             <Loader2 className='absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin' />
                                         )}
@@ -1427,7 +1427,7 @@ export default function CafeSubmissionForm({
 
                                     <div className='flex gap-2'>
                                         <div className='flex-1 relative'>
-                                            <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                            <Link className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                             <input
                                                 type='text'
                                                 value={googleMapsUrl}
@@ -2516,7 +2516,7 @@ export default function CafeSubmissionForm({
                                                     htmlFor='ownership-proof-upload'
                                                     className='cursor-pointer'
                                                 >
-                                                    <Upload className='w-8 h-8 mx-auto text-text/40 mb-2' />
+                                                    <Upload className='w-8 h-8 mx-auto text-text opacity-40 mb-2' />
                                                     <p className='text-sm font-medium text-text/70'>
                                                         Click to upload proof
                                                         documents

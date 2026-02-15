@@ -177,7 +177,7 @@ export default function InventoryRestockModal({
                     {/* Unit Cost */}
                     <div>
                         <label className='text-sm font-medium mb-1 flex items-center gap-1'>
-                            <Calculator className='w-3.5 h-3.5 text-text/40' />
+                            <Calculator className='w-3.5 h-3.5 text-text opacity-40' />
                             Unit Cost (₱)
                         </label>
                         <input
@@ -226,7 +226,7 @@ export default function InventoryRestockModal({
                     {/* Invoice Number */}
                     <div>
                         <label className='text-sm font-medium mb-1 flex items-center gap-1'>
-                            <Receipt className='w-3.5 h-3.5 text-text/40' />
+                            <Receipt className='w-3.5 h-3.5 text-text opacity-40' />
                             Invoice Number
                         </label>
                         <input
@@ -241,7 +241,7 @@ export default function InventoryRestockModal({
                     {/* Order Reference */}
                     <div>
                         <label className='text-sm font-medium mb-1 flex items-center gap-1'>
-                            <FileText className='w-3.5 h-3.5 text-text/40' />
+                            <FileText className='w-3.5 h-3.5 text-text opacity-40' />
                             Order Reference
                         </label>
                         <input
@@ -256,7 +256,7 @@ export default function InventoryRestockModal({
                     {/* Supplier Name */}
                     <div>
                         <label className='text-sm font-medium mb-1 flex items-center gap-1'>
-                            <Building2 className='w-3.5 h-3.5 text-text/40' />
+                            <Building2 className='w-3.5 h-3.5 text-text opacity-40' />
                             Supplier Name
                         </label>
                         <input
@@ -271,7 +271,7 @@ export default function InventoryRestockModal({
                     {/* Proof URL */}
                     <div>
                         <label className='text-sm font-medium mb-1 flex items-center gap-1'>
-                            <Link2 className='w-3.5 h-3.5 text-text/40' />
+                            <Link2 className='w-3.5 h-3.5 text-text opacity-40' />
                             Proof URL (Receipt/Photo)
                         </label>
                         <input

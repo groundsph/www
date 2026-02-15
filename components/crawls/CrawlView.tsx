@@ -214,7 +214,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
 
                     {crawl.cafes.length === 0 ? (
                         <div className="text-center py-16">
-                            <Coffee className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
+                            <Coffee className="w-16 h-16 text-secondary opacity-40 mx-auto mb-4" />
                             <h3 className="text-xl font-serif font-semibold text-text mb-2">
                                 No cafes yet
                             </h3>
@@ -253,7 +253,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                                                 />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center">
-                                                    <Coffee className="w-6 h-6 md:w-8 md:h-8 text-secondary/40" />
+                                                    <Coffee className="w-6 h-6 md:w-8 md:h-8 text-secondary opacity-40" />
                                                 </div>
                                             )}
 

@@ -660,7 +660,7 @@ export default function Settings() {
 
                                     {loadingSessions ? (
                                         <div className='flex items-center justify-center py-12'>
-                                            <Loader2 className='w-6 h-6 animate-spin text-text/40' />
+                                            <Loader2 className='w-6 h-6 animate-spin text-text opacity-40' />
                                         </div>
                                     ) : sessions.length === 0 ? (
                                         <p className='text-text/60 text-center py-8'>
@@ -825,11 +825,11 @@ export default function Settings() {
                                     {/* Passkeys List */}
                                     {loadingPasskeys ? (
                                         <div className='flex items-center justify-center py-12'>
-                                            <Loader2 className='w-6 h-6 animate-spin text-text/40' />
+                                            <Loader2 className='w-6 h-6 animate-spin text-text opacity-40' />
                                         </div>
                                     ) : passkeys.length === 0 ? (
                                         <div className='text-center py-8'>
-                                            <Fingerprint className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                                            <Fingerprint className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
                                             <p className='text-text/60'>
                                                 No passkeys registered yet
                                             </p>
@@ -910,7 +910,7 @@ export default function Settings() {
 
                                     {loadingLinkedAccounts ? (
                                         <div className='flex items-center justify-center py-12'>
-                                            <Loader2 className='w-6 h-6 animate-spin text-text/40' />
+                                            <Loader2 className='w-6 h-6 animate-spin text-text opacity-40' />
                                         </div>
                                     ) : (
                                         <div className='space-y-4'>

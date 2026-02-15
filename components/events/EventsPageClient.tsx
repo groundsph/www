@@ -182,11 +182,11 @@ export default function EventsPageClient({
                 <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-20 overflow-hidden'>
                     {/* Decorative Background Elements */}
                     <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
-                        <Coffee className='absolute -top-6 -right-6 w-48 h-48 text-primary/5 rotate-12' />
+                        <Coffee className='absolute -top-6 -right-6 w-48 h-48 text-primary opacity-5 rotate-12' />
                         <CalendarIcon className='absolute -bottom-12 -left-12 w-64 h-64 text-secondary opacity-5 -rotate-12' />
                         <div className='absolute top-1/4 right-1/4 w-32 h-32 bg-accent/5 rounded-full blur-3xl' />
                         <div className='absolute bottom-1/4 left-1/3 w-40 h-40 bg-primary/5 rounded-full blur-3xl' />
-                        <MapPinIcon className='absolute top-20 right-[20%] w-16 h-16 text-text/5 rotate-12' />
+                        <MapPinIcon className='absolute top-20 right-[20%] w-16 h-16 text-text opacity-5 rotate-12' />
                     </div>
 
                     <div className='max-w-7xl mx-auto px-6 relative z-10'>

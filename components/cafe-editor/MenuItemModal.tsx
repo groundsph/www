@@ -267,7 +267,7 @@ export default function MenuItemModal({
                                     >
                                         {uploadProgress !== null ? (
                                             <>
-                                                <Loader2 className='w-6 h-6 animate-spin text-text/40' />
+                                                <Loader2 className='w-6 h-6 animate-spin text-text opacity-40' />
                                                 <span className='text-sm text-text/60'>
                                                     Uploading...{" "}
                                                     {Math.round(uploadProgress)}
@@ -276,7 +276,7 @@ export default function MenuItemModal({
                                             </>
                                         ) : (
                                             <>
-                                                <ImagePlus className='w-6 h-6 text-text/40' />
+                                                <ImagePlus className='w-6 h-6 text-text opacity-40' />
                                                 <span className='text-sm text-text/60'>
                                                     Click to add photo
                                                 </span>

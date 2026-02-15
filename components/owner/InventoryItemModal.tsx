@@ -279,7 +279,7 @@ export default function InventoryItemModal({
                         </div>
                         <div>
                             <label className="text-sm font-medium mb-1 flex items-center gap-1">
-                                <AlertCircle className="w-3.5 h-3.5 text-text/40" />
+                                <AlertCircle className="w-3.5 h-3.5 text-text opacity-40" />
                                 Warning At
                             </label>
                             <input
@@ -316,7 +316,7 @@ export default function InventoryItemModal({
                     {/* Expiry Date */}
                     <div>
                         <label className="text-sm font-medium mb-1 flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-text/40" />
+                            <Calendar className="w-3.5 h-3.5 text-text opacity-40" />
                             Expiry Date
                         </label>
                         <input

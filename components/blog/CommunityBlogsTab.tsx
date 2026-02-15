@@ -62,7 +62,7 @@ export default function CommunityBlogsTab({
                                         />
                                     ) : (
                                         <div className='w-full h-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center'>
-                                            <Coffee className='w-12 h-12 text-primary/40' />
+                                            <Coffee className='w-12 h-12 text-primary opacity-40' />
                                         </div>
                                     )}
                                     <div className='absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent' />
@@ -111,7 +111,7 @@ export default function CommunityBlogsTab({
 
                 {posts.length === 0 ? (
                     <div className='text-center py-16'>
-                        <BookOpen className='w-16 h-16 text-text/20 mx-auto mb-4' />
+                        <BookOpen className='w-16 h-16 text-text opacity-20 mx-auto mb-4' />
                         <p className='text-text/60'>
                             No blog posts yet.
                         </p>
@@ -163,7 +163,7 @@ export default function CommunityBlogsTab({
                                                 />
                                             ) : (
                                                 <div className='w-full h-full bg-text/5 flex items-center justify-center'>
-                                                    <Coffee className='w-12 h-12 text-text/20' />
+                                                    <Coffee className='w-12 h-12 text-text opacity-20' />
                                                 </div>
                                             )}
                                             {post.cafe && (

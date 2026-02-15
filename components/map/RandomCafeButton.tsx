@@ -201,7 +201,7 @@ export default function RandomCafeButton({
                                 {/* No Location */}
                                 {!isLoading && !hasLocation && (
                                     <div className='flex flex-col items-center justify-center py-12 text-center'>
-                                        <MapPin className='w-12 h-12 text-text/30 mb-3' />
+                                        <MapPin className='w-12 h-12 text-text opacity-30 mb-3' />
                                         <p className='font-medium mb-1'>
                                             Location Required
                                         </p>
@@ -219,7 +219,7 @@ export default function RandomCafeButton({
                                     cafes.length > 0 &&
                                     !hasNearbyCafes && (
                                         <div className='flex flex-col items-center justify-center py-12 text-center'>
-                                            <Navigation className='w-12 h-12 text-text/30 mb-3' />
+                                            <Navigation className='w-12 h-12 text-text opacity-30 mb-3' />
                                             <p className='font-medium mb-1'>
                                                 No Cafes Nearby
                                             </p>

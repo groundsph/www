@@ -145,7 +145,7 @@ export default function AddToCollectionModal({
                         <div className='p-4 max-h-[60vh] overflow-y-auto'>
                             {loading ? (
                                 <div className='flex items-center justify-center py-8'>
-                                    <Loader2 className='w-6 h-6 animate-spin text-text/50' />
+                                    <Loader2 className='w-6 h-6 animate-spin text-text opacity-50' />
                                 </div>
                             ) : collections.length === 0 && !showCreateForm ? (
                                 <div className='text-center py-8'>

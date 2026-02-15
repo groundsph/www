@@ -320,7 +320,7 @@ export default function CommunityPage({
 
                         {/* Inline Search */}
                         <div className='relative w-full md:w-72'>
-                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                             <input
                                 type='text'
                                 value={searchQuery}
@@ -417,7 +417,7 @@ export default function CommunityPage({
                         </>
                     ) : (
                         <div className='text-center py-16'>
-                            <MapPin className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
+                            <MapPin className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
                             <h3 className='text-xl font-serif font-semibold text-text mb-2'>
                                 No crawls yet
                             </h3>
@@ -467,7 +467,7 @@ export default function CommunityPage({
                         </>
                     ) : (
                         <div className='text-center py-16'>
-                            <Layers className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
+                            <Layers className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
                             <h3 className='text-xl font-serif font-semibold text-text mb-2'>
                                 No collections yet
                             </h3>
@@ -527,7 +527,7 @@ function UnifiedSearchResults({
         return (
             <section className="max-w-7xl mx-auto px-6 py-16">
                 <div className="text-center">
-                    <Search className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
+                    <Search className="w-16 h-16 text-secondary opacity-40 mx-auto mb-4" />
                     <h3 className="text-xl font-serif font-semibold text-text mb-2">
                         No results found
                     </h3>

@@ -304,7 +304,7 @@ export default function ReviewItem({
                                 />
                             ) : (
                                 <div className='w-full h-full flex items-center justify-center'>
-                                    <User className='w-3 h-3 text-primary/60' />
+                                    <User className='w-3 h-3 text-primary opacity-60' />
                                 </div>
                             )}
                         </div>

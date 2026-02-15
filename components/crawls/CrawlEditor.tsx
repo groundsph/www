@@ -367,7 +367,7 @@ export default function CrawlEditor({
                             {isPublic ? (
                                 <Eye className='w-5 h-5 text-primary' />
                             ) : (
-                                <EyeOff className='w-5 h-5 text-text/50' />
+                                <EyeOff className='w-5 h-5 text-text opacity-50' />
                             )}
                             <div>
                                 <p className='text-sm font-medium text-text'>
@@ -540,7 +540,7 @@ export default function CrawlEditor({
                             Add Cafes
                         </label>
                         <div className='relative'>
-                            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
+                            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text opacity-40' />
                             <input
                                 type='text'
                                 value={searchQuery}
@@ -574,7 +574,7 @@ export default function CrawlEditor({
                                                 />
                                             ) : (
                                                 <div className='w-full h-full flex items-center justify-center'>
-                                                    <Coffee className='w-5 h-5 text-secondary/40' />
+                                                    <Coffee className='w-5 h-5 text-secondary opacity-40' />
                                                 </div>
                                             )}
                                         </div>
@@ -604,7 +604,7 @@ export default function CrawlEditor({
 
                         {items.length === 0 ? (
                             <div className='text-center py-12 border border-dashed border-secondary/30 rounded-xl'>
-                                <MapIcon className='w-10 h-10 text-secondary/40 mx-auto mb-3' />
+                                <MapIcon className='w-10 h-10 text-secondary opacity-40 mx-auto mb-3' />
                                 <p className='text-text/60'>
                                     No cafes added yet
                                 </p>
@@ -639,7 +639,7 @@ export default function CrawlEditor({
                                                 />
                                             ) : (
                                                 <div className='w-full h-full flex items-center justify-center'>
-                                                    <Coffee className='w-6 h-6 text-secondary/40' />
+                                                    <Coffee className='w-6 h-6 text-secondary opacity-40' />
                                                 </div>
                                             )}
                                         </div>

@@ -48,7 +48,7 @@ export default function CollectionCard({
                     />
                 ) : (
                     <div className='w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-accent/20'>
-                        <Layers className='w-12 h-12 text-primary/40' />
+                        <Layers className='w-12 h-12 text-primary opacity-40' />
                     </div>
                 )}
                 {/* Overlay gradient */}

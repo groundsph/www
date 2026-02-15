@@ -270,7 +270,7 @@ export default function FollowListModal({
                 {activeTab === "find" && (
                     <div className="p-4 pb-0">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
                             <input
                                 type="text"
                                 value={searchQuery}
@@ -293,11 +293,11 @@ export default function FollowListModal({
                         <>
                             {isSearching ? (
                                 <div className='py-12 flex justify-center'>
-                                    <Loader2 className='w-6 h-6 animate-spin text-primary/50' />
+                                    <Loader2 className='w-6 h-6 animate-spin text-primary opacity-50' />
                                 </div>
                             ) : searchResults.length === 0 ? (
                                 <div className='flex flex-col items-center justify-center py-12 text-center opacity-60'>
-                                    <Search className='w-12 h-12 text-text/20 mb-3' />
+                                    <Search className='w-12 h-12 text-text opacity-20 mb-3' />
                                     <p className='text-sm'>
                                         {searchQuery.trim().length === 0
                                             ? "Search for people to follow"
@@ -381,7 +381,7 @@ export default function FollowListModal({
                         <>
                             {users.length === 0 && !isLoading ? (
                                 <div className='flex flex-col items-center justify-center py-12 text-center opacity-60'>
-                                    <User className='w-12 h-12 text-text/20 mb-3' />
+                                    <User className='w-12 h-12 text-text opacity-20 mb-3' />
                                     <p className='text-sm'>
                                         {activeTab === "followers"
                                             ? "No followers yet"
@@ -468,7 +468,7 @@ export default function FollowListModal({
 
                             {isLoading && (
                                 <div className='py-4 flex justify-center'>
-                                    <Loader2 className='w-6 h-6 animate-spin text-primary/50' />
+                                    <Loader2 className='w-6 h-6 animate-spin text-primary opacity-50' />
                                 </div>
                             )}
                         </>
