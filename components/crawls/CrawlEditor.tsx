@@ -94,7 +94,7 @@ export default function CrawlEditor({
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<CafeSearchResult[]>([])
     const [isSearching, setIsSearching] = useState(false)
-    const [showMobileMap, setShowMobileMap] = useState(false)
+    const [showMobileMap, setShowMobileMap] = useState(true)
     const [focusPoint, setFocusPoint] = useState<{
         lat: number
         lng: number
@@ -148,6 +148,13 @@ export default function CrawlEditor({
     }, [searchQuery, items])
 
     const addCafe = (cafe: CafeSearchResult) => {
+        // Validate coordinates before adding
+        const normalized = normalizeLatLng({ lat: cafe.lat, lng: cafe.lng })
+        if (!normalized) {
+            console.warn('[CrawlEditor] Cannot add cafe - invalid coordinates:', cafe.lat, cafe.lng)
+            return
+        }
+        
         const newItem: CrawlItem = {
             cafeId: cafe.id,
             sortOrder: items.length,
@@ -156,16 +163,13 @@ export default function CrawlEditor({
             thumbnail: cafe.thumbnail,
             cityMunicipality: cafe.cityMunicipality,
             region: cafe.region,
-            lat: cafe.lat,
-            lng: cafe.lng,
+            lat: normalized.lat,
+            lng: normalized.lng,
         }
         setItems((prev) => [...prev, newItem])
         setSearchQuery("")
         setSearchResults([])
-        const normalized = normalizeLatLng({ lat: cafe.lat, lng: cafe.lng })
-        if (normalized) {
-            setFocusPoint(normalized)
-        }
+        setFocusPoint(normalized)
     }
 
     // Remove cafe from crawl

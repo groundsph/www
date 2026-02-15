@@ -13,15 +13,27 @@ import { normalizeLatLng } from "@/utils/map/coords"
 
 function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | null }) {
     const map = useMap()
+
     useEffect(() => {
-        if (!focusPoint) return
-        const normalized = normalizeLatLng(focusPoint)
+        const normalized = normalizeLatLng(focusPoint ?? null)
         if (!normalized) return
         if (!map) return
-        const zoom = map.getZoom()
-        if (typeof zoom !== "number" || !Number.isFinite(zoom)) return
-        map.flyTo([normalized.lat, normalized.lng], Math.max(zoom, 13), { duration: 0.8 })
+
+        const timer = setTimeout(() => {
+            try {
+                if (!map.getContainer()) return
+                const currentZoom = map.getZoom()
+                const targetZoom = Number.isFinite(currentZoom) ? Math.max(currentZoom, 13) : 13
+                map.stop()
+                map.setView([normalized.lat, normalized.lng], targetZoom, { animate: false })
+            } catch {
+                // Silently ignore
+            }
+        }, 100)
+
+        return () => clearTimeout(timer)
     }, [focusPoint, map])
+
     return null
 }
 
@@ -51,14 +63,22 @@ function MapBounds({ points }: { points: { lat: number; lng: number }[] }) {
     const map = useMap()
 
     useEffect(() => {
-        if (points.length === 0) return
-        if (points.length === 1) {
-            map.setView([points[0].lat, points[0].lng], Math.max(map.getZoom(), 13))
-            return
-        }
+        if (!map) return
+        const validPoints = points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+        if (validPoints.length < 2) return
 
-        const bounds = points.map((p) => [p.lat, p.lng]) as [number, number][]
-        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 })
+        const timer = setTimeout(() => {
+            try {
+                if (!map.getContainer()) return
+                const bounds = validPoints.map((p) => [p.lat, p.lng]) as [number, number][]
+                map.stop()
+                map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14, animate: false })
+            } catch {
+                // Silently ignore bounds errors
+            }
+        }, 150)
+
+        return () => clearTimeout(timer)
     }, [points, map])
 
     return null
