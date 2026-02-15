@@ -375,7 +375,7 @@ export default function CollectionEditor({
                                         </div>
                                     </>
                                 ) : (
-                                    <div className='w-full h-full flex flex-col items-center justify-center text-text/40 group-hover:text-primary/60 transition-colors'>
+                                    <div className='w-full h-full flex flex-col items-center justify-center text-text opacity-40 group-hover:opacity-60 transition-all'>
                                         <ImageIcon className='w-10 h-10 mb-2' />
                                         <span className='text-sm'>
                                             Add cover image

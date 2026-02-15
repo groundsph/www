@@ -334,7 +334,7 @@ export default function CrawlEditor({
         <>
             {/* Header */}
             <div className='border-b w-full border-secondary/20 bg-background/80 backdrop-blur-sm sticky top-0 z-20'>
-                <div className='max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4'>
+                <div className='max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap'>
                     <div className='flex items-center gap-4'>
                         <Link
                             href={
@@ -351,7 +351,7 @@ export default function CrawlEditor({
                         </h1>
                     </div>
 
-                    <div className='flex items-center gap-3'>
+                    <div className='flex items-center md:flex-wrap flex-wrap-reverse gap-3'>
                         {mode === "edit" && (
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
@@ -456,7 +456,7 @@ export default function CrawlEditor({
                                             </div>
                                         </>
                                     ) : (
-                                        <div className='w-full h-full flex flex-col items-center justify-center text-text/40 group-hover:text-primary/60 transition-colors'>
+                                        <div className='w-full h-full flex flex-col items-center justify-center text-text opacity-40 group-hover:opacity-60 transition-all'>
                                             <ImageIcon className='w-10 h-10 mb-2' />
                                             <span className='text-sm'>
                                                 Add cover image
