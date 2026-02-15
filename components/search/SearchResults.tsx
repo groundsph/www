@@ -3,7 +3,7 @@
 import { motion } from "motion/react"
 import { SearchResult } from "@/utils/types/search"
 import { getResultIcon } from "./search-utils"
-import { FileText, Coffee, User, Zap, CornerDownRight } from "lucide-react"
+import { FileText, Coffee, User, Zap, CornerDownRight, MapIcon, Layers, Calendar } from "lucide-react"
 import { cn } from "@/utils/cn"
 import Image from "next/image"
 
@@ -14,7 +14,7 @@ interface SearchResultsProps {
   query: string
 }
 
-const iconMap = { FileText, Coffee, User, Zap }
+const iconMap = { FileText, Coffee, User, Zap, MapIcon, Layers, Calendar }
 
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) return text
@@ -49,7 +49,11 @@ function ResultIcon({ result }: { result: SearchResult }) {
       result.type === 'action' && "bg-accent/20 text-accent",
       result.type === 'page' && "bg-secondary/20 text-secondary",
       result.type === 'cafe' && "bg-primary/20 text-primary",
-      result.type === 'user' && "bg-tertiary text-text"
+      result.type === 'user' && "bg-tertiary text-text",
+      result.type === 'blog' && "bg-secondary/20 text-secondary",
+      result.type === 'crawl' && "bg-primary/20 text-primary",
+      result.type === 'collection' && "bg-accent/20 text-accent",
+      result.type === 'event' && "bg-tertiary/20 text-tertiary"
     )}>
       <Icon className="w-4 h-4" />
     </div>
@@ -72,9 +76,10 @@ export function SearchResults({ results, selectedIndex, onSelect, query }: Searc
     return acc
   }, {} as Record<string, SearchResult[]>)
 
-  const groupOrder = ['action', 'page', 'cafe', 'user']
+  const groupOrder = ['action', 'page', 'cafe', 'user', 'blog', 'crawl', 'collection', 'event']
   const groupLabels: Record<string, string> = {
     action: 'Quick Actions', page: 'Pages', cafe: 'Cafes', user: 'Users',
+    blog: 'Blogs', crawl: 'Crawls', collection: 'Collections', event: 'Events',
   }
 
   return (

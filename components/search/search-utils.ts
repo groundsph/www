@@ -22,6 +22,10 @@ export function getResultIcon(type: string): string {
     case "cafe": return "Coffee"
     case "user": return "User"
     case "action": return "Zap"
+    case "blog": return "FileText"
+    case "crawl": return "MapIcon"
+    case "collection": return "Layers"
+    case "event": return "Calendar"
     default: return "Search"
   }
 }
