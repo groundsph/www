@@ -23,7 +23,7 @@ import {
     generateRootFilePath,
     type StorageBucket,
 } from "@/utils/storage"
-import { collectCafeStampUrls, collectCrawlCoverUrls } from "@/utils/storage/cleanup"
+import { collectCafeStampUrls, collectCrawlCoverUrls, collectBlogImageUrls } from "@/utils/storage/cleanup"
 import { CAFE_PLACEHOLDER_URL } from "@/utils/extras"
 import { isOwnerOfCafe } from "@/app/api/actions/owner"
 
@@ -741,11 +741,8 @@ export async function cleanupOrphanedImages(): Promise<CleanupResult> {
         }
 
         // Blog Images
-        const blogImages = new Set<string>()
-        const blogsResult = await db.select({ coverImage: blogPosts.coverImage }).from(blogPosts).where(isNotNull(blogPosts.coverImage))
-        for (const b of blogsResult) {
-            if (b.coverImage) blogImages.add(b.coverImage)
-        }
+        const blogsResult = await db.select({ coverImage: blogPosts.coverImage, images: blogPosts.images }).from(blogPosts)
+        const blogImages = collectBlogImageUrls(blogsResult)
 
         // Event Images
         const eventImages = new Set<string>()

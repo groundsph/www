@@ -29,3 +29,17 @@ export function collectCrawlCoverUrls(crawls: CrawlWithCoverImage[]): Set<string
     }
     return urls
 }
+
+interface BlogWithImages {
+    coverImage: string | null
+    images?: string[] | null
+}
+
+export function collectBlogImageUrls(blogs: BlogWithImages[]): Set<string> {
+    const urls = new Set<string>()
+    for (const blog of blogs) {
+        if (blog.coverImage) urls.add(blog.coverImage)
+        blog.images?.forEach((url) => urls.add(url))
+    }
+    return urls
+}
