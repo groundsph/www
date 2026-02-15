@@ -1,11 +1,6 @@
 import { Metadata } from "next"
 import { Suspense } from "react"
 import CommunityPage from "@/components/community/CommunityPage"
-import {
-    getPublicCollections,
-    getPublicCafeCrawls,
-} from "@/app/api/actions/community"
-import { getUpcomingEvents } from "@/app/api/actions/events"
 import { getFeaturedPosts, getPublishedBlogPosts } from "@/app/api/actions/blog"
 
 export const dynamic = "force-dynamic"
@@ -27,24 +22,30 @@ export default async function BlogPage({
     const params = await searchParams
     const page = parseInt(params.page || "1")
 
-    // Fetch blog data and other community data
-    const [crawlsData, collectionsData, eventsData, featuredResult, postsResult] = await Promise.all([
-        getPublicCafeCrawls(1, 12, "recent"),
-        getPublicCollections(1, 12, "recent"),
-        getUpcomingEvents(12),
-        page === 1 ? getFeaturedPosts(3) : Promise.resolve([]),
-        getPublishedBlogPosts({ page, pageSize: 12 }),
-    ])
+    // Fetch only blog data needed for this page
+    let featuredResult: Awaited<ReturnType<typeof getFeaturedPosts>> = []
+    let postsResult = { posts: [] as Awaited<ReturnType<typeof getPublishedBlogPosts>>['posts'], total: 0, hasMore: false }
+
+    try {
+        const [featuredRes, postsRes] = await Promise.all([
+            page === 1 ? getFeaturedPosts(3) : Promise.resolve([]),
+            getPublishedBlogPosts({ page, pageSize: 12 }),
+        ])
+        featuredResult = featuredRes
+        postsResult = postsRes
+    } catch (error) {
+        console.error("Failed to fetch blog data:", error)
+    }
 
     return (
         <Suspense fallback={<BlogPageSkeleton />}>
             <CommunityPage
                 initialTab="blogs"
-                initialCrawls={crawlsData.crawls}
-                initialCrawlsTotal={crawlsData.total}
-                initialCollections={collectionsData.collections}
-                initialCollectionsTotal={collectionsData.total}
-                initialEvents={eventsData}
+                initialCrawls={[]}
+                initialCrawlsTotal={0}
+                initialCollections={[]}
+                initialCollectionsTotal={0}
+                initialEvents={[]}
                 initialFeaturedPosts={featuredResult}
                 initialPosts={postsResult.posts}
                 initialPostsTotal={postsResult.total}

@@ -133,10 +133,6 @@ export default function CommunityPage({
 
     const handleTabChange = (tab: TabType) => {
         setActiveTab(tab)
-        // router.push is better to update URL, but we should clear search if switching tabs?
-        // User didn't specify, but often good UX. For now let's keep search query?
-        // Actually if I switch to Events, search might not apply there.
-        // Let's just update tab.
         router.push(`/community?tab=${tab}`, { scroll: false })
     }
 
@@ -208,9 +204,6 @@ export default function CommunityPage({
 
             if (searchQuery.startsWith("@")) {
                 setIsUserSearch(true)
-                // If on another tab, maybe we don't force 'people' tab state but show overlay?
-                // But simplified approach: stick to activeTab logic but render overrides?
-                // Or just show results.
                 setSearchingUsers(true)
                 try {
                     const query = searchQuery.slice(1)
@@ -227,15 +220,7 @@ export default function CommunityPage({
                 }
             } else {
                 setIsUserSearch(false)
-                // Switch to collections tab if not already there?
-                // "searching by default searches for collections"
                 if (activeTab !== "collections") {
-                    // setActiveTab('collections') // Optional: force switch?
-                    // User says: "searching by default searches for collections".
-                    // If I am on "Events", I probably expect events search if I didn't switch tabs.
-                    // But if the search bar is "inline with tabs", it looks global.
-                    // Given the request "remove users tab", and "search defaults to collections",
-                    // I will force switch to collections tab so the user sees the results.
                     setActiveTab("collections")
                 }
 
@@ -259,8 +244,7 @@ export default function CommunityPage({
         }, 300)
 
         return () => clearTimeout(timeoutId)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchQuery])
+    }, [searchQuery, activeTab, isUserSearch])
 
     const tabs = [
         { id: "blogs" as TabType, label: "Blogs", icon: BookOpen },

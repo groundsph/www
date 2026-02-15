@@ -30,14 +30,29 @@ export default async function Page({
     const initialTab = params.tab || "blogs"
     const blogsPage = parseInt(params.page || "1")
 
-    // Fetch initial data for all tabs in parallel
-    const [crawlsData, collectionsData, eventsData, featuredResult, postsResult] = await Promise.all([
-        getPublicCafeCrawls(1, 12, "recent"),
-        getPublicCollections(1, 12, "recent"),
-        getUpcomingEvents(12),
-        blogsPage === 1 ? getFeaturedPosts(3) : Promise.resolve([]),
-        getPublishedBlogPosts({ page: blogsPage, pageSize: 12 }),
-    ])
+    // Fetch initial data for all tabs in parallel with error handling
+    let crawlsData = { crawls: [] as Awaited<ReturnType<typeof getPublicCafeCrawls>>['crawls'], total: 0 }
+    let collectionsData = { collections: [] as Awaited<ReturnType<typeof getPublicCollections>>['collections'], total: 0 }
+    let eventsData: Awaited<ReturnType<typeof getUpcomingEvents>> = []
+    let featuredResult: Awaited<ReturnType<typeof getFeaturedPosts>> = []
+    let postsResult = { posts: [] as Awaited<ReturnType<typeof getPublishedBlogPosts>>['posts'], total: 0, hasMore: false }
+
+    try {
+        const [crawlsRes, collectionsRes, eventsRes, featuredRes, postsRes] = await Promise.all([
+            getPublicCafeCrawls(1, 12, "recent"),
+            getPublicCollections(1, 12, "recent"),
+            getUpcomingEvents(12),
+            blogsPage === 1 ? getFeaturedPosts(3) : Promise.resolve([]),
+            getPublishedBlogPosts({ page: blogsPage, pageSize: 12 }),
+        ])
+        crawlsData = crawlsRes
+        collectionsData = collectionsRes
+        eventsData = eventsRes
+        featuredResult = featuredRes
+        postsResult = postsRes
+    } catch (error) {
+        console.error("Failed to fetch community data:", error)
+    }
 
     return (
         <Suspense fallback={<CommunityPageSkeleton />}>
