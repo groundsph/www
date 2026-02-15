@@ -853,3 +853,20 @@ export async function searchCafesSimple(query: string) {
 
     return result
 }
+
+/**
+ * Search cafes for blog tagging - returns published cafes only
+ */
+export async function searchCafesForBlog(query: string) {
+    if (!query || query.length < 2) return []
+
+    return db.select({
+        id: cafes.id,
+        name: cafes.name,
+        slug: cafes.slug,
+        thumbnail: cafes.thumbnail,
+    })
+        .from(cafes)
+        .where(and(eq(cafes.isPublished, true), ilike(cafes.name, `%${query}%`)))
+        .limit(10)
+}

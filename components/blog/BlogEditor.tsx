@@ -12,7 +12,12 @@ import {
     ImageIcon,
     Trash2,
     HelpCircle,
+    Images,
+    MapPin,
+    Route,
 } from "lucide-react"
+import BlogCafePicker from "./BlogCafePicker"
+import BlogCrawlPicker from "./BlogCrawlPicker"
 import {
     BlogPost,
     BlogPostInput,
@@ -59,15 +64,22 @@ export default function BlogEditor({
     const [tagInput, setTagInput] = useState("")
     const [featured, setFeatured] = useState(post?.featured || false)
 
+    // Gallery and tagging state
+    const [galleryImages, setGalleryImages] = useState<string[]>(post?.images || [])
+    const [taggedCafeIds, setTaggedCafeIds] = useState<string[]>(post?.tagged_cafe_ids || [])
+    const [linkedCrawlId, setLinkedCrawlId] = useState<string | null>(post?.crawl_id || null)
+
     const [showPreview, setShowPreview] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+    const [isUploadingGallery, setIsUploadingGallery] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [autoSlug, setAutoSlug] = useState(!post?.slug)
     const [isGeneratingExcerpt, setIsGeneratingExcerpt] = useState(false)
     const [aiProvider, setAiProvider] = useState<AIProvider>("google")
 
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const galleryInputRef = useRef<HTMLInputElement>(null)
 
     const categories = allowedCategories
         ? BLOG_CATEGORIES.filter((c) => allowedCategories.includes(c.value))
@@ -111,6 +123,55 @@ export default function BlogEditor({
         }
     }
 
+    const handleGalleryUpload = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        setIsUploadingGallery(true)
+        setError(null)
+
+        const newImages: string[] = []
+
+        try {
+            for (const file of Array.from(files)) {
+                // Compress blog images for gallery
+                const compressedFile = await compressBlogCover(file)
+
+                const formData = new FormData()
+                formData.append("image", compressedFile)
+
+                const result = await uploadBlogImageAction(formData)
+
+                if (result.success && result.url) {
+                    newImages.push(result.url)
+                } else {
+                    console.error("Failed to upload image:", result.error)
+                }
+            }
+
+            if (newImages.length > 0) {
+                setGalleryImages([...galleryImages, ...newImages])
+            } else {
+                setError("Failed to upload gallery images")
+            }
+        } catch (err) {
+            setError("Failed to upload gallery images")
+            console.error(err)
+        } finally {
+            setIsUploadingGallery(false)
+            // Reset input
+            if (galleryInputRef.current) {
+                galleryInputRef.current.value = ""
+            }
+        }
+    }
+
+    const handleRemoveGalleryImage = (index: number) => {
+        setGalleryImages(galleryImages.filter((_, i) => i !== index))
+    }
+
     const handleAddTag = () => {
         const trimmed = tagInput.trim().toLowerCase()
         if (trimmed && !tags.includes(trimmed) && tags.length < 10) {
@@ -147,6 +208,9 @@ export default function BlogEditor({
             status,
             tags,
             featured,
+            images: galleryImages,
+            tagged_cafe_ids: taggedCafeIds,
+            crawl_id: linkedCrawlId,
         }
 
         try {
@@ -593,6 +657,91 @@ export default function BlogEditor({
                         <p className='text-xs text-text/40 text-right'>
                             {tags.length}/10 tags
                         </p>
+                    </div>
+
+                    {/* Gallery Images */}
+                    <div className='space-y-3'>
+                        <label className='flex items-center gap-2 text-sm font-medium text-text'>
+                            <Images className='w-4 h-4 text-text/50' />
+                            Gallery Images
+                        </label>
+
+                        {/* Gallery Grid */}
+                        {galleryImages.length > 0 && (
+                            <div className='grid grid-cols-3 gap-2'>
+                                {galleryImages.map((image, index) => (
+                                    <div
+                                        key={index}
+                                        className='relative aspect-square rounded-lg overflow-hidden bg-text/5 group'
+                                    >
+                                        <Image
+                                            src={image}
+                                            alt={`Gallery ${index + 1}`}
+                                            fill
+                                            className='object-cover'
+                                        />
+                                        <button
+                                            onClick={() => handleRemoveGalleryImage(index)}
+                                            className='absolute top-1 right-1 p-1.5 bg-white/90 text-red-500 rounded-md hover:bg-white hover:scale-110 shadow-sm transition-all opacity-0 group-hover:opacity-100'
+                                        >
+                                            <X className='w-3 h-3' />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Add Gallery Images Button */}
+                        <button
+                            onClick={() => galleryInputRef.current?.click()}
+                            disabled={isUploadingGallery || galleryImages.length >= 10}
+                            className='w-full py-2.5 rounded-xl border-2 border-dashed border-text/10 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 flex items-center justify-center gap-2 text-text/50 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed'
+                        >
+                            {isUploadingGallery ? (
+                                <>
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                    <span className='text-sm'>Uploading...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ImageIcon className='w-4 h-4' />
+                                    <span className='text-sm'>Add Images ({galleryImages.length}/10)</span>
+                                </>
+                            )}
+                        </button>
+                        <input
+                            ref={galleryInputRef}
+                            type='file'
+                            accept='image/*'
+                            multiple
+                            onChange={handleGalleryUpload}
+                            className='hidden'
+                        />
+                    </div>
+
+                    {/* Tagged Cafes */}
+                    <div className='space-y-2'>
+                        <label className='flex items-center gap-2 text-sm font-medium text-text'>
+                            <MapPin className='w-4 h-4 text-text/50' />
+                            Tagged Cafes
+                        </label>
+                        <BlogCafePicker
+                            selectedCafeIds={taggedCafeIds}
+                            onChange={setTaggedCafeIds}
+                            maxCafes={5}
+                        />
+                    </div>
+
+                    {/* Linked Crawl */}
+                    <div className='space-y-2'>
+                        <label className='flex items-center gap-2 text-sm font-medium text-text'>
+                            <Route className='w-4 h-4 text-text/50' />
+                            Linked Crawl
+                        </label>
+                        <BlogCrawlPicker
+                            selectedCrawlId={linkedCrawlId}
+                            onChange={setLinkedCrawlId}
+                        />
                     </div>
 
                     {/* Featured Toggle (Admin only) */}

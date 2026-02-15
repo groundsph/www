@@ -885,6 +885,35 @@ export async function searchCafesForCrawl(query: string): Promise<CafeSearchResu
 }
 
 // =============================================================================
+// SEARCH CAFE CRAWLS FOR BLOG
+// =============================================================================
+
+export interface CrawlSearchResult {
+    id: string
+    title: string
+    slug: string
+    coverImage: string | null
+}
+
+export async function searchCafeCrawls(query: string): Promise<CrawlSearchResult[]> {
+    if (!query || query.length < 2) return []
+
+    return db.select({
+        id: cafeCrawls.id,
+        title: cafeCrawls.title,
+        slug: cafeCrawls.slug,
+        coverImage: cafeCrawls.coverImage,
+    })
+        .from(cafeCrawls)
+        .where(and(
+            eq(cafeCrawls.isPublic, true),
+            eq(cafeCrawls.status, "published"),
+            sql`${cafeCrawls.title} ILIKE ${`%${query}%`}`
+        ))
+        .limit(10)
+}
+
+// =============================================================================
 // DELETE CAFE CRAWL
 // =============================================================================
 
