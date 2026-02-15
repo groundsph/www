@@ -15,7 +15,7 @@ export async function generateMetadata({
 
     if (!crawl) {
         return {
-            title: "Crawl Not Found | Grounds PH",
+            title: "Crawl Not Found",
         }
     }
 
