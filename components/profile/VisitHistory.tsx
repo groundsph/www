@@ -391,7 +391,7 @@ export default function VisitHistory({
                                             <Suspense
                                                 fallback={
                                                     <Coffee
-                                                        className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary/70 group-hover:text-primary transition-colors`}
+                                                        className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary opacity-70 group-hover:text-primary transition-colors`}
                                                     />
                                                 }
                                             >
@@ -407,7 +407,7 @@ export default function VisitHistory({
                                                     />
                                                 ) : (
                                                     <Coffee
-                                                        className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary/70 group-hover:text-primary transition-colors`}
+                                                        className={`${isMobile ? "w-5 h-5" : "w-6 h-6"} text-primary opacity-70 group-hover:text-primary transition-colors`}
                                                     />
                                                 )}
                                             </Suspense>

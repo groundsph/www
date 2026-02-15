@@ -263,7 +263,7 @@ export default function CafeEdit({
                                     <div className='flex items-center justify-between'>
                                         <div className='flex items-center gap-3'>
                                             <Gem
-                                                className={`w-5 h-5 ${cafe.is_hidden_gem ? "text-amber-500" : "text-text/40"}`}
+                                                className={`w-5 h-5 ${cafe.is_hidden_gem ? "text-amber-500" : "text-text opacity-40"}`}
                                             />
                                             <div>
                                                 <p className='font-medium'>

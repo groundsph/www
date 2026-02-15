@@ -1228,7 +1228,7 @@ export default function Profile() {
                                         className={`p-2 rounded-lg mb-2 bg-secondary/10`}
                                     >
                                         <RankIcon
-                                            className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text/40"}`}
+                                            className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text opacity-40"}`}
                                         />
                                     </div>
                                     <span className='text-lg font-bold capitalize'>
@@ -1391,7 +1391,7 @@ export default function Profile() {
                                                                     isCurrent ||
                                                                     isUnlocked
                                                                         ? config.color
-                                                                        : "text-text/30"
+                                                                        : "text-text opacity-30"
                                                                 }`}
                                                             />
                                                         </div>

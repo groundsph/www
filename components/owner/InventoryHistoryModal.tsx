@@ -52,7 +52,7 @@ export default function InventoryHistoryModal({
                     </div>
                 ) : history.length === 0 ? (
                     <div className="text-center py-12 bg-text/5 rounded-xl">
-                        <Package className="w-12 h-12 text-text/30 mx-auto mb-4" />
+                        <Package className="w-12 h-12 text-text opacity-30 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-text/60">No restock history</h3>
                         <p className="text-sm text-text/40 mt-1">
                             This item has no restock records yet
@@ -123,7 +123,7 @@ export default function InventoryHistoryModal({
                                         )}
                                         {entry.supplierName && (
                                             <div className="flex items-center gap-2 text-sm">
-                                                <Building2 className="w-3.5 h-3.5 text-text/40" />
+                                                <Building2 className="w-3.5 h-3.5 text-text opacity-40" />
                                                 <span className="text-text/60">Supplier:</span>
                                                 <span className="font-medium">{entry.supplierName}</span>
                                             </div>

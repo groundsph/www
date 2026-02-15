@@ -140,7 +140,7 @@ export default function InventoryTable({
     if (items.length === 0) {
         return (
             <div className="text-center py-12 border border-text/10 rounded-xl bg-text/5">
-                <PackagePlus className="w-12 h-12 text-text/30 mx-auto mb-4" />
+                <PackagePlus className="w-12 h-12 text-text opacity-30 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-text/60">No items found</h3>
                 <p className="text-sm text-text/40 mt-1">
                     Try adjusting your filters or add a new item

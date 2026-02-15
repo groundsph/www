@@ -90,7 +90,7 @@ export default function BasicInfoSection({
                 <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'>
                     <div className='flex items-center gap-3'>
                         <BadgeCheck
-                            className={`w-5 h-5 ${data.is_verified ? colors.text : "text-text/40"}`}
+                            className={`w-5 h-5 ${data.is_verified ? colors.text : "text-text opacity-40"}`}
                         />
                         <div>
                             <p className='font-medium'>Verified Cafe</p>

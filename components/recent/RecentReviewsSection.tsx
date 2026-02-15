@@ -89,7 +89,7 @@ export default function RecentReviewsSection({
                                             className={`w-3 h-3 ${
                                                 i < review.rating
                                                     ? "fill-amber-400 text-amber-400"
-                                                    : "text-text/20"
+                                                    : "text-text opacity-20"
                                             }`}
                                         />
                                     ))}

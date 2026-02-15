@@ -148,7 +148,7 @@ export default function BadgeNotification({
                                 }}
                                 className="p-1 hover:bg-text/10 rounded-full transition-colors"
                             >
-                                <X className="w-4 h-4 text-text/60" />
+                                <X className="w-4 h-4 text-text opacity-60" />
                             </button>
                         </div>
 

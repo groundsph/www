@@ -702,7 +702,7 @@ export default function Settings() {
                                                             className={`p-3 rounded-xl ${isCurrentSession ? "bg-primary/10" : "bg-text/5"}`}
                                                         >
                                                             <DeviceIcon
-                                                                className={`w-5 h-5 ${isCurrentSession ? "text-primary" : "text-text/60"}`}
+                                                                className={`w-5 h-5 ${isCurrentSession ? "text-primary" : "text-text opacity-60"}`}
                                                             />
                                                         </div>
                                                         <div className='flex-1 min-w-0'>

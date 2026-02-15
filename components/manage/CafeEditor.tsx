@@ -450,7 +450,7 @@ export default function CafeEditor({
                         <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'>
                             <div className='flex items-center gap-3'>
                                 <BadgeCheck
-                                    className={`w-5 h-5 ${cafe.is_verified ? "text-accent" : "text-text/40"}`}
+                                    className={`w-5 h-5 ${cafe.is_verified ? "text-accent" : "text-text opacity-40"}`}
                                 />
                                 <div>
                                     <p className='font-medium'>Verified Cafe</p>
@@ -488,7 +488,7 @@ export default function CafeEditor({
                             <div className='flex items-center justify-between'>
                                 <div className='flex items-center gap-3'>
                                     <Gem
-                                        className={`w-5 h-5 ${cafe.is_hidden_gem ? "text-amber-500" : "text-text/40"}`}
+                                        className={`w-5 h-5 ${cafe.is_hidden_gem ? "text-amber-500" : "text-text opacity-40"}`}
                                     />
                                     <div>
                                         <p className='font-medium'>
@@ -548,7 +548,7 @@ export default function CafeEditor({
                         <div className='flex items-center justify-between p-4 bg-background border border-text/10 rounded-lg'>
                             <div className='flex items-center gap-3'>
                                 <Store
-                                    className={`w-5 h-5 ${cafe.is_chain ? "text-orange-500" : "text-text/40"}`}
+                                    className={`w-5 h-5 ${cafe.is_chain ? "text-orange-500" : "text-text opacity-40"}`}
                                 />
                                 <div>
                                     <p className='font-medium'>Chain Cafe</p>

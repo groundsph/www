@@ -23,7 +23,6 @@ describe("icon opacity styling", () => {
 
     // Check each file for incorrect opacity patterns on lucide icons
     const incorrectPatterns: string[] = []
-    const opacityRegex = /text-[a-z]+\/\d+/g
 
     for (const file of filesToCheck) {
       const content = readFileSync(file, "utf-8")
@@ -34,18 +33,32 @@ describe("icon opacity styling", () => {
       }
 
       // Find all lucide icon elements with className containing incorrect opacity
-      // Match: <IconName className='...text-color/number...'
-      // Exclude Link components
-      const iconPattern = /<([A-Z][a-zA-Z]*)\s+[^>]*className='([^']*text-[a-z]+\/\d+[^']*)'/g
-      let match
-      while ((match = iconPattern.exec(content)) !== null) {
-        const iconName = match[1]
-        // Skip Link components (Next.js)
-        if (iconName === "Link") {
-          continue
+      // Match patterns for all three quote styles:
+      // 1. Single-quoted: <IconName className='...text-color/number...'/>
+      // 2. Double-quoted: <IconName className="...text-color/number..."/>
+      // 3. Template literals: <IconName className={`...text-color/number...`}/>
+      
+      const singleQuotePattern = /<([A-Z][a-zA-Z]*)\s+[^>]*className='([^']*text-[a-z]+\/\d+[^']*)'/g
+      const doubleQuotePattern = /<([A-Z][a-zA-Z]*)\s+[^>]*className="([^"]*text-[a-z]+\/\d+[^"]*)"/g
+      const templateLiteralPattern = /<([A-Z][a-zA-Z]*)\s+[^>]*className={`([^`]*text-[a-z]+\/\d+[^`]*)`}/g
+
+      const patterns = [
+        { regex: singleQuotePattern, name: "single-quote" },
+        { regex: doubleQuotePattern, name: "double-quote" },
+        { regex: templateLiteralPattern, name: "template-literal" },
+      ]
+
+      for (const { regex, name } of patterns) {
+        let match
+        while ((match = regex.exec(content)) !== null) {
+          const iconName = match[1]
+          // Skip Link components (Next.js)
+          if (iconName === "Link") {
+            continue
+          }
+          const iconElement = match[0]
+          incorrectPatterns.push(`${file}:${iconName} (${name}): ${iconElement.substring(0, 80)}`)
         }
-        const iconElement = match[0]
-        incorrectPatterns.push(`${file}:${iconName}: ${iconElement.substring(0, 80)}`)
       }
     }
 

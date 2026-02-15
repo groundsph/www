@@ -1045,7 +1045,7 @@ export default function SuggestEditModal({
                                                                 (changes.is_chain ??
                                                                 cafe.is_chain)
                                                                     ? "text-orange-500"
-                                                                    : "text-text/40"
+                                                                    : "text-text opacity-40"
                                                             }`}
                                                         />
                                                         <div>

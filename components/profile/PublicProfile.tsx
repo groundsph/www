@@ -549,7 +549,7 @@ export default function PublicProfile({
                                                                 } else {
                                                                     return (
                                                                         <Award
-                                                                            className={`w-7 h-7 ${isEarned ? "text-primary" : "text-text/20"}`}
+                                                                            className={`w-7 h-7 ${isEarned ? "text-primary" : "text-text opacity-20"}`}
                                                                         />
                                                                     )
                                                                 }
@@ -690,7 +690,7 @@ export default function PublicProfile({
                                         className={`p-2 rounded-lg mb-2 bg-secondary/10`}
                                     >
                                         <RankIcon
-                                            className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text/40"}`}
+                                            className={`w-6 h-6 ${stats?.scout_rank ? rankConfig[stats.scout_rank].color : "text-text opacity-40"}`}
                                         />
                                     </div>
                                     <span className='text-lg font-bold capitalize'>

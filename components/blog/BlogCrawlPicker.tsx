@@ -138,7 +138,7 @@ export default function BlogCrawlPicker({
                     Select a crawl to link...
                 </span>
                 <ChevronDown
-                    className={`w-4 h-4 text-text/40 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    className={`w-4 h-4 text-text opacity-40 transition-transform ${isOpen ? "rotate-180" : ""}`}
                 />
             </button>
 

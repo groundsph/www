@@ -224,7 +224,7 @@ export default function InventoryItemModal({
                                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-text/10 rounded transition-colors"
                             >
-                                <ChevronDown className={`w-4 h-4 text-text/60 transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`} />
+                                <ChevronDown className={`w-4 h-4 text-text opacity-60 transition-transform ${showCategoryDropdown ? "rotate-180" : ""}`} />
                             </button>
                             
                             {/* Dropdown */}
@@ -330,7 +330,7 @@ export default function InventoryItemModal({
                     {/* Link */}
                     <div>
                         <label className="text-sm font-medium mb-1 flex items-center gap-1">
-                            <Link2 className="w-3.5 h-3.5 text-text/40" />
+                            <Link2 className="w-3.5 h-3.5 text-text opacity-40" />
                             Product Link
                         </label>
                         <input

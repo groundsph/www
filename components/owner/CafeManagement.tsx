@@ -1591,14 +1591,14 @@ export default function CafeManagement({
                                                             {Array.from({
                                                                 length: 5,
                                                             }).map((_, i) => (
-                                                                <Star
-                                                                    key={i}
-                                                                    className={`w-3.5 h-3.5 ${
-                                                                        i <
-                                                                        review.rating
-                                                                            ? "text-amber-500 fill-amber-500"
-                                                                            : "text-text/20"
-                                                                    }`}
+                                                                    <Star
+                                                                        key={i}
+                                                                        className={`w-3.5 h-3.5 ${
+                                                                            i <
+                                                                            review.rating
+                                                                                ? "text-amber-500 fill-amber-500"
+                                                                                : "text-text opacity-20"
+                                                                        }`}
                                                                 />
                                                             ))}
                                                         </span>
