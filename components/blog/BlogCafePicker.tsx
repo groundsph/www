@@ -27,6 +27,7 @@ export default function BlogCafePicker({
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<CafeSearchResult[]>([])
     const [isSearching, setIsSearching] = useState(false)
+    const [searchError, setSearchError] = useState<string | null>(null)
     const [selectedCafes, setSelectedCafes] = useState<CafeSearchResult[]>([])
 
     // Fetch selected cafes on mount
@@ -63,6 +64,7 @@ export default function BlogCafePicker({
             }
 
             setIsSearching(true)
+            setSearchError(null)
             try {
                 const results = await searchCafesForBlog(searchQuery)
                 // Filter out already selected cafes
@@ -72,6 +74,7 @@ export default function BlogCafePicker({
                 setSearchResults(filtered)
             } catch (err) {
                 console.error("Failed to search cafes:", err)
+                setSearchError("Failed to search cafes. Please try again.")
             } finally {
                 setIsSearching(false)
             }
@@ -116,14 +119,19 @@ export default function BlogCafePicker({
                 </div>
 
                 <AnimatePresence>
-                    {searchResults.length > 0 && (
+                    {(searchResults.length > 0 || searchError) && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             className="absolute top-full left-0 right-0 mt-2 bg-background border border-text/15 rounded-xl shadow-lg z-50 max-h-60 overflow-auto"
                         >
-                            {searchResults.map((cafe) => (
+                            {searchError ? (
+                                <div className="px-4 py-3 text-sm text-red-600 bg-red-50">
+                                    {searchError}
+                                </div>
+                            ) : (
+                                searchResults.map((cafe) => (
                                 <button
                                     key={cafe.id}
                                     onClick={() => handleAddCafe(cafe)}
@@ -146,7 +154,8 @@ export default function BlogCafePicker({
                                         </p>
                                     </div>
                                 </button>
-                            ))}
+                            ))
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

@@ -25,6 +25,7 @@ export default function BlogCrawlPicker({
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<CrawlSearchResult[]>([])
     const [isSearching, setIsSearching] = useState(false)
+    const [searchError, setSearchError] = useState<string | null>(null)
     const [isOpen, setIsOpen] = useState(false)
     const [selectedCrawl, setSelectedCrawl] = useState<CrawlSearchResult | null>(null)
 
@@ -56,6 +57,7 @@ export default function BlogCrawlPicker({
             }
 
             setIsSearching(true)
+            setSearchError(null)
             try {
                 const results = await searchCafeCrawls(searchQuery)
                 // Filter out already selected crawl
@@ -65,6 +67,7 @@ export default function BlogCrawlPicker({
                 setSearchResults(filtered)
             } catch (err) {
                 console.error("Failed to search crawls:", err)
+                setSearchError("Failed to search crawls. Please try again.")
             } finally {
                 setIsSearching(false)
             }
@@ -165,7 +168,11 @@ export default function BlogCrawlPicker({
                         </div>
 
                         <div className="max-h-60 overflow-auto">
-                            {searchResults.length === 0 ? (
+                            {searchError ? (
+                                <div className="px-4 py-4 text-sm text-red-600 bg-red-50">
+                                    {searchError}
+                                </div>
+                            ) : searchResults.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
                                     {searchQuery.length >= 2 ? (
                                         <p className="text-sm text-text/50">

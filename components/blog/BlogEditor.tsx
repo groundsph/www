@@ -671,7 +671,7 @@ export default function BlogEditor({
                             <div className='grid grid-cols-3 gap-2'>
                                 {galleryImages.map((image, index) => (
                                     <div
-                                        key={index}
+                                        key={image}
                                         className='relative aspect-square rounded-lg overflow-hidden bg-text/5 group'
                                     >
                                         <Image
