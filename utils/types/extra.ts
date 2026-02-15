@@ -54,6 +54,7 @@ export interface EventFilters {
     is_national?: boolean;
     start_after?: string;
     start_before?: string;
+    search?: string;
 }
 
 // 2. Define your CafeWithRatings manually to ensure all fields are present

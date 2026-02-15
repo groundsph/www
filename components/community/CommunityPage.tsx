@@ -17,7 +17,7 @@ import {
     MapPin,
     BookOpen,
 } from "lucide-react"
-import { getPublicCollections, searchUsers, getPublicCafeCrawls } from "@/app/api/actions/community"
+import { getPublicCollections, searchUsers, getPublicCafeCrawls, searchCommunityContent } from "@/app/api/actions/community"
 import CrawlCard from "@/components/crawls/CrawlCard"
 import CollectionCard from "@/components/collections/CollectionCard"
 import { Crawl } from "@/utils/types/cafe-crawls"
@@ -26,8 +26,9 @@ import MonthlyLeaderboard from "@/components/community/MonthlyLeaderboard"
 import { EventWithCafe } from "@/utils/types/extra"
 import CommunityBlogsTab from "@/components/blog/CommunityBlogsTab"
 import { BlogPost } from "@/utils/types/blog"
+import { COMMUNITY_TAB_ORDER, CommunityTab } from "@/components/community/community-search-order"
 
-type TabType = "blogs" | "crawls" | "collections" | "events" | "leaderboard"
+type TabType = CommunityTab
 
 interface PublicCollection {
     id: string
@@ -105,12 +106,12 @@ export default function CommunityPage({
     const [collectionsPage, setCollectionsPage] = useState(1)
     const [loadingCollections, setLoadingCollections] = useState(false)
 
-    // Blogs state
-    const [featuredPosts, setFeaturedPosts] = useState(initialFeaturedPosts)
-    const [posts, setPosts] = useState(initialPosts)
-    const [postsTotal, setPostsTotal] = useState(initialPostsTotal)
-    const [postsPage, setPostsPage] = useState(initialPostsPage)
-    const [postsHasMore, setPostsHasMore] = useState(initialPostsHasMore)
+    // Blogs state (read-only from props, managed by CommunityBlogsTab)
+    const featuredPosts = initialFeaturedPosts
+    const posts = initialPosts
+    const postsTotal = initialPostsTotal
+    const postsPage = initialPostsPage
+    const postsHasMore = initialPostsHasMore
 
     // Search state
     const [searchQuery, setSearchQuery] = useState("")
@@ -118,7 +119,15 @@ export default function CommunityPage({
     const [userResults, setUserResults] = useState<UserResult[]>([])
 
     const [searchingUsers, setSearchingUsers] = useState(false)
-    const [searchingCollections, setSearchingCollections] = useState(false)
+
+    // Unified search results
+    const [searchResults, setSearchResults] = useState<{
+        blogs: BlogPost[]
+        crawls: Crawl[]
+        collections: PublicCollection[]
+        events: EventWithCafe[]
+    } | null>(null)
+    const [searchingContent, setSearchingContent] = useState(false)
 
     // Sync tab with URL
     useEffect(() => {
@@ -183,27 +192,15 @@ export default function CommunityPage({
                 if (isUserSearch) {
                     setIsUserSearch(false)
                     setUserResults([])
-                } else {
-                    // Reset collections to initial if we were searching
-                    // Only reset if we were actually filtering.
-                    // Ideally we re-fetch pure recent collections.
-                    setLoadingCollections(true)
-                    try {
-                        const data = await getPublicCollections(1, 12, "recent")
-                        setCollections(data.collections)
-                        setCollectionsTotal(data.total)
-                        setCollectionsPage(1)
-                    } catch (e) {
-                        console.error(e)
-                    } finally {
-                        setLoadingCollections(false)
-                    }
                 }
+                setSearchResults(null)
+                setSearchingContent(false)
                 return
             }
 
             if (searchQuery.startsWith("@")) {
                 setIsUserSearch(true)
+                setSearchResults(null)
                 setSearchingUsers(true)
                 try {
                     const query = searchQuery.slice(1)
@@ -220,31 +217,20 @@ export default function CommunityPage({
                 }
             } else {
                 setIsUserSearch(false)
-                if (activeTab !== "collections") {
-                    setActiveTab("collections")
-                }
-
-                setSearchingCollections(true)
+                setSearchingContent(true)
                 try {
-                    const data = await getPublicCollections(
-                        1,
-                        12,
-                        "recent",
-                        searchQuery
-                    )
-                    setCollections(data.collections)
-                    setCollectionsTotal(data.total)
-                    setCollectionsPage(1) // Reset page
+                    const results = await searchCommunityContent(searchQuery)
+                    setSearchResults(results)
                 } catch (err) {
-                    console.error("Collection search failed:", err)
+                    console.error("Community search failed:", err)
                 } finally {
-                    setSearchingCollections(false)
+                    setSearchingContent(false)
                 }
             }
         }, 300)
 
         return () => clearTimeout(timeoutId)
-    }, [searchQuery, activeTab, isUserSearch])
+    }, [searchQuery, isUserSearch])
 
     const tabs = [
         { id: "blogs" as TabType, label: "Blogs", icon: BookOpen },
@@ -342,7 +328,7 @@ export default function CommunityPage({
                                 placeholder='Search or start with @ for users...'
                                 className='w-full pl-9 pr-4 py-2 bg-text/5 border border-transparent rounded-lg text-sm text-text placeholder:text-text/40 focus:bg-background focus:border-primary/30 focus:outline-none transition-all'
                             />
-                            {(searchingUsers || searchingCollections) && (
+                            {(searchingUsers || searchingContent) && (
                                 <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin' />
                             )}
                         </div>
@@ -375,6 +361,12 @@ export default function CommunityPage({
                         </div>
                     )}
                 </section>
+            ) : searchResults ? (
+                <UnifiedSearchResults
+                    searchQuery={searchQuery}
+                    results={searchResults}
+                    searching={searchingContent}
+                />
             ) : activeTab === "blogs" ? (
                 <section className='max-w-7xl mx-auto px-6 py-8'>
                     <CommunityBlogsTab
@@ -404,7 +396,7 @@ export default function CommunityPage({
                                 ))}
                             </div>
 
-                            {crawls.length < crawlsTotal && !searchQuery && (
+                            {crawls.length < crawlsTotal && (
                                 <div className='flex justify-center mt-8'>
                                     <button
                                         onClick={loadMoreCrawls}
@@ -427,12 +419,10 @@ export default function CommunityPage({
                         <div className='text-center py-16'>
                             <MapPin className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
                             <h3 className='text-xl font-serif font-semibold text-text mb-2'>
-                                {searchQuery ? "No crawls found" : "No crawls yet"}
+                                No crawls yet
                             </h3>
                             <p className='text-text/60'>
-                                {searchQuery
-                                    ? "Try searching for something else."
-                                    : "Be the first to create a public cafe crawl!"}
+                                Be the first to create a public cafe crawl!
                             </p>
                         </div>
                     )}
@@ -456,55 +446,262 @@ export default function CommunityPage({
                                 ))}
                             </div>
 
-                            {collections.length < collectionsTotal &&
-                                !searchQuery && (
-                                    <div className='flex justify-center mt-8'>
-                                        <button
-                                            onClick={loadMoreCollections}
-                                            disabled={loadingCollections}
-                                            className='px-6 py-3 bg-text/5 hover:bg-text/10 rounded-full text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer'
-                                        >
-                                            {loadingCollections ? (
-                                                <span className='flex items-center gap-2'>
-                                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                                    Loading...
-                                                </span>
-                                            ) : (
-                                                "Load More"
-                                            )}
-                                        </button>
-                                    </div>
-                                )}
+                            {collections.length < collectionsTotal && (
+                                <div className='flex justify-center mt-8'>
+                                    <button
+                                        onClick={loadMoreCollections}
+                                        disabled={loadingCollections}
+                                        className='px-6 py-3 bg-text/5 hover:bg-text/10 rounded-full text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer'
+                                    >
+                                        {loadingCollections ? (
+                                            <span className='flex items-center gap-2'>
+                                                <Loader2 className='w-4 h-4 animate-spin' />
+                                                Loading...
+                                            </span>
+                                        ) : (
+                                            "Load More"
+                                        )}
+                                    </button>
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className='text-center py-16'>
                             <Layers className='w-16 h-16 text-secondary/40 mx-auto mb-4' />
                             <h3 className='text-xl font-serif font-semibold text-text mb-2'>
-                                {searchQuery
-                                    ? "No collections found"
-                                    : "No collections yet"}
+                                No collections yet
                             </h3>
                             <p className='text-text/60'>
-                                {searchQuery
-                                    ? "Try searching for something else."
-                                    : "Be the first to create a public collection!"}
+                                Be the first to create a public collection!
                             </p>
                         </div>
                     )}
                 </section>
-            ) : activeTab === "leaderboard" && !isUserSearch ? (
+            ) : activeTab === "leaderboard" ? (
                 <section className='max-w-7xl mx-auto px-6 py-8'>
                     <MonthlyLeaderboard />
                 </section>
-            ) : null}
-
-            {activeTab === "events" && !isUserSearch && (
+            ) : activeTab === "events" ? (
                 <EventsPageClient
                     initialEvents={initialEvents}
                     embedded
                 />
-            )}
+            ) : null}
         </div>
+    )
+}
+
+// Unified Search Results Component
+function UnifiedSearchResults({
+    searchQuery,
+    results,
+    searching,
+}: {
+    searchQuery: string
+    results: {
+        blogs: BlogPost[]
+        crawls: Crawl[]
+        collections: PublicCollection[]
+        events: EventWithCafe[]
+    }
+    searching: boolean
+}) {
+    const totalResults =
+        results.blogs.length +
+        results.crawls.length +
+        results.collections.length +
+        results.events.length
+
+    if (searching) {
+        return (
+            <section className="max-w-7xl mx-auto px-6 py-16">
+                <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+                    <p className="text-text/60">Searching across community...</p>
+                </div>
+            </section>
+        )
+    }
+
+    if (totalResults === 0) {
+        return (
+            <section className="max-w-7xl mx-auto px-6 py-16">
+                <div className="text-center">
+                    <Search className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
+                    <h3 className="text-xl font-serif font-semibold text-text mb-2">
+                        No results found
+                    </h3>
+                    <p className="text-text/60">
+                        We couldn&apos;t find anything matching &ldquo;{searchQuery}&rdquo;
+                    </p>
+                </div>
+            </section>
+        )
+    }
+
+    const sectionConfig: Record<
+        Exclude<CommunityTab, "leaderboard">,
+        {
+            label: string
+            icon: React.ElementType
+            render: () => React.ReactNode
+        }
+    > = {
+        blogs: {
+            label: "Blog Posts",
+            icon: BookOpen,
+            render: () =>
+                results.blogs.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {results.blogs.map((post) => (
+                            <Link
+                                key={post.id}
+                                href={`/blog/${post.slug}`}
+                                className="group block"
+                            >
+                                <div className="bg-background border border-secondary/20 rounded-xl overflow-hidden hover:border-primary/30 transition-all">
+                                    {post.cover_image && (
+                                        <div className="aspect-video overflow-hidden">
+                                            <Image
+                                                src={post.cover_image}
+                                                alt={post.title}
+                                                width={400}
+                                                height={225}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="p-4">
+                                        <h4 className="font-semibold text-text group-hover:text-primary transition-colors line-clamp-2">
+                                            {post.title}
+                                        </h4>
+                                        <p className="text-sm text-text/60 mt-1 line-clamp-2">
+                                            {post.excerpt}
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                ) : null,
+        },
+        crawls: {
+            label: "Cafe Crawls",
+            icon: MapPin,
+            render: () =>
+                results.crawls.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {results.crawls.map((crawl) => (
+                            <CrawlCard key={crawl.id} crawl={crawl} />
+                        ))}
+                    </div>
+                ) : null,
+        },
+        collections: {
+            label: "Collections",
+            icon: Layers,
+            render: () =>
+                results.collections.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {results.collections.map((collection) => (
+                            <CollectionCard
+                                key={collection.id}
+                                collection={collection}
+                                showAuthor
+                                author={{
+                                    displayName: collection.author.displayName,
+                                    username: collection.author.username,
+                                    avatarUrl: collection.author.avatarUrl,
+                                }}
+                            />
+                        ))}
+                    </div>
+                ) : null,
+        },
+        events: {
+            label: "Events",
+            icon: Calendar,
+            render: () =>
+                results.events.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {results.events.map((event) => (
+                            <Link
+                                key={event.id}
+                                href={`/community/events/${event.id}`}
+                                className="group block"
+                            >
+                                <div className="bg-background border border-secondary/20 rounded-xl overflow-hidden hover:border-primary/30 transition-all">
+                                    {event.image_url && (
+                                        <div className="aspect-video overflow-hidden">
+                                            <Image
+                                                src={event.image_url}
+                                                alt={event.title}
+                                                width={400}
+                                                height={225}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="p-4">
+                                        <h4 className="font-semibold text-text group-hover:text-primary transition-colors">
+                                            {event.title}
+                                        </h4>
+                                        <p className="text-sm text-text/60 mt-1">
+                                            {event.location_name}
+                                            {event.city && `, ${event.city}`}
+                                        </p>
+                                        <p className="text-xs text-text/40 mt-2">
+                                            {new Date(
+                                                event.start_date
+                                            ).toLocaleDateString("en-US", {
+                                                month: "short",
+                                                day: "numeric",
+                                                year: "numeric",
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                ) : null,
+        },
+    }
+
+    return (
+        <section className="max-w-7xl mx-auto px-6 py-8">
+            <div className="mb-6">
+                <h3 className="text-lg font-semibold text-text">
+                    Search Results for &ldquo;{searchQuery}&rdquo;
+                </h3>
+                <p className="text-sm text-text/60">
+                    {totalResults} result{totalResults !== 1 ? "s" : ""} found
+                </p>
+            </div>
+
+            <div className="space-y-10">
+                {COMMUNITY_TAB_ORDER.filter(
+                    (tab): tab is Exclude<CommunityTab, "leaderboard"> =>
+                        tab !== "leaderboard"
+                ).map((tab) => {
+                    const config = sectionConfig[tab]
+                    const content = config.render()
+                    if (!content) return null
+
+                    return (
+                        <div key={tab}>
+                            <div className="flex items-center gap-2 mb-4">
+                                <config.icon className="w-5 h-5 text-primary" />
+                                <h4 className="text-base font-semibold text-text">
+                                    {config.label}
+                                </h4>
+                            </div>
+                            {content}
+                        </div>
+                    )
+                })}
+            </div>
+        </section>
     )
 }
 

@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { events, cafes, profiles, cafeSubscriptions, user } from "@/db/schema"
-import { eq, and, gte, lt, lte, desc, asc, count, inArray } from "drizzle-orm"
+import { eq, and, gte, lt, lte, desc, asc, count, inArray, or, ilike } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
 
@@ -167,6 +167,13 @@ export async function getEvents(
     if (filters.is_national !== undefined) conditions.push(eq(events.isNational, filters.is_national))
     if (filters.start_after) conditions.push(gte(events.startDate, new Date(filters.start_after)))
     if (filters.start_before) conditions.push(lte(events.startDate, new Date(filters.start_before)))
+    if (filters.search) {
+        const searchCondition = or(
+            ilike(events.title, `%${filters.search}%`),
+            ilike(events.description, `%${filters.search}%`)
+        )
+        if (searchCondition) conditions.push(searchCondition)
+    }
 
     const [eventsResult, countResult] = await Promise.all([
         db.select({

@@ -4,6 +4,11 @@ import { db } from "@/db"
 import { collections, profiles } from "@/db/schema"
 import { eq, desc, or, sql, inArray, ilike, and, gt } from "drizzle-orm"
 import { getPublicCafeCrawls } from "@/app/api/actions/cafe-crawls"
+import { getPublishedBlogPosts } from "@/app/api/actions/blog"
+import { getEvents } from "@/app/api/actions/events"
+import { BlogPost } from "@/utils/types/blog"
+import { Crawl } from "@/utils/types/cafe-crawls"
+import { EventWithCafe } from "@/utils/types/extra"
 
 // =============================================================================
 // PUBLIC COLLECTIONS
@@ -218,3 +223,37 @@ export async function getFeaturedUsers(limit: number = 8): Promise<UserSearchRes
 // =============================================================================
 
 export { getPublicCafeCrawls }
+
+// =============================================================================
+// UNIFIED COMMUNITY SEARCH
+// =============================================================================
+
+export interface CommunitySearchResult {
+    blogs: BlogPost[]
+    crawls: Crawl[]
+    collections: PublicCollection[]
+    events: EventWithCafe[]
+}
+
+/**
+ * Search across all community content types (blogs, crawls, collections, events)
+ */
+export async function searchCommunityContent(query: string): Promise<CommunitySearchResult> {
+    if (!query || query.length < 2) {
+        return { blogs: [], crawls: [], collections: [], events: [] }
+    }
+
+    const [blogsResult, crawlsResult, collectionsResult, eventsResult] = await Promise.all([
+        getPublishedBlogPosts({ search: query, pageSize: 6 }),
+        getPublicCafeCrawls(1, 6, "recent", query),
+        getPublicCollections(1, 6, "recent", query),
+        getEvents({ search: query, status: "published" }, 1, 6),
+    ])
+
+    return {
+        blogs: blogsResult.posts,
+        crawls: crawlsResult.crawls,
+        collections: collectionsResult.collections,
+        events: eventsResult.events,
+    }
+}
