@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { blogPosts, profiles, cafes, cafeSubscriptions } from "@/db/schema"
-import { eq, and, desc, count, sql, ne, inArray } from "drizzle-orm"
+import { eq, and, desc, count, sql, ne, inArray, or, ilike } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { headers } from "next/headers"
 import {
@@ -63,6 +63,23 @@ async function isCafeOwner(cafeId: string): Promise<boolean> {
 async function getCurrentUserId(): Promise<string | null> {
     const user = await getCurrentUser()
     return user?.id ?? null
+}
+
+function normalizeSearchQuery(search: string): string {
+    return search.trim().replace(/\s+/g, " ")
+}
+
+function buildBlogSearchCondition(search: string) {
+    const normalized = normalizeSearchQuery(search)
+    if (!normalized) return undefined
+
+    const likePattern = `%${normalized}%`
+    return or(
+        sql`${blogPosts.searchVector} @@ plainto_tsquery('english', ${normalized})`,
+        ilike(blogPosts.title, likePattern),
+        ilike(blogPosts.excerpt, likePattern),
+        ilike(blogPosts.content, likePattern)
+    )
 }
 
 // Helper to map blog post
@@ -148,11 +165,11 @@ export async function getPublishedBlogPosts(
     if (cafeId) conditions.push(eq(blogPosts.cafeId, cafeId))
     if (featured !== undefined) conditions.push(eq(blogPosts.featured, featured))
 
-    // Handle search with tsquery
+    // Handle search with tsquery + ilike fallback
     let postsResult
     let countResult
-    if (search) {
-        const searchCondition = sql`${blogPosts.searchVector} @@ plainto_tsquery('english', ${search})`
+    const searchCondition = search ? buildBlogSearchCondition(search) : undefined
+    if (searchCondition) {
         postsResult = await db
             .select({
                 id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
@@ -323,7 +340,7 @@ export async function getAdminBlogPosts(params: AdminBlogParams = {}): Promise<P
     if (category) conditions.push(eq(blogPosts.category, category))
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-    const searchCondition = search ? sql`${blogPosts.searchVector} @@ plainto_tsquery('english', ${search})` : undefined
+    const searchCondition = search ? buildBlogSearchCondition(search) : undefined
     const finalWhere = whereClause && searchCondition ? and(whereClause, searchCondition) : (whereClause || searchCondition)
 
     const [postsResult, countResult] = await Promise.all([
@@ -387,7 +404,7 @@ export async function getWriterBlogPosts(params: AdminBlogParams = {}): Promise<
     if (category) conditions.push(eq(blogPosts.category, category))
 
     const whereClause = and(...conditions)
-    const searchCondition = search ? sql`${blogPosts.searchVector} @@ plainto_tsquery('english', ${search})` : undefined
+    const searchCondition = search ? buildBlogSearchCondition(search) : undefined
     const finalWhere = searchCondition ? and(whereClause, searchCondition) : whereClause
 
     const [postsResult, countResult] = await Promise.all([

@@ -13,8 +13,8 @@ import {
     Loader2,
     Star,
     Trophy,
-    MapPin,
     BookOpen,
+    Map,
 } from "lucide-react"
 import { getPublicCollections, searchUsers, getPublicCafeCrawls, searchCommunityContent } from "@/app/api/actions/community"
 import CrawlCard from "@/components/crawls/CrawlCard"
@@ -233,7 +233,7 @@ export default function CommunityPage({
 
     const tabs = [
         { id: "blogs" as TabType, label: "Blogs", icon: BookOpen },
-        { id: "crawls" as TabType, label: "Crawls", icon: MapPin },
+        { id: "crawls" as TabType, label: "Crawls", icon: Map },
         { id: "collections" as TabType, label: "Collections", icon: Layers },
         { id: "events" as TabType, label: "Events", icon: Calendar },
         { id: "leaderboard" as TabType, label: "Leaderboard", icon: Trophy },
@@ -250,7 +250,7 @@ export default function CommunityPage({
             tag: "Explore the City",
             title: "Cafe Crawls",
             description: "Plan and share curated cafe hopping routes. Discover new spots and create memorable coffee journeys across the Philippines.",
-            icon: MapPin,
+            icon: Map,
         },
         collections: {
             tag: "Curated Lists",
@@ -279,7 +279,7 @@ export default function CommunityPage({
             {/* Hero */}
             <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-16 overflow-hidden'>
                 <div className='absolute inset-0 pointer-events-none select-none overflow-hidden'>
-                    <currentHero.icon className='absolute -top-6 -right-6 w-48 h-48 text-primary/5 rotate-12' />
+                    <currentHero.icon className='absolute -top-6 -right-6 w-48 h-48 text-primary opacity-5 rotate-12' />
                     <Users className='absolute -bottom-12 -left-12 w-64 h-64 text-secondary opacity-5 -rotate-12' />
                 </div>
 
@@ -416,7 +416,7 @@ export default function CommunityPage({
                         </>
                     ) : (
                         <div className='text-center py-16'>
-                            <MapPin className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
+                            <Map className='w-16 h-16 text-secondary opacity-40 mx-auto mb-4' />
                             <h3 className='text-xl font-serif font-semibold text-text mb-2'>
                                 No crawls yet
                             </h3>
@@ -586,7 +586,7 @@ function UnifiedSearchResults({
         },
         crawls: {
             label: "Cafe Crawls",
-            icon: MapPin,
+            icon: Map,
             render: () =>
                 results.crawls.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
