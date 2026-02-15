@@ -14,9 +14,13 @@ import { normalizeLatLng } from "@/utils/map/coords"
 function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | null }) {
     const map = useMap()
     useEffect(() => {
+        if (!focusPoint) return
         const normalized = normalizeLatLng(focusPoint)
         if (!normalized) return
-        map.flyTo([normalized.lat, normalized.lng], Math.max(map.getZoom(), 13), { duration: 0.8 })
+        if (!map) return
+        const zoom = map.getZoom()
+        if (typeof zoom !== "number" || !Number.isFinite(zoom)) return
+        map.flyTo([normalized.lat, normalized.lng], Math.max(zoom, 13), { duration: 0.8 })
     }, [focusPoint, map])
     return null
 }

@@ -1,8 +1,14 @@
 import type { MetadataRoute } from "next"
 
+interface StaticPageConfig {
+    path: string
+    changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never"
+    priority: number
+}
+
 interface SitemapInput {
     baseUrl: string
-    staticPages: string[]
+    staticPages: StaticPageConfig[]
     cafes: { slug: string; updatedAt?: Date | null; createdAt?: Date | null }[]
     blogs: { slug: string; updatedAt?: Date | null; publishedAt?: Date | null }[]
     menus: { slug: string; updatedAt?: Date | null }[]
@@ -16,11 +22,11 @@ function withBase(baseUrl: string, path: string) {
 }
 
 export function buildSitemapEntries(input: SitemapInput): MetadataRoute.Sitemap {
-    const staticEntries: MetadataRoute.Sitemap = input.staticPages.map((path) => ({
-        url: withBase(input.baseUrl, path),
+    const staticEntries: MetadataRoute.Sitemap = input.staticPages.map((page) => ({
+        url: withBase(input.baseUrl, page.path),
         lastModified: new Date(),
-        changeFrequency: "daily",
-        priority: path === "/" ? 1 : 0.8,
+        changeFrequency: page.changeFrequency,
+        priority: page.priority,
     }))
 
     const cafeEntries: MetadataRoute.Sitemap = input.cafes.map((cafe) => ({

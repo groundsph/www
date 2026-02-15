@@ -50,7 +50,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return buildSitemapEntries({
         baseUrl,
-        staticPages: ["/", "/cafes", "/blog", "/map", "/community", "/submit", "/donate", "/contact", "/roadmap", "/legal", "/legal/privacy", "/legal/terms", "/legal/content-policy"],
+        staticPages: [
+            // Core pages
+            { path: "/", changeFrequency: "daily", priority: 1 },
+            { path: "/cafes", changeFrequency: "daily", priority: 0.9 },
+            { path: "/blog", changeFrequency: "daily", priority: 0.9 },
+            { path: "/map", changeFrequency: "weekly", priority: 0.8 },
+            // Community pages
+            { path: "/community", changeFrequency: "daily", priority: 0.8 },
+            { path: "/submit", changeFrequency: "monthly", priority: 0.6 },
+            { path: "/donate", changeFrequency: "monthly", priority: 0.5 },
+            { path: "/contact", changeFrequency: "monthly", priority: 0.5 },
+            { path: "/roadmap", changeFrequency: "monthly", priority: 0.5 },
+            // Legal pages
+            { path: "/legal", changeFrequency: "yearly", priority: 0.3 },
+            { path: "/legal/privacy", changeFrequency: "yearly", priority: 0.3 },
+            { path: "/legal/terms", changeFrequency: "yearly", priority: 0.3 },
+            { path: "/legal/content-policy", changeFrequency: "yearly", priority: 0.3 },
+        ],
         cafes: cafeResults,
         blogs: blogResults,
         menus: menuResults,
