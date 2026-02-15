@@ -10,6 +10,7 @@ import { buildCrawlMarkerHtml } from "@/utils/map/crawl-marker"
 import { getCrawlSegmentStyle } from "@/utils/map/crawl-route-style"
 import { invalidateMapSize } from "@/utils/map/leaflet"
 import { normalizeLatLng } from "@/utils/map/coords"
+import { buildOsrmUrl } from "@/utils/map/osrm"
 
 function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | null }) {
     const map = useMap()
@@ -228,19 +229,16 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
 
             const results = await Promise.all(
                 requests.map(async ({ start, end }) => {
-                    const res = await fetch("/api/routes/osrm", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ start, end, profile: "driving" }),
-                    })
+                    const url = buildOsrmUrl(start, end, "driving")
+                    const res = await fetch(url)
                     if (!res.ok) {
                         console.error(`[CrawlRouteMap] Failed to fetch route: ${res.status}`)
                         return null
                     }
-                    const json = await res.json()
-                    if (!json?.geometry?.coordinates) return null
+                    const data = await res.json()
+                    if (!data?.routes?.[0]?.geometry?.coordinates) return null
                     // Transform GeoJSON [lng,lat] to Leaflet [lat,lng]
-                    return json.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]])
+                    return data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]])
                 })
             )
 
