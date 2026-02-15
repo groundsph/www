@@ -3,6 +3,11 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { getCafeCrawlBySlug } from "@/app/api/actions/cafe-crawls"
 import CrawlEditor from "@/components/crawls/CrawlEditor"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+    robots: { index: false, follow: false },
+}
 
 interface EditCrawlPageProps {
     params: Promise<{

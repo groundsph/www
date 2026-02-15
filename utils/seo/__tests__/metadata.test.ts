@@ -26,4 +26,13 @@ describe("buildPageMetadata", () => {
         })
         expect(meta.robots).toEqual({ index: false, follow: false })
     })
+
+    it("omits images when ogImagePath is not provided", () => {
+        const meta = buildPageMetadata({
+            title: "No Image",
+            description: "No Image",
+            urlPath: "/blog/test",
+        })
+        expect(meta.openGraph?.images).toBeUndefined()
+    })
 })

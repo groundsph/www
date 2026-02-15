@@ -23,6 +23,7 @@ export async function generateMetadata({
         title: crawl.title,
         description: crawl.description ?? `A cafe crawl with ${crawl.itemCount ?? 0} cafes`,
         ogImageUrl: `/community/crawls/${crawl.slug}/opengraph-image`,
+        urlPath: `/community/crawls/${crawl.slug}`,
     })
 }
 

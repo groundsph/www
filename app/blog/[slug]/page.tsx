@@ -18,6 +18,7 @@ import { mergeCafeTags } from "@/utils/blog/merge-cafe-tags"
 import BlogImageGallery from "@/components/blog/BlogImageGallery"
 import BlogCafeHighlights from "@/components/blog/BlogCafeHighlights"
 import BlogCrawlEmbed from "@/components/blog/BlogCrawlEmbed"
+import { buildPageMetadata } from "@/utils/seo/metadata"
 
 // Dynamic rendering for Dokploy build
 export const dynamic = "force-dynamic"
@@ -36,15 +37,13 @@ export async function generateMetadata({
         }
     }
 
-    return {
-        title: `${post.title}`,
+    const ogImagePath = post.cover_image ? post.cover_image : "/og-image.jpg"
+    return buildPageMetadata({
+        title: post.title,
         description: post.excerpt || post.content.substring(0, 160),
-        openGraph: {
-            title: post.title,
-            description: post.excerpt || post.content.substring(0, 160),
-            images: post.cover_image ? [post.cover_image] : [],
-        },
-    }
+        urlPath: `/blog/${post.slug}`,
+        ogImagePath,
+    })
 }
 
 export default async function BlogPostPage({
