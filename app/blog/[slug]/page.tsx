@@ -11,6 +11,13 @@ import { notFound } from "next/navigation"
 import { Calendar, Clock, ArrowLeft, Eye, Coffee, User } from "lucide-react"
 import ShareButton from "@/components/blog/ShareButton"
 import ReportButton from "@/components/blog/ReportButton"
+import { getCafesByIds, getCafesBySlugs } from "@/app/api/actions/cafe"
+import { getCafeCrawlById } from "@/app/api/actions/cafe-crawls"
+import { extractCafeSlugsFromContent } from "@/utils/blog/link-detection"
+import { mergeCafeTags } from "@/utils/blog/merge-cafe-tags"
+import BlogImageGallery from "@/components/blog/BlogImageGallery"
+import BlogCafeHighlights from "@/components/blog/BlogCafeHighlights"
+import BlogCrawlEmbed from "@/components/blog/BlogCrawlEmbed"
 
 // Dynamic rendering for Dokploy build
 export const dynamic = "force-dynamic"
@@ -54,6 +61,36 @@ export default async function BlogPostPage({
 
     // Increment view count (fire and forget)
     incrementViewCount(post.id)
+
+    // Extract cafe slugs from content
+    const detectedSlugs = extractCafeSlugsFromContent(post.content)
+
+    // Fetch cafes by detected slugs and explicit tagged IDs in parallel
+    const [cafesBySlugs, cafesByIds] = await Promise.all([
+        detectedSlugs.length > 0 ? getCafesBySlugs(detectedSlugs) : Promise.resolve([]),
+        post.tagged_cafe_ids && post.tagged_cafe_ids.length > 0
+            ? getCafesByIds(post.tagged_cafe_ids)
+            : Promise.resolve([]),
+    ])
+
+    // Merge cafe IDs, dedupe and preserve order
+    const explicitIds = post.tagged_cafe_ids || []
+    const detectedIds = cafesBySlugs.map((c) => c.id)
+    const mergedCafeIds = mergeCafeTags(explicitIds, detectedIds)
+
+    // Build final cafe list preserving merge order
+    const cafeMap = new Map<string, typeof cafesByIds[0]>([
+        ...cafesByIds.map((c) => [c.id, c] as const),
+        ...cafesBySlugs.map((c) => [c.id, c] as const),
+    ])
+    const mergedCafes = mergedCafeIds
+        .map((id) => cafeMap.get(id))
+        .filter((c): c is NonNullable<typeof c> => c !== undefined)
+
+    // Fetch crawl if linked
+    const crawl = post.crawl_id
+        ? await getCafeCrawlById(post.crawl_id)
+        : null
 
     // Get related posts (same category, excluding current)
     const { posts: relatedPosts } = await getPublishedBlogPosts({
@@ -190,10 +227,21 @@ export default async function BlogPostPage({
                     </div>
                 </header>
 
+                {/* Gallery */}
+                {post.images && post.images.length > 0 && (
+                    <BlogImageGallery images={post.images} />
+                )}
+
                 {/* Content */}
                 <div className='prose prose-lg prose-stone max-w-none mb-12'>
                     <MarkdownRender content={post.content} />
                 </div>
+
+                {/* Cafe Highlights */}
+                {mergedCafes.length > 0 && <BlogCafeHighlights cafes={mergedCafes} />}
+
+                {/* Crawl Embed */}
+                {crawl && <BlogCrawlEmbed crawl={crawl} />}
 
                 {/* Tags */}
                 {post.tags && post.tags.length > 0 && (

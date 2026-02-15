@@ -249,6 +249,139 @@ export async function getPublicCafeCrawls(
 }
 
 // =============================================================================
+// GET CAFE CRAWL BY ID
+// =============================================================================
+
+export async function getCafeCrawlById(id: string): Promise<CafeCrawlDetail | null> {
+    const crawlResult = await db
+        .select({
+            id: cafeCrawls.id,
+            userId: cafeCrawls.userId,
+            title: cafeCrawls.title,
+            slug: cafeCrawls.slug,
+            description: cafeCrawls.description,
+            coverImage: cafeCrawls.coverImage,
+            status: cafeCrawls.status,
+            isPublic: cafeCrawls.isPublic,
+            itemCount: cafeCrawls.itemCount,
+            viewsCount: cafeCrawls.viewsCount,
+            savesCount: cafeCrawls.savesCount,
+            likesCount: cafeCrawls.likesCount,
+            createdAt: cafeCrawls.createdAt,
+            updatedAt: cafeCrawls.updatedAt,
+            authorDisplayName: profiles.displayName,
+            authorUsername: profiles.username,
+            authorAvatarUrl: profiles.avatarUrl,
+        })
+        .from(cafeCrawls)
+        .leftJoin(profiles, eq(cafeCrawls.userId, profiles.id))
+        .where(eq(cafeCrawls.id, id))
+        .limit(1)
+
+    if (crawlResult.length === 0) return null
+
+    const crawl = crawlResult[0]
+
+    // Check visibility
+    const user = await getCurrentUser()
+    if (!crawl.isPublic && crawl.userId !== user?.id) {
+        return null
+    }
+
+    // Increment view count (async, don't wait) - Skip on localhost
+    const headersList = await headers()
+    const host = headersList.get("host") || ""
+    if (!host.includes("localhost") && !host.includes("127.0.0.1")) {
+        db.update(cafeCrawls)
+            .set({ viewsCount: sql`${cafeCrawls.viewsCount} + 1` })
+            .where(eq(cafeCrawls.id, crawl.id))
+            .then(() => {})
+            .catch(() => {})
+    }
+
+    // Fetch items with cafe details
+    const itemsResult = await db
+        .select({
+            id: cafeCrawlItems.id,
+            cafeId: cafeCrawlItems.cafeId,
+            sortOrder: cafeCrawlItems.sortOrder,
+            note: cafeCrawlItems.note,
+            cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            cafeThumbnail: cafes.thumbnail,
+            cafeCity: cafes.cityMunicipality,
+            cafeRegion: cafes.region,
+            cafeLat: cafes.lat,
+            cafeLng: cafes.lng,
+            averageRating: cafeRatingStats.averageRating,
+            totalReviews: cafeRatingStats.totalReviews,
+        })
+        .from(cafeCrawlItems)
+        .innerJoin(cafes, eq(cafeCrawlItems.cafeId, cafes.id))
+        .leftJoin(cafeRatingStats, eq(cafeCrawlItems.cafeId, cafeRatingStats.cafeId))
+        .where(eq(cafeCrawlItems.crawlId, crawl.id))
+        .orderBy(cafeCrawlItems.sortOrder)
+
+    // Check if user has saved or liked
+    let hasSaved = false
+    let hasLiked = false
+    if (user) {
+        const saveResult = await db
+            .select({ id: cafeCrawlSaves.id })
+            .from(cafeCrawlSaves)
+            .where(and(eq(cafeCrawlSaves.crawlId, crawl.id), eq(cafeCrawlSaves.userId, user.id)))
+            .limit(1)
+        hasSaved = saveResult.length > 0
+
+        const likeResult = await db
+            .select({ id: cafeCrawlLikes.id })
+            .from(cafeCrawlLikes)
+            .where(and(eq(cafeCrawlLikes.crawlId, crawl.id), eq(cafeCrawlLikes.userId, user.id)))
+            .limit(1)
+        hasLiked = likeResult.length > 0
+    }
+
+    return {
+        id: crawl.id,
+        title: crawl.title,
+        slug: crawl.slug,
+        description: crawl.description,
+        coverImage: crawl.coverImage,
+        itemCount: crawl.itemCount ?? 0,
+        viewsCount: crawl.viewsCount ?? 0,
+        savesCount: crawl.savesCount ?? 0,
+        likesCount: crawl.likesCount ?? 0,
+        status: crawl.status ?? "draft",
+        createdAt: crawl.createdAt?.toISOString() ?? new Date().toISOString(),
+        updatedAt: crawl.updatedAt?.toISOString() ?? new Date().toISOString(),
+        author: {
+            id: crawl.userId,
+            displayName: crawl.authorDisplayName ?? "",
+            username: crawl.authorUsername ?? "unknown",
+            avatarUrl: crawl.authorAvatarUrl,
+        },
+        items: itemsResult.map((item) => ({
+            id: item.id,
+            cafeId: item.cafeId,
+            name: item.cafeName,
+            slug: item.cafeSlug,
+            thumbnail: item.cafeThumbnail,
+            cityMunicipality: item.cafeCity,
+            region: item.cafeRegion,
+            lat: item.cafeLat,
+            lng: item.cafeLng,
+            averageRating: item.averageRating,
+            totalReviews: item.totalReviews,
+            sortOrder: item.sortOrder ?? 0,
+            note: item.note,
+        })),
+        hasSaved,
+        hasLiked,
+        isOwner: user?.id === crawl.userId,
+    }
+}
+
+// =============================================================================
 // GET CAFE CRAWL BY SLUG
 // =============================================================================
 

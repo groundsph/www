@@ -870,3 +870,143 @@ export async function searchCafesForBlog(query: string) {
         .where(and(eq(cafes.isPublished, true), ilike(cafes.name, `%${query}%`)))
         .limit(10)
 }
+
+/**
+ * Get multiple cafes by their IDs
+ */
+export async function getCafesByIds(ids: string[]) {
+    if (!ids.length) return []
+
+    const results = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            description: cafes.description,
+            addressDisplay: cafes.addressDisplay,
+            area: cafes.area,
+            cityMunicipality: cafes.cityMunicipality,
+            province: cafes.province,
+            region: cafes.region,
+            lat: cafes.lat,
+            lng: cafes.lng,
+            priceLevel: cafes.priceLevel,
+            coffeeStyle: cafes.coffeeStyle,
+            membershipTier: cafes.membershipTier,
+            roaster: cafes.roaster,
+            brewMethods: cafes.brewMethods,
+            specialty: cafes.specialty,
+            milkOptions: cafes.milkOptions,
+            tags: cafes.tags,
+            operatingHours: cafes.operatingHours,
+            socials: cafes.socials,
+            phone: cafes.phone,
+            email: cafes.email,
+            websiteUrl: cafes.websiteUrl,
+            paymentMethods: cafes.paymentMethods,
+            hasWifi: cafes.hasWifi,
+            hasSmoking: cafes.hasSmoking,
+            hasSockets: cafes.hasSockets,
+            hasAircon: cafes.hasAircon,
+            hasParking: cafes.hasParking,
+            hasOutdoorSeating: cafes.hasOutdoorSeating,
+            hasIndoorSeating: cafes.hasIndoorSeating,
+            hasRestroom: cafes.hasRestroom,
+            hasBidet: cafes.hasBidet,
+            hasNonDairy: cafes.hasNonDairy,
+            hasDecaf: cafes.hasDecaf,
+            isPetFriendly: cafes.isPetFriendly,
+            isWorkFriendly: cafes.isWorkFriendly,
+            servesFood: cafes.servesFood,
+            isActive: cafes.isActive,
+            isPublished: cafes.isPublished,
+            isVerified: cafes.isVerified,
+            isClaimed: cafes.isClaimed,
+            ownerIds: cafes.ownerIds,
+            contributorId: cafes.contributorId,
+            featuredUntil: cafes.featuredUntil,
+            isHiddenGem: cafes.isHiddenGem,
+            findingHint: cafes.findingHint,
+            isChain: cafes.isChain,
+            createdAt: cafes.createdAt,
+            updatedAt: cafes.updatedAt,
+            averageRating: cafeRatingStats.averageRating,
+            totalReviews: cafeRatingStats.totalReviews,
+        })
+        .from(cafes)
+        .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
+        .where(and(eq(cafes.isPublished, true), inArray(cafes.id, ids)))
+
+    return results.map(c => mapCafeToSnakeCase(c))
+}
+
+/**
+ * Get multiple cafes by their slugs
+ */
+export async function getCafesBySlugs(slugs: string[]) {
+    if (!slugs.length) return []
+
+    const results = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            description: cafes.description,
+            addressDisplay: cafes.addressDisplay,
+            area: cafes.area,
+            cityMunicipality: cafes.cityMunicipality,
+            province: cafes.province,
+            region: cafes.region,
+            lat: cafes.lat,
+            lng: cafes.lng,
+            priceLevel: cafes.priceLevel,
+            coffeeStyle: cafes.coffeeStyle,
+            membershipTier: cafes.membershipTier,
+            roaster: cafes.roaster,
+            brewMethods: cafes.brewMethods,
+            specialty: cafes.specialty,
+            milkOptions: cafes.milkOptions,
+            tags: cafes.tags,
+            operatingHours: cafes.operatingHours,
+            socials: cafes.socials,
+            phone: cafes.phone,
+            email: cafes.email,
+            websiteUrl: cafes.websiteUrl,
+            paymentMethods: cafes.paymentMethods,
+            hasWifi: cafes.hasWifi,
+            hasSmoking: cafes.hasSmoking,
+            hasSockets: cafes.hasSockets,
+            hasAircon: cafes.hasAircon,
+            hasParking: cafes.hasParking,
+            hasOutdoorSeating: cafes.hasOutdoorSeating,
+            hasIndoorSeating: cafes.hasIndoorSeating,
+            hasRestroom: cafes.hasRestroom,
+            hasBidet: cafes.hasBidet,
+            hasNonDairy: cafes.hasNonDairy,
+            hasDecaf: cafes.hasDecaf,
+            isPetFriendly: cafes.isPetFriendly,
+            isWorkFriendly: cafes.isWorkFriendly,
+            servesFood: cafes.servesFood,
+            isActive: cafes.isActive,
+            isPublished: cafes.isPublished,
+            isVerified: cafes.isVerified,
+            isClaimed: cafes.isClaimed,
+            ownerIds: cafes.ownerIds,
+            contributorId: cafes.contributorId,
+            featuredUntil: cafes.featuredUntil,
+            isHiddenGem: cafes.isHiddenGem,
+            findingHint: cafes.findingHint,
+            isChain: cafes.isChain,
+            createdAt: cafes.createdAt,
+            updatedAt: cafes.updatedAt,
+            averageRating: cafeRatingStats.averageRating,
+            totalReviews: cafeRatingStats.totalReviews,
+        })
+        .from(cafes)
+        .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
+        .where(and(eq(cafes.isPublished, true), inArray(cafes.slug, slugs)))
+
+    return results.map(c => mapCafeToSnakeCase(c))
+}
