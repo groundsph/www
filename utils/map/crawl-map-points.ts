@@ -1,9 +1,11 @@
+import { normalizeLatLng } from "@/utils/map/coords"
+
 interface CrawlMapItem {
     name: string
     slug: string
     thumbnail: string | null
-    lat: number | null
-    lng: number | null
+    lat: unknown
+    lng: unknown
     sortOrder: number
 }
 
@@ -18,13 +20,14 @@ export interface MapPoint {
 
 export function buildCrawlMapPoints(items: CrawlMapItem[]): MapPoint[] {
     return items
-        .filter((item): item is CrawlMapItem & { lat: number; lng: number } =>
-            item.lat != null && item.lng != null
+        .map((item) => ({ item, coords: normalizeLatLng(item) }))
+        .filter((entry): entry is { item: CrawlMapItem; coords: { lat: number; lng: number } } =>
+            entry.coords !== null
         )
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((item, index) => ({
-            lat: item.lat,
-            lng: item.lng,
+        .sort((a, b) => a.item.sortOrder - b.item.sortOrder)
+        .map(({ item, coords }, index) => ({
+            lat: coords.lat,
+            lng: coords.lng,
             imageUrl: item.thumbnail,
             label: item.name,
             index: index + 1,

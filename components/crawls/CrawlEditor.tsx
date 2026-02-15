@@ -30,6 +30,7 @@ import ImageCropper from "@/components/ui/ImageCropper"
 import { uploadCrawlCover } from "@/utils/storage/client"
 import { compressCollectionCover } from "@/utils/image-processing"
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
+import { normalizeLatLng } from "@/utils/map/coords"
 
 interface CrawlItem {
     id?: string
@@ -104,22 +105,22 @@ export default function CrawlEditor({
     const [showCropper, setShowCropper] = useState(false)
     const [isUploadingCover, setIsUploadingCover] = useState(false)
 
-    // Get map points from items
     const mapPoints = useMemo(
         () =>
             items
-                .filter((item) => item.lat && item.lng)
-                .map((item, index) => ({
-                    lat: item.lat!,
-                    lng: item.lng!,
-                    imageUrl: item.thumbnail
-                        ? getCafeThumbnailUrl(item.thumbnail)
-                        : null,
+                .map((item) => ({ item, coords: normalizeLatLng({ lat: item.lat, lng: item.lng }) }))
+                .filter((entry): entry is { item: CrawlItem; coords: { lat: number; lng: number } } =>
+                    entry.coords !== null
+                )
+                .map(({ item, coords }, index) => ({
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    imageUrl: item.thumbnail ? getCafeThumbnailUrl(item.thumbnail) : null,
                     label: item.name || "",
                     index: index + 1,
                     cafeSlug: item.slug,
                 })),
-        [items],
+        [items]
     )
 
     // Debounced search for cafes
@@ -146,7 +147,6 @@ export default function CrawlEditor({
         return () => clearTimeout(timeoutId)
     }, [searchQuery, items])
 
-    // Add cafe to crawl
     const addCafe = (cafe: CafeSearchResult) => {
         const newItem: CrawlItem = {
             cafeId: cafe.id,
@@ -162,8 +162,9 @@ export default function CrawlEditor({
         setItems((prev) => [...prev, newItem])
         setSearchQuery("")
         setSearchResults([])
-        if (cafe.lat && cafe.lng) {
-            setFocusPoint({ lat: cafe.lat, lng: cafe.lng })
+        const normalized = normalizeLatLng({ lat: cafe.lat, lng: cafe.lng })
+        if (normalized) {
+            setFocusPoint(normalized)
         }
     }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet"
 import { DivIcon } from "leaflet"
 import { useRouter } from "next/navigation"
@@ -9,12 +9,14 @@ import "@/app/map.css"
 import { buildCrawlMarkerHtml } from "@/utils/map/crawl-marker"
 import { getCrawlSegmentStyle } from "@/utils/map/crawl-route-style"
 import { invalidateMapSize } from "@/utils/map/leaflet"
+import { normalizeLatLng } from "@/utils/map/coords"
 
 function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | null }) {
     const map = useMap()
     useEffect(() => {
-        if (!focusPoint) return
-        map.flyTo([focusPoint.lat, focusPoint.lng], Math.max(map.getZoom(), 13), { duration: 0.8 })
+        const normalized = normalizeLatLng(focusPoint)
+        if (!normalized) return
+        map.flyTo([normalized.lat, normalized.lng], Math.max(map.getZoom(), 13), { duration: 0.8 })
     }, [focusPoint, map])
     return null
 }
@@ -169,22 +171,35 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
     const [segments, setSegments] = useState<[number, number][][]>([])
     const [gapCount, setGapCount] = useState(0)
 
-    // Default center: Philippines (used when no focus point is provided)
-    const defaultCenter: [number, number] = focusPoint
-        ? [focusPoint.lat, focusPoint.lng]
-        : [12.8797, 121.774]
+    const normalizedPoints = useMemo(
+        () =>
+            points
+                .map((point) => ({ point, coords: normalizeLatLng(point) }))
+                .filter((entry): entry is { point: CrawlRouteMapProps["points"][number]; coords: { lat: number; lng: number } } =>
+                    entry.coords !== null
+                )
+                .map(({ point, coords }) => ({ ...point, lat: coords.lat, lng: coords.lng })),
+        [points]
+    )
+
+    const normalizedFocus = normalizeLatLng(focusPoint ?? null)
+    const defaultCenter: [number, number] = normalizedFocus
+        ? [normalizedFocus.lat, normalizedFocus.lng]
+        : normalizedPoints[0]
+          ? [normalizedPoints[0].lat, normalizedPoints[0].lng]
+          : [12.8797, 121.774]
 
     useEffect(() => {
         let cancelled = false
         const run = async () => {
-            if (points.length < 2) {
+            if (normalizedPoints.length < 2) {
                 setSegments([])
                 setGapCount(0)
                 return
             }
-            const requests = points.slice(0, -1).map((p, idx) => ({
+            const requests = normalizedPoints.slice(0, -1).map((p, idx) => ({
                 start: p,
-                end: points[idx + 1],
+                end: normalizedPoints[idx + 1],
             }))
 
             const results = await Promise.all(
@@ -214,7 +229,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
         return () => {
             cancelled = true
         }
-    }, [points])
+    }, [normalizedPoints])
 
     return (
         <div className="relative h-full w-full z-0">
@@ -224,12 +239,12 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
                 scrollWheelZoom
                 className="h-full w-full"
                 style={{ minHeight: "420px" }}
-            >
+                >
                 <TileLayer
                     attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                     url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
                 />
-                {points.map((p, idx) => (
+                {normalizedPoints.map((p, idx) => (
                     <CrawlMarker
                         key={`${p.lat}-${p.lng}-${idx}`}
                         point={p}
@@ -245,7 +260,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />
                 <MapResizeHandler />
-                <MapBounds points={points} />
+                <MapBounds points={normalizedPoints} />
                 {showUserLocation && <UserLocationMarker />}
             </MapContainer>
             {gapCount > 0 && (
