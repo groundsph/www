@@ -31,7 +31,7 @@ import { uploadCrawlCover } from "@/utils/storage/client"
 import { compressCollectionCover } from "@/utils/image-processing"
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 import { normalizeLatLng } from "@/utils/map/coords"
-import { motion } from "motion/react"
+import { motion, AnimatePresence } from "motion/react"
 
 interface CrawlItem {
     id?: string
@@ -74,6 +74,7 @@ interface CrawlEditorProps {
 }
 
 const staggerContainer = {
+    initial: {},
     animate: {
         transition: {
             staggerChildren: 0.1,
@@ -85,6 +86,23 @@ const fadeInUp = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.5 },
+}
+
+const searchResultsContainer = {
+    initial: { opacity: 0, y: -10 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -10 },
+}
+
+const searchResultItem = {
+    initial: { opacity: 0, x: -10 },
+    animate: { opacity: 1, x: 0 },
+}
+
+const listItem = {
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: 20 },
 }
 
 
@@ -584,57 +602,59 @@ export default function CrawlEditor({
                         </div>
 
                         {/* Search Results */}
-                        {searchResults.length > 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className='mt-2 border border-secondary/20 rounded-xl overflow-hidden divide-y divide-secondary/10'
-                            >
-                                {searchResults.map((cafe, index) => (
-                                    <motion.button
-                                        key={cafe.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.03 }}
-                                        whileHover={{
-                                            scale: 1.01,
-                                            backgroundColor: "rgba(0,0,0,0.02)",
-                                        }}
-                                        whileTap={{ scale: 0.99 }}
-                                        onClick={() => addCafe(cafe)}
-                                        className='w-full flex items-center gap-3 p-3 transition-colors text-left'
-                                    >
-                                        <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-secondary/10 shrink-0'>
-                                            {cafe.thumbnail ? (
-                                                <Image
-                                                    src={getCafeThumbnailUrl(
-                                                        cafe.thumbnail,
-                                                    )}
-                                                    alt={cafe.name}
-                                                    fill
-                                                    className='object-cover'
-                                                />
-                                            ) : (
-                                                <div className='w-full h-full flex items-center justify-center'>
-                                                    <Coffee className='w-5 h-5 text-secondary opacity-40' />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className='flex-1 min-w-0'>
-                                            <p className='text-sm font-medium text-text truncate'>
-                                                {cafe.name}
-                                            </p>
-                                            <p className='text-xs text-text/60 truncate'>
-                                                {cafe.cityMunicipality},{" "}
-                                                {cafe.region}
-                                            </p>
-                                        </div>
-                                        <Plus className='w-5 h-5 text-primary shrink-0' />
-                                    </motion.button>
-                                ))}
-                            </motion.div>
-                        )}
+                        <AnimatePresence>
+                            {searchResults.length > 0 && (
+                                <motion.div
+                                    variants={searchResultsContainer}
+                                    initial="initial"
+                                    animate="animate"
+                                    exit="exit"
+                                    className='mt-2 border border-secondary/20 rounded-xl overflow-hidden divide-y divide-secondary/10'
+                                >
+                                    {searchResults.map((cafe, index) => (
+                                        <motion.button
+                                            key={cafe.id}
+                                            variants={searchResultItem}
+                                            transition={{ delay: index * 0.03 }}
+                                            whileHover={{
+                                                scale: 1.01,
+                                                backgroundColor: "rgba(0,0,0,0.02)",
+                                            }}
+                                            whileTap={{ scale: 0.99 }}
+                                            onClick={() => addCafe(cafe)}
+                                            className='w-full flex items-center gap-3 p-3 transition-colors text-left'
+                                        >
+                                            <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-secondary/10 shrink-0'>
+                                                {cafe.thumbnail ? (
+                                                    <Image
+                                                        src={getCafeThumbnailUrl(
+                                                            cafe.thumbnail,
+                                                        )}
+                                                        alt={cafe.name}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                ) : (
+                                                    <div className='w-full h-full flex items-center justify-center'>
+                                                        <Coffee className='w-5 h-5 text-secondary opacity-40' />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className='flex-1 min-w-0'>
+                                                <p className='text-sm font-medium text-text truncate'>
+                                                    {cafe.name}
+                                                </p>
+                                                <p className='text-xs text-text/60 truncate'>
+                                                    {cafe.cityMunicipality},{" "}
+                                                    {cafe.region}
+                                                </p>
+                                            </div>
+                                            <Plus className='w-5 h-5 text-primary shrink-0' />
+                                        </motion.button>
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     {/* Cafes List */}
@@ -661,23 +681,22 @@ export default function CrawlEditor({
                             </motion.div>
                         ) : (
                             <div className='space-y-3'>
-                                {items.map((item, index) => (
-                                    <motion.div
-                                        key={`${item.cafeId}-${index}`}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 20 }}
-                                        transition={{
-                                            delay: index * 0.05,
-                                            duration: 0.3,
-                                        }}
-                                        whileHover={{
-                                            scale: 1.01,
-                                            backgroundColor:
-                                                "rgba(0,0,0,0.02)",
-                                        }}
-                                        className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl cursor-default'
-                                    >
+                                <AnimatePresence>
+                                    {items.map((item, index) => (
+                                        <motion.div
+                                            key={item.cafeId}
+                                            variants={listItem}
+                                            transition={{
+                                                delay: index * 0.05,
+                                                duration: 0.3,
+                                            }}
+                                            whileHover={{
+                                                scale: 1.01,
+                                                backgroundColor:
+                                                    "rgba(0,0,0,0.02)",
+                                            }}
+                                            className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl cursor-default'
+                                        >
                                         {/* Index */}
                                         <div className='flex flex-col items-center gap-1 pt-1'>
                                             <span className='w-6 h-6 flex items-center justify-center bg-primary text-white text-xs font-bold rounded-full'>
@@ -763,6 +782,7 @@ export default function CrawlEditor({
                                         </div>
                                     </motion.div>
                                 ))}
+                                </AnimatePresence>
                             </div>
                         )}
                     </div>

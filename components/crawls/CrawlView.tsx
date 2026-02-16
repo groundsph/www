@@ -18,6 +18,7 @@ import CrawlActions from "@/components/crawls/CrawlActions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
 const staggerContainer = {
+    initial: {},
     animate: {
         transition: {
             staggerChildren: 0.1,
@@ -261,7 +262,6 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                                     <motion.div
                                         key={cafe.id}
                                         variants={listItem}
-                                        custom={index}
                                         initial="initial"
                                         animate="animate"
                                         transition={{ delay: index * 0.05, duration: 0.4 }}
