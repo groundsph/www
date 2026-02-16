@@ -40,6 +40,10 @@ export default function ContentManagement({
     )
     const [processing, setProcessing] = useState<string | null>(null)
 
+    // Approval confirmation modal state
+    const [showApproveConfirm, setShowApproveConfirm] = useState(false)
+    const [approvalPost, setApprovalPost] = useState<BlogPost | null>(null)
+
     // Blog handlers
     const refreshBlogPosts = async () => {
         const { getAdminBlogPosts } = await import("@/app/api/actions/blog")
@@ -212,7 +216,10 @@ export default function ContentManagement({
                                     <div className='flex items-center gap-2 self-end sm:self-center'>
                                         {post.status === "pending" && (
                                             <button
-                                                onClick={() => handleApproveBlogPost(post.id)}
+                                                onClick={() => {
+                                                    setApprovalPost(post)
+                                                    setShowApproveConfirm(true)
+                                                }}
                                                 disabled={processing === post.id}
                                                 className='flex items-center gap-1.5 px-3 py-2 bg-green-500/20 text-green-600 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
                                                 title='Approve'
@@ -292,6 +299,74 @@ export default function ContentManagement({
                                 onSuccess={handleBlogSuccess}
                                 onCancel={closeBlogEditor}
                             />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Approve Confirmation Modal */}
+            {showApproveConfirm && approvalPost && (
+                <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
+                    {/* Backdrop */}
+                    <div
+                        className='absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200'
+                        onClick={() => setShowApproveConfirm(false)}
+                    />
+
+                    {/* Modal */}
+                    <div className='relative w-full max-w-md bg-background rounded-2xl shadow-xl ring-1 ring-text/10 overflow-hidden animate-in zoom-in-95 fade-in duration-200'>
+                        <div className='p-6'>
+                            {/* Header */}
+                            <div className='flex items-center gap-3 mb-6'>
+                                <div className='w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-600'>
+                                    <CheckCircle className='w-5 h-5' />
+                                </div>
+                                <div>
+                                    <h3 className='text-lg font-semibold text-text'>
+                                        Approve Blog Post
+                                    </h3>
+                                    <p className='text-xs text-text/60 truncate max-w-[250px]'>
+                                        {approvalPost.title}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <p className='text-sm text-text/70 mb-6'>
+                                Are you sure you want to approve this blog post?
+                                It will be published and visible to all users.
+                            </p>
+
+                            {/* Actions */}
+                            <div className='flex gap-3'>
+                                <button
+                                    type='button'
+                                    onClick={() => setShowApproveConfirm(false)}
+                                    className='flex-1 px-4 py-2 text-sm font-medium text-text/60 hover:text-text hover:bg-text/5 rounded-xl transition-colors cursor-pointer'
+                                    disabled={processing === approvalPost.id}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type='button'
+                                    onClick={() => {
+                                        handleApproveBlogPost(approvalPost.id)
+                                        setShowApproveConfirm(false)
+                                        setApprovalPost(null)
+                                    }}
+                                    disabled={processing === approvalPost.id}
+                                    className='flex-1 px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer'
+                                >
+                                    {processing === approvalPost.id ? (
+                                        <>
+                                            <Loader2 className='w-4 h-4 animate-spin' />
+                                            Approving...
+                                        </>
+                                    ) : (
+                                        'Confirm Approve'
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
