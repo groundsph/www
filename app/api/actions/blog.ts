@@ -36,8 +36,6 @@ async function isAdminOrModerator(): Promise<boolean> {
     return role === "admin" || role === "moderator"
 }
 
-const WRITER_ALLOWED_CATEGORIES: BlogCategory[] = ["news", "guides", "community"]
-
 async function isCafeOwner(cafeId: string): Promise<boolean> {
     const user = await getCurrentUser()
     if (!user) return false
@@ -530,13 +528,6 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
             return { success: false, error: "Regular users can only submit community posts" }
         }
         return { success: false, error: "You must link posts to a cafe you own" }
-    }
-
-    // Writers have category restrictions (keep existing logic)
-    if (!isAdminMod && userRole === "writer") {
-        if (!WRITER_ALLOWED_CATEGORIES.includes(input.category)) {
-            return { success: false, error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}` }
-        }
     }
 
     // For users, force category to "community" and status to "pending"
