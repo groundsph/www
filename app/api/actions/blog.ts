@@ -742,6 +742,72 @@ export async function toggleFeatured(postId: string, featured: boolean): Promise
     return { success: true }
 }
 
+// ============================================
+// Community User Operations
+// ============================================
+
+export async function createCommunityBlogPost(input: {
+    title: string
+    excerpt?: string
+    content: string
+    cover_image?: string | null
+}): Promise<BlogActionResult> {
+    return createBlogPost({
+        title: input.title,
+        excerpt: input.excerpt,
+        content: input.content,
+        cover_image: input.cover_image,
+        category: "community",
+        status: "pending",
+        tags: [],
+        featured: false,
+        images: [],
+        tagged_cafe_ids: [],
+        crawl_id: null,
+        cafe_id: null,
+    })
+}
+
+export async function getUserBlogPosts(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedBlogResult> {
+    const userId = await getCurrentUserId()
+    if (!userId) return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
+
+    const { page = 1, pageSize = 20 } = params
+    const offset = (page - 1) * pageSize
+
+    const [postsResult, countResult] = await Promise.all([
+        db.select({
+            id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+            content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+            cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+            tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+            publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+        })
+            .from(blogPosts)
+            .where(eq(blogPosts.authorId, userId))
+            .orderBy(desc(blogPosts.createdAt))
+            .limit(pageSize)
+            .offset(offset),
+        db.select({ count: count() }).from(blogPosts).where(eq(blogPosts.authorId, userId)),
+    ])
+
+    if (postsResult.length === 0) {
+        return { posts: [], total: countResult[0]?.count ?? 0, page, pageSize, hasMore: false }
+    }
+
+    const authorResult = await db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+        .from(profiles).where(eq(profiles.id, userId)).limit(1)
+
+    const total = countResult[0]?.count ?? 0
+    return {
+        posts: postsResult.map(p => mapBlogPost(p, authorResult[0], null)),
+        total,
+        page,
+        pageSize,
+        hasMore: offset + pageSize < total,
+    }
+}
+
 export async function getBlogPostById(postId: string): Promise<BlogPost | null> {
     const userId = await getCurrentUserId()
 
