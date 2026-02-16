@@ -14,6 +14,7 @@ import {
 } from "@/utils/types/blog"
 import { format } from "date-fns"
 import { resolveBlogStatus } from "@/utils/blog/moderation"
+import { canSubmitCommunityBlog } from "@/utils/blog/community-posting"
 import { checkBlogPost } from "@/utils/ai/openai-compatible"
 import { revalidatePath } from "next/cache"
 
@@ -505,29 +506,55 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
     const isAdminMod = await isAdminOrModerator()
     const isOwner = input.cafe_id ? await isCafeOwner(input.cafe_id) : false
 
-    // Any authenticated user can create, but non-admin/mod posts go to pending
-    const finalStatus = resolveBlogStatus(input.status, isAdminMod)
-
-    // Writers have category restrictions
+    // Fetch role for non-admin/mod users
+    let userRole: string | null = null
     if (!isAdminMod) {
-        const profileResult = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, userId)).limit(1)
-        const role = profileResult[0]?.role
-        if (role === "writer") {
-            if (!WRITER_ALLOWED_CATEGORIES.includes(input.category)) {
-                return { success: false, error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}` }
-            }
-        }
+        const profileResult = await db
+            .select({ role: profiles.role })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1)
+        userRole = profileResult[0]?.role ?? null
     }
 
-    // Non-writers must link to a cafe they own (unless admin/mod)
-    if (!isAdminMod && !isOwner && !input.cafe_id) {
+    // Use canSubmitCommunityBlog to check submission eligibility
+    const submissionCheck = canSubmitCommunityBlog({
+        role: userRole,
+        category: input.category,
+        hasCafeOwnership: isOwner,
+    })
+
+    // If not allowed, return error
+    if (!submissionCheck.allowed) {
+        if (userRole === "user") {
+            return { success: false, error: "Regular users can only submit community posts" }
+        }
         return { success: false, error: "You must link posts to a cafe you own" }
     }
 
-    // Tier check for cafe owners
+    // Writers have category restrictions (keep existing logic)
+    if (!isAdminMod && userRole === "writer") {
+        if (!WRITER_ALLOWED_CATEGORIES.includes(input.category)) {
+            return { success: false, error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}` }
+        }
+    }
+
+    // For users, force category to "community" and status to "pending"
+    let finalCategory = input.category
+    let finalStatus = resolveBlogStatus(input.status, isAdminMod)
+
+    if (userRole === "user") {
+        finalCategory = "community"
+        finalStatus = resolveBlogStatus("pending", false) // Force pending for users
+    }
+
+    // Tier check for cafe owners (requires cafe_id)
     if (!isAdminMod && input.cafe_id) {
-        const subResult = await db.select({ tier: cafeSubscriptions.tier })
-            .from(cafeSubscriptions).where(eq(cafeSubscriptions.cafeId, input.cafe_id)).limit(1)
+        const subResult = await db
+            .select({ tier: cafeSubscriptions.tier })
+            .from(cafeSubscriptions)
+            .where(eq(cafeSubscriptions.cafeId, input.cafe_id))
+            .limit(1)
         const tier = subResult[0]?.tier || "free"
         if (tier === "free") {
             return { success: false, error: "Blog posting requires a Pro subscription or higher. Upgrade to start sharing your cafe's story." }
@@ -567,7 +594,7 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
         coverImage: input.cover_image || null,
         authorId: userId,
         cafeId: input.cafe_id || null,
-        category: input.category,
+        category: finalCategory,
         status: finalStatus,
         llmReview,
         tags: input.tags || [],
