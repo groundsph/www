@@ -91,11 +91,12 @@ interface CrawlRouteMapProps {
     showUserLocation?: boolean
     animateTimeline?: boolean
     timelineDelayMs?: number
+    revealSequence?: boolean
 }
 
-const markerIcon = (point: CrawlRouteMapProps["points"][number], showTooltip: boolean, isActive = false) =>
+const markerIcon = (point: CrawlRouteMapProps["points"][number], showTooltip: boolean, isActive = false, isRevealed = true) =>
     new DivIcon({
-        className: `crawl-marker-icon ${isActive ? "crawl-marker-active" : ""}`,
+        className: `crawl-marker-icon ${isActive ? "crawl-marker-active" : ""} ${!isRevealed ? "crawl-marker-hidden" : ""}`,
         html: buildCrawlMarkerHtml({ 
             imageUrl: point.imageUrl ?? null, 
             label: point.label, 
@@ -137,10 +138,12 @@ function UserLocationMarker() {
 // Individual marker component with click/tap handling
 function CrawlMarker({ 
     point, 
-    isActive
+    isActive,
+    isRevealed = true
 }: { 
     point: CrawlRouteMapProps["points"][number]
     isActive?: boolean
+    isRevealed?: boolean
 }) {
     const router = useRouter()
     const [showTooltip, setShowTooltip] = useState(false)
@@ -186,7 +189,7 @@ function CrawlMarker({
     return (
         <Marker
             position={[point.lat, point.lng]}
-            icon={markerIcon(point, showTooltip, isActive)}
+            icon={markerIcon(point, showTooltip, isActive, isRevealed)}
             eventHandlers={{
                 click: handleClick,
             }}
@@ -194,11 +197,12 @@ function CrawlMarker({
     )
 }
 
-export default function CrawlRouteMap({ points, focusPoint, showUserLocation, animateTimeline = false, timelineDelayMs = 1500 }: CrawlRouteMapProps) {
+export default function CrawlRouteMap({ points, focusPoint, showUserLocation, animateTimeline = false, timelineDelayMs = 1500, revealSequence = false }: CrawlRouteMapProps) {
     const [segments, setSegments] = useState<[number, number][][]>([])
     const [gapCount, setGapCount] = useState(0)
-    const [activePointIndex, setActivePointIndex] = useState<number>(0)
+    const [activePointIndex, setActivePointIndex] = useState<number>(revealSequence ? -1 : 0)
     const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
+    const [sequenceComplete, setSequenceComplete] = useState(false)
 
     const normalizedPoints = useMemo(
         () =>
@@ -298,6 +302,38 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
         return () => clearInterval(interval)
     }, [animateTimeline, timelineDelayMs, normalizedPoints.length, segments.length, isPaused])
 
+    // Sequential reveal animation (plays once, no loop)
+    useEffect(() => {
+        if (!revealSequence || normalizedPoints.length === 0 || segments.length === 0 || sequenceComplete) return
+
+        let currentStep = 0
+        const totalSteps = normalizedPoints.length + segments.length
+
+        const revealNext = () => {
+            if (currentStep >= totalSteps) {
+                setSequenceComplete(true)
+                return
+            }
+
+            if (currentStep % 2 === 0) {
+                // Even steps: reveal cafe
+                setActivePointIndex(currentStep / 2)
+                setActiveSegmentIndex(-1)
+            } else {
+                // Odd steps: reveal segment
+                setActiveSegmentIndex(Math.floor(currentStep / 2))
+            }
+
+            currentStep++
+            setTimeout(revealNext, timelineDelayMs)
+        }
+
+        // Start the sequence after a short delay
+        const startTimeout = setTimeout(revealNext, 500)
+
+        return () => clearTimeout(startTimeout)
+    }, [revealSequence, normalizedPoints.length, segments.length, timelineDelayMs, sequenceComplete])
+
     return (
         <div className="relative h-full w-full z-0">
             <MapContainer
@@ -315,14 +351,15 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                     <CrawlMarker
                         key={p.cafeSlug || idx}
                         point={p}
-                        isActive={animateTimeline ? idx === activePointIndex : false}
+                        isActive={revealSequence ? idx <= activePointIndex : animateTimeline ? idx === activePointIndex : true}
+                        isRevealed={revealSequence ? idx <= activePointIndex : true}
                     />
                 ))}
                 {segments.map((segment, idx) => (
                     <Polyline
                         key={`seg-${idx}`}
                         positions={segment}
-                        pathOptions={getCrawlSegmentStyle(idx, animateTimeline ? idx === activeSegmentIndex : false)}
+                        pathOptions={getCrawlSegmentStyle(idx, revealSequence ? idx <= activeSegmentIndex : animateTimeline ? idx === activeSegmentIndex : true, revealSequence ? idx <= activeSegmentIndex : true)}
                     />
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />

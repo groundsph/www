@@ -220,12 +220,12 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                 <motion.section variants={fadeInUp} className="mb-12">
                     <div className="rounded-2xl overflow-hidden border border-secondary/20 shadow-sm">
                         <div className="h-[420px] w-full">
-                            <CrawlRouteMap
-                                points={mapPoints}
-                                showUserLocation={true}
-                                animateTimeline={true}
-                                timelineDelayMs={1000}
-                            />
+                        <CrawlRouteMap
+                            points={mapPoints}
+                            showUserLocation={true}
+                            revealSequence={true}
+                            timelineDelayMs={1000}
+                        />
                         </div>
                     </div>
                     <div className="flex items-center gap-2 mt-4 text-sm text-text/60">

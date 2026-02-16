@@ -27,6 +27,7 @@ interface CrawlRouteMapProps {
     showUserLocation?: boolean
     animateTimeline?: boolean
     timelineDelayMs?: number
+    revealSequence?: boolean
 }
 
 export default function CrawlRouteMap({
@@ -35,6 +36,7 @@ export default function CrawlRouteMap({
     showUserLocation,
     animateTimeline,
     timelineDelayMs,
+    revealSequence,
 }: CrawlRouteMapProps) {
     return (
         <CrawlRouteMapInternal
@@ -43,6 +45,7 @@ export default function CrawlRouteMap({
             showUserLocation={showUserLocation}
             animateTimeline={animateTimeline}
             timelineDelayMs={timelineDelayMs}
+            revealSequence={revealSequence}
         />
     )
 }

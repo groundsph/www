@@ -560,8 +560,7 @@ export default function CrawlEditor({
                             <CrawlRouteMap
                                 points={mapPoints}
                                 focusPoint={focusPoint}
-                                animateTimeline={true}
-                                timelineDelayMs={800}
+                                animateTimeline={false}
                             />
                         </div>
 
@@ -571,8 +570,7 @@ export default function CrawlEditor({
                                 <CrawlRouteMap
                                     points={mapPoints}
                                     focusPoint={focusPoint}
-                                    animateTimeline={true}
-                                    timelineDelayMs={800}
+                                    animateTimeline={false}
                                 />
                             </div>
                         )}

@@ -242,6 +242,13 @@
     }
 }
 
+/* Hidden marker state */
+.crawl-marker-hidden {
+    opacity: 0;
+    transform: scale(0.6);
+    pointer-events: none;
+}
+
 /* Marker entrance animation */
 @keyframes marker-enter {
     0% {
@@ -255,6 +262,11 @@
 }
 
 /* Base marker styles with transition */
+.crawl-marker-icon {
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .crawl-marker-pin {
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
                 border-color 0.4s ease,
@@ -275,6 +287,11 @@
         0 6px 20px rgba(116, 81, 45, 0.6),
         0 4px 8px rgba(116, 81, 45, 0.4),
         0 0 30px rgba(116, 81, 45, 0.3);
+}
+
+/* Hidden segment state */
+.crawl-route-segment-hidden {
+    opacity: 0;
 }
 
 /* Segment entrance animation */
