@@ -1924,14 +1924,25 @@ export default function Profile() {
                     variants={item}
                     className='mt-10'
                 >
-                    <div className='flex items-center gap-2 mb-4 flex-wrap'>
-                        <FileText className='w-5 h-5' />
-                        <h2 className='text-xl font-semibold font-serif'>
-                            Blogs
-                        </h2>
-                        <span className='bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full ml-auto'>
-                            {userBlogs.length}
-                        </span>
+                    <div className='flex items-center justify-between mb-4 flex-wrap gap-2'>
+                        <div className='flex items-center gap-2'>
+                            <FileText className='w-5 h-5' />
+                            <h2 className='text-xl font-semibold font-serif'>
+                                Blogs
+                            </h2>
+                        </div>
+                        <div className='flex items-center gap-3'>
+                            <Link
+                                href='/blog/new'
+                                className='text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1'
+                            >
+                                <Edit2 className='w-4 h-4' />
+                                Write Blog
+                            </Link>
+                            <span className='bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                                {userBlogs.length}
+                            </span>
+                        </div>
                     </div>
 
                     {userBlogs.length > 0 ? (
@@ -1984,22 +1995,13 @@ export default function Profile() {
                                 ))}
                             </div>
 
-                            <div className='flex gap-3 mt-4'>
-                                <Link
-                                    href='/profile/blogs'
-                                    className='flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
-                                >
-                                    <FileText className='w-4 h-4' />
-                                    Manage Blogs
-                                </Link>
-                                <Link
-                                    href='/blog/new'
-                                    className='flex items-center justify-center gap-2 px-4 py-3 bg-background border border-primary text-primary rounded-lg font-semibold hover:bg-primary/5 transition-colors'
-                                >
-                                    <Edit2 className='w-4 h-4' />
-                                    Write Blog
-                                </Link>
-                            </div>
+                            <Link
+                                href='/profile/blogs'
+                                className='mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                            >
+                                <FileText className='w-4 h-4' />
+                                Manage Blogs
+                            </Link>
                         </div>
                     ) : (
                         <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
