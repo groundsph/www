@@ -411,6 +411,7 @@ export default function CommunityBlogEditor() {
                                 />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                                 <button
+                                    type="button"
                                     onClick={() => setCoverImage(null)}
                                     className="absolute top-3 right-3 p-2 bg-white/90 text-red-500 rounded-lg hover:bg-white hover:scale-110 shadow-sm transition-all opacity-0 group-hover:opacity-100"
                                     aria-label="Remove cover image"
@@ -420,6 +421,7 @@ export default function CommunityBlogEditor() {
                             </div>
                         ) : (
                             <button
+                                type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading}
                                 className="w-full aspect-video rounded-2xl border-2 border-dashed border-text/10 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 flex flex-col items-center justify-center gap-3 text-text/40 hover:text-primary group"
@@ -541,6 +543,7 @@ export default function CommunityBlogEditor() {
                             <AnimatePresence>
                                 {modelLoadError && (
                                     <motion.button
+                                        type="button"
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.9 }}
@@ -558,6 +561,7 @@ export default function CommunityBlogEditor() {
 
                             {/* Generate Button */}
                             <button
+                                type="button"
                                 onClick={handleGenerateExcerpt}
                                 disabled={!canGenerateExcerpt}
                                 className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-primary to-primary/80 rounded-lg hover:shadow-md hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all active:scale-95"
