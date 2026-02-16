@@ -15,15 +15,17 @@ export function buildCrawlMarkerHtml(input: {
     index?: number
     cafeSlug?: string
     showTooltip?: boolean
+    isActive?: boolean
 }) {
     const image = escapeHtml(input.imageUrl || CAFE_PLACEHOLDER_URL)
     const alt = escapeHtml(input.label ?? "Cafe")
     const number = typeof input.index === "number" ? input.index : null
     const name = input.label ? escapeHtml(input.label) : null
     const showTooltipClass = input.showTooltip ? "has-tooltip" : ""
+    const isActiveClass = input.isActive ? "crawl-marker-active" : ""
 
     return `
-        <div class="crawl-marker-pin ${showTooltipClass}" data-cafe-slug="${input.cafeSlug || ''}">
+        <div class="crawl-marker-pin ${showTooltipClass} ${isActiveClass}" data-cafe-slug="${input.cafeSlug || ''}">
             ${number !== null ? `<div class="crawl-marker-number">${number}</div>` : ""}
             <div class="crawl-marker-circle" style="background-image:url('${image}')" aria-label="${alt}"></div>
             ${name ? `<div class="crawl-marker-tooltip">${name}</div>` : ""}

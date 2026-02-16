@@ -89,17 +89,20 @@ interface CrawlRouteMapProps {
     points: { lat: number; lng: number; imageUrl?: string | null; label?: string; index?: number; cafeSlug?: string }[]
     focusPoint?: { lat: number; lng: number } | null
     showUserLocation?: boolean
+    animateTimeline?: boolean
+    timelineDelayMs?: number
 }
 
-const markerIcon = (point: CrawlRouteMapProps["points"][number], showTooltip: boolean) =>
+const markerIcon = (point: CrawlRouteMapProps["points"][number], showTooltip: boolean, isActive = false) =>
     new DivIcon({
-        className: "crawl-marker-icon",
+        className: `crawl-marker-icon ${isActive ? "crawl-marker-active" : ""}`,
         html: buildCrawlMarkerHtml({ 
             imageUrl: point.imageUrl ?? null, 
             label: point.label, 
             index: point.index,
             cafeSlug: point.cafeSlug,
-            showTooltip 
+            showTooltip,
+            isActive
         }),
         iconSize: [44, 44],
         iconAnchor: [22, 44],
@@ -134,10 +137,12 @@ function UserLocationMarker() {
 // Individual marker component with click/tap handling
 function CrawlMarker({ 
     point, 
-    index 
+    index,
+    isActive
 }: { 
     point: CrawlRouteMapProps["points"][number]
-    index: number 
+    index: number
+    isActive?: boolean
 }) {
     const router = useRouter()
     const [showTooltip, setShowTooltip] = useState(false)
@@ -184,7 +189,7 @@ function CrawlMarker({
         <Marker
             key={`${point.lat}-${point.lng}-${index}`}
             position={[point.lat, point.lng]}
-            icon={markerIcon(point, showTooltip)}
+            icon={markerIcon(point, showTooltip, isActive)}
             eventHandlers={{
                 click: handleClick,
             }}
@@ -192,9 +197,11 @@ function CrawlMarker({
     )
 }
 
-export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: CrawlRouteMapProps) {
+export default function CrawlRouteMap({ points, focusPoint, showUserLocation, animateTimeline = false, timelineDelayMs = 1500 }: CrawlRouteMapProps) {
     const [segments, setSegments] = useState<[number, number][][]>([])
     const [gapCount, setGapCount] = useState(0)
+    const [activePointIndex, setActivePointIndex] = useState<number>(0)
+    const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
 
     const normalizedPoints = useMemo(
         () =>
@@ -253,6 +260,34 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
         }
     }, [normalizedPoints])
 
+    // Timeline animation
+    useEffect(() => {
+        if (!animateTimeline || normalizedPoints.length === 0) return
+
+        const totalSteps = normalizedPoints.length + segments.length
+        let currentStep = 0
+
+        const interval = setInterval(() => {
+            if (currentStep >= totalSteps) {
+                currentStep = 0
+            }
+
+            if (currentStep % 2 === 0) {
+                // Even steps: highlight cafe
+                setActivePointIndex(currentStep / 2)
+                setActiveSegmentIndex(-1)
+            } else {
+                // Odd steps: draw segment
+                setActiveSegmentIndex(Math.floor(currentStep / 2))
+                setActivePointIndex(-1)
+            }
+
+            currentStep++
+        }, timelineDelayMs)
+
+        return () => clearInterval(interval)
+    }, [animateTimeline, timelineDelayMs, normalizedPoints.length, segments.length])
+
     return (
         <div className="relative h-full w-full z-0">
             <MapContainer
@@ -271,13 +306,14 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation }: 
                         key={`${p.lat}-${p.lng}-${idx}`}
                         point={p}
                         index={idx}
+                        isActive={animateTimeline ? idx === activePointIndex : false}
                     />
                 ))}
                 {segments.map((segment, idx) => (
                     <Polyline
                         key={`seg-${idx}`}
                         positions={segment}
-                        pathOptions={getCrawlSegmentStyle(idx)}
+                        pathOptions={getCrawlSegmentStyle(idx, animateTimeline ? idx === activeSegmentIndex : false)}
                     />
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />

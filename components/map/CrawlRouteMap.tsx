@@ -25,18 +25,24 @@ interface CrawlRouteMapProps {
     }[]
     focusPoint?: { lat: number; lng: number } | null
     showUserLocation?: boolean
+    animateTimeline?: boolean
+    timelineDelayMs?: number
 }
 
 export default function CrawlRouteMap({
     points,
     focusPoint,
     showUserLocation,
+    animateTimeline,
+    timelineDelayMs,
 }: CrawlRouteMapProps) {
     return (
         <CrawlRouteMapInternal
             points={points}
             focusPoint={focusPoint}
             showUserLocation={showUserLocation}
+            animateTimeline={animateTimeline}
+            timelineDelayMs={timelineDelayMs}
         />
     )
 }
