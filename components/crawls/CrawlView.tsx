@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { motion } from "motion/react"
 import {
     ArrowLeft,
     Coffee,
@@ -15,6 +16,25 @@ import {
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 import CrawlActions from "@/components/crawls/CrawlActions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+
+const staggerContainer = {
+    animate: {
+        transition: {
+            staggerChildren: 0.1,
+        },
+    },
+}
+
+const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 },
+}
+
+const listItem = {
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+}
 
 interface CafeItem {
     id: string
@@ -92,18 +112,25 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                 </div>
             )}
 
-            <article className="max-w-6xl px-4 py-8 md:py-12 w-full">
+            <motion.article
+                className="max-w-6xl px-4 py-8 md:py-12 w-full"
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
+            >
                 {/* Back Link */}
-                <Link
-                    href="/community"
-                    className="inline-flex items-center gap-2 text-text/60 hover:text-primary transition-colors mb-8"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span className="text-sm font-medium">Back to Community</span>
-                </Link>
+                <motion.div variants={fadeInUp}>
+                    <Link
+                        href="/community"
+                        className="inline-flex items-center gap-2 text-text/60 hover:text-primary transition-colors mb-8"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="text-sm font-medium">Back to Community</span>
+                    </Link>
+                </motion.div>
 
                 {/* Header */}
-                <header className="mb-8">
+                <motion.header variants={fadeInUp} className="mb-8">
                     {/* Title */}
                     <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif text-text mb-4 leading-tight">
                         {crawl.title}
@@ -191,10 +218,10 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                             isOwner={crawl.isOwner ?? false}
                         />
                     </div>
-                </header>
+                </motion.header>
 
                 {/* Map Section */}
-                <section className="mb-12">
+                <motion.section variants={fadeInUp} className="mb-12">
                     <div className="rounded-2xl overflow-hidden border border-secondary/20 shadow-sm">
                         <div className="h-[420px] w-full">
                             <CrawlRouteMap points={mapPoints} showUserLocation={true} />
@@ -204,16 +231,20 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                         <MapPin className="w-4 h-4" />
                         <span>{crawl.itemCount || 0} cafes in this route</span>
                     </div>
-                </section>
+                </motion.section>
 
                 {/* Cafes List */}
-                <section>
+                <motion.section variants={fadeInUp}>
                     <h2 className="text-2xl font-bold font-serif text-text mb-6">
                         Cafes on this Route
                     </h2>
 
                     {crawl.cafes.length === 0 ? (
-                        <div className="text-center py-16">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="text-center py-16"
+                        >
                             <Coffee className="w-16 h-16 text-secondary opacity-40 mx-auto mb-4" />
                             <h3 className="text-xl font-serif font-semibold text-text mb-2">
                                 No cafes yet
@@ -221,17 +252,26 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                             <p className="text-text/60">
                                 This crawl is empty.
                             </p>
-                        </div>
+                        </motion.div>
                     ) : (
                         <div className="space-y-4">
                             {crawl.cafes
                                 .sort((a, b) => a.sortOrder - b.sortOrder)
                                 .map((cafe, index) => (
-                                    <Link
+                                    <motion.div
                                         key={cafe.id}
-                                        href={`/cafes/${cafe.slug}`}
-                                        className="flex gap-4 p-4 bg-background border border-secondary/20 hover:border-secondary/40 rounded-xl transition-all group shadow-sm hover:shadow-md"
+                                        variants={listItem}
+                                        custom={index}
+                                        initial="initial"
+                                        animate="animate"
+                                        transition={{ delay: index * 0.05, duration: 0.4 }}
+                                        whileHover={{ scale: 1.02, y: -2 }}
+                                        whileTap={{ scale: 0.98 }}
                                     >
+                                        <Link
+                                            href={`/cafes/${cafe.slug}`}
+                                            className="flex gap-4 p-4 bg-background border border-secondary/20 hover:border-secondary/40 rounded-xl transition-all group shadow-sm hover:shadow-md"
+                                        >
                                         {/* Index */}
                                         <div className="hidden md:flex shrink-0 w-8 h-8 rounded-full bg-secondary/10 items-center justify-center">
                                             <span className="text-sm font-medium text-text/50">
@@ -298,11 +338,12 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                                             )}
                                         </div>
                                     </Link>
+                                    </motion.div>
                                 ))}
                         </div>
                     )}
-                </section>
-            </article>
+                </motion.section>
+            </motion.article>
         </>
     )
 }

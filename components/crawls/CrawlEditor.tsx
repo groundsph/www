@@ -31,6 +31,7 @@ import { uploadCrawlCover } from "@/utils/storage/client"
 import { compressCollectionCover } from "@/utils/image-processing"
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 import { normalizeLatLng } from "@/utils/map/coords"
+import { motion } from "motion/react"
 
 interface CrawlItem {
     id?: string
@@ -71,6 +72,22 @@ interface CrawlEditorProps {
     crawl: Crawl
     mode?: "create" | "edit"
 }
+
+const staggerContainer = {
+    animate: {
+        transition: {
+            staggerChildren: 0.1,
+        },
+    },
+}
+
+const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 },
+}
+
+
 
 export default function CrawlEditor({
     crawl,
@@ -416,10 +433,18 @@ export default function CrawlEditor({
                 </div>
             </div>
 
-            <div className='max-w-6xl w-full mx-auto px-6 py-8'>
-                <div className='space-y-8'>
+            <motion.div
+                className='max-w-6xl w-full mx-auto px-6 py-8'
+                variants={staggerContainer}
+                initial='initial'
+                animate='animate'
+            >
+                <motion.div className='space-y-8' variants={fadeInUp}>
                     {/* Top row: Cover + Details */}
-                    <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+                    <motion.div
+                        className='grid grid-cols-1 lg:grid-cols-3 gap-8'
+                        variants={fadeInUp}
+                    >
                         <div className='lg:col-span-1'>
                             {/* Cover Image */}
                             <div>
@@ -504,7 +529,7 @@ export default function CrawlEditor({
                                 />
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Route Preview */}
                     <div>
@@ -560,12 +585,25 @@ export default function CrawlEditor({
 
                         {/* Search Results */}
                         {searchResults.length > 0 && (
-                            <div className='mt-2 border border-secondary/20 rounded-xl overflow-hidden divide-y divide-secondary/10'>
-                                {searchResults.map((cafe) => (
-                                    <button
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className='mt-2 border border-secondary/20 rounded-xl overflow-hidden divide-y divide-secondary/10'
+                            >
+                                {searchResults.map((cafe, index) => (
+                                    <motion.button
                                         key={cafe.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.03 }}
+                                        whileHover={{
+                                            scale: 1.01,
+                                            backgroundColor: "rgba(0,0,0,0.02)",
+                                        }}
+                                        whileTap={{ scale: 0.99 }}
                                         onClick={() => addCafe(cafe)}
-                                        className='w-full flex items-center gap-3 p-3 hover:bg-secondary/5 transition-colors text-left'
+                                        className='w-full flex items-center gap-3 p-3 transition-colors text-left'
                                     >
                                         <div className='relative w-10 h-10 rounded-lg overflow-hidden bg-secondary/10 shrink-0'>
                                             {cafe.thumbnail ? (
@@ -593,9 +631,9 @@ export default function CrawlEditor({
                                             </p>
                                         </div>
                                         <Plus className='w-5 h-5 text-primary shrink-0' />
-                                    </button>
+                                    </motion.button>
                                 ))}
-                            </div>
+                            </motion.div>
                         )}
                     </div>
 
@@ -608,7 +646,11 @@ export default function CrawlEditor({
                         </div>
 
                         {items.length === 0 ? (
-                            <div className='text-center py-12 border border-dashed border-secondary/30 rounded-xl'>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className='text-center py-12 border border-dashed border-secondary/30 rounded-xl'
+                            >
                                 <MapIcon className='w-10 h-10 text-secondary opacity-40 mx-auto mb-3' />
                                 <p className='text-text/60'>
                                     No cafes added yet
@@ -616,13 +658,25 @@ export default function CrawlEditor({
                                 <p className='text-sm text-text/40'>
                                     Search above to add cafes to your route
                                 </p>
-                            </div>
+                            </motion.div>
                         ) : (
                             <div className='space-y-3'>
                                 {items.map((item, index) => (
-                                    <div
+                                    <motion.div
                                         key={`${item.cafeId}-${index}`}
-                                        className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl'
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                        transition={{
+                                            delay: index * 0.05,
+                                            duration: 0.3,
+                                        }}
+                                        whileHover={{
+                                            scale: 1.01,
+                                            backgroundColor:
+                                                "rgba(0,0,0,0.02)",
+                                        }}
+                                        className='flex items-start gap-3 p-4 bg-secondary/5 rounded-xl cursor-default'
                                     >
                                         {/* Index */}
                                         <div className='flex flex-col items-center gap-1 pt-1'>
@@ -707,13 +761,13 @@ export default function CrawlEditor({
                                                 <X className='w-4 h-4' />
                                             </button>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
                         )}
                     </div>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
 
             {/* Delete Confirmation */}
             {showDeleteConfirm && (
