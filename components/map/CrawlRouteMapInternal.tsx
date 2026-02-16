@@ -203,6 +203,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
     const [activePointIndex, setActivePointIndex] = useState<number>(revealSequence ? -1 : 0)
     const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
     const [isLoadingRoutes, setIsLoadingRoutes] = useState(true)
+    const [hasFetchedRoutes, setHasFetchedRoutes] = useState(false)
 
     const normalizedPoints = useMemo(
         () =>
@@ -254,15 +255,20 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
             )
 
             if (cancelled) return
+            const validSegments = results.filter(Boolean) as [number, number][][]
             setGapCount(results.filter((r) => !r).length)
-            setSegments(results.filter(Boolean) as [number, number][][])
+            setSegments(validSegments)
             
-            // Wait for Leaflet to render the polylines before hiding loader
-            setTimeout(() => {
-                if (!cancelled) {
-                    setIsLoadingRoutes(false)
-                }
-            }, 300)
+            // Only show content if we actually have route data
+            if (validSegments.length > 0) {
+                setHasFetchedRoutes(true)
+                // Wait for Leaflet to render the polylines before hiding loader
+                setTimeout(() => {
+                    if (!cancelled) {
+                        setIsLoadingRoutes(false)
+                    }
+                }, 300)
+            }
         }
 
         run()
@@ -327,8 +333,8 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                     attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                     url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
                 />
-                {/* Markers and routes - always rendered but opacity controlled via CSS */}
-                <div className={`transition-opacity duration-700 ease-out ${isLoadingRoutes ? 'opacity-0' : 'opacity-100'}`}>
+                {/* Markers and routes - only show after successful fetch */}
+                <div className={`transition-opacity duration-700 ease-out ${!hasFetchedRoutes || isLoadingRoutes ? 'opacity-0' : 'opacity-100'}`}>
                     {normalizedPoints.map((p, idx) => (
                         <CrawlMarker
                             key={p.cafeSlug || idx}
@@ -351,10 +357,10 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                 {showUserLocation && <UserLocationMarker />}
             </MapContainer>
             
-            {/* Loading overlay with smooth fade */}
+            {/* Loading overlay with smooth fade - show until we have routes */}
             <div 
                 className={`absolute inset-0 bg-secondary/20 backdrop-blur-[2px] flex items-center justify-center z-10 transition-opacity duration-700 ease-out pointer-events-none ${
-                    isLoadingRoutes ? 'opacity-100' : 'opacity-0'
+                    !hasFetchedRoutes || isLoadingRoutes ? 'opacity-100' : 'opacity-0'
                 }`}
             >
                 <div className="text-center bg-background/90 px-6 py-4 rounded-xl shadow-lg">
