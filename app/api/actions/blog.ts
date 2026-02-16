@@ -375,6 +375,19 @@ export async function getAdminBlogPosts(params: AdminBlogParams = {}): Promise<P
     }
 }
 
+/**
+ * Retrieves paginated blog posts for writers and admins.
+ * Supports filtering by status, category, and search query.
+ * Returns empty results if user is not authenticated or lacks writer/admin role.
+ *
+ * @param params - Query and pagination parameters
+ * @param params.page - Page number (1-indexed, defaults to 1)
+ * @param params.pageSize - Number of posts per page (defaults to 20)
+ * @param params.status - Filter by post status (optional)
+ * @param params.category - Filter by post category (optional)
+ * @param params.search - Search term to filter posts (optional)
+ * @returns Promise resolving to PaginatedBlogResult containing posts and metadata
+ */
 export async function getWriterBlogPosts(params: AdminBlogParams = {}): Promise<PaginatedBlogResult> {
     const user = await getCurrentUser()
     if (!user) return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
@@ -386,47 +399,22 @@ export async function getWriterBlogPosts(params: AdminBlogParams = {}): Promise<
     }
 
     const { page = 1, pageSize = 20, status, category, search } = params
-    const offset = (page - 1) * pageSize
 
-    const conditions = [eq(blogPosts.authorId, user.id)]
+    const conditions: ReturnType<typeof eq>[] = []
     if (status) conditions.push(eq(blogPosts.status, status))
     if (category) conditions.push(eq(blogPosts.category, category))
 
-    const whereClause = and(...conditions)
-    const searchCondition = search ? buildBlogSearchCondition(search) : undefined
-    const finalWhere = searchCondition ? and(whereClause, searchCondition) : whereClause
-
-    const [postsResult, countResult] = await Promise.all([
-        db.select({
-            id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-            content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
-            cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
-            tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
-            publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
-        })
-            .from(blogPosts)
-            .where(finalWhere)
-            .orderBy(desc(blogPosts.createdAt))
-            .limit(pageSize)
-            .offset(offset),
-        db.select({ count: count() }).from(blogPosts).where(finalWhere),
-    ])
-
-    if (postsResult.length === 0) {
-        return { posts: [], total: countResult[0]?.count ?? 0, page, pageSize, hasMore: false }
+    let additionalConditions: ReturnType<typeof and> | undefined
+    if (conditions.length > 0) {
+        additionalConditions = and(...conditions)
     }
 
-    const authorResult = await db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
-        .from(profiles).where(eq(profiles.id, user.id)).limit(1)
-
-    const total = countResult[0]?.count ?? 0
-    return {
-        posts: postsResult.map(p => mapBlogPost(p, authorResult[0], null)),
-        total,
-        page,
-        pageSize,
-        hasMore: offset + pageSize < total,
+    if (search) {
+        const searchCondition = buildBlogSearchCondition(search)
+        additionalConditions = additionalConditions ? and(additionalConditions, searchCondition) : searchCondition
     }
+
+    return fetchUserBlogsWithPagination({ page, pageSize, userId: user.id, additionalConditions })
 }
 
 export async function getWriterBlogPostById(id: string): Promise<BlogPost | null> {
@@ -743,37 +731,22 @@ export async function toggleFeatured(postId: string, featured: boolean): Promise
 }
 
 // ============================================
-// Community User Operations
+// Helper Functions for User Blog Queries
 // ============================================
 
-export async function createCommunityBlogPost(input: {
-    title: string
-    excerpt?: string
-    content: string
-    cover_image?: string | null
-}): Promise<BlogActionResult> {
-    return createBlogPost({
-        title: input.title,
-        excerpt: input.excerpt,
-        content: input.content,
-        cover_image: input.cover_image,
-        category: "community",
-        status: "pending",
-        tags: [],
-        featured: false,
-        images: [],
-        tagged_cafe_ids: [],
-        crawl_id: null,
-        cafe_id: null,
-    })
+interface UserBlogQueryParams {
+    page: number
+    pageSize: number
+    userId: string
+    additionalConditions?: ReturnType<typeof and>
 }
 
-export async function getUserBlogPosts(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedBlogResult> {
-    const userId = await getCurrentUserId()
-    if (!userId) return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
-
-    const { page = 1, pageSize = 20 } = params
+async function fetchUserBlogsWithPagination(params: UserBlogQueryParams): Promise<PaginatedBlogResult> {
+    const { page, pageSize, userId, additionalConditions } = params
     const offset = (page - 1) * pageSize
+
+    const baseConditions = eq(blogPosts.authorId, userId)
+    const finalWhere = additionalConditions ? and(baseConditions, additionalConditions) : baseConditions
 
     const [postsResult, countResult] = await Promise.all([
         db.select({
@@ -784,11 +757,11 @@ export async function getUserBlogPosts(params: { page?: number; pageSize?: numbe
             publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
         })
             .from(blogPosts)
-            .where(eq(blogPosts.authorId, userId))
+            .where(finalWhere)
             .orderBy(desc(blogPosts.createdAt))
             .limit(pageSize)
             .offset(offset),
-        db.select({ count: count() }).from(blogPosts).where(eq(blogPosts.authorId, userId)),
+        db.select({ count: count() }).from(blogPosts).where(finalWhere),
     ])
 
     if (postsResult.length === 0) {
@@ -806,6 +779,75 @@ export async function getUserBlogPosts(params: { page?: number; pageSize?: numbe
         pageSize,
         hasMore: offset + pageSize < total,
     }
+}
+
+// ============================================
+// Community User Operations
+// ============================================
+
+/**
+ * Creates a community blog post for the current user.
+ * Community posts are always created with "pending" status for moderation.
+ * Revalidates the /blog path on successful creation.
+ *
+ * @param input - The blog post data
+ * @param input.title - The post title (required, must not be empty)
+ * @param input.excerpt - Optional post excerpt/summary
+ * @param input.content - The post content (required, must not be empty)
+ * @param input.cover_image - Optional cover image URL
+ * @returns Promise resolving to BlogActionResult with success status and slug on success
+ */
+export async function createCommunityBlogPost(input: {
+    title: string
+    excerpt?: string
+    content: string
+    cover_image?: string | null
+}): Promise<BlogActionResult> {
+    // Validate required fields
+    if (!input.title || input.title.trim().length === 0) {
+        return { success: false, error: "Title is required" }
+    }
+    if (!input.content || input.content.trim().length === 0) {
+        return { success: false, error: "Content is required" }
+    }
+
+    const result = await createBlogPost({
+        title: input.title,
+        excerpt: input.excerpt,
+        content: input.content,
+        cover_image: input.cover_image,
+        category: "community",
+        status: "pending",
+        tags: [],
+        featured: false,
+        images: [],
+        tagged_cafe_ids: [],
+        crawl_id: null,
+        cafe_id: null,
+    })
+
+    if (result.success) {
+        revalidatePath("/blog")
+    }
+
+    return result
+}
+
+/**
+ * Retrieves paginated blog posts for the currently authenticated user.
+ * Returns empty results if user is not authenticated.
+ *
+ * @param params - Pagination parameters
+ * @param params.page - Page number (1-indexed, defaults to 1)
+ * @param params.pageSize - Number of posts per page (defaults to 20)
+ * @returns Promise resolving to PaginatedBlogResult containing posts and metadata
+ */
+export async function getUserBlogPosts(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedBlogResult> {
+    const userId = await getCurrentUserId()
+    if (!userId) return { posts: [], total: 0, page: 1, pageSize: 20, hasMore: false }
+
+    const { page = 1, pageSize = 20 } = params
+    return fetchUserBlogsWithPagination({ page, pageSize, userId })
 }
 
 export async function getBlogPostById(postId: string): Promise<BlogPost | null> {
