@@ -274,19 +274,17 @@
     animation: marker-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Active marker styles */
+/* Active marker styles - NO PULSE, just subtle highlight */
 .crawl-marker-active {
     z-index: 1000 !important;
 }
 
 .crawl-marker-active .crawl-marker-pin {
-    animation: crawl-marker-pulse 1.5s ease-in-out infinite, marker-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     border-color: #e8d5b7;
-    transform: scale(1.15);
+    transform: scale(1.05);
     box-shadow:
-        0 6px 20px rgba(116, 81, 45, 0.6),
-        0 4px 8px rgba(116, 81, 45, 0.4),
-        0 0 30px rgba(116, 81, 45, 0.3);
+        0 4px 12px rgba(116, 81, 45, 0.4),
+        0 2px 4px rgba(116, 81, 45, 0.2);
 }
 
 /* Hidden segment state */
@@ -314,9 +312,8 @@
     animation: segment-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Active segment styles */
+/* Active segment styles - NO PULSE, just subtle highlight */
 .crawl-route-segment-active {
-    animation: crawl-route-glow 1.5s ease-in-out infinite, segment-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    filter: drop-shadow(0 0 10px rgba(116, 81, 45, 0.9));
-    stroke-width: 4;
+    filter: drop-shadow(0 0 6px rgba(116, 81, 45, 0.6));
+    stroke-width: 5;
 }

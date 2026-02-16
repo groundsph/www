@@ -203,6 +203,8 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
     const [activePointIndex, setActivePointIndex] = useState<number>(revealSequence ? -1 : 0)
     const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
     const [sequenceComplete, setSequenceComplete] = useState(false)
+    const [revealedPoints, setRevealedPoints] = useState<Set<number>>(new Set())
+    const [revealedSegments, setRevealedSegments] = useState<Set<number>>(new Set())
 
     const normalizedPoints = useMemo(
         () =>
@@ -317,11 +319,16 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
 
             if (currentStep % 2 === 0) {
                 // Even steps: reveal cafe
-                setActivePointIndex(currentStep / 2)
+                const pointIndex = currentStep / 2
+                setRevealedPoints(prev => new Set([...prev, pointIndex]))
+                setActivePointIndex(pointIndex)
                 setActiveSegmentIndex(-1)
             } else {
                 // Odd steps: reveal segment
-                setActiveSegmentIndex(Math.floor(currentStep / 2))
+                const segmentIndex = Math.floor(currentStep / 2)
+                setRevealedSegments(prev => new Set([...prev, segmentIndex]))
+                setActiveSegmentIndex(segmentIndex)
+                setActivePointIndex(-1)
             }
 
             currentStep++
@@ -351,15 +358,15 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                     <CrawlMarker
                         key={p.cafeSlug || idx}
                         point={p}
-                        isActive={revealSequence ? idx <= activePointIndex : animateTimeline ? idx === activePointIndex : true}
-                        isRevealed={revealSequence ? idx <= activePointIndex : true}
+                        isActive={!revealSequence && animateTimeline ? idx === activePointIndex : false}
+                        isRevealed={revealSequence ? revealedPoints.has(idx) : true}
                     />
                 ))}
                 {segments.map((segment, idx) => (
                     <Polyline
                         key={`seg-${idx}`}
                         positions={segment}
-                        pathOptions={getCrawlSegmentStyle(idx, revealSequence ? idx <= activeSegmentIndex : animateTimeline ? idx === activeSegmentIndex : true, revealSequence ? idx <= activeSegmentIndex : true)}
+                        pathOptions={getCrawlSegmentStyle(idx, !revealSequence && animateTimeline ? idx === activeSegmentIndex : false, revealSequence ? revealedSegments.has(idx) : true)}
                     />
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />
