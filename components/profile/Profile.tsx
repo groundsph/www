@@ -6,6 +6,7 @@ import { getFullProfileData, updateProfile } from "@/app/api/actions/profile"
 import { uploadAvatar } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
+import type { BlogPost } from "@/utils/types/blog"
 import { motion, AnimatePresence } from "motion/react"
 import {
     Award,
@@ -16,6 +17,7 @@ import {
     Coffee,
     Compass,
     Edit2,
+    FileText,
     Layers,
     Loader2,
     MapPin,
@@ -48,6 +50,7 @@ import {
     getSavedCafeCrawls,
     getUserCafeCrawls,
 } from "@/app/api/actions/cafe-crawls"
+import { getUserBlogPosts } from "@/app/api/actions/blog"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
 
@@ -256,6 +259,9 @@ export default function Profile() {
         }[]
     >([])
 
+    // User Blogs
+    const [userBlogs, setUserBlogs] = useState<BlogPost[]>([])
+
     // Redirect if not authenticated
     useEffect(() => {
         if (!user && !loading) {
@@ -350,6 +356,20 @@ export default function Profile() {
             }
         }
         fetchSavedCollections()
+    }, [user])
+
+    // Fetch user blogs separately
+    useEffect(() => {
+        const fetchUserBlogs = async () => {
+            if (!user) return
+            try {
+                const result = await getUserBlogPosts({ pageSize: 3 })
+                setUserBlogs(result.posts)
+            } catch (error) {
+                console.error("Error fetching user blogs:", error)
+            }
+        }
+        fetchUserBlogs()
     }, [user])
 
     // Stable handlers for FollowCounts
@@ -1893,6 +1913,111 @@ export default function Profile() {
                             >
                                 <Bookmark className='w-4 h-4' />
                                 Browse Crawls
+                            </Link>
+                        </div>
+                    )}
+                </motion.section>
+
+                {/* Blogs Section */}
+                <motion.section
+                    variants={item}
+                    className='mt-10'
+                >
+                    <div className='flex items-center gap-2 mb-4 flex-wrap'>
+                        <FileText className='w-5 h-5' />
+                        <h2 className='text-xl font-semibold font-serif'>
+                            Blogs
+                        </h2>
+                        <span className='bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full ml-auto'>
+                            {userBlogs.length}
+                        </span>
+                    </div>
+
+                    {userBlogs.length > 0 ? (
+                        <div className='bg-text/5 border border-text/10 rounded-xl p-6'>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                {userBlogs.map((blog) => (
+                                    <motion.div
+                                        key={blog.id}
+                                        whileHover={{ scale: 1.02, y: -2 }}
+                                    >
+                                        <Link
+                                            href={`/community/blog/${blog.slug}`}
+                                            className='flex items-center gap-3 p-4 bg-background rounded-lg border border-text/10 hover:border-primary/30 transition-all group h-full'
+                                        >
+                                            {blog.cover_image ? (
+                                                <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0'>
+                                                    <Image
+                                                        src={blog.cover_image}
+                                                        alt={blog.title}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className='w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                                    <FileText className='w-5 h-5 text-primary opacity-60' />
+                                                </div>
+                                            )}
+                                            <div className='flex-1 min-w-0'>
+                                                <p className='font-semibold truncate group-hover:text-primary transition-colors'>
+                                                    {blog.title}
+                                                </p>
+                                                <div className='flex items-center gap-2 mt-1'>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                        blog.status === 'published' ? 'text-green-600 bg-green-100' :
+                                                        blog.status === 'pending' ? 'text-orange-600 bg-orange-100' :
+                                                        blog.status === 'draft' ? 'text-yellow-600 bg-yellow-100' :
+                                                        'text-gray-600 bg-gray-100'
+                                                    }`}>
+                                                        {blog.status === 'published' ? 'Published' :
+                                                         blog.status === 'pending' ? 'Pending' :
+                                                         blog.status === 'draft' ? 'Draft' : 'Archived'}
+                                                    </span>
+                                                    {blog.updated_at && (
+                                                        <span className='text-xs text-text/50'>
+                                                            {new Date(blog.updated_at).toLocaleDateString('en-US', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                            })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    </motion.div>
+                                ))}
+                            </div>
+
+                            <div className='flex gap-3 mt-4'>
+                                <Link
+                                    href='/profile/blogs'
+                                    className='flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors'
+                                >
+                                    <FileText className='w-4 h-4' />
+                                    Manage Blogs
+                                </Link>
+                                <Link
+                                    href='/blog/new'
+                                    className='flex items-center justify-center gap-2 px-4 py-3 bg-background border border-primary text-primary rounded-lg font-semibold hover:bg-primary/5 transition-colors'
+                                >
+                                    <Edit2 className='w-4 h-4' />
+                                    Write Blog
+                                </Link>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className='text-center py-10 bg-text/5 rounded-xl border border-text/10'>
+                            <FileText className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
+                            <p className='text-text/60 font-medium mb-4'>
+                                No blog posts yet
+                            </p>
+                            <Link
+                                href='/blog/new'
+                                className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
+                            >
+                                <Edit2 className='w-4 h-4' />
+                                Write Your First Blog
                             </Link>
                         </div>
                     )}
