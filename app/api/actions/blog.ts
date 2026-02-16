@@ -586,6 +586,7 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
 
     if (!inserted) return { success: false, error: "Failed to create blog post" }
 
+    revalidatePath("/blog")
     return { success: true, slug: inserted.slug }
 }
 
