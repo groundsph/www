@@ -14,7 +14,7 @@ import {
 } from "@/utils/types/blog"
 import { format } from "date-fns"
 import { resolveBlogStatus } from "@/utils/blog/moderation"
-import { canSubmitCommunityBlog } from "@/utils/blog/community-posting"
+import { canSubmitBlogPost } from "@/utils/blog/community-posting"
 import { checkBlogPost } from "@/utils/ai/openai-compatible"
 import { revalidatePath } from "next/cache"
 
@@ -517,9 +517,9 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
         userRole = profileResult[0]?.role ?? null
     }
 
-    // Use canSubmitCommunityBlog to check submission eligibility
-    const submissionCheck = canSubmitCommunityBlog({
-        role: userRole,
+    // Use canSubmitBlogPost to check submission eligibility
+    const submissionCheck = canSubmitBlogPost({
+        role: userRole as "user" | "writer" | "admin" | "moderator" | null,
         category: input.category,
         hasCafeOwnership: isOwner,
     })
@@ -545,7 +545,7 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
 
     if (userRole === "user") {
         finalCategory = "community"
-        finalStatus = resolveBlogStatus("pending", false) // Force pending for users
+        finalStatus = "pending" // Force pending for users
     }
 
     // Tier check for cafe owners (requires cafe_id)
