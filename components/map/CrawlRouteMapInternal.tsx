@@ -202,7 +202,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
     const [gapCount, setGapCount] = useState(0)
     const [activePointIndex, setActivePointIndex] = useState<number>(revealSequence ? -1 : 0)
     const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
-    const [isLoadingRoutes, setIsLoadingRoutes] = useState(false)
+    const [isLoadingRoutes, setIsLoadingRoutes] = useState(true)
 
     const normalizedPoints = useMemo(
         () =>
