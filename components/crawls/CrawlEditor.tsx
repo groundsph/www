@@ -99,14 +99,6 @@ const searchResultItem = {
     animate: { opacity: 1, x: 0 },
 }
 
-const listItem = {
-    initial: { opacity: 0, x: -20 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: 20 },
-}
-
-
-
 export default function CrawlEditor({
     crawl,
     mode = "edit",
@@ -685,14 +677,18 @@ export default function CrawlEditor({
                             </motion.div>
                         ) : (
                             <div className='space-y-3'>
-                                <AnimatePresence>
+                                <AnimatePresence mode='popLayout'>
                                     {items.map((item, index) => (
                                         <motion.div
                                             key={item.cafeId}
-                                            variants={listItem}
+                                            layout
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 20 }}
                                             transition={{
-                                                delay: index * 0.05,
-                                                duration: 0.3,
+                                                opacity: { duration: 0.2 },
+                                                x: { duration: 0.3 },
+                                                layout: { duration: 0.3, ease: "easeInOut" },
                                             }}
                                             whileHover={{
                                                 scale: 1.01,

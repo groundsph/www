@@ -32,11 +32,6 @@ const fadeInUp = {
     transition: { duration: 0.5 },
 }
 
-const listItem = {
-    initial: { opacity: 0, x: -20 },
-    animate: { opacity: 1, x: 0 },
-}
-
 interface CafeItem {
     id: string
     cafeId: string
@@ -266,10 +261,14 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                                 .map((cafe, index) => (
                                     <motion.div
                                         key={cafe.id}
-                                        variants={listItem}
-                                        initial="initial"
-                                        animate="animate"
-                                        transition={{ delay: index * 0.05, duration: 0.4 }}
+                                        layout
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{
+                                            opacity: { duration: 0.2 },
+                                            x: { duration: 0.3 },
+                                            layout: { duration: 0.2 },
+                                        }}
                                         whileHover={{ scale: 1.02, y: -2 }}
                                         whileTap={{ scale: 0.98 }}
                                     >
