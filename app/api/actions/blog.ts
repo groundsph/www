@@ -827,10 +827,6 @@ export async function createCommunityBlogPost(input: {
         cafe_id: null,
     })
 
-    if (result.success) {
-        revalidatePath("/blog")
-    }
-
     return result
 }
 
