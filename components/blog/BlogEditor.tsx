@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -15,6 +15,8 @@ import {
     Images,
     MapPin,
     Route,
+    RefreshCw,
+    Sparkles,
 } from "lucide-react"
 import BlogCafePicker from "./BlogCafePicker"
 import BlogCrawlPicker from "./BlogCrawlPicker"
@@ -32,6 +34,17 @@ import { uploadBlogImageAction } from "@/utils/storage/actions"
 import { compressBlogCover } from "@/utils/image-processing"
 import { generateExcerptAction, listModelsAction } from "@/app/api/actions/ai"
 import MarkdownRender from "@/components/ui/MarkdownRender"
+import { useNotification } from "@/components/layout/NotificationProvider"
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const MAX_CONTENT_FOR_EXCERPT = 6000
+const MIN_CONTENT_FOR_EXCERPT = 50
+const AI_COOLDOWN_MS = 20000 // 20 seconds
+const MODEL_RETRY_DELAYS = [500, 1000, 2000] // 0.5s, 1s, 2s
+const MAX_MODEL_RETRIES = 3
 
 interface BlogEditorProps {
     post?: BlogPost
@@ -50,6 +63,7 @@ export default function BlogEditor({
     onCancel,
     allowedCategories,
 }: BlogEditorProps) {
+    const { addNotification } = useNotification()
     const [title, setTitle] = useState(post?.title || "")
     const [slug, setSlug] = useState(post?.slug || "")
     const [excerpt, setExcerpt] = useState(post?.excerpt || "")
@@ -79,36 +93,104 @@ export default function BlogEditor({
     const [availableModels, setAvailableModels] = useState<string[]>([])
     const [selectedModel, setSelectedModel] = useState<string>("")
     const [isLoadingModels, setIsLoadingModels] = useState(true)
+    const [modelLoadError, setModelLoadError] = useState<string | null>(null)
+
+    // Cooldown state
+    const [lastGenerateTime, setLastGenerateTime] = useState<number | null>(null)
+    const [cooldownRemaining, setCooldownRemaining] = useState(0)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-    // Load available models on mount
-    useEffect(() => {
-        const loadModels = async () => {
+    // ============================================================================
+    // Model Loading with Retry
+    // ============================================================================
+
+    const loadModels = useCallback(
+        async (retryAttempt = 0) => {
             setIsLoadingModels(true)
+            setModelLoadError(null)
+
             try {
                 const result = await listModelsAction()
-                if (result.success && result.models) {
+
+                if (result.success && result.models && result.models.length > 0) {
                     setAvailableModels(result.models)
-                    // Default to server-provided model if available, otherwise first model
+                    setModelLoadError(null)
+
+                    // Set default model
                     const defaultModel = result.defaultModel
                     if (defaultModel && result.models.includes(defaultModel)) {
                         setSelectedModel(defaultModel)
-                    } else if (result.models.length > 0) {
+                    } else {
                         setSelectedModel(result.models[0])
                     }
+                } else if (result.error) {
+                    throw new Error(result.error)
+                } else {
+                    throw new Error("No models available")
                 }
-            } catch (err) {
-                console.error("Failed to load models:", err)
+            } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : "Failed to load AI models"
+
+                // Retry logic
+                if (retryAttempt < MAX_MODEL_RETRIES) {
+                    const delay = MODEL_RETRY_DELAYS[retryAttempt] || 2000
+
+                    retryTimeoutRef.current = setTimeout(() => {
+                        loadModels(retryAttempt + 1)
+                    }, delay)
+                } else {
+                    // All retries exhausted
+                    setModelLoadError(errorMessage)
+                    setAvailableModels([])
+                    setSelectedModel("")
+                    addNotification(errorMessage, "error", {
+                        title: "AI Models Unavailable",
+                    })
+                }
             } finally {
                 setIsLoadingModels(false)
             }
+        },
+        [addNotification]
+    )
+
+    // Initial load
+    useEffect(() => {
+        loadModels()
+
+        return () => {
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current)
+            }
+        }
+    }, [loadModels])
+
+    // ============================================================================
+    // Cooldown Timer
+    // ============================================================================
+
+    useEffect(() => {
+        if (!lastGenerateTime) {
+            setCooldownRemaining(0)
+            return
         }
 
-        loadModels()
-    }, [])
-    const galleryInputRef = useRef<HTMLInputElement>(null)
+        const updateCooldown = () => {
+            const elapsed = Date.now() - lastGenerateTime
+            const remaining = Math.max(0, Math.ceil((AI_COOLDOWN_MS - elapsed) / 1000))
+            setCooldownRemaining(remaining)
+        }
 
+        updateCooldown()
+        const interval = setInterval(updateCooldown, 1000)
+
+        return () => clearInterval(interval)
+    }, [lastGenerateTime])
+
+    const galleryInputRef = useRef<HTMLInputElement>(null)
     const categories = allowedCategories
         ? BLOG_CATEGORIES.filter((c) => allowedCategories.includes(c.value))
         : BLOG_CATEGORIES
@@ -453,6 +535,8 @@ export default function BlogEditor({
                             >
                                 {isLoadingModels ? (
                                     <option value=''>Loading models...</option>
+                                ) : modelLoadError ? (
+                                    <option value=''>Models unavailable</option>
                                 ) : availableModels.length === 0 ? (
                                     <option value=''>No models available</option>
                                 ) : (
@@ -463,46 +547,117 @@ export default function BlogEditor({
                                     ))
                                 )}
                             </select>
+
+                            {/* Retry Button (shown on error) */}
+                            <AnimatePresence>
+                                {modelLoadError && (
+                                    <motion.button
+                                        type="button"
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        onClick={() => loadModels()}
+                                        disabled={isLoadingModels}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+                                    >
+                                        <RefreshCw
+                                            className={`w-4 h-4 ${isLoadingModels ? "animate-spin" : ""}`}
+                                        />
+                                        Retry
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
+
                             <button
                                 onClick={async () => {
-                                    if (!content.trim()) {
-                                        setError(
-                                            "Please write some content first to generate an excerpt."
+                                    // Guard: content length check
+                                    if (content.length < MIN_CONTENT_FOR_EXCERPT) {
+                                        addNotification(
+                                            `Please write at least ${MIN_CONTENT_FOR_EXCERPT} characters before generating an excerpt.`,
+                                            "error",
+                                            { title: "Content Too Short" }
                                         )
                                         return
                                     }
+
+                                    // Guard: model selected check
                                     if (!selectedModel) {
-                                        setError(
-                                            "Please select a model first."
+                                        addNotification("Please select an AI model first.", "error", {
+                                            title: "No Model Selected",
+                                        })
+                                        return
+                                    }
+
+                                    // Guard: cooldown check
+                                    if (lastGenerateTime && Date.now() - lastGenerateTime < AI_COOLDOWN_MS) {
+                                        const remainingSeconds = Math.ceil(
+                                            (AI_COOLDOWN_MS - (Date.now() - lastGenerateTime)) / 1000
+                                        )
+                                        addNotification(
+                                            `Please wait ${remainingSeconds} seconds before generating again.`,
+                                            "warning",
+                                            { title: "Cooldown Active" }
                                         )
                                         return
                                     }
+
+                                    // Limit content length for excerpt generation
+                                    let contentToUse = content
+                                    if (content.length > MAX_CONTENT_FOR_EXCERPT) {
+                                        contentToUse = content.slice(0, MAX_CONTENT_FOR_EXCERPT)
+                                        addNotification(
+                                            `Using first ${MAX_CONTENT_FOR_EXCERPT.toLocaleString()} characters for excerpt generation.`,
+                                            "warning",
+                                            { title: "Content Truncated" }
+                                        )
+                                    }
+
                                     setIsGeneratingExcerpt(true)
-                                    setError(null)
+
                                     try {
                                         const res = await generateExcerptAction(
-                                            content,
+                                            contentToUse,
                                             selectedModel
                                         )
                                         if (res.success && res.excerpt) {
                                             setExcerpt(res.excerpt)
+                                            setLastGenerateTime(Date.now())
+                                            addNotification("Excerpt generated successfully!", "success", {
+                                                title: "AI Generated",
+                                                duration: 3000,
+                                            })
                                         } else {
-                                            setError(
-                                                res.error ||
-                                                    "Failed to generate excerpt"
+                                            addNotification(
+                                                res.error || "Failed to generate excerpt",
+                                                "error",
+                                                { title: "Generation Failed" }
                                             )
                                         }
                                     } catch (err) {
                                         console.error(err)
-                                        setError("Failed to generate excerpt")
+                                        addNotification("Failed to generate excerpt", "error", {
+                                            title: "Generation Failed",
+                                        })
                                     } finally {
                                         setIsGeneratingExcerpt(false)
                                     }
                                 }}
                                 disabled={
-                                    isGeneratingExcerpt || !content.trim() || !selectedModel
+                                    isGeneratingExcerpt || 
+                                    content.length < MIN_CONTENT_FOR_EXCERPT || 
+                                    !selectedModel ||
+                                    cooldownRemaining > 0
                                 }
-                                className='text-xs font-medium text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors px-2 py-1 rounded-lg hover:bg-primary/5'
+                                className='flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-gradient-to-r from-primary to-primary/80 rounded-lg hover:shadow-md hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all active:scale-95'
+                                title={
+                                    content.length < MIN_CONTENT_FOR_EXCERPT
+                                        ? `Need at least ${MIN_CONTENT_FOR_EXCERPT} characters`
+                                        : !selectedModel
+                                            ? "Select a model first"
+                                            : cooldownRemaining > 0
+                                                ? `Wait ${cooldownRemaining}s`
+                                                : "Generate excerpt with AI"
+                                }
                             >
                                 {isGeneratingExcerpt ? (
                                     <>
@@ -511,12 +666,21 @@ export default function BlogEditor({
                                     </>
                                 ) : (
                                     <>
-                                        <span className='text-[10px]'>✨</span>
-                                        Generate with AI
+                                        <Sparkles className='w-3 h-3' />
+                                        {cooldownRemaining > 0
+                                            ? `Wait ${cooldownRemaining}s`
+                                            : "Generate with AI"}
                                     </>
                                 )}
                             </button>
                         </div>
+
+                        {/* Helper text */}
+                        <p className='text-xs text-text/50 mt-1'>
+                            {content.length < MIN_CONTENT_FOR_EXCERPT
+                                ? `Write at least ${MIN_CONTENT_FOR_EXCERPT} characters to enable AI generation`
+                                : "AI will analyze your content and create a compelling excerpt"}
+                        </p>
                     </div>
 
                     {/* Content */}
