@@ -2,10 +2,12 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, FileText, Edit2, Trash2, Eye } from "lucide-react"
 import type { BlogPost } from "@/utils/types/blog"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { deleteBlogPost } from "@/app/api/actions/blog"
+import { getBlogStatusStyle, getBlogStatusLabel } from "@/utils/blog/status-styles"
 import { useState } from "react"
 
 interface UserBlogsListProps {
@@ -16,6 +18,7 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
     const [posts, setPosts] = useState(initialPosts)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const { addNotification } = useNotification()
+    const router = useRouter()
 
     const handleDelete = async (postId: string) => {
         if (!confirm("Are you sure you want to delete this blog post?")) {
@@ -27,6 +30,7 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
             const result = await deleteBlogPost(postId)
             if (result.success) {
                 setPosts(posts.filter(p => p.id !== postId))
+                router.refresh()
                 addNotification("Blog post deleted successfully", "success")
             } else {
                 addNotification(result.error || "Failed to delete blog post", "error")
@@ -36,36 +40,6 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
             addNotification("An error occurred while deleting", "error")
         } finally {
             setDeletingId(null)
-        }
-    }
-
-    const getStatusStyles = (status: string) => {
-        switch (status) {
-            case "published":
-                return "text-green-600 bg-green-100"
-            case "pending":
-                return "text-orange-600 bg-orange-100"
-            case "draft":
-                return "text-yellow-600 bg-yellow-100"
-            case "archived":
-                return "text-gray-600 bg-gray-100"
-            default:
-                return "text-gray-600 bg-gray-100"
-        }
-    }
-
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case "published":
-                return "Published"
-            case "pending":
-                return "Pending"
-            case "draft":
-                return "Draft"
-            case "archived":
-                return "Archived"
-            default:
-                return status
         }
     }
 
@@ -155,8 +129,8 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
                                         </p>
                                     )}
                                     <div className="flex items-center gap-3 mt-2">
-                                        <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusStyles(post.status)}`}>
-                                            {getStatusLabel(post.status)}
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${getBlogStatusStyle(post.status)}`}>
+                                            {getBlogStatusLabel(post.status)}
                                         </span>
                                         {post.updated_at && (
                                             <span className="text-sm text-text/50">

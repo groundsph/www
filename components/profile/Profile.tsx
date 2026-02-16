@@ -7,6 +7,7 @@ import { uploadAvatar } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { ProfileWithBadges, Tables } from "@/utils/types/extra"
 import type { BlogPost } from "@/utils/types/blog"
+import { getBlogStatusStyle, getBlogStatusLabel } from "@/utils/blog/status-styles"
 import { motion, AnimatePresence } from "motion/react"
 import {
     Award,
@@ -1964,21 +1965,15 @@ export default function Profile() {
                                                     {blog.title}
                                                 </p>
                                                 <div className='flex items-center gap-2 mt-1'>
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                                        blog.status === 'published' ? 'text-green-600 bg-green-100' :
-                                                        blog.status === 'pending' ? 'text-orange-600 bg-orange-100' :
-                                                        blog.status === 'draft' ? 'text-yellow-600 bg-yellow-100' :
-                                                        'text-gray-600 bg-gray-100'
-                                                    }`}>
-                                                        {blog.status === 'published' ? 'Published' :
-                                                         blog.status === 'pending' ? 'Pending' :
-                                                         blog.status === 'draft' ? 'Draft' : 'Archived'}
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${getBlogStatusStyle(blog.status)}`}>
+                                                        {getBlogStatusLabel(blog.status)}
                                                     </span>
                                                     {blog.updated_at && (
                                                         <span className='text-xs text-text/50'>
                                                             {new Date(blog.updated_at).toLocaleDateString('en-US', {
                                                                 month: 'short',
                                                                 day: 'numeric',
+                                                                year: 'numeric',
                                                             })}
                                                         </span>
                                                     )}
