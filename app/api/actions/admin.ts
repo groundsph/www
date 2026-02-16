@@ -10,13 +10,14 @@ import {
     profiles,
     user,
 } from "@/db/schema"
-import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull } from "drizzle-orm"
+import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
 import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedEmail, sendSubscriptionRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
+import { getModeratorRegionsForCurrentUser, normalizeRegions } from "@/utils/moderation/region-access"
 
 type ScoutRank = 'novice' | 'scout' | 'explorer' | 'expert' | 'vanguard' | 'legend'
 
@@ -286,11 +287,18 @@ export async function getPendingCafes(): Promise<CafeWithRatings[]> {
         return []
     }
 
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    const conditions = [eq(cafes.isPublished, false)]
+    if (regions.length > 0) {
+        conditions.push(inArray(cafes.region, regions))
+    }
+
     // Fetch pending cafes
     const cafesResult = await db
         .select()
         .from(cafes)
-        .where(eq(cafes.isPublished, false))
+        .where(and(...conditions))
         .orderBy(desc(cafes.createdAt))
 
     if (!cafesResult.length) return []
@@ -345,6 +353,7 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
             name: cafes.name,
             slug: cafes.slug,
             contributorId: cafes.contributorId,
+            region: cafes.region,
         })
         .from(cafes)
         .where(eq(cafes.id, cafeId))
@@ -353,6 +362,12 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
     const cafe = cafeResult[0]
     if (!cafe) {
         return { success: false, error: "Cafe not found" }
+    }
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && !regions.includes(cafe.region)) {
+        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
     }
 
     try {
@@ -466,12 +481,19 @@ export async function rejectCafe(cafeId: string, reason?: string): Promise<Admin
             gallery: cafes.gallery,
             contributorId: cafes.contributorId,
             isPublished: cafes.isPublished,
+            region: cafes.region,
         })
         .from(cafes)
         .where(eq(cafes.id, cafeId))
         .limit(1)
 
     const cafe = cafeResult[0]
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && cafe && !regions.includes(cafe.region)) {
+        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
+    }
 
     // Store cafe info for email before deletion
     const cafeName = cafe?.name
@@ -572,6 +594,7 @@ export async function deleteCafe(cafeId: string): Promise<AdminActionResult> {
             gallery: cafes.gallery,
             contributorId: cafes.contributorId,
             isPublished: cafes.isPublished,
+            region: cafes.region,
         })
         .from(cafes)
         .where(eq(cafes.id, cafeId))
@@ -580,6 +603,12 @@ export async function deleteCafe(cafeId: string): Promise<AdminActionResult> {
     const cafe = cafeResult[0]
     if (!cafe) {
         return { success: false, error: "Cafe not found" }
+    }
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && !regions.includes(cafe.region)) {
+        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
     }
 
     const contributorId = cafe.contributorId
@@ -640,6 +669,12 @@ export async function getCafeById(cafeId: string): Promise<CafeWithRatings | nul
 
     const cafe = cafeResult[0]
     if (!cafe) return null
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && !regions.includes(cafe.region)) {
+        return null
+    }
 
     // Get contributor info if exists
     let contributor = null
@@ -728,14 +763,20 @@ export async function updateCafe(
         return { success: false, error: "Unauthorized" }
     }
 
-    // Fetch current cafe data for change detection
+    // Fetch current cafe data for change detection and region validation
     const currentCafeResult = await db
-        .select({ name: cafes.name })
+        .select({ name: cafes.name, region: cafes.region })
         .from(cafes)
         .where(eq(cafes.id, cafeId))
         .limit(1)
 
     const currentCafe = currentCafeResult[0]
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && currentCafe && !regions.includes(currentCafe.region)) {
+        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
+    }
 
     // Map snake_case updates to camelCase for Drizzle
     const fieldMap: Record<string, string> = {
@@ -874,10 +915,17 @@ export async function getPublishedCafes(): Promise<CafeWithRatings[]> {
         return []
     }
 
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    const conditions = [eq(cafes.isPublished, true)]
+    if (regions.length > 0) {
+        conditions.push(inArray(cafes.region, regions))
+    }
+
     const cafesResult = await db
         .select()
         .from(cafes)
-        .where(eq(cafes.isPublished, true))
+        .where(and(...conditions))
         .orderBy(asc(cafes.name))
 
     if (!cafesResult.length) return []
@@ -960,6 +1008,12 @@ export async function getPaginatedCafes(params: CafePaginationParams): Promise<P
 
     // Build conditions array
     const conditions = [eq(cafes.isPublished, isPublished)]
+
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0) {
+        conditions.push(inArray(cafes.region, regions))
+    }
 
     if (province) {
         conditions.push(eq(cafes.province, province))
@@ -1092,10 +1146,15 @@ export async function getCafeFilterOptions(): Promise<CafeFilterOptions> {
         return { provinces: [], cities: [], totalPublished: 0, totalPending: 0 }
     }
 
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    const regionCondition = regions.length > 0 ? inArray(cafes.region, regions) : undefined
+
     // Get all unique provinces
     const provincesResult = await db
         .selectDistinct({ province: cafes.province })
         .from(cafes)
+        .where(regionCondition ? and(regionCondition) : undefined)
         .orderBy(asc(cafes.province))
 
     const provinces = provincesResult.map(p => p.province).filter(Boolean) as string[]
@@ -1107,6 +1166,7 @@ export async function getCafeFilterOptions(): Promise<CafeFilterOptions> {
             city: cafes.cityMunicipality,
         })
         .from(cafes)
+        .where(regionCondition ? and(regionCondition) : undefined)
         .orderBy(asc(cafes.province), asc(cafes.cityMunicipality))
 
     const citiesMap = new Map<string, string[]>()
@@ -1124,16 +1184,16 @@ export async function getCafeFilterOptions(): Promise<CafeFilterOptions> {
         cities: cityList,
     }))
 
-    // Get counts
+    // Get counts with region filtering
     const publishedCountResult = await db
         .select({ count: drizzleCount() })
         .from(cafes)
-        .where(eq(cafes.isPublished, true))
+        .where(regionCondition ? and(eq(cafes.isPublished, true), regionCondition) : eq(cafes.isPublished, true))
 
     const pendingCountResult = await db
         .select({ count: drizzleCount() })
         .from(cafes)
-        .where(eq(cafes.isPublished, false))
+        .where(regionCondition ? and(eq(cafes.isPublished, false), regionCondition) : eq(cafes.isPublished, false))
 
     return {
         provinces,
@@ -1449,10 +1509,16 @@ export async function unpublishCafe(cafeId: string): Promise<AdminActionResult> 
     }
 
     const cafeResult = await db
-        .select({ contributorId: cafes.contributorId })
+        .select({ contributorId: cafes.contributorId, region: cafes.region })
         .from(cafes)
         .where(eq(cafes.id, cafeId))
         .limit(1)
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && cafeResult[0] && !regions.includes(cafeResult[0].region)) {
+        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
+    }
 
     try {
         await db.update(cafes)
@@ -1491,6 +1557,21 @@ export async function getCafeStory(cafeId: string): Promise<{ id: string; conten
         return null
     }
 
+    // Validate region access for moderators with region restrictions
+    const cafeResult = await db
+        .select({ region: cafes.region })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
+
+    const cafe = cafeResult[0]
+    if (!cafe) return null
+
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && !regions.includes(cafe.region)) {
+        return null
+    }
+
     const storyResult = await db
         .select({ id: cafeStories.id, content: cafeStories.content })
         .from(cafeStories)
@@ -1515,6 +1596,23 @@ export async function upsertCafeStory(cafeId: string, content: string): Promise<
 
     if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
         return { success: false, error: "Unauthorized" }
+    }
+
+    // Validate region access for moderators with region restrictions
+    const cafeResult = await db
+        .select({ region: cafes.region })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
+
+    const cafe = cafeResult[0]
+    if (!cafe) {
+        return { success: false, error: "Cafe not found" }
+    }
+
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && !regions.includes(cafe.region)) {
+        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
     }
 
     const existingResult = await db
@@ -1554,6 +1652,23 @@ export async function deleteCafeStory(cafeId: string): Promise<AdminActionResult
 
     if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
         return { success: false, error: "Unauthorized" }
+    }
+
+    // Validate region access for moderators with region restrictions
+    const cafeResult = await db
+        .select({ region: cafes.region })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
+
+    const cafe = cafeResult[0]
+    if (!cafe) {
+        return { success: false, error: "Cafe not found" }
+    }
+
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && !regions.includes(cafe.region)) {
+        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
     }
 
     try {
@@ -1688,7 +1803,10 @@ export async function getReportedReviews(): Promise<ReviewForModeration[]> {
 
     const uniqueReviewIds = [...new Set(reportedReviewIdsResult.map(r => r.reviewId))]
 
-    // Fetch the reviews with those IDs
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+
+    // Fetch the reviews with those IDs, joining with cafes for region filtering
     const reviewsResult = await db
         .select({
             id: reviews.id,
@@ -1700,9 +1818,14 @@ export async function getReportedReviews(): Promise<ReviewForModeration[]> {
             updatedAt: reviews.updatedAt,
             userId: reviews.userId,
             cafeId: reviews.cafeId,
+            cafeRegion: cafes.region,
         })
         .from(reviews)
-        .where(inArray(reviews.id, uniqueReviewIds))
+        .leftJoin(cafes, eq(reviews.cafeId, cafes.id))
+        .where(and(
+            inArray(reviews.id, uniqueReviewIds),
+            regions.length > 0 ? inArray(cafes.region, regions) : undefined
+        ))
         .orderBy(desc(reviews.updatedAt))
 
     if (!reviewsResult.length) return []
@@ -1790,8 +1913,15 @@ export async function getReviewsForModeration(
         return []
     }
 
-    // Fetch reviews
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+
+    // Fetch reviews, joining with cafes for region filtering
     const conditions = status ? [eq(reviews.status, status)] : []
+    if (regions.length > 0) {
+        conditions.push(inArray(cafes.region, regions))
+    }
+
     const reviewsResult = await db
         .select({
             id: reviews.id,
@@ -1805,6 +1935,7 @@ export async function getReviewsForModeration(
             cafeId: reviews.cafeId,
         })
         .from(reviews)
+        .leftJoin(cafes, eq(reviews.cafeId, cafes.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(reviews.updatedAt))
 
@@ -1893,6 +2024,28 @@ export async function moderateReview(
         return { success: false, error: "Unauthorized" }
     }
 
+    // Fetch review with cafe region for validation
+    const reviewResult = await db
+        .select({
+            id: reviews.id,
+            cafeRegion: cafes.region,
+        })
+        .from(reviews)
+        .leftJoin(cafes, eq(reviews.cafeId, cafes.id))
+        .where(eq(reviews.id, reviewId))
+        .limit(1)
+
+    const review = reviewResult[0]
+    if (!review) {
+        return { success: false, error: "Review not found" }
+    }
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && (!review.cafeRegion || !regions.includes(review.cafeRegion))) {
+        return { success: false, error: "Unauthorized - review is outside your region scope" }
+    }
+
     try {
         await db.update(reviews)
             .set({ status: newStatus, updatedAt: new Date() })
@@ -1931,14 +2084,27 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
         return { success: false, error: "Unauthorized" }
     }
 
-    // Get review images first
+    // Get review images and cafe region for validation
     const reviewResult = await db
-        .select({ images: reviews.images })
+        .select({
+            images: reviews.images,
+            cafeRegion: cafes.region,
+        })
         .from(reviews)
+        .leftJoin(cafes, eq(reviews.cafeId, cafes.id))
         .where(eq(reviews.id, reviewId))
         .limit(1)
 
     const review = reviewResult[0]
+    if (!review) {
+        return { success: false, error: "Review not found" }
+    }
+
+    // Validate region access for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    if (regions.length > 0 && (!review.cafeRegion || !regions.includes(review.cafeRegion))) {
+        return { success: false, error: "Unauthorized - review is outside your region scope" }
+    }
 
     // Delete review images from storage
     if (review?.images && review.images.length > 0) {
@@ -1967,7 +2133,6 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
 
 import { badgeDefinitions, userBadges, featuredSchedules } from "@/db/schema"
 import { deleteBadgeImageAction } from '@/utils/storage/actions'
-import { inArray } from "drizzle-orm"
 
 export interface BadgeDefinition {
     id: string
@@ -3226,6 +3391,7 @@ export interface TeamMember {
     avatar_url: string | null
     role: UserRole | null
     created_at: string | null
+    moderator_regions: string[] | null
 }
 
 /**
@@ -3271,6 +3437,7 @@ export async function searchUsersForRoleAssignment(query: string, limit: number 
         avatar_url: u.avatarUrl,
         role: u.role as UserRole | null,
         created_at: u.createdAt?.toISOString() ?? null,
+        moderator_regions: null,
     }))
 }
 
@@ -3295,13 +3462,61 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole): P
         return { success: false, error: "You cannot change your own role" }
     }
 
+    const updates: { role: UserRole; moderatorRegions?: null } = { role: newRole }
+    if (newRole !== "moderator") {
+        updates.moderatorRegions = null
+    }
+
     try {
         await db.update(profiles)
-            .set({ role: newRole })
+            .set(updates)
             .where(eq(profiles.id, targetUserId))
     } catch (error) {
         console.error("Error updating user role:", error)
         return { success: false, error: "Failed to update user role" }
+    }
+
+    return { success: true }
+}
+
+/**
+ * Update moderator regions (admin only)
+ */
+export async function updateModeratorRegions(targetUserId: string, regions: string[]): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    if (!Array.isArray(regions)) {
+        return { success: false, error: "Invalid regions format" }
+    }
+
+    const profileResult = await db.select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin') {
+        return { success: false, error: "Only admins can update moderator regions" }
+    }
+
+    const targetResult = await db.select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, targetUserId))
+        .limit(1)
+
+    if (targetResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Target user is not a moderator" }
+    }
+
+    const normalized = normalizeRegions(regions)
+
+    try {
+        await db.update(profiles)
+            .set({ moderatorRegions: normalized.length > 0 ? normalized : null })
+            .where(eq(profiles.id, targetUserId))
+    } catch (error) {
+        console.error("Error updating moderator regions:", error)
+        return { success: false, error: "Failed to update moderator regions" }
     }
 
     return { success: true }
@@ -3332,6 +3547,7 @@ export async function getAdminsAndModerators(): Promise<TeamMember[]> {
             avatarUrl: profiles.avatarUrl,
             role: profiles.role,
             createdAt: profiles.createdAt,
+            moderatorRegions: profiles.moderatorRegions,
         })
         .from(profiles)
         .where(inArray(profiles.role, ['admin', 'moderator', 'writer']))
@@ -3344,6 +3560,7 @@ export async function getAdminsAndModerators(): Promise<TeamMember[]> {
         avatar_url: u.avatarUrl,
         role: u.role as UserRole | null,
         created_at: u.createdAt?.toISOString() ?? null,
+        moderator_regions: u.moderatorRegions ?? null,
     }))
 }
 

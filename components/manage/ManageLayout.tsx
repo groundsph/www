@@ -38,7 +38,6 @@ const navItems: NavItem[] = [
         name: "Content",
         href: "/manage/content",
         icon: <FileText className='w-5 h-5' />,
-        adminOnly: true,
     },
     {
         name: "Analytics",

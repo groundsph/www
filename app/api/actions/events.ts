@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { events, cafes, profiles, cafeSubscriptions, user } from "@/db/schema"
-import { eq, and, gte, lt, lte, desc, asc, count, inArray, or, ilike } from "drizzle-orm"
+import { eq, and, gte, lt, lte, desc, asc, count, inArray, or, ilike, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
 
@@ -75,6 +75,20 @@ async function canManageEvent(event: Event): Promise<boolean> {
     if (event.cafe_id && (await isCafeOwner(event.cafe_id))) return true
 
     return false
+}
+
+/**
+ * Check if user can auto-publish community events (admin, moderator, or cafe owner)
+ */
+async function canAutoPublishCommunityEvent(userId: string): Promise<boolean> {
+    if (await isAdminOrModerator()) return true
+
+    const ownerResult = await db.select({ id: cafes.id })
+        .from(cafes)
+        .where(sql`${cafes.ownerIds} @> ARRAY[${userId}]::uuid[]`)
+        .limit(1)
+
+    return Boolean(ownerResult[0])
 }
 
 // Helper to map event result to snake_case
@@ -663,7 +677,8 @@ export interface CommunityEventInput {
 
 /**
  * Submit a community event (any authenticated user)
- * Creates event with status "pending" for moderation
+ * Creates event with status "published" for privileged users (admin/moderator/owner),
+ * otherwise "pending" for moderation
  */
 export async function submitCommunityEvent(input: CommunityEventInput): Promise<EventActionResult> {
     const userId = await getCurrentUserId()
@@ -678,6 +693,10 @@ export async function submitCommunityEvent(input: CommunityEventInput): Promise<
     if (!input.region) return { success: false, error: "Region is required" }
     if (!input.ticket_link.trim()) return { success: false, error: "Event link is required" }
 
+    // Determine if event should be auto-published
+    const canAutoPublish = await canAutoPublishCommunityEvent(userId)
+    const status = canAutoPublish ? "published" : "pending"
+
     const [inserted] = await db.insert(events).values({
         title: input.title.trim(),
         description: input.description.trim(),
@@ -691,7 +710,7 @@ export async function submitCommunityEvent(input: CommunityEventInput): Promise<
         imageUrl: input.image_url || null,
         ticketLink: input.ticket_link.trim(),
         isNational: false,
-        status: "pending",
+        status,
         createdBy: userId,
     }).returning()
 

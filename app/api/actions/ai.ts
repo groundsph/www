@@ -1,9 +1,6 @@
 "use server";
 
-import { generateExcerpt } from "@/utils/ai/google-ai";
-import { generateExcerptGroq } from "@/utils/ai/groq";
-
-export type AIProvider = "google" | "groq";
+import { generateExcerpt, listModels } from "@/utils/ai/openai-compatible";
 
 interface ActionResponse {
     success: boolean;
@@ -11,9 +8,28 @@ interface ActionResponse {
     error?: string;
 }
 
+export async function listModelsAction(): Promise<{
+    success: boolean;
+    models?: string[];
+    defaultModel?: string;
+    error?: string;
+}> {
+    try {
+        const models = await listModels();
+        const defaultModel = process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL;
+        return { success: true, models, defaultModel };
+    } catch (error) {
+        console.error("List models action error:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Failed to list models",
+        };
+    }
+}
+
 export async function generateExcerptAction(
     content: string,
-    provider: AIProvider = "google"
+    model: string
 ): Promise<ActionResponse> {
     try {
         if (!content || content.length < 50) {
@@ -23,20 +39,21 @@ export async function generateExcerptAction(
             };
         }
 
-        let excerpt: string;
-
-        if (provider === "groq") {
-            excerpt = await generateExcerptGroq(content);
-        } else {
-            excerpt = await generateExcerpt(content);
+        if (!model) {
+            return {
+                success: false,
+                error: "No model selected. Please select a model.",
+            };
         }
+
+        const excerpt = await generateExcerpt(model, content);
 
         return { success: true, excerpt };
     } catch (error) {
         console.error("Generate excerpt action error:", error);
         return {
             success: false,
-            error: "Failed to generate excerpt. Please check your API key and try again.",
+            error: error instanceof Error ? error.message : "Failed to generate excerpt",
         };
     }
 }

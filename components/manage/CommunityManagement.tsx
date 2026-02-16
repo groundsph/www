@@ -39,6 +39,8 @@ import {
 } from "@/app/api/actions/events"
 import { EventWithCafe } from "@/utils/types/extra"
 import { format } from "date-fns"
+import { PHILIPPINES_LOCATIONS } from "@/utils/data/philippines"
+import { updateModeratorRegions } from "@/app/api/actions/admin"
 
 interface CommunityManagementProps {
     userRole: "admin" | "moderator"
@@ -63,6 +65,11 @@ export default function CommunityManagement({
     const [teamSearchResults, setTeamSearchResults] = useState<TeamMember[]>([])
     const [teamLoading, setTeamLoading] = useState(false)
     const [teamSearchLoading, setTeamSearchLoading] = useState(false)
+    const [editingRegionsFor, setEditingRegionsFor] = useState<string | null>(null)
+    const [selectedRegions, setSelectedRegions] = useState<string[]>([])
+    const [savingRegions, setSavingRegions] = useState(false)
+
+    const regionOptions = PHILIPPINES_LOCATIONS.regions.map((r) => r.name)
 
     // Pending events state
     const [pendingEvents, setPendingEvents] = useState<EventWithCafe[]>([])
@@ -168,6 +175,43 @@ export default function CommunityManagement({
             alert(result.error || "Failed to demote user")
         }
         setTeamLoading(false)
+    }
+
+    // Region management handlers
+    const handleEditRegions = (member: TeamMember) => {
+        if (member.role !== "moderator") return
+        setEditingRegionsFor(member.id)
+        setSelectedRegions(member.moderator_regions || [])
+    }
+
+    const handleToggleRegion = (region: string) => {
+        setSelectedRegions((prev) =>
+            prev.includes(region)
+                ? prev.filter((r) => r !== region)
+                : [...prev, region]
+        )
+    }
+
+    const handleSaveRegions = async (userId: string) => {
+        setSavingRegions(true)
+        const result = await updateModeratorRegions(userId, selectedRegions)
+        if (result.success) {
+            setEditingRegionsFor(null)
+            setSelectedRegions([])
+            await loadTeamMembers()
+        } else {
+            alert(result.error || "Failed to update regions")
+        }
+        setSavingRegions(false)
+    }
+
+    const handleClearRegions = () => {
+        setSelectedRegions([])
+    }
+
+    const handleCancelEditRegions = () => {
+        setEditingRegionsFor(null)
+        setSelectedRegions([])
     }
 
     // Load team members when Team tab is selected
@@ -861,68 +905,148 @@ export default function CommunityManagement({
                                 {teamMembers.map((member) => (
                                     <div
                                         key={member.id}
-                                        className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-background rounded-xl border border-tertiary/50'
+                                        className='flex flex-col gap-3 p-3 bg-background rounded-xl border border-tertiary/50'
                                     >
-                                        <div className='relative w-10 h-10 rounded-full overflow-hidden bg-tertiary/30 shrink-0'>
-                                            {member.avatar_url ? (
-                                                <Image
-                                                    src={member.avatar_url}
-                                                    alt={member.display_name}
-                                                    fill
-                                                    className='object-cover'
-                                                />
-                                            ) : (
-                                                <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-lg font-semibold'>
-                                                    {member.display_name?.[0]?.toUpperCase() ||
-                                                        "?"}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className='flex-1 min-w-0'>
-                                            <div className='font-medium truncate flex items-center gap-2'>
-                                                {member.display_name}
-                                                {member.role === "admin" ? (
-                                                    <ShieldCheck className='w-4 h-4 text-amber-500' />
-                                                ) : member.role ===
-                                                  "moderator" ? (
-                                                    <Shield className='w-4 h-4 text-blue-500' />
+                                        <div className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3'>
+                                            <div className='relative w-10 h-10 rounded-full overflow-hidden bg-tertiary/30 shrink-0'>
+                                                {member.avatar_url ? (
+                                                    <Image
+                                                        src={member.avatar_url}
+                                                        alt={member.display_name}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
                                                 ) : (
-                                                    <PenTool className='w-4 h-4 text-green-500' />
+                                                    <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-lg font-semibold'>
+                                                        {member.display_name?.[0]?.toUpperCase() ||
+                                                            "?"}
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div className='text-sm text-text/60 truncate'>
-                                                @{member.username}
+                                            <div className='flex-1 min-w-0'>
+                                                <div className='font-medium truncate flex items-center gap-2'>
+                                                    {member.display_name}
+                                                    {member.role === "admin" ? (
+                                                        <ShieldCheck className='w-4 h-4 text-amber-500' />
+                                                    ) : member.role ===
+                                                      "moderator" ? (
+                                                        <Shield className='w-4 h-4 text-blue-500' />
+                                                    ) : (
+                                                        <PenTool className='w-4 h-4 text-green-500' />
+                                                    )}
+                                                </div>
+                                                <div className='text-sm text-text/60 truncate'>
+                                                    @{member.username}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className='flex items-center gap-2 self-end sm:self-center'>
-                                            <span
-                                                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                    member.role === "admin"
-                                                        ? "bg-amber-500/20 text-amber-600"
+                                            <div className='flex items-center gap-2 self-end sm:self-center'>
+                                                <span
+                                                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                        member.role === "admin"
+                                                            ? "bg-amber-500/20 text-amber-600"
+                                                            : member.role ===
+                                                                "moderator"
+                                                              ? "bg-blue-500/20 text-blue-600"
+                                                              : "bg-green-500/20 text-green-600"
+                                                    }`}
+                                                >
+                                                    {member.role === "admin"
+                                                        ? "Admin"
                                                         : member.role ===
                                                             "moderator"
-                                                          ? "bg-blue-500/20 text-blue-600"
-                                                          : "bg-green-500/20 text-green-600"
-                                                }`}
-                                            >
-                                                {member.role === "admin"
-                                                    ? "Admin"
-                                                    : member.role ===
-                                                        "moderator"
-                                                      ? "Moderator"
-                                                      : "Writer"}
-                                            </span>
-                                            <button
-                                                onClick={() =>
-                                                    handleDemoteUser(member.id)
-                                                }
-                                                disabled={teamLoading}
-                                                className='p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50'
-                                                title='Remove from team'
-                                            >
-                                                <X className='w-4 h-4' />
-                                            </button>
+                                                          ? "Moderator"
+                                                          : "Writer"}
+                                                </span>
+                                                {member.role === "moderator" && (
+                                                    <button
+                                                        onClick={() =>
+                                                            handleEditRegions(member)
+                                                        }
+                                                        disabled={teamLoading}
+                                                        className='p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition disabled:opacity-50'
+                                                        title='Edit regions'
+                                                    >
+                                                        <MapPin className='w-4 h-4' />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() =>
+                                                        handleDemoteUser(member.id)
+                                                    }
+                                                    disabled={teamLoading}
+                                                    className='p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50'
+                                                    title='Remove from team'
+                                                >
+                                                    <X className='w-4 h-4' />
+                                                </button>
+                                            </div>
                                         </div>
+
+                                        {/* Region display for moderators */}
+                                        {member.role === "moderator" && (
+                                            <div className='text-sm'>
+                                                <span className='text-text/60'>Regions: </span>
+                                                <span className='text-text/80'>
+                                                    {!member.moderator_regions || member.moderator_regions.length === 0
+                                                        ? "All regions"
+                                                        : member.moderator_regions.join(", ")}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Region editor */}
+                                        {editingRegionsFor === member.id && (
+                                            <div className='border-t border-tertiary/50 pt-3 mt-1'>
+                                                <h4 className='text-sm font-medium mb-2'>Assign Regions</h4>
+                                                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto mb-3'>
+                                                    {regionOptions.map((region) => (
+                                                        <label
+                                                            key={region}
+                                                            className='flex items-center gap-2 p-2 bg-tertiary/10 rounded-lg cursor-pointer hover:bg-tertiary/20 transition'
+                                                        >
+                                                            <input
+                                                                type='checkbox'
+                                                                checked={selectedRegions.includes(region)}
+                                                                onChange={() => handleToggleRegion(region)}
+                                                                className='w-4 h-4 rounded border-text/20 text-primary focus:ring-primary'
+                                                            />
+                                                            <span className='text-sm'>{region}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                                <div className='flex items-center gap-2'>
+                                                    <button
+                                                        onClick={() => handleSaveRegions(member.id)}
+                                                        disabled={savingRegions}
+                                                        className='px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition text-sm disabled:opacity-50 flex items-center gap-1.5'
+                                                    >
+                                                        {savingRegions ? (
+                                                            <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                                                        ) : (
+                                                            <Check className='w-3.5 h-3.5' />
+                                                        )}
+                                                        Save Regions
+                                                    </button>
+                                                    <button
+                                                        onClick={handleClearRegions}
+                                                        disabled={savingRegions}
+                                                        className='px-3 py-1.5 bg-tertiary/30 text-text/70 rounded-lg hover:bg-tertiary/50 transition text-sm disabled:opacity-50'
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                    <button
+                                                        onClick={handleCancelEditRegions}
+                                                        disabled={savingRegions}
+                                                        className='px-3 py-1.5 text-text/60 hover:text-text transition text-sm disabled:opacity-50'
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                                <p className='text-xs text-text/40 mt-2'>
+                                                    Selecting no regions allows access to all regions.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

@@ -38,6 +38,7 @@ export const profiles = pgTable("profiles", {
     profileCompleted: boolean("profile_completed").default(false),
     passport: jsonb("passport"),
     stats: jsonb("stats"),
+    moderatorRegions: text("moderator_regions").array(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 })
@@ -338,6 +339,7 @@ export const blogPosts = pgTable(
         coverImage: text("cover_image"),
         category: enums.blogCategoryEnum("category").default("news"),
         status: enums.blogStatusEnum("status").default("draft"),
+        llmReview: jsonb("llm_review"),
         tags: text("tags").array(),
         images: text("images").array(),
         taggedCafeIds: uuid("tagged_cafe_ids").array(),

@@ -81,6 +81,7 @@ export type Database = {
           featured: boolean | null
           id: string
           images: string[] | null
+          llm_review: Json | null
           published_at: string | null
           search_vector: unknown
           slug: string
@@ -103,6 +104,7 @@ export type Database = {
           featured?: boolean | null
           id?: string
           images?: string[] | null
+          llm_review?: Json | null
           published_at?: string | null
           search_vector?: unknown
           slug: string
@@ -125,6 +127,7 @@ export type Database = {
           featured?: boolean | null
           id?: string
           images?: string[] | null
+          llm_review?: Json | null
           published_at?: string | null
           search_vector?: unknown
           slug?: string
@@ -1149,6 +1152,7 @@ export type Database = {
           display_name: string
           id: string
           is_supporter: boolean | null
+          moderator_regions: string[] | null
           passport: Json | null
           profile_completed: boolean | null
           role: Database["public"]["Enums"]["user_role"] | null
@@ -1166,6 +1170,7 @@ export type Database = {
           display_name: string
           id: string
           is_supporter?: boolean | null
+          moderator_regions?: string[] | null
           passport?: Json | null
           profile_completed?: boolean | null
           role?: Database["public"]["Enums"]["user_role"] | null
@@ -1183,6 +1188,7 @@ export type Database = {
           display_name?: string
           id?: string
           is_supporter?: boolean | null
+          moderator_regions?: string[] | null
           passport?: Json | null
           profile_completed?: boolean | null
           role?: Database["public"]["Enums"]["user_role"] | null
@@ -1599,7 +1605,7 @@ export type Database = {
       | "promotions"
       | "community"
       | "cafe_update"
-      blog_status: "draft" | "published" | "archived"
+      blog_status: "pending" | "draft" | "published" | "archived"
       coffee_style: "classic" | "artisan"
       contribution_action_type:
       | "CREATE"
@@ -1754,7 +1760,7 @@ export const Constants = {
         "community",
         "cafe_update",
       ],
-      blog_status: ["draft", "published", "archived"],
+      blog_status: ["pending", "draft", "published", "archived"],
       coffee_style: ["classic", "artisan"],
       contribution_action_type: [
         "CREATE",

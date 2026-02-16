@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
 import {
@@ -30,7 +30,7 @@ import {
 import { createBlogPost, updateBlogPost } from "@/app/api/actions/blog"
 import { uploadBlogImageAction } from "@/utils/storage/actions"
 import { compressBlogCover } from "@/utils/image-processing"
-import { generateExcerptAction, AIProvider } from "@/app/api/actions/ai"
+import { generateExcerptAction, listModelsAction } from "@/app/api/actions/ai"
 import MarkdownRender from "@/components/ui/MarkdownRender"
 
 interface BlogEditorProps {
@@ -76,9 +76,37 @@ export default function BlogEditor({
     const [error, setError] = useState<string | null>(null)
     const [autoSlug, setAutoSlug] = useState(!post?.slug)
     const [isGeneratingExcerpt, setIsGeneratingExcerpt] = useState(false)
-    const [aiProvider, setAiProvider] = useState<AIProvider>("google")
+    const [availableModels, setAvailableModels] = useState<string[]>([])
+    const [selectedModel, setSelectedModel] = useState<string>("")
+    const [isLoadingModels, setIsLoadingModels] = useState(true)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    // Load available models on mount
+    useEffect(() => {
+        const loadModels = async () => {
+            setIsLoadingModels(true)
+            try {
+                const result = await listModelsAction()
+                if (result.success && result.models) {
+                    setAvailableModels(result.models)
+                    // Default to server-provided model if available, otherwise first model
+                    const defaultModel = result.defaultModel
+                    if (defaultModel && result.models.includes(defaultModel)) {
+                        setSelectedModel(defaultModel)
+                    } else if (result.models.length > 0) {
+                        setSelectedModel(result.models[0])
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load models:", err)
+            } finally {
+                setIsLoadingModels(false)
+            }
+        }
+
+        loadModels()
+    }, [])
     const galleryInputRef = useRef<HTMLInputElement>(null)
 
     const categories = allowedCategories
@@ -418,17 +446,22 @@ export default function BlogEditor({
                         />
                         <div className='flex items-center justify-end gap-2 mt-2'>
                             <select
-                                value={aiProvider}
-                                onChange={(e) =>
-                                    setAiProvider(e.target.value as AIProvider)
-                                }
-                                className='px-2 py-1 rounded-lg border border-text/15 bg-background text-xs font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer hover:bg-text/5 transition-all'
-                                disabled={isGeneratingExcerpt}
+                                value={selectedModel}
+                                onChange={(e) => setSelectedModel(e.target.value)}
+                                className='px-2 py-1 rounded-lg border border-text/15 bg-background text-xs font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer hover:bg-text/5 transition-all max-w-[180px]'
+                                disabled={isGeneratingExcerpt || isLoadingModels || availableModels.length === 0}
                             >
-                                <option value='google'>
-                                    Google (Gemini 2.5)
-                                </option>
-                                <option value='groq'>Groq (Llama 3.3)</option>
+                                {isLoadingModels ? (
+                                    <option value=''>Loading models...</option>
+                                ) : availableModels.length === 0 ? (
+                                    <option value=''>No models available</option>
+                                ) : (
+                                    availableModels.map((model) => (
+                                        <option key={model} value={model}>
+                                            {model}
+                                        </option>
+                                    ))
+                                )}
                             </select>
                             <button
                                 onClick={async () => {
@@ -438,12 +471,18 @@ export default function BlogEditor({
                                         )
                                         return
                                     }
+                                    if (!selectedModel) {
+                                        setError(
+                                            "Please select a model first."
+                                        )
+                                        return
+                                    }
                                     setIsGeneratingExcerpt(true)
                                     setError(null)
                                     try {
                                         const res = await generateExcerptAction(
                                             content,
-                                            aiProvider
+                                            selectedModel
                                         )
                                         if (res.success && res.excerpt) {
                                             setExcerpt(res.excerpt)
@@ -461,7 +500,7 @@ export default function BlogEditor({
                                     }
                                 }}
                                 disabled={
-                                    isGeneratingExcerpt || !content.trim()
+                                    isGeneratingExcerpt || !content.trim() || !selectedModel
                                 }
                                 className='text-xs font-medium text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors px-2 py-1 rounded-lg hover:bg-primary/5'
                             >

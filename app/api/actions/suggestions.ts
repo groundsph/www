@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { cafes, cafeEditSuggestions, profiles, user } from "@/db/schema"
-import { eq, desc, count as drizzleCount } from "drizzle-orm"
+import { eq, desc, count as drizzleCount, inArray, and } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { sendSuggestionApprovedEmail, sendSuggestionRejectedEmail } from "@/utils/email"
 import { notifyDiscordEditSuggestion } from "./notify"
@@ -12,6 +12,7 @@ import {
     SuggestedImageChanges
 } from "@/utils/types/suggestions"
 import { logContribution } from "@/utils/contribution-logging"
+import { getModeratorRegionsForCurrentUser } from "@/utils/moderation/region-access"
 
 // Map snake_case suggestion fields to camelCase Drizzle columns
 const fieldMapping: Record<string, string> = {
@@ -218,6 +219,15 @@ async function isAdmin(): Promise<boolean> {
 export async function getPendingSuggestions(): Promise<EditSuggestion[]> {
     if (!await isAdmin()) return []
 
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    const whereConditions: (ReturnType<typeof eq> | ReturnType<typeof inArray>)[] = [
+        eq(cafeEditSuggestions.status, 'pending')
+    ]
+    if (regions.length > 0) {
+        whereConditions.push(inArray(cafes.region, regions))
+    }
+
     const result = await db
         .select({
             id: cafeEditSuggestions.id,
@@ -241,7 +251,7 @@ export async function getPendingSuggestions(): Promise<EditSuggestion[]> {
         .from(cafeEditSuggestions)
         .leftJoin(cafes, eq(cafeEditSuggestions.cafeId, cafes.id))
         .leftJoin(profiles, eq(cafeEditSuggestions.userId, profiles.id))
-        .where(eq(cafeEditSuggestions.status, 'pending'))
+        .where(and(...whereConditions))
         .orderBy(cafeEditSuggestions.createdAt)
 
     return result.map(row => ({
@@ -341,16 +351,29 @@ export async function approveSuggestion(
         return { success: false, error: "Unauthorized" }
     }
 
-    // Fetch the suggestion
+    // Fetch the suggestion with cafe region
     const suggestionResult = await db
-        .select()
+        .select({
+            id: cafeEditSuggestions.id,
+            cafeId: cafeEditSuggestions.cafeId,
+            userId: cafeEditSuggestions.userId,
+            status: cafeEditSuggestions.status,
+            suggestedChanges: cafeEditSuggestions.suggestedChanges,
+            suggestedImages: cafeEditSuggestions.suggestedImages,
+            cafeRegion: cafes.region,
+        })
         .from(cafeEditSuggestions)
+        .leftJoin(cafes, eq(cafeEditSuggestions.cafeId, cafes.id))
         .where(eq(cafeEditSuggestions.id, suggestionId))
         .limit(1)
 
     const suggestion = suggestionResult[0]
-    if (!suggestion) {
-        return { success: false, error: "Suggestion not found" }
+    const regions = await getModeratorRegionsForCurrentUser()
+    
+    // Validate region access - use generic error to prevent timing attacks
+    const hasRegionAccess = regions.length === 0 || !suggestion?.cafeRegion || regions.includes(suggestion.cafeRegion)
+    if (!suggestion || !hasRegionAccess) {
+        return { success: false, error: "Not found or unauthorized" }
     }
 
     if (suggestion.status !== 'pending') {
@@ -365,7 +388,7 @@ export async function approveSuggestion(
         const drizzleUpdates = mapSuggestableFieldsToDrizzle(changesToApply)
         await db.update(cafes)
             .set(drizzleUpdates)
-            .where(eq(cafes.id, suggestion.cafeId))
+            .where(eq(cafes.id, suggestion.cafeId!))
     }
 
     // Handle image changes
@@ -374,7 +397,7 @@ export async function approveSuggestion(
         const cafeResult = await db
             .select({ gallery: cafes.gallery, thumbnail: cafes.thumbnail })
             .from(cafes)
-            .where(eq(cafes.id, suggestion.cafeId))
+            .where(eq(cafes.id, suggestion.cafeId!))
             .limit(1)
 
         const cafe = cafeResult[0]
@@ -402,7 +425,7 @@ export async function approveSuggestion(
             }
 
             if (Object.keys(updates).length > 0) {
-                await db.update(cafes).set(updates).where(eq(cafes.id, suggestion.cafeId))
+                await db.update(cafes).set(updates).where(eq(cafes.id, suggestion.cafeId!))
             }
         }
     }
@@ -416,7 +439,7 @@ export async function approveSuggestion(
 
     // Get cafe and author info for email
     const [cafeData, authorProfile, authorUser] = await Promise.all([
-        db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(eq(cafes.id, suggestion.cafeId)).limit(1),
+        db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(eq(cafes.id, suggestion.cafeId!)).limit(1),
         db.select({ displayName: profiles.displayName, username: profiles.username }).from(profiles).where(eq(profiles.id, suggestion.userId)).limit(1),
         db.select({ email: user.email }).from(user).where(eq(user.id, suggestion.userId)).limit(1),
     ])
@@ -434,7 +457,7 @@ export async function approveSuggestion(
         )
 
         // Log contribution
-        await logContribution(suggestion.userId, suggestion.cafeId, 'UPDATE', {
+        await logContribution(suggestion.userId, suggestion.cafeId!, 'UPDATE', {
             summary: `Suggestion approved: ${Object.keys(changesToApply).join(', ')}`,
             source: 'approved_suggestion',
             cafe_name: cafe.name,
@@ -470,16 +493,28 @@ export async function rejectSuggestion(
         return { success: false, error: "Unauthorized" }
     }
 
-    // Fetch the suggestion
+    // Fetch the suggestion with cafe region
     const suggestionResult = await db
-        .select()
+        .select({
+            id: cafeEditSuggestions.id,
+            cafeId: cafeEditSuggestions.cafeId,
+            userId: cafeEditSuggestions.userId,
+            status: cafeEditSuggestions.status,
+            suggestedChanges: cafeEditSuggestions.suggestedChanges,
+            cafeRegion: cafes.region,
+        })
         .from(cafeEditSuggestions)
+        .leftJoin(cafes, eq(cafeEditSuggestions.cafeId, cafes.id))
         .where(eq(cafeEditSuggestions.id, suggestionId))
         .limit(1)
 
     const suggestion = suggestionResult[0]
-    if (!suggestion) {
-        return { success: false, error: "Suggestion not found" }
+    const regions = await getModeratorRegionsForCurrentUser()
+    
+    // Validate region access - use generic error to prevent timing attacks
+    const hasRegionAccess = regions.length === 0 || !suggestion?.cafeRegion || regions.includes(suggestion.cafeRegion)
+    if (!suggestion || !hasRegionAccess) {
+        return { success: false, error: "Not found or unauthorized" }
     }
 
     if (suggestion.status !== 'pending') {
@@ -496,7 +531,7 @@ export async function rejectSuggestion(
 
     // Send email to author
     const [cafeData, authorProfile, authorUser] = await Promise.all([
-        db.select({ name: cafes.name }).from(cafes).where(eq(cafes.id, suggestion.cafeId)).limit(1),
+        db.select({ name: cafes.name }).from(cafes).where(eq(cafes.id, suggestion.cafeId!)).limit(1),
         db.select({ displayName: profiles.displayName, username: profiles.username }).from(profiles).where(eq(profiles.id, suggestion.userId)).limit(1),
         db.select({ email: user.email }).from(user).where(eq(user.id, suggestion.userId)).limit(1),
     ])

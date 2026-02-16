@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { isAdmin, getUserRole } from "@/app/api/actions/admin"
+import { isAdmin } from "@/app/api/actions/admin"
 import { getAdminBlogPosts } from "@/app/api/actions/blog"
 import { getAdminEvents } from "@/app/api/actions/events"
 import ContentManagement from "@/components/manage/ContentManagement"
@@ -13,13 +13,6 @@ export default async function ManageContentPage() {
     const hasAccess = await isAdmin()
     if (!hasAccess) {
         redirect("/")
-    }
-
-    const userRole = await getUserRole()
-
-    // Only admins can access this page
-    if (userRole !== "admin") {
-        redirect("/manage")
     }
 
     const [blogPostsResult, eventsResult] = await Promise.all([

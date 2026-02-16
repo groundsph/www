@@ -175,8 +175,7 @@ export default function EventSubmissionForm() {
                     Event Submitted!
                 </h2>
                 <p className='text-text/70 mb-6'>
-                    Thank you for submitting your event. Our team will review it
-                    and you&apos;ll be notified once it&apos;s approved.
+                    Thank you for submitting your event. Events by admins, moderators, and cafe owners are published immediately. Others will be reviewed by our team before publishing.
                 </p>
                 <Link
                     href='/community'
@@ -204,9 +203,7 @@ export default function EventSubmissionForm() {
             {/* Info Banner */}
             <div className='bg-primary/10 border-b border-primary/20 px-6 py-3'>
                 <p className='text-sm text-text/80'>
-                    <strong>Note:</strong> All event submissions are reviewed by
-                    our team before being published. You&apos;ll receive an
-                    email once your event is approved.
+                    <strong>Note:</strong> Events submitted by admins, moderators, and cafe owners are published immediately. All other submissions are reviewed by our team before being published. You&apos;ll receive an email notification once your event is approved.
                 </p>
             </div>
 
@@ -257,13 +254,8 @@ export default function EventSubmissionForm() {
                                     <Loader2 className='w-8 h-8 animate-spin' />
                                 ) : (
                                     <>
-                                        <ImageIcon className='w-10 h-10' />
-                                        <span className='text-sm font-medium'>
-                                            Click to upload cover image
-                                        </span>
-                                        <span className='text-xs'>
-                                            Recommended: 16:9 ratio, max 5MB
-                                        </span>
+                                        <ImageIcon className='w-8 h-8' />
+                                        <span>Click to upload cover image</span>
                                     </>
                                 )}
                             </button>
@@ -489,7 +481,7 @@ export default function EventSubmissionForm() {
                             Submit for Review
                         </button>
                         <p className='text-xs text-text/50 text-center mt-2'>
-                            Your event will be reviewed before publishing
+                            Events by admins, moderators, and cafe owners are published immediately
                         </p>
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import { Database } from "./database.types"
+import { Database, Json } from "./database.types"
 
 // Database types
 export type BlogPostRow = Database["public"]["Tables"]["blog_posts"]["Row"]
@@ -23,6 +23,7 @@ export interface BlogPost extends Omit<BlogPostRow, "search_vector"> {
         slug: string
         thumbnail: string
     } | null
+    llm_review: Json | null
 }
 
 // Input for creating/updating blog posts
@@ -93,6 +94,7 @@ export const BLOG_STATUSES: {
     label: string
     color: string
 }[] = [
+        { value: "pending", label: "Pending", color: "text-orange-600 bg-orange-100" },
         { value: "draft", label: "Draft", color: "text-yellow-600 bg-yellow-100" },
         {
             value: "published",

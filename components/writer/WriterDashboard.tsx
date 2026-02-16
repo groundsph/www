@@ -97,7 +97,7 @@ export default function WriterDashboard({
             {/* Filters */}
             <div className='flex flex-col md:flex-row gap-4 py-4 border-y border-text/5'>
                 <div className='flex items-center gap-2 overflow-x-auto pb-2 md:pb-0'>
-                    {(["all", "published", "draft", "archived"] as const).map(
+                    {(["all", "published", "pending", "draft", "archived"] as const).map(
                         (status) => (
                             <button
                                 key={status}
@@ -149,7 +149,7 @@ export default function WriterDashboard({
                         <FileText className='w-8 h-8 text-text opacity-30' />
                     </div>
                     <h3 className='text-lg font-semibold text-text'>
-                        No stories founding
+                        No stories found
                     </h3>
                     <p className='text-text/60 max-w-sm mx-auto mt-2 mb-6'>
                         You haven&apos;t written any stories yet, or none match

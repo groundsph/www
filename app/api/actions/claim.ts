@@ -2,13 +2,14 @@
 
 import { db } from "@/db"
 import { cafes, cafeClaims, profiles, user } from "@/db/schema"
-import { eq, and, desc } from "drizzle-orm"
+import { eq, and, desc, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { notifyDiscordCafeClaim } from "@/app/api/actions/notify"
 import { Resend } from "resend"
 import ClaimApprovedEmail from "@/emails/ClaimApprovedEmail"
 import ClaimRejectedEmail from "@/emails/ClaimRejectedEmail"
 import { getStorageProvider, STORAGE_BUCKETS } from "@/utils/storage"
+import { getModeratorRegionsForCurrentUser } from "@/utils/moderation/region-access"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -288,6 +289,15 @@ export async function getPendingClaims(): Promise<CafeClaim[]> {
         return []
     }
 
+    // Apply region filtering for moderators with region restrictions
+    const regions = await getModeratorRegionsForCurrentUser()
+    const whereConditions: (ReturnType<typeof eq> | ReturnType<typeof inArray>)[] = [
+        eq(cafeClaims.status, "pending")
+    ]
+    if (regions.length > 0) {
+        whereConditions.push(inArray(cafes.region, regions))
+    }
+
     const claimsResult = await db
         .select({
             id: cafeClaims.id,
@@ -310,7 +320,7 @@ export async function getPendingClaims(): Promise<CafeClaim[]> {
         .from(cafeClaims)
         .leftJoin(cafes, eq(cafeClaims.cafeId, cafes.id))
         .leftJoin(profiles, eq(cafeClaims.userId, profiles.id))
-        .where(eq(cafeClaims.status, "pending"))
+        .where(and(...whereConditions))
         .orderBy(cafeClaims.createdAt)
 
     return claimsResult.map(c => ({
@@ -363,16 +373,27 @@ export async function approveClaim(
         return { success: false, error: "Not authorized" }
     }
 
-    // Get claim
+    // Get claim with cafe region
     const claimResult = await db
-        .select()
+        .select({
+            id: cafeClaims.id,
+            cafeId: cafeClaims.cafeId,
+            userId: cafeClaims.userId,
+            status: cafeClaims.status,
+            cafeRegion: cafes.region,
+        })
         .from(cafeClaims)
+        .leftJoin(cafes, eq(cafeClaims.cafeId, cafes.id))
         .where(eq(cafeClaims.id, claimId))
         .limit(1)
 
     const claim = claimResult[0]
-    if (!claim) {
-        return { success: false, error: "Claim not found" }
+    const regions = await getModeratorRegionsForCurrentUser()
+    
+    // Validate region access - use generic error to prevent timing attacks
+    const hasRegionAccess = regions.length === 0 || !claim?.cafeRegion || regions.includes(claim.cafeRegion)
+    if (!claim || !hasRegionAccess) {
+        return { success: false, error: "Not found or unauthorized" }
     }
 
     // Update claim status
@@ -387,7 +408,7 @@ export async function approveClaim(
     const cafeResult = await db
         .select({ ownerIds: cafes.ownerIds })
         .from(cafes)
-        .where(eq(cafes.id, claim.cafeId))
+        .where(eq(cafes.id, claim.cafeId!))
         .limit(1)
 
     const currentOwners = cafeResult[0]?.ownerIds || []
@@ -395,7 +416,7 @@ export async function approveClaim(
         await db.update(cafes).set({
             ownerIds: [...currentOwners, claim.userId],
             isClaimed: true,
-        }).where(eq(cafes.id, claim.cafeId))
+        }).where(eq(cafes.id, claim.cafeId!))
     }
 
     // Send email notification to claimant
@@ -404,7 +425,7 @@ export async function approveClaim(
         const [claimantProfile, claimantUser, cafeData] = await Promise.all([
             db.select({ displayName: profiles.displayName }).from(profiles).where(eq(profiles.id, claim.userId)).limit(1),
             db.select({ email: user.email }).from(user).where(eq(user.id, claim.userId)).limit(1),
-            db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(eq(cafes.id, claim.cafeId)).limit(1),
+            db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(eq(cafes.id, claim.cafeId!)).limit(1),
         ])
 
         const email = claimantUser[0]?.email
@@ -453,6 +474,29 @@ export async function rejectClaim(
         return { success: false, error: "Not authorized" }
     }
 
+    // Get claim with cafe region for validation
+    const claimResult = await db
+        .select({
+            id: cafeClaims.id,
+            cafeId: cafeClaims.cafeId,
+            userId: cafeClaims.userId,
+            status: cafeClaims.status,
+            cafeRegion: cafes.region,
+        })
+        .from(cafeClaims)
+        .leftJoin(cafes, eq(cafeClaims.cafeId, cafes.id))
+        .where(eq(cafeClaims.id, claimId))
+        .limit(1)
+
+    const claim = claimResult[0]
+    const regions = await getModeratorRegionsForCurrentUser()
+    
+    // Validate region access - use generic error to prevent timing attacks
+    const hasRegionAccess = regions.length === 0 || !claim?.cafeRegion || regions.includes(claim.cafeRegion)
+    if (!claim || !hasRegionAccess) {
+        return { success: false, error: "Not found or unauthorized" }
+    }
+
     // Update claim status
     await db.update(cafeClaims).set({
         status: "rejected",
@@ -463,18 +507,11 @@ export async function rejectClaim(
 
     // Send email notification to claimant
     try {
-        const claimResult = await db
-            .select({ userId: cafeClaims.userId, cafeId: cafeClaims.cafeId })
-            .from(cafeClaims)
-            .where(eq(cafeClaims.id, claimId))
-            .limit(1)
-
-        const claimData = claimResult[0]
-        if (claimData) {
+        if (claim.userId && claim.cafeId) {
             const [claimantProfile, claimantUser, cafeData] = await Promise.all([
-                db.select({ displayName: profiles.displayName }).from(profiles).where(eq(profiles.id, claimData.userId)).limit(1),
-                db.select({ email: user.email }).from(user).where(eq(user.id, claimData.userId)).limit(1),
-                db.select({ name: cafes.name }).from(cafes).where(eq(cafes.id, claimData.cafeId)).limit(1),
+                db.select({ displayName: profiles.displayName }).from(profiles).where(eq(profiles.id, claim.userId)).limit(1),
+                db.select({ email: user.email }).from(user).where(eq(user.id, claim.userId)).limit(1),
+                db.select({ name: cafes.name }).from(cafes).where(eq(cafes.id, claim.cafeId)).limit(1),
             ])
 
             const email = claimantUser[0]?.email

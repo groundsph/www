@@ -13,6 +13,9 @@ import {
     generateSlug,
 } from "@/utils/types/blog"
 import { format } from "date-fns"
+import { resolveBlogStatus } from "@/utils/blog/moderation"
+import { checkBlogPost } from "@/utils/ai/openai-compatible"
+import { revalidatePath } from "next/cache"
 
 // ============================================
 // Helper Functions
@@ -30,19 +33,6 @@ async function isAdminOrModerator(): Promise<boolean> {
 
     const role = result[0]?.role
     return role === "admin" || role === "moderator"
-}
-
-async function isWriter(): Promise<boolean> {
-    const user = await getCurrentUser()
-    if (!user) return false
-
-    const result = await db
-        .select({ role: profiles.role })
-        .from(profiles)
-        .where(eq(profiles.id, user.id))
-        .limit(1)
-
-    return result[0]?.role === "writer"
 }
 
 const WRITER_ALLOWED_CATEGORIES: BlogCategory[] = ["news", "guides", "community"]
@@ -512,26 +502,30 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
     const userId = await getCurrentUserId()
     if (!userId) return { success: false, error: "Not authenticated" }
 
-    const isAdmin = await isAdminOrModerator()
-    const hasWriterRole = await isWriter()
+    const isAdminMod = await isAdminOrModerator()
     const isOwner = input.cafe_id ? await isCafeOwner(input.cafe_id) : false
 
-    if (!isAdmin && !hasWriterRole && !isOwner) {
-        return { success: false, error: "Not authorized to create blog posts" }
-    }
+    // Any authenticated user can create, but non-admin/mod posts go to pending
+    const finalStatus = resolveBlogStatus(input.status, isAdminMod)
 
-    if (hasWriterRole && !isAdmin) {
-        if (!WRITER_ALLOWED_CATEGORIES.includes(input.category)) {
-            return { success: false, error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}` }
+    // Writers have category restrictions
+    if (!isAdminMod) {
+        const profileResult = await db.select({ role: profiles.role }).from(profiles).where(eq(profiles.id, userId)).limit(1)
+        const role = profileResult[0]?.role
+        if (role === "writer") {
+            if (!WRITER_ALLOWED_CATEGORIES.includes(input.category)) {
+                return { success: false, error: `Writers can only create posts in these categories: ${WRITER_ALLOWED_CATEGORIES.join(", ")}` }
+            }
         }
     }
 
-    if (!isAdmin && !hasWriterRole && !input.cafe_id) {
-        return { success: false, error: "Cafe owners must link posts to a cafe" }
+    // Non-writers must link to a cafe they own (unless admin/mod)
+    if (!isAdminMod && !isOwner && !input.cafe_id) {
+        return { success: false, error: "You must link posts to a cafe you own" }
     }
 
     // Tier check for cafe owners
-    if (!isAdmin && input.cafe_id) {
+    if (!isAdminMod && input.cafe_id) {
         const subResult = await db.select({ tier: cafeSubscriptions.tier })
             .from(cafeSubscriptions).where(eq(cafeSubscriptions.cafeId, input.cafe_id)).limit(1)
         const tier = subResult[0]?.tier || "free"
@@ -552,6 +546,19 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
         slug = `${baseSlug}-${counter++}`
     }
 
+    // Run LLM check for non-admin/mod posts
+    let llmReview = null
+    if (!isAdminMod) {
+        try {
+            const model = process.env.BLOG_CHECK_MODEL || "gpt-4"
+            llmReview = await checkBlogPost(model, input.content)
+        } catch (error) {
+            console.error("LLM check failed:", error)
+            // Fail-closed: require manual review if LLM check fails
+            llmReview = { approved: false, issues: ["LLM check failed - requires manual review"], suggestions: [] }
+        }
+    }
+
     const [inserted] = await db.insert(blogPosts).values({
         title: input.title,
         slug,
@@ -561,13 +568,14 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
         authorId: userId,
         cafeId: input.cafe_id || null,
         category: input.category,
-        status: input.status,
+        status: finalStatus,
+        llmReview,
         tags: input.tags || [],
         images: input.images || [],
         taggedCafeIds: input.tagged_cafe_ids || [],
         crawlId: input.crawl_id || null,
         featured: input.featured || false,
-        publishedAt: input.status === "published" ? new Date() : null,
+        publishedAt: finalStatus === "published" ? new Date() : null,
     }).returning()
 
     if (!inserted) return { success: false, error: "Failed to create blog post" }
@@ -579,16 +587,16 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     const userId = await getCurrentUserId()
     if (!userId) return { success: false, error: "Not authenticated" }
 
-    const existing = await db.select({ authorId: blogPosts.authorId, cafeId: blogPosts.cafeId, status: blogPosts.status })
+    const existing = await db.select({ authorId: blogPosts.authorId, cafeId: blogPosts.cafeId, status: blogPosts.status, publishedAt: blogPosts.publishedAt })
         .from(blogPosts).where(eq(blogPosts.id, postId)).limit(1)
 
     if (!existing[0]) return { success: false, error: "Post not found" }
 
-    const isAdmin = await isAdminOrModerator()
+    const isAdminMod = await isAdminOrModerator()
     const isOwner = existing[0].cafeId ? await isCafeOwner(existing[0].cafeId) : false
     const isAuthor = existing[0].authorId === userId
 
-    if (!isAdmin && !isOwner && !isAuthor) {
+    if (!isAdminMod && !isOwner && !isAuthor) {
         return { success: false, error: "Not authorized to edit this post" }
     }
 
@@ -608,7 +616,23 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
         }
     }
 
-    const isPublishing = input.status === "published" && existing[0].status !== "published"
+    // Re-run LLM check if content changes for non-admin/mod updates
+    let llmReview = null
+    if (!isAdminMod && input.content !== undefined) {
+        try {
+            const model = process.env.BLOG_CHECK_MODEL || "gpt-4"
+            llmReview = await checkBlogPost(model, input.content)
+        } catch (error) {
+            console.error("LLM check failed during update:", error)
+            // Fail-closed: require manual review if LLM check fails
+            llmReview = { approved: false, issues: ["LLM check failed during update - requires manual review"], suggestions: [] }
+        }
+    }
+
+    // Resolve status with moderation rules
+    const resolvedStatus = input.status ? resolveBlogStatus(input.status, isAdminMod) : undefined
+    const isPublishing = resolvedStatus === "published" && existing[0].status !== "published"
+    const isUnpublishing = resolvedStatus && resolvedStatus !== "published" && existing[0].status === "published"
 
     const updateData: Partial<typeof blogPosts.$inferInsert> = { updatedAt: new Date() }
     if (input.title !== undefined) updateData.title = input.title
@@ -618,13 +642,20 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     if (input.cover_image !== undefined) updateData.coverImage = input.cover_image
     if (input.cafe_id !== undefined) updateData.cafeId = input.cafe_id
     if (input.category !== undefined) updateData.category = input.category
-    if (input.status !== undefined) updateData.status = input.status
+    if (resolvedStatus !== undefined) updateData.status = resolvedStatus
     if (input.tags !== undefined) updateData.tags = input.tags
     if (input.images !== undefined) updateData.images = input.images
     if (input.tagged_cafe_ids !== undefined) updateData.taggedCafeIds = input.tagged_cafe_ids
     if (input.crawl_id !== undefined) updateData.crawlId = input.crawl_id
     if (input.featured !== undefined) updateData.featured = input.featured
-    if (isPublishing) updateData.publishedAt = new Date()
+    if (llmReview !== null) updateData.llmReview = llmReview
+
+    // Only admin/mod can set publishedAt; preserve it for non-admin/mod
+    if (isPublishing && isAdminMod) {
+        updateData.publishedAt = new Date()
+    } else if (isUnpublishing) {
+        updateData.publishedAt = null
+    }
 
     await db.update(blogPosts).set(updateData).where(eq(blogPosts.id, postId))
 
@@ -657,6 +688,33 @@ export async function publishBlogPost(postId: string): Promise<BlogActionResult>
 
 export async function archiveBlogPost(postId: string): Promise<BlogActionResult> {
     return updateBlogPost(postId, { status: "archived" })
+}
+
+export async function approveBlogPost(postId: string): Promise<BlogActionResult> {
+    if (!(await isAdminOrModerator())) {
+        return { success: false, error: "Not authorized" }
+    }
+
+    const existing = await db.select({ status: blogPosts.status, slug: blogPosts.slug })
+        .from(blogPosts).where(eq(blogPosts.id, postId)).limit(1)
+
+    if (!existing[0]) return { success: false, error: "Post not found" }
+
+    const isAlreadyPublished = existing[0].status === "published"
+
+    await db.update(blogPosts)
+        .set({
+            status: "published",
+            publishedAt: isAlreadyPublished ? undefined : new Date(),
+            updatedAt: new Date(),
+        })
+        .where(eq(blogPosts.id, postId))
+
+    revalidatePath("/blog")
+    revalidatePath("/admin/blog")
+    revalidatePath(`/blog/${existing[0].slug}`)
+
+    return { success: true }
 }
 
 export async function toggleFeatured(postId: string, featured: boolean): Promise<BlogActionResult> {

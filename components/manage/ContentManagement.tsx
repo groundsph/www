@@ -10,6 +10,7 @@ import {
     Eye,
     Loader2,
     Flag,
+    CheckCircle,
 } from "lucide-react"
 import { BlogPost } from "@/utils/types/blog"
 import { EventWithCafe } from "@/utils/types/extra"
@@ -70,6 +71,22 @@ export default function ContentManagement({
             setBlogPosts((prev) => prev.filter((p) => p.id !== postId))
         } else {
             alert(result.error || "Failed to delete post")
+        }
+        setProcessing(null)
+    }
+
+    const handleApproveBlogPost = async (postId: string) => {
+        setProcessing(postId)
+        const { approveBlogPost } = await import("@/app/api/actions/blog")
+        const result = await approveBlogPost(postId)
+        if (result.success) {
+            setBlogPosts((prev) =>
+                prev.map((p) =>
+                    p.id === postId ? { ...p, status: "published" as const } : p
+                )
+            )
+        } else {
+            alert(result.error || "Failed to approve post")
         }
         setProcessing(null)
     }
@@ -177,7 +194,9 @@ export default function ContentManagement({
                                                 className={`px-2 py-0.5 rounded-full text-xs ${
                                                     post.status === "published"
                                                         ? "bg-green-500/20 text-green-600"
-                                                        : "bg-amber-500/20 text-amber-600"
+                                                        : post.status === "pending"
+                                                          ? "bg-orange-500/20 text-orange-600"
+                                                          : "bg-amber-500/20 text-amber-600"
                                                 }`}
                                             >
                                                 {post.status}
@@ -191,6 +210,23 @@ export default function ContentManagement({
                                         </div>
                                     </div>
                                     <div className='flex items-center gap-2 self-end sm:self-center'>
+                                        {post.status === "pending" && (
+                                            <button
+                                                onClick={() => handleApproveBlogPost(post.id)}
+                                                disabled={processing === post.id}
+                                                className='flex items-center gap-1.5 px-3 py-2 bg-green-500/20 text-green-600 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
+                                                title='Approve'
+                                            >
+                                                {processing === post.id ? (
+                                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle className='w-4 h-4' />
+                                                        <span className='text-sm font-medium'>Approve</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
                                         {post.status === "published" && (
                                             <Link
                                                 href={`/blog/${post.slug}`}

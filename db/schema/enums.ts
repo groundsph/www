@@ -22,6 +22,7 @@ export const blogCategoryEnum = pgEnum("blog_category", [
     "cafe_update",
 ])
 export const blogStatusEnum = pgEnum("blog_status", [
+    "pending",
     "draft",
     "published",
     "archived",
