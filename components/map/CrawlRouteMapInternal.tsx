@@ -202,9 +202,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
     const [gapCount, setGapCount] = useState(0)
     const [activePointIndex, setActivePointIndex] = useState<number>(revealSequence ? -1 : 0)
     const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
-    const [sequenceComplete, setSequenceComplete] = useState(false)
-    const [revealedPoints, setRevealedPoints] = useState<Set<number>>(new Set())
-    const [revealedSegments, setRevealedSegments] = useState<Set<number>>(new Set())
+    const [isLoadingRoutes, setIsLoadingRoutes] = useState(false)
 
     const normalizedPoints = useMemo(
         () =>
@@ -232,6 +230,9 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                 setGapCount(0)
                 return
             }
+            
+            setIsLoadingRoutes(true)
+            
             const requests = normalizedPoints.slice(0, -1).map((p, idx) => ({
                 start: p,
                 end: normalizedPoints[idx + 1],
@@ -255,6 +256,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
             if (cancelled) return
             setGapCount(results.filter((r) => !r).length)
             setSegments(results.filter(Boolean) as [number, number][][])
+            setIsLoadingRoutes(false)
         }
 
         run()
@@ -304,42 +306,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
         return () => clearInterval(interval)
     }, [animateTimeline, timelineDelayMs, normalizedPoints.length, segments.length, isPaused])
 
-    // Sequential reveal animation (plays once, no loop)
-    useEffect(() => {
-        if (!revealSequence || normalizedPoints.length === 0 || segments.length === 0 || sequenceComplete) return
 
-        let currentStep = 0
-        const totalSteps = normalizedPoints.length + segments.length
-
-        const revealNext = () => {
-            if (currentStep >= totalSteps) {
-                setSequenceComplete(true)
-                return
-            }
-
-            if (currentStep % 2 === 0) {
-                // Even steps: reveal cafe
-                const pointIndex = currentStep / 2
-                setRevealedPoints(prev => new Set([...prev, pointIndex]))
-                setActivePointIndex(pointIndex)
-                setActiveSegmentIndex(-1)
-            } else {
-                // Odd steps: reveal segment
-                const segmentIndex = Math.floor(currentStep / 2)
-                setRevealedSegments(prev => new Set([...prev, segmentIndex]))
-                setActiveSegmentIndex(segmentIndex)
-                setActivePointIndex(-1)
-            }
-
-            currentStep++
-            setTimeout(revealNext, timelineDelayMs)
-        }
-
-        // Start the sequence after a short delay
-        const startTimeout = setTimeout(revealNext, 500)
-
-        return () => clearTimeout(startTimeout)
-    }, [revealSequence, normalizedPoints.length, segments.length, timelineDelayMs, sequenceComplete])
 
     return (
         <div className="relative h-full w-full z-0">
@@ -354,19 +321,20 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                     attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                     url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
                 />
-                {normalizedPoints.map((p, idx) => (
+                {/* Only show markers and routes when not loading */}
+                {!isLoadingRoutes && normalizedPoints.map((p, idx) => (
                     <CrawlMarker
                         key={p.cafeSlug || idx}
                         point={p}
-                        isActive={!revealSequence && animateTimeline ? idx === activePointIndex : false}
-                        isRevealed={revealSequence ? revealedPoints.has(idx) : true}
+                        isActive={animateTimeline ? idx === activePointIndex : false}
+                        isRevealed={true}
                     />
                 ))}
-                {segments.map((segment, idx) => (
+                {!isLoadingRoutes && segments.map((segment, idx) => (
                     <Polyline
                         key={`seg-${idx}`}
                         positions={segment}
-                        pathOptions={getCrawlSegmentStyle(idx, !revealSequence && animateTimeline ? idx === activeSegmentIndex : false, revealSequence ? revealedSegments.has(idx) : true)}
+                        pathOptions={getCrawlSegmentStyle(idx, animateTimeline ? idx === activeSegmentIndex : false, true)}
                     />
                 ))}
                 <MapFocus focusPoint={focusPoint ?? null} />
@@ -374,6 +342,17 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                 <MapBounds points={normalizedPoints} />
                 {showUserLocation && <UserLocationMarker />}
             </MapContainer>
+            
+            {/* Loading overlay */}
+            {isLoadingRoutes && (
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10">
+                    <div className="text-center">
+                        <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+                        <p className="text-text/70 font-serif">Calculating route...</p>
+                    </div>
+                </div>
+            )}
+            
             {gapCount > 0 && (
                 <div className="absolute top-3 right-3 bg-background/90 border border-secondary/30 text-xs text-text/70 px-3 py-2 rounded-lg shadow-sm">
                     {gapCount} route gap{gapCount > 1 ? "s" : ""} (no road path)

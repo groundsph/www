@@ -242,39 +242,14 @@
     }
 }
 
-/* Hidden marker state */
-.crawl-marker-hidden {
-    opacity: 0;
-    transform: scale(0.6);
-    pointer-events: none;
-}
-
-/* Marker entrance animation */
-@keyframes marker-enter {
-    0% {
-        transform: scale(0.8);
-        opacity: 0.5;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-/* Base marker styles with transition */
-.crawl-marker-icon {
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* Base marker styles - no animations */
 .crawl-marker-pin {
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 0.4s ease,
-                box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: marker-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    transition: transform 0.3s ease,
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
 }
 
-/* Active marker styles - NO PULSE, just subtle highlight */
+/* Active marker styles */
 .crawl-marker-active {
     z-index: 1000 !important;
 }
@@ -282,38 +257,16 @@
 .crawl-marker-active .crawl-marker-pin {
     border-color: #e8d5b7;
     transform: scale(1.05);
-    box-shadow:
-        0 4px 12px rgba(116, 81, 45, 0.4),
-        0 2px 4px rgba(116, 81, 45, 0.2);
 }
 
-/* Hidden segment state */
-.crawl-route-segment-hidden {
-    opacity: 0;
-}
-
-/* Segment entrance animation */
-@keyframes segment-enter {
-    0% {
-        filter: drop-shadow(0 0 2px rgba(116, 81, 45, 0.3));
-        stroke-opacity: 0.6;
-    }
-    100% {
-        filter: drop-shadow(0 0 4px rgba(116, 81, 45, 0.5));
-        stroke-opacity: 1;
-    }
-}
-
-/* Base segment styles with transition */
+/* Base segment styles - no animations */
 .crawl-route-segment {
-    transition: filter 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                stroke-width 0.4s ease,
-                stroke-opacity 0.4s ease;
-    animation: segment-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    transition: filter 0.3s ease,
+                stroke-width 0.3s ease;
 }
 
-/* Active segment styles - NO PULSE, just subtle highlight */
+/* Active segment styles */
 .crawl-route-segment-active {
-    filter: drop-shadow(0 0 6px rgba(116, 81, 45, 0.6));
+    filter: drop-shadow(0 0 4px rgba(116, 81, 45, 0.5));
     stroke-width: 5;
 }

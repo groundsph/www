@@ -223,8 +223,6 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                         <CrawlRouteMap
                             points={mapPoints}
                             showUserLocation={true}
-                            revealSequence={true}
-                            timelineDelayMs={1000}
                         />
                         </div>
                     </div>
