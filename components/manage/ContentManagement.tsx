@@ -19,6 +19,7 @@ import EventsManagement from "@/components/events/EventsManagement"
 import BlogReportsPanel from "./BlogReportsPanel"
 import ApprovePostModal from "@/components/admin/ApprovePostModal"
 import Link from "next/link"
+import { useNotification } from "@/components/layout/NotificationProvider"
 
 interface ContentManagementProps {
     blogPosts: BlogPost[]
@@ -40,6 +41,7 @@ export default function ContentManagement({
         null
     )
     const [processing, setProcessing] = useState<string | null>(null)
+    const { addNotification } = useNotification()
 
     // Approval confirmation modal state
     const [approvalPost, setApprovalPost] = useState<BlogPost | null>(null)
@@ -81,17 +83,39 @@ export default function ContentManagement({
 
     const handleApproveBlogPost = async (postId: string) => {
         setProcessing(postId)
+
+        // Store current post state for potential rollback
+        const currentPost = blogPosts.find((p) => p.id === postId)
+        if (!currentPost) {
+            setProcessing(null)
+            return
+        }
+        const previousStatus = currentPost.status
+
+        // Optimistically update to published
+        setBlogPosts((prev) =>
+            prev.map((p) =>
+                p.id === postId ? { ...p, status: "published" as const } : p
+            )
+        )
+
+        // Make the API call
         const { approveBlogPost } = await import("@/app/api/actions/blog")
         const result = await approveBlogPost(postId)
-        if (result.success) {
+
+        if (!result.success) {
+            // Rollback on failure
             setBlogPosts((prev) =>
                 prev.map((p) =>
-                    p.id === postId ? { ...p, status: "published" as const } : p
+                    p.id === postId ? { ...p, status: previousStatus } : p
                 )
             )
-        } else {
-            alert(result.error || "Failed to approve post")
+            addNotification(
+                result.error || "Failed to approve post",
+                "error"
+            )
         }
+
         setProcessing(null)
     }
 
