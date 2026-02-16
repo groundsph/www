@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "motion/react"
@@ -30,6 +30,7 @@ export default function CommunityBlogEditor() {
     const router = useRouter()
     const { addNotification } = useNotification()
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Form state
     const [title, setTitle] = useState("")
@@ -88,7 +89,7 @@ export default function CommunityBlogEditor() {
                 if (retryAttempt < MAX_MODEL_RETRIES) {
                     const delay = MODEL_RETRY_DELAYS[retryAttempt] || 2000
 
-                    setTimeout(() => {
+                    retryTimeoutRef.current = setTimeout(() => {
                         loadModels(retryAttempt + 1)
                     }, delay)
                 } else {
@@ -110,6 +111,12 @@ export default function CommunityBlogEditor() {
     // Initial load
     useEffect(() => {
         loadModels()
+
+        return () => {
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current)
+            }
+        }
     }, [loadModels])
 
     // ============================================================================
@@ -135,12 +142,48 @@ export default function CommunityBlogEditor() {
     }, [lastGenerateTime])
 
     // ============================================================================
+    // Navigation Guard for Unsaved Changes
+    // ============================================================================
+
+    const hasUnsavedChanges = title.trim() !== "" || content.trim() !== "" || excerpt.trim() !== ""
+
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault()
+                e.returnValue = ""
+            }
+        }
+
+        window.addEventListener("beforeunload", handleBeforeUnload)
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+    }, [hasUnsavedChanges])
+
+    // ============================================================================
     // Handlers
     // ============================================================================
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
+        if (!allowedTypes.includes(file.type)) {
+            addNotification('Please upload a valid image file (JPEG, PNG, GIF, WebP, or AVIF)', 'error', {
+                title: 'Invalid File Type',
+            })
+            return
+        }
+
+        // Validate file size (10MB max)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+        if (file.size > MAX_FILE_SIZE) {
+            addNotification('File size must be less than 10MB', 'error', {
+                title: 'File Too Large',
+            })
+            return
+        }
 
         setIsUploading(true)
 
@@ -295,13 +338,16 @@ export default function CommunityBlogEditor() {
     // Derived State
     // ============================================================================
 
-    const canGenerateExcerpt =
-        content.length >= MIN_CONTENT_FOR_EXCERPT &&
-        !!selectedModel &&
-        cooldownRemaining === 0 &&
-        !isGeneratingExcerpt
+    const canGenerateExcerpt = useMemo(
+        () =>
+            content.length >= MIN_CONTENT_FOR_EXCERPT &&
+            !!selectedModel &&
+            cooldownRemaining === 0 &&
+            !isGeneratingExcerpt,
+        [content.length, selectedModel, cooldownRemaining, isGeneratingExcerpt]
+    )
 
-    const readingTime = estimateReadingTime(content)
+    const readingTime = useMemo(() => estimateReadingTime(content), [content])
 
     // ============================================================================
     // Render
@@ -322,7 +368,8 @@ export default function CommunityBlogEditor() {
                             </p>
                         </div>
                         <button
-                            onClick={handleSubmit}
+                            type="submit"
+                            form="community-blog-form"
                             disabled={isSubmitting}
                             className="px-4 sm:px-6 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 active:scale-95"
                         >
@@ -339,7 +386,14 @@ export default function CommunityBlogEditor() {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+            <form
+                id="community-blog-form"
+                onSubmit={(e) => {
+                    e.preventDefault()
+                    handleSubmit()
+                }}
+                className="max-w-4xl mx-auto px-4 sm:px-6 py-8"
+            >
                 <div className="space-y-8">
                     {/* Cover Image */}
                     <div className="space-y-2">
@@ -570,7 +624,7 @@ Share your coffee experiences, brewing tips, cafe discoveries, or anything relat
                         </div>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
     )
 }
