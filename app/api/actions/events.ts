@@ -78,17 +78,32 @@ async function canManageEvent(event: Event): Promise<boolean> {
 }
 
 /**
+ * Test-only wrapper for canAutoPublishCommunityEvent with injectable dependencies
+ */
+export async function canAutoPublishCommunityEventForTest(input: {
+    userId: string
+    isAdminOrModerator: () => Promise<boolean>
+    isOwner: (userId: string) => Promise<boolean>
+}): Promise<boolean> {
+    if (await input.isAdminOrModerator()) return true
+    return Boolean(await input.isOwner(input.userId))
+}
+
+/**
  * Check if user can auto-publish community events (admin, moderator, or cafe owner)
  */
 async function canAutoPublishCommunityEvent(userId: string): Promise<boolean> {
-    if (await isAdminOrModerator()) return true
-
-    const ownerResult = await db.select({ id: cafes.id })
-        .from(cafes)
-        .where(sql`${cafes.ownerIds} @> ARRAY[${userId}]::uuid[]`)
-        .limit(1)
-
-    return Boolean(ownerResult[0])
+    return canAutoPublishCommunityEventForTest({
+        userId,
+        isAdminOrModerator,
+        isOwner: async (uid: string) => {
+            const ownerResult = await db.select({ id: cafes.id })
+                .from(cafes)
+                .where(sql`${cafes.ownerIds} @> ARRAY[${uid}]::uuid[]`)
+                .limit(1)
+            return Boolean(ownerResult[0])
+        },
+    })
 }
 
 // Helper to map event result to snake_case
