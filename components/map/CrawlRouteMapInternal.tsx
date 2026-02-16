@@ -256,7 +256,13 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
             if (cancelled) return
             setGapCount(results.filter((r) => !r).length)
             setSegments(results.filter(Boolean) as [number, number][][])
-            setIsLoadingRoutes(false)
+            
+            // Wait for Leaflet to render the polylines before hiding loader
+            setTimeout(() => {
+                if (!cancelled) {
+                    setIsLoadingRoutes(false)
+                }
+            }, 300)
         }
 
         run()
