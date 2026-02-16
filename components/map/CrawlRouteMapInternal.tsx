@@ -137,11 +137,9 @@ function UserLocationMarker() {
 // Individual marker component with click/tap handling
 function CrawlMarker({ 
     point, 
-    index,
     isActive
 }: { 
     point: CrawlRouteMapProps["points"][number]
-    index: number
     isActive?: boolean
 }) {
     const router = useRouter()
@@ -187,7 +185,6 @@ function CrawlMarker({
 
     return (
         <Marker
-            key={`${point.lat}-${point.lng}-${index}`}
             position={[point.lat, point.lng]}
             icon={markerIcon(point, showTooltip, isActive)}
             eventHandlers={{
@@ -261,28 +258,30 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
     }, [normalizedPoints])
 
     // Timeline animation
+    const currentStepRef = useRef(0)
+
     useEffect(() => {
-        if (!animateTimeline || normalizedPoints.length === 0) return
+        if (!animateTimeline || normalizedPoints.length === 0 || segments.length === 0) return
 
         const totalSteps = normalizedPoints.length + segments.length
-        let currentStep = 0
+        currentStepRef.current = 0
 
         const interval = setInterval(() => {
-            if (currentStep >= totalSteps) {
-                currentStep = 0
+            if (currentStepRef.current >= totalSteps) {
+                currentStepRef.current = 0
             }
 
-            if (currentStep % 2 === 0) {
+            if (currentStepRef.current % 2 === 0) {
                 // Even steps: highlight cafe
-                setActivePointIndex(currentStep / 2)
+                setActivePointIndex(currentStepRef.current / 2)
                 setActiveSegmentIndex(-1)
             } else {
                 // Odd steps: draw segment
-                setActiveSegmentIndex(Math.floor(currentStep / 2))
+                setActiveSegmentIndex(Math.floor(currentStepRef.current / 2))
                 setActivePointIndex(-1)
             }
 
-            currentStep++
+            currentStepRef.current++
         }, timelineDelayMs)
 
         return () => clearInterval(interval)
@@ -303,9 +302,8 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                 />
                 {normalizedPoints.map((p, idx) => (
                     <CrawlMarker
-                        key={`${p.lat}-${p.lng}-${idx}`}
+                        key={p.cafeSlug || idx}
                         point={p}
-                        index={idx}
                         isActive={animateTimeline ? idx === activePointIndex : false}
                     />
                 ))}
