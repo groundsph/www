@@ -321,37 +321,41 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                     attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                     url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
                 />
-                {/* Only show markers and routes when not loading */}
-                {!isLoadingRoutes && normalizedPoints.map((p, idx) => (
-                    <CrawlMarker
-                        key={p.cafeSlug || idx}
-                        point={p}
-                        isActive={animateTimeline ? idx === activePointIndex : false}
-                        isRevealed={true}
-                    />
-                ))}
-                {!isLoadingRoutes && segments.map((segment, idx) => (
-                    <Polyline
-                        key={`seg-${idx}`}
-                        positions={segment}
-                        pathOptions={getCrawlSegmentStyle(idx, animateTimeline ? idx === activeSegmentIndex : false, true)}
-                    />
-                ))}
+                {/* Markers and routes - always rendered but opacity controlled via CSS */}
+                <div className={`transition-opacity duration-700 ease-out ${isLoadingRoutes ? 'opacity-0' : 'opacity-100'}`}>
+                    {normalizedPoints.map((p, idx) => (
+                        <CrawlMarker
+                            key={p.cafeSlug || idx}
+                            point={p}
+                            isActive={animateTimeline ? idx === activePointIndex : false}
+                            isRevealed={true}
+                        />
+                    ))}
+                    {segments.map((segment, idx) => (
+                        <Polyline
+                            key={`seg-${idx}`}
+                            positions={segment}
+                            pathOptions={getCrawlSegmentStyle(idx, animateTimeline ? idx === activeSegmentIndex : false, true)}
+                        />
+                    ))}
+                </div>
                 <MapFocus focusPoint={focusPoint ?? null} />
                 <MapResizeHandler />
                 <MapBounds points={normalizedPoints} />
                 {showUserLocation && <UserLocationMarker />}
             </MapContainer>
             
-            {/* Loading overlay */}
-            {isLoadingRoutes && (
-                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10">
-                    <div className="text-center">
-                        <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
-                        <p className="text-text/70 font-serif">Calculating route...</p>
-                    </div>
+            {/* Loading overlay with smooth fade */}
+            <div 
+                className={`absolute inset-0 bg-secondary/20 backdrop-blur-[2px] flex items-center justify-center z-10 transition-opacity duration-700 ease-out pointer-events-none ${
+                    isLoadingRoutes ? 'opacity-100' : 'opacity-0'
+                }`}
+            >
+                <div className="text-center bg-background/90 px-6 py-4 rounded-xl shadow-lg">
+                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-text/60 text-sm font-medium">Loading route...</p>
                 </div>
-            )}
+            </div>
             
             {gapCount > 0 && (
                 <div className="absolute top-3 right-3 bg-background/90 border border-secondary/30 text-xs text-text/70 px-3 py-2 rounded-lg shadow-sm">
