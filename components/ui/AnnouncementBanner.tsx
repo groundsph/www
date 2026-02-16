@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Megaphone, Feather, type LucideIcon } from "lucide-react"
+import { X, Megaphone, Map, type LucideIcon } from "lucide-react"
 
 // ============================================================
 // ANNOUNCEMENT CONFIGURATION
@@ -17,11 +17,11 @@ interface Announcement {
 }
 
 const CURRENT_ANNOUNCEMENT: Announcement | null = {
-    id: "writer-app-2026-v1",
-    message: "We're looking for passionate community writers to share their coffee stories!",
-    icon: Feather,
-    link: { href: "/contact?as=writer_application", label: "Apply Now" },
-    expiresAt: new Date("2026-02-20"),
+    id: "cafe-crawls-2026-feb",
+    message: "Try Cafe Crawls - Create and Share custom cafe guides!",
+    icon: Map,
+    link: { href: "/community?tab=crawls", label: "View Crawls" },
+    expiresAt: new Date("2026-02-28"),
 }
 
 // ============================================================
@@ -50,7 +50,7 @@ export default function AnnouncementBanner() {
         setIsVisible(false)
         localStorage.setItem(
             "announcement-dismissed-id",
-            CURRENT_ANNOUNCEMENT.id
+            CURRENT_ANNOUNCEMENT.id,
         )
     }
 

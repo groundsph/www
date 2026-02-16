@@ -14,9 +14,5 @@ export default async function NewBlogPostPage() {
         redirect("/auth/login?redirect=/blog/new")
     }
 
-    return (
-        <main className="min-h-screen">
-            <CommunityBlogEditor />
-        </main>
-    )
+    return <CommunityBlogEditor />
 }
