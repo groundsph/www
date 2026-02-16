@@ -82,28 +82,42 @@ export default function ContentManagement({
     }
 
     const handleApproveBlogPost = async (postId: string) => {
+        // Prevent concurrent calls
+        if (processing) return
+
         setProcessing(postId)
 
-        // Store current post state for potential rollback
-        const currentPost = blogPosts.find((p) => p.id === postId)
-        if (!currentPost) {
+        // Store current post state for potential rollback (captured at update moment)
+        let previousStatus: BlogPost["status"] = "pending"
+        let postFound = false
+
+        // Optimistically update to published and capture previous status
+        setBlogPosts((prev) => {
+            const post = prev.find((p) => p.id === postId)
+            if (post) {
+                previousStatus = post.status
+                postFound = true
+            }
+            return prev.map((p) =>
+                p.id === postId ? { ...p, status: "published" as const } : p
+            )
+        })
+
+        if (!postFound) {
             setProcessing(null)
             return
         }
-        const previousStatus = currentPost.status
 
-        // Optimistically update to published
-        setBlogPosts((prev) =>
-            prev.map((p) =>
-                p.id === postId ? { ...p, status: "published" as const } : p
-            )
-        )
+        try {
+            const { approveBlogPost } = await import("@/app/api/actions/blog")
+            const result = await approveBlogPost(postId)
 
-        // Make the API call
-        const { approveBlogPost } = await import("@/app/api/actions/blog")
-        const result = await approveBlogPost(postId)
+            if (!result.success) {
+                throw new Error(result.error || "Failed to approve post")
+            }
 
-        if (!result.success) {
+            addNotification("Post approved successfully", "success")
+        } catch (error) {
             // Rollback on failure
             setBlogPosts((prev) =>
                 prev.map((p) =>
@@ -111,12 +125,12 @@ export default function ContentManagement({
                 )
             )
             addNotification(
-                result.error || "Failed to approve post",
+                error instanceof Error ? error.message : "Failed to approve post",
                 "error"
             )
+        } finally {
+            setProcessing(null)
         }
-
-        setProcessing(null)
     }
 
     return (
