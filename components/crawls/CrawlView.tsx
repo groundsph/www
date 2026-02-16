@@ -223,6 +223,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                         <CrawlRouteMap
                             points={mapPoints}
                             showUserLocation={true}
+                            showLoadingState={true}
                         />
                         </div>
                     </div>

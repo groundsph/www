@@ -92,6 +92,7 @@ interface CrawlRouteMapProps {
     animateTimeline?: boolean
     timelineDelayMs?: number
     revealSequence?: boolean
+    showLoadingState?: boolean
 }
 
 const markerIcon = (point: CrawlRouteMapProps["points"][number], showTooltip: boolean, isActive = false, isRevealed = true) =>
@@ -197,13 +198,13 @@ function CrawlMarker({
     )
 }
 
-export default function CrawlRouteMap({ points, focusPoint, showUserLocation, animateTimeline = false, timelineDelayMs = 1500, revealSequence = false }: CrawlRouteMapProps) {
+export default function CrawlRouteMap({ points, focusPoint, showUserLocation, animateTimeline = false, timelineDelayMs = 1500, revealSequence = false, showLoadingState = false }: CrawlRouteMapProps) {
     const [segments, setSegments] = useState<[number, number][][]>([])
     const [gapCount, setGapCount] = useState(0)
     const [activePointIndex, setActivePointIndex] = useState<number>(revealSequence ? -1 : 0)
     const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
-    const [isLoadingRoutes, setIsLoadingRoutes] = useState(true)
-    const [hasFetchedRoutes, setHasFetchedRoutes] = useState(false)
+    const [isLoadingRoutes, setIsLoadingRoutes] = useState(showLoadingState)
+    const [hasFetchedRoutes, setHasFetchedRoutes] = useState(!showLoadingState)
 
     const normalizedPoints = useMemo(
         () =>
@@ -229,10 +230,17 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
             if (normalizedPoints.length < 2) {
                 setSegments([])
                 setGapCount(0)
+                if (showLoadingState) {
+                    setHasFetchedRoutes(false)
+                    setIsLoadingRoutes(true)
+                }
                 return
             }
             
-            setIsLoadingRoutes(true)
+            if (showLoadingState) {
+                setIsLoadingRoutes(true)
+                setHasFetchedRoutes(false)
+            }
             
             const requests = normalizedPoints.slice(0, -1).map((p, idx) => ({
                 start: p,
@@ -258,7 +266,9 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
             const validSegments = results.filter(Boolean) as [number, number][][]
             setGapCount(results.filter((r) => !r).length)
             setSegments(validSegments)
-            
+
+            if (!showLoadingState) return
+
             // Only show content if we actually have route data
             if (validSegments.length > 0) {
                 setHasFetchedRoutes(true)
@@ -275,7 +285,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
         return () => {
             cancelled = true
         }
-    }, [normalizedPoints])
+    }, [normalizedPoints, showLoadingState])
 
     // Timeline animation
     const currentStepRef = useRef(0)
