@@ -259,16 +259,27 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
 
     // Timeline animation
     const currentStepRef = useRef(0)
+    const [isPaused, setIsPaused] = useState(false)
 
     useEffect(() => {
         if (!animateTimeline || normalizedPoints.length === 0 || segments.length === 0) return
 
         const totalSteps = normalizedPoints.length + segments.length
-        currentStepRef.current = 0
+        
+        // If we're paused, wait 3 seconds before restarting
+        if (isPaused) {
+            const pauseTimeout = setTimeout(() => {
+                currentStepRef.current = 0
+                setIsPaused(false)
+            }, 3000)
+            return () => clearTimeout(pauseTimeout)
+        }
 
         const interval = setInterval(() => {
             if (currentStepRef.current >= totalSteps) {
-                currentStepRef.current = 0
+                // End of cycle - pause before restarting
+                setIsPaused(true)
+                return
             }
 
             if (currentStepRef.current % 2 === 0) {
@@ -285,7 +296,7 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
         }, timelineDelayMs)
 
         return () => clearInterval(interval)
-    }, [animateTimeline, timelineDelayMs, normalizedPoints.length, segments.length])
+    }, [animateTimeline, timelineDelayMs, normalizedPoints.length, segments.length, isPaused])
 
     return (
         <div className="relative h-full w-full z-0">

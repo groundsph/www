@@ -242,17 +242,64 @@
     }
 }
 
+/* Marker entrance animation */
+@keyframes marker-enter {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Base marker styles with transition */
+.crawl-marker-pin {
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.4s ease,
+                box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: marker-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 /* Active marker styles */
 .crawl-marker-active {
     z-index: 1000 !important;
 }
 
 .crawl-marker-active .crawl-marker-pin {
-    animation: crawl-marker-pulse 1.5s ease-in-out infinite;
+    animation: crawl-marker-pulse 1.5s ease-in-out infinite, marker-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     border-color: #e8d5b7;
+    transform: scale(1.15);
+    box-shadow:
+        0 6px 20px rgba(116, 81, 45, 0.6),
+        0 4px 8px rgba(116, 81, 45, 0.4),
+        0 0 30px rgba(116, 81, 45, 0.3);
+}
+
+/* Segment entrance animation */
+@keyframes segment-enter {
+    0% {
+        filter: drop-shadow(0 0 2px rgba(116, 81, 45, 0.3));
+        stroke-opacity: 0.6;
+    }
+    100% {
+        filter: drop-shadow(0 0 4px rgba(116, 81, 45, 0.5));
+        stroke-opacity: 1;
+    }
+}
+
+/* Base segment styles with transition */
+.crawl-route-segment {
+    transition: filter 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                stroke-width 0.4s ease,
+                stroke-opacity 0.4s ease;
+    animation: segment-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* Active segment styles */
 .crawl-route-segment-active {
-    animation: crawl-route-glow 1.5s ease-in-out infinite;
+    animation: crawl-route-glow 1.5s ease-in-out infinite, segment-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    filter: drop-shadow(0 0 10px rgba(116, 81, 45, 0.9));
+    stroke-width: 4;
 }
