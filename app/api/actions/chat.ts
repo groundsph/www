@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { getOrCreateChatSessionId } from "@/utils/chat-session"
 import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { runChatWithTools } from "@/utils/ai/chat-tools"
+import { getChatEnabled } from "@/utils/feature-flags"
 import { z } from "zod"
 
 const sendChatMessageSchema = z.object({
@@ -32,6 +33,15 @@ export async function sendChatMessage(
                 success: false,
                 remaining: 10,
                 error: "Invalid message. Message must be between 1 and 2000 characters.",
+            }
+        }
+
+        // Check if chat is enabled
+        if (!getChatEnabled()) {
+            return {
+                success: false,
+                remaining: 0,
+                error: "Chat is temporarily unavailable.",
             }
         }
 

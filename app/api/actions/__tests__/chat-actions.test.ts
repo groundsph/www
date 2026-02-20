@@ -35,6 +35,13 @@ mock.module("@/utils/ai/chat-tools", () => ({
     runChatWithTools: mockRunChatWithTools,
 }))
 
+// Mock feature-flags
+const mockGetChatEnabled = mock(() => true)
+
+mock.module("@/utils/feature-flags", () => ({
+    getChatEnabled: mockGetChatEnabled,
+}))
+
 // Import after mocking
 const { sendChatMessage } = await import("@/app/api/actions/chat")
 
@@ -43,6 +50,16 @@ describe("sendChatMessage", () => {
         mockCheckChatLimit.mockClear()
         mockIncrementChatUsage.mockClear()
         mockRunChatWithTools.mockClear()
+        mockGetChatEnabled.mockClear()
+        mockGetChatEnabled.mockImplementation(() => true)
+    })
+
+    it("returns unavailable when chat disabled", async () => {
+        mockGetChatEnabled.mockImplementation(() => false)
+
+        const result = await sendChatMessage({ message: "hi" })
+        expect(result.success).toBe(false)
+        expect(result.error).toMatch(/unavailable/i)
     })
 
     it("returns error when rate limit exceeded", async () => {
