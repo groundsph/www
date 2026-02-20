@@ -13,6 +13,49 @@ The AI chat feature provides a floating chat widget where users can ask natural 
 - "Compare Good Cup vs Tightrope"
 - "What cities have the most cafes?"
 
+## Chat Availability Toggle
+
+The AI chat can be disabled via environment variable or admin toggle.
+
+### Environment Variable
+
+| Variable | Description | Values |
+|----------|-------------|--------|
+| `CHAT_ENABLED` | Optional override to disable chat | `"true"` (default), `"false"` or `"0"` |
+
+When `CHAT_ENABLED` is set to `"false"` or `"0"`, the chat widget is completely disabled regardless of the database setting.
+
+### Admin Toggle
+
+Admins can control chat availability at runtime via `/admin/settings/chat`. This updates a flag in the database (`chat_enabled` table) without requiring a deployment.
+
+### Precedence Rules
+
+Chat availability is determined in this order:
+
+1. **Environment variable** (`CHAT_ENABLED`) - Takes highest priority
+2. **Database flag** - Checked if no env var override
+3. **Default** - Chat is enabled if neither is set
+
+```
+CHAT_ENABLED env var → Database flag → Default (enabled)
+```
+
+### Usage
+
+**Disable chat temporarily** (admin):
+- Go to `/admin/settings/chat`
+- Toggle off
+- No restart needed
+
+**Disable chat permanently** (deployment):
+- Set `CHAT_ENABLED=false` in `.env.local`
+- Redeploy
+
+**Emergency shutdown** (immediate):
+- Set `CHAT_ENABLED=0` and restart
+- Overrides admin toggle
+
 ## Environment Variables
 
 ### Required for AI Features
@@ -209,6 +252,8 @@ bun test app/api/actions/__tests__/chat-actions.test.ts
 
 ### Chat widget not appearing
 
+- Check `CHAT_ENABLED` is not set to `false` or `0`
+- Verify the admin toggle at `/admin/settings/chat` is enabled
 - Verify AI environment variables are set
 - Check browser console for JavaScript errors
 - Ensure `components/chat/ChatWidget` is mounted in layout

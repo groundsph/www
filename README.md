@@ -133,6 +133,7 @@ Environment values live in `.env.local`. The example template is `.env.example`.
 | `OPENAI_COMPATIBLE_EXCERPT_MODEL` | Model used for blog excerpts |
 | `OPENAI_COMPATIBLE_MODEL` | Model used for AI chat (default: gpt-4o-mini) |
 | `BLOG_CHECK_MODEL` | Model used for blog moderation checks |
+| `CHAT_ENABLED` | Set to "false" to disable AI chat (optional) |
 | `DISCORD_WEBHOOK_URL` | Discord webhook for notifications |
 | `KOFI_WEBHOOK_VERIFICATION_TOKEN` | Ko-fi webhook verification token |
 | `HELIX_API_KEY` | HelixPay API key |
@@ -186,7 +187,9 @@ bun run llm:models
 
 ### AI Chat
 
-The platform includes an AI chat assistant that helps users discover cafes and answers questions about locations, amenities, and reviews. See [docs/ai.md](docs/ai.md) for detailed configuration and rate limiting information.
+The platform includes an AI chat assistant that helps users discover cafes and answers questions about locations, amenities, and reviews.
+
+**Chat Availability:** Set `CHAT_ENABLED=false` to disable the chat widget, or toggle it at `/admin/settings/chat`. See [docs/ai.md](docs/ai.md) for configuration details and rate limiting.
 
 ## Webhooks and Cron Jobs
 
