@@ -2,6 +2,18 @@ import { describe, it, expect, mock, beforeEach } from "bun:test"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import ChatWindow from "@/components/chat/ChatWindow"
 
+// Mock localStorage for tests
+const localStorageMock = {
+    getItem: mock(() => null),
+    setItem: mock(() => {}),
+    removeItem: mock(() => {}),
+}
+
+Object.defineProperty(global, "localStorage", {
+    value: localStorageMock,
+    writable: true,
+})
+
 const mockSendChatMessage = mock(() =>
     Promise.resolve({ success: true, message: "ok", remaining: 9 })
 )

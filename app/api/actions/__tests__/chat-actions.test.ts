@@ -56,6 +56,7 @@ describe("sendChatMessage", () => {
 
     it("returns unavailable when chat disabled", async () => {
         mockGetChatEnabled.mockImplementation(() => Promise.resolve(false))
+        mockCheckChatLimit.mockImplementation(() => Promise.resolve({ canSend: true, remaining: 10 }))
 
         const result = await sendChatMessage({ message: "hi" })
         expect(result.success).toBe(false)
