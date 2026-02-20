@@ -29,93 +29,106 @@ export interface CafeQueryResult {
     }
 }
 
+export interface CafeQueryError {
+    success: false
+    error: string
+}
+
 /**
  * Run a deterministic cafe query based on validated parameters
  * Returns structured data for AI response generation
  */
 export async function runCafeQuery(
     params: CafeQueryInput
-): Promise<CafeQueryResult> {
-    const limit = params.limit ?? 10
-    const offset = params.offset ?? 0
+): Promise<CafeQueryResult | CafeQueryError> {
+    try {
+        const limit = params.limit ?? 10
+        const offset = params.offset ?? 0
 
-    // Build where conditions
-    const conditions = buildConditions(params)
+        // Build where conditions
+        const conditions = buildConditions(params)
 
-    // Query cafes with rating stats - apply ordering inline
-    let query = db
-        .select({
-            id: cafes.id,
-            name: cafes.name,
-            slug: cafes.slug,
-            lat: cafes.lat,
-            lng: cafes.lng,
-            cityMunicipality: cafes.cityMunicipality,
-            province: cafes.province,
-            rating: cafeRatingStats.averageRating,
-        })
-        .from(cafes)
-        .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(...conditions))
+        // Query cafes with rating stats - apply ordering inline
+        let query = db
+            .select({
+                id: cafes.id,
+                name: cafes.name,
+                slug: cafes.slug,
+                lat: cafes.lat,
+                lng: cafes.lng,
+                cityMunicipality: cafes.cityMunicipality,
+                province: cafes.province,
+                rating: cafeRatingStats.averageRating,
+            })
+            .from(cafes)
+            .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
+            .where(and(...conditions))
 
-    // Apply ordering based on sortBy parameter
-    switch (params.sortBy) {
-        case "rating":
-            query = query.orderBy(
-                desc(cafes.membershipTier),
-                desc(cafeRatingStats.averageRating)
-            ) as typeof query
-            break
-        case "reviews":
-            query = query.orderBy(
-                desc(cafes.membershipTier),
-                desc(cafeRatingStats.totalReviews)
-            ) as typeof query
-            break
-        case "recent":
-            query = query.orderBy(desc(cafes.createdAt)) as typeof query
-            break
-        default:
-            // Default: by membership tier then created
-            query = query.orderBy(
-                desc(cafes.membershipTier),
-                desc(cafes.createdAt)
-            ) as typeof query
-    }
-
-    // Execute query
-    let results = await query
-
-    // Post-process geo filters (distance filtering)
-    if (params.nearLatLng && params.radiusKm) {
-        const center: GeoPoint = {
-            lat: params.nearLatLng.lat,
-            lng: params.nearLatLng.lng,
+        // Apply ordering based on sortBy parameter
+        switch (params.sortBy) {
+            case "rating":
+                query = query.orderBy(
+                    desc(cafes.membershipTier),
+                    desc(cafeRatingStats.averageRating)
+                ) as typeof query
+                break
+            case "reviews":
+                query = query.orderBy(
+                    desc(cafes.membershipTier),
+                    desc(cafeRatingStats.totalReviews)
+                ) as typeof query
+                break
+            case "recent":
+                query = query.orderBy(desc(cafes.createdAt)) as typeof query
+                break
+            default:
+                // Default: by membership tier then created
+                query = query.orderBy(
+                    desc(cafes.membershipTier),
+                    desc(cafes.createdAt)
+                ) as typeof query
         }
-        results = filterByDistance(results, center, params.radiusKm)
-    }
 
-    // Sort by distance if requested
-    if (params.sortBy === "distance" && params.nearLatLng) {
-        const center: GeoPoint = {
-            lat: params.nearLatLng.lat,
-            lng: params.nearLatLng.lng,
+        // Execute query
+        let results = await query
+
+        // Post-process geo filters (distance filtering)
+        if (params.nearLatLng && params.radiusKm) {
+            const center: GeoPoint = {
+                lat: params.nearLatLng.lat,
+                lng: params.nearLatLng.lng,
+            }
+            results = filterByDistance(results, center, params.radiusKm)
         }
-        results = sortByDistance(results, center)
-    }
 
-    // Apply pagination after geo processing
-    const total = results.length
-    const paginatedResults = results.slice(offset, offset + limit)
+        // Sort by distance if requested
+        if (params.sortBy === "distance" && params.nearLatLng) {
+            const center: GeoPoint = {
+                lat: params.nearLatLng.lat,
+                lng: params.nearLatLng.lng,
+            }
+            results = sortByDistance(results, center)
+        }
 
-    return {
-        cafes: paginatedResults,
-        total,
-        metadata: {
-            filters: params,
-            executedAt: new Date().toISOString(),
-            hasMore: offset + limit < total,
-        },
+        // Apply pagination after geo processing
+        const total = results.length
+        const paginatedResults = results.slice(offset, offset + limit)
+
+        return {
+            cafes: paginatedResults,
+            total,
+            metadata: {
+                filters: params,
+                executedAt: new Date().toISOString(),
+                hasMore: offset + limit < total,
+            },
+        }
+    } catch (error) {
+        console.error("Cafe query error:", error)
+        return {
+            success: false,
+            error: "Failed to query cafes",
+        }
     }
 }
 
