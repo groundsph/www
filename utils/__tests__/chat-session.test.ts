@@ -44,12 +44,13 @@ describe("getOrCreateChatSessionId", () => {
 		expect(sessionId).toBe(existingId)
 	})
 
-	it("generates unique session ids each time", async () => {
+	it("returns the same session id when called multiple times (cookie persistence)", async () => {
+		// First call creates a new session and sets cookie
 		const sessionId1 = await getOrCreateChatSessionId(null)
+		// Second call should find the existing cookie and return the same ID
 		const sessionId2 = await getOrCreateChatSessionId(null)
 
-		expect(sessionId1).not.toBe(sessionId2)
+		expect(sessionId1).toBe(sessionId2)
 		expect(sessionId1.length).toBeGreaterThan(10)
-		expect(sessionId2.length).toBeGreaterThan(10)
 	})
 })
