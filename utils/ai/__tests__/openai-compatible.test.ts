@@ -81,6 +81,50 @@ describe("listModels", () => {
     })
 })
 
+describe("chatCompletionWithTools", () => {
+    let originalEnv: { [key: string]: string | undefined }
+
+    beforeEach(() => {
+        originalEnv = {
+            OPENAI_COMPATIBLE_BASE_URL: process.env.OPENAI_COMPATIBLE_BASE_URL,
+            OPENAI_COMPATIBLE_API_KEY: process.env.OPENAI_COMPATIBLE_API_KEY,
+            OPENAI_COMPATIBLE_MODEL: process.env.OPENAI_COMPATIBLE_MODEL,
+        }
+        process.env.OPENAI_COMPATIBLE_BASE_URL = "https://api.example.com"
+        process.env.OPENAI_COMPATIBLE_API_KEY = "test-api-key"
+        process.env.OPENAI_COMPATIBLE_MODEL = "custom-model"
+    })
+
+    afterEach(() => {
+        Object.assign(process.env, originalEnv)
+    })
+
+    it("uses configured model for chat completions", async () => {
+        const mockFetch = mock(() =>
+            Promise.resolve({
+                ok: true,
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: "Hi" } }],
+                    }),
+            } as Response)
+        )
+        global.fetch = mockFetch
+
+        const { chatCompletionWithTools } = await import(
+            "@/utils/ai/openai-compatible"
+        )
+
+        await chatCompletionWithTools(
+            [{ role: "user", content: "Hello" }],
+            []
+        )
+
+        const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+        expect(body.model).toBe("custom-model")
+    })
+})
+
 describe("generateExcerpt", () => {
     let originalEnv: { [key: string]: string | undefined }
 

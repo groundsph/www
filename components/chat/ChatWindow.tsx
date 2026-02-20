@@ -20,17 +20,51 @@ interface ChatWindowProps {
     onClose: () => void
 }
 
+const CHAT_HISTORY_KEY = "chat-history"
+
 export default function ChatWindow({
     remainingMessages,
     onClose,
 }: ChatWindowProps) {
-    const [messages, setMessages] = useState<Message[]>([])
+    const [messages, setMessages] = useState<Message[]>(() => {
+        // Load from localStorage on mount
+        if (typeof window !== "undefined") {
+            try {
+                const saved = localStorage.getItem(CHAT_HISTORY_KEY)
+                if (saved) {
+                    const parsed = JSON.parse(saved)
+                    // Restore Date objects
+                    return parsed.map((m: Message) => ({
+                        ...m,
+                        timestamp: new Date(m.timestamp),
+                    }))
+                }
+            } catch {
+                // Ignore parse errors
+            }
+        }
+        return []
+    })
     const [input, setInput] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [currentRemaining, setCurrentRemaining] = useState(remainingMessages)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const lastLocationRequestRef = useRef(0)
+
+    // Save to localStorage whenever messages change
+    useEffect(() => {
+        if (typeof window !== "undefined" && messages.length > 0) {
+            localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages))
+        }
+    }, [messages])
+
+    // Clear localStorage when rate limit reached
+    useEffect(() => {
+        if (currentRemaining <= 0 && typeof window !== "undefined") {
+            localStorage.removeItem(CHAT_HISTORY_KEY)
+        }
+    }, [currentRemaining])
 
     const {
         location,

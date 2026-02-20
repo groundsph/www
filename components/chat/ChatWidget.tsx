@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { MessageSquare } from "lucide-react"
+import { MessageSquare, X } from "lucide-react"
 import ChatWindow from "./ChatWindow"
 
 interface ChatWidgetProps {
@@ -10,21 +10,28 @@ interface ChatWidgetProps {
     isEnabled?: boolean
 }
 
-export function ChatWidget({ remainingMessages = 10, isEnabled = true }: ChatWidgetProps) {
+export function ChatWidget({
+    remainingMessages = 10,
+    isEnabled = true,
+}: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false)
 
     if (!isEnabled) return null
 
     return (
-        <div className="fixed bottom-4 right-4 z-50">
-            <AnimatePresence>
+        <div className='fixed bottom-4 right-4 z-50 flex flex-col items-end'>
+            <AnimatePresence mode='wait'>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="mb-4"
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 25,
+                        }}
+                        className='mb-3'
                     >
                         <ChatWindow
                             remainingMessages={remainingMessages}
@@ -34,18 +41,70 @@ export function ChatWidget({ remainingMessages = 10, isEnabled = true }: ChatWid
                 )}
             </AnimatePresence>
 
-            <button
+            <motion.button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-center w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors relative"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                animate={{
+                    boxShadow: [
+                        "0 4px 20px -5px var(--secondary-20)",
+                        "0 8px 30px -5px var(--secondary-40)",
+                        "0 4px 20px -5px var(--secondary-20)",
+                    ],
+                }}
+                transition={{
+                    boxShadow: {
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    },
+                }}
+                className='relative p-3 bg-secondary text-background rounded-full shadow-xl border-2 border-secondary/30 hover:bg-secondary/90 transition-colors cursor-pointer group'
                 aria-label={isOpen ? "Close chat" : "Open chat"}
             >
-                <MessageSquare className="w-6 h-6" />
+                <AnimatePresence mode='wait'>
+                    {isOpen ? (
+                        <motion.div
+                            key='close'
+                            initial={{ rotate: -90, opacity: 0 }}
+                            animate={{ rotate: 0, opacity: 1 }}
+                            exit={{ rotate: 90, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <X className='w-5 h-5' />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key='open'
+                            initial={{ rotate: 90, opacity: 0 }}
+                            animate={{ rotate: 0, opacity: 1 }}
+                            exit={{ rotate: -90, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <MessageSquare className='w-5 h-5' />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {remainingMessages > 0 && remainingMessages < 10 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                    <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className='absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg'
+                    >
                         {remainingMessages}
-                    </span>
+                    </motion.span>
                 )}
-            </button>
+
+                {/* Pulse animation for new users */}
+                {!isOpen && remainingMessages === 10 && (
+                    <motion.span
+                        className='absolute inset-0 rounded-full bg-secondary/50'
+                        animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 2, repeat: 2, delay: 1 }}
+                    />
+                )}
+            </motion.button>
         </div>
     )
 }

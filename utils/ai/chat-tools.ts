@@ -243,6 +243,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
             const response = await chatCompletionWithTools(messages, tools, {
                 temperature: 0.7,
                 maxTokens: 1000,
+                timeoutMs: 60000, // 60 seconds for longer queries
             })
 
             if (!response) {

@@ -203,6 +203,10 @@ export interface ChatCompletionOptions {
 
 const DEFAULT_CHAT_MODEL = "gpt-4o-mini"
 
+function getChatModel(): string {
+    return process.env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_CHAT_MODEL
+}
+
 /**
  * Make a chat completion request with tool support
  */
@@ -228,7 +232,7 @@ export async function chatCompletionWithTools(
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: DEFAULT_CHAT_MODEL,
+                model: getChatModel(),
                 messages,
                 tools,
                 tool_choice: options.toolChoice ?? "auto",

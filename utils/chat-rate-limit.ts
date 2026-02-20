@@ -2,8 +2,11 @@ import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { chatRateLimits } from "@/db/schema/chat-rate-limit"
 
-const MAX_USAGE = 10
+const MAX_USAGE = process.env.NODE_ENV === "development" ? Infinity : 10
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+
+// Skip rate limit in development
+const isDev = process.env.NODE_ENV === "development"
 
 export class RateLimitExceededError extends Error {
     constructor(message = "Rate limit exceeded") {
@@ -19,6 +22,8 @@ function validateSessionId(sessionId: string): void {
 }
 
 export async function incrementChatUsage(sessionId: string): Promise<void> {
+    if (isDev) return // Skip rate limit in development
+
     validateSessionId(sessionId)
 
     const now = new Date()
@@ -66,6 +71,8 @@ export async function incrementChatUsage(sessionId: string): Promise<void> {
 }
 
 export async function getChatRemaining(sessionId: string): Promise<number> {
+    if (isDev) return Infinity // No limit in development
+
     validateSessionId(sessionId)
 
     const now = new Date()
@@ -75,20 +82,24 @@ export async function getChatRemaining(sessionId: string): Promise<number> {
     })
 
     if (!existing) {
-        return MAX_USAGE
+        return MAX_USAGE as number
     }
 
     const windowStart = new Date(existing.windowStartedAt)
     const windowExpired = now.getTime() - windowStart.getTime() > SESSION_DURATION_MS
 
     if (windowExpired) {
-        return MAX_USAGE
+        return MAX_USAGE as number
     }
 
-    return Math.max(0, MAX_USAGE - existing.usedCount)
+    return Math.max(0, (MAX_USAGE as number) - existing.usedCount)
 }
 
 export async function checkChatLimit(sessionId: string): Promise<{ canSend: boolean; remaining: number }> {
+    if (isDev) {
+        return { canSend: true, remaining: Infinity }
+    }
+
     const remaining = await getChatRemaining(sessionId)
     return {
         canSend: remaining > 0,
