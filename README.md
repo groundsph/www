@@ -131,6 +131,7 @@ Environment values live in `.env.local`. The example template is `.env.example`.
 | `OPENAI_COMPATIBLE_BASE_URL` | OpenAI-compatible API base URL |
 | `OPENAI_COMPATIBLE_API_KEY` | OpenAI-compatible API key |
 | `OPENAI_COMPATIBLE_EXCERPT_MODEL` | Model used for blog excerpts |
+| `OPENAI_COMPATIBLE_MODEL` | Model used for AI chat (default: gpt-4o-mini) |
 | `BLOG_CHECK_MODEL` | Model used for blog moderation checks |
 | `DISCORD_WEBHOOK_URL` | Discord webhook for notifications |
 | `KOFI_WEBHOOK_VERIFICATION_TOKEN` | Ko-fi webhook verification token |
@@ -172,7 +173,7 @@ The Better Auth routes are mounted at `app/api/auth/[...all]/route.ts`.
 
 ## AI
 
-AI features use an OpenAI-compatible API and are optional. To enable model listing and excerpt generation:
+AI features use an OpenAI-compatible API and are optional. To enable model listing, excerpt generation, and chat:
 
 - `OPENAI_COMPATIBLE_BASE_URL`
 - `OPENAI_COMPATIBLE_API_KEY`
@@ -182,6 +183,10 @@ You can list available models with:
 ```bash
 bun run llm:models
 ```
+
+### AI Chat
+
+The platform includes an AI chat assistant that helps users discover cafes and answers questions about locations, amenities, and reviews. See [docs/ai.md](docs/ai.md) for detailed configuration and rate limiting information.
 
 ## Webhooks and Cron Jobs
 
