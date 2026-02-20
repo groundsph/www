@@ -11,7 +11,7 @@ import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 
 const MAX_TOOL_CALLS_DEFAULT = 4
-const MAX_TOOL_CALLS_LIMIT = 8
+const MAX_TOOL_CALLS_LIMIT = 4
 
 const CHAT_SYSTEM_PROMPT = `You are a helpful assistant for Grounds, a coffee discovery platform for the Philippines.
 

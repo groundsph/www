@@ -195,9 +195,10 @@ export interface ChatCompletionResponse {
 }
 
 export interface ChatCompletionOptions {
-    temperature?: number
     maxTokens?: number
+    temperature?: number
     timeoutMs?: number
+    toolChoice?: "auto" | "none" | { type: "function"; function: { name: string } }
 }
 
 const DEFAULT_CHAT_MODEL = "gpt-4o-mini"
@@ -230,7 +231,7 @@ export async function chatCompletionWithTools(
                 model: DEFAULT_CHAT_MODEL,
                 messages,
                 tools,
-                tool_choice: "auto",
+                tool_choice: options.toolChoice ?? "auto",
                 max_tokens: options.maxTokens ?? 1000,
                 temperature: options.temperature ?? 0.7,
             }),
