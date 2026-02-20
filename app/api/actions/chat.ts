@@ -5,6 +5,11 @@ import { getOrCreateChatSessionId } from "@/utils/chat-session"
 import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { runChatWithTools } from "@/utils/ai/chat-tools"
 import { cookies } from "next/headers"
+import { z } from "zod"
+
+const sendChatMessageSchema = z.object({
+    message: z.string().min(1).max(2000),
+})
 
 export interface SendChatMessageInput {
     message: string
@@ -21,6 +26,16 @@ export async function sendChatMessage(
     input: SendChatMessageInput
 ): Promise<SendChatMessageResult> {
     try {
+        // Validate input
+        const validated = sendChatMessageSchema.safeParse(input)
+        if (!validated.success) {
+            return {
+                success: false,
+                remaining: 10,
+                error: "Invalid message. Message must be between 1 and 2000 characters.",
+            }
+        }
+
         // Get current user (if authenticated) for user-linked session
         const user = await getCurrentUser()
 
@@ -42,7 +57,7 @@ export async function sendChatMessage(
 
         // Call AI with tools
         const result = await runChatWithTools({
-            message: input.message,
+            message: validated.data.message,
             sessionId,
         })
 
