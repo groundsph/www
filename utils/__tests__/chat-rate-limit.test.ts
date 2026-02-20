@@ -10,9 +10,6 @@ interface RateLimitRecord {
 
 let mockRateLimitStore: Map<string, RateLimitRecord> = new Map()
 
-// Track the last where clause for update operations
-let lastUpdateWhere: { sessionId: string } | null = null
-
 // Mock drizzle-orm eq function
 mock.module("drizzle-orm", () => ({
     eq: (left: unknown, right: string) => ({
@@ -67,7 +64,6 @@ mock.module("@/db", () => ({
 // Reset store before each test
 const resetStore = () => {
     mockRateLimitStore = new Map()
-    lastUpdateWhere = null
 }
 
 // Import functions after mocking
