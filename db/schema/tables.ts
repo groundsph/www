@@ -13,6 +13,10 @@ import {
 
 import * as enums from "./enums"
 
+import { chatRateLimits } from "./chat-rate-limit"
+
+export { chatRateLimits }
+
 // Custom tsvector type for full-text search columns
 const tsvector = customType<{ data: string }>({
     dataType() {
