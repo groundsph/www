@@ -161,3 +161,111 @@ export async function checkBlogPost(
         throw new Error("Invalid AI response format")
     }
 }
+
+// Tool definitions and types for tool calling
+export interface ToolDefinition {
+    type: "function"
+    function: {
+        name: string
+        description: string
+        parameters: object
+    }
+}
+
+interface ToolCall {
+    id: string
+    type: "function"
+    function: {
+        name: string
+        arguments: string
+    }
+}
+
+interface ChatMessage {
+    role: "system" | "user" | "assistant" | "tool"
+    content: string
+    tool_calls?: ToolCall[]
+    tool_call_id?: string
+    name?: string
+}
+
+export interface ChatCompletionResponse {
+    content: string | null
+    toolCalls: ToolCall[] | null
+}
+
+export interface ChatCompletionOptions {
+    temperature?: number
+    maxTokens?: number
+    timeoutMs?: number
+}
+
+const DEFAULT_CHAT_MODEL = "gpt-4o-mini"
+
+/**
+ * Make a chat completion request with tool support
+ */
+export async function chatCompletionWithTools(
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
+    options: ChatCompletionOptions = {}
+): Promise<ChatCompletionResponse | null> {
+    const { baseUrl, apiKey } = getConfig()
+    if (!baseUrl || !apiKey) {
+        console.error("Missing OPENAI_COMPATIBLE_BASE_URL or OPENAI_COMPATIBLE_API_KEY")
+        return null
+    }
+
+    const normalizedUrl = normalizeBaseUrl(baseUrl)
+    const timeoutMs = options.timeoutMs ?? 30000
+
+    try {
+        const response = await fetch(`${normalizedUrl}/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                model: DEFAULT_CHAT_MODEL,
+                messages,
+                tools,
+                tool_choice: "auto",
+                max_tokens: options.maxTokens ?? 1000,
+                temperature: options.temperature ?? 0.7,
+            }),
+            signal: AbortSignal.timeout(timeoutMs),
+        })
+
+        if (!response.ok) {
+            console.error(`Chat completion failed: ${response.status} ${response.statusText}`)
+            return null
+        }
+
+        const data = (await response.json()) as {
+            choices?: {
+                message?: {
+                    content?: string
+                    tool_calls?: ToolCall[]
+                }
+            }[]
+        }
+
+        const message = data.choices?.[0]?.message
+        if (!message) {
+            return null
+        }
+
+        return {
+            content: message.content ?? null,
+            toolCalls: message.tool_calls ?? null,
+        }
+    } catch (error) {
+        if (error instanceof Error && error.name === "TimeoutError") {
+            console.error("Chat completion timed out")
+        } else {
+            console.error("Chat completion error:", error)
+        }
+        return null
+    }
+}
