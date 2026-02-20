@@ -7,3 +7,8 @@ test("renders chat button", () => {
     expect(button).toBeDefined()
     expect(button.tagName).toBe("BUTTON")
 })
+
+test("does not render when disabled", () => {
+    render(<ChatWidget isEnabled={false} />)
+    expect(screen.queryByRole("button")).toBeNull()
+})

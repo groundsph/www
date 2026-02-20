@@ -7,10 +7,13 @@ import ChatWindow from "./ChatWindow"
 
 interface ChatWidgetProps {
     remainingMessages?: number
+    isEnabled?: boolean
 }
 
-export function ChatWidget({ remainingMessages = 10 }: ChatWidgetProps) {
+export function ChatWidget({ remainingMessages = 10, isEnabled = true }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false)
+
+    if (!isEnabled) return null
 
     return (
         <div className="fixed bottom-4 right-4 z-50">
