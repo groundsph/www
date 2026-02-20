@@ -46,3 +46,4 @@ certificates
 .agent
 plan.md
 .opencode/
+.worktrees/
