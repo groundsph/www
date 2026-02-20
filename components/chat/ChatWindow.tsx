@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { motion } from "motion/react"
 import { X, Send, AlertCircle, Loader2 } from "lucide-react"
 import ChatMessage from "./ChatMessage"
@@ -30,12 +30,23 @@ export default function ChatWindow({ remainingMessages, onClose }: ChatWindowPro
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }, [])
 
+    // Handle Escape key to close chat
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                onClose()
+            }
+        }
+        document.addEventListener("keydown", handleEscape)
+        return () => document.removeEventListener("keydown", handleEscape)
+    }, [onClose])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!input.trim() || isLoading || currentRemaining <= 0) return
 
         const userMessage: Message = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             role: "user",
             content: input.trim(),
             timestamp: new Date(),
@@ -51,7 +62,7 @@ export default function ChatWindow({ remainingMessages, onClose }: ChatWindowPro
 
             if (result.success && result.message) {
                 const assistantMessage: Message = {
-                    id: (Date.now() + 1).toString(),
+                    id: crypto.randomUUID(),
                     role: "assistant",
                     content: result.message,
                     timestamp: new Date(),
