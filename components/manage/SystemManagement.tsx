@@ -19,6 +19,7 @@ import {
     adminCleanupOrphanedImages,
     adminProcessAvatarQueue,
 } from "@/app/api/actions/admin"
+import { ChatSettings } from "@/components/admin/ChatSettings"
 import { uploadBadgeImageAction } from "@/utils/storage/actions"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
@@ -59,7 +60,7 @@ const resizeBadgeImage = (file: File): Promise<File> => {
     })
 }
 
-type TabType = "badges" | "maintenance"
+type TabType = "badges" | "maintenance" | "settings"
 
 export default function SystemManagement({
     badges: initialBadges,
@@ -440,6 +441,17 @@ export default function SystemManagement({
                     <Settings className='w-4 h-4' />
                     Maintenance
                 </button>
+                <button
+                    onClick={() => setActiveTab("settings")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                        activeTab === "settings"
+                            ? "bg-primary text-white"
+                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
+                    }`}
+                >
+                    <Settings className='w-4 h-4' />
+                    Settings
+                </button>
             </div>
 
             {/* Badges Tab */}
@@ -538,6 +550,22 @@ export default function SystemManagement({
                                 {cleanupMessage}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Settings Tab */}
+            {activeTab === "settings" && (
+                <div className='space-y-4'>
+                    <div className='bg-background rounded-xl p-5 shadow-sm border border-tertiary/50'>
+                        <h3 className='font-semibold mb-2 flex items-center gap-2'>
+                            <Settings className='w-5 h-5' />
+                            Chat Availability
+                        </h3>
+                        <p className='text-text/60 text-sm mb-4'>
+                            Enable or disable the AI chat feature for all users.
+                        </p>
+                        <ChatSettings />
                     </div>
                 </div>
             )}

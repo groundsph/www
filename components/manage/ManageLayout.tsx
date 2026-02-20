@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
     },
     {
         name: "System",
-        href: "/manage/system",
+        href: "/manage/system/settings",
         icon: <Settings className='w-5 h-5' />,
         adminOnly: true,
     },

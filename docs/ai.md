@@ -27,7 +27,7 @@ When `CHAT_ENABLED` is set to `"false"` or `"0"`, the chat widget is completely 
 
 ### Admin Toggle
 
-Admins can control chat availability at runtime via `/admin/settings/chat`. This updates a flag in the database (`chat_enabled` table) without requiring a deployment.
+Admins can control chat availability at runtime via `/manage/system/settings` under the **Settings** tab. This updates a flag in the database without requiring a deployment.
 
 ### Precedence Rules
 
@@ -44,7 +44,7 @@ CHAT_ENABLED env var → Database flag → Default (enabled)
 ### Usage
 
 **Disable chat temporarily** (admin):
-- Go to `/admin/settings/chat`
+- Go to `/manage/system/settings`
 - Toggle off
 - No restart needed
 
@@ -253,7 +253,7 @@ bun test app/api/actions/__tests__/chat-actions.test.ts
 ### Chat widget not appearing
 
 - Check `CHAT_ENABLED` is not set to `false` or `0`
-- Verify the admin toggle at `/admin/settings/chat` is enabled
+- Verify the admin toggle at `/manage/system/settings` is enabled
 - Verify AI environment variables are set
 - Check browser console for JavaScript errors
 - Ensure `components/chat/ChatWidget` is mounted in layout

@@ -37,7 +37,7 @@ export async function sendChatMessage(
         }
 
         // Check if chat is enabled
-        if (!getChatEnabled()) {
+        if (!(await getChatEnabled())) {
             return {
                 success: false,
                 remaining: 0,

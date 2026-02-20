@@ -37,7 +37,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     useEffect(() => {
         const fetchChatStatus = async () => {
             try {
-                const response = await fetch("/api/chat-status")
+                const response = await fetch("/api/chat-status", {
+                    cache: "no-store",
+                })
                 if (response.ok) {
                     const data = await response.json()
                     setIsChatEnabled(data.enabled ?? true)

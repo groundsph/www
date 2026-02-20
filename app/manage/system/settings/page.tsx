@@ -1,25 +1,19 @@
 import { redirect } from "next/navigation"
-import {
-    isAdmin,
-    getUserRole,
-    getAllBadgeDefinitions,
-} from "@/app/api/actions/admin"
+import { isAdmin, getUserRole, getAllBadgeDefinitions } from "@/app/api/actions/admin"
 import SystemManagement from "@/components/manage/SystemManagement"
 
 export const metadata = {
-    title: "System | Manage",
-    description: "Manage badges, settings, and maintenance tools",
+    title: "System Settings | Manage",
+    description: "Manage badges, platform settings, and maintenance tools",
 }
 
-export default async function ManageSystemPage() {
+export default async function ManageSystemSettingsPage() {
     const hasAccess = await isAdmin()
     if (!hasAccess) {
         redirect("/")
     }
 
     const userRole = await getUserRole()
-
-    // Only admins can access this page
     if (userRole !== "admin") {
         redirect("/manage")
     }

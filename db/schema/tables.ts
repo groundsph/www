@@ -14,8 +14,9 @@ import {
 import * as enums from "./enums"
 
 import { chatRateLimits } from "./chat-rate-limit"
+import { featureFlags } from "./feature-flags"
 
-export { chatRateLimits }
+export { chatRateLimits, featureFlags }
 
 // Custom tsvector type for full-text search columns
 const tsvector = customType<{ data: string }>({

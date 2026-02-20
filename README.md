@@ -189,7 +189,7 @@ bun run llm:models
 
 The platform includes an AI chat assistant that helps users discover cafes and answers questions about locations, amenities, and reviews.
 
-**Chat Availability:** Set `CHAT_ENABLED=false` to disable the chat widget, or toggle it at `/admin/settings/chat`. See [docs/ai.md](docs/ai.md) for configuration details and rate limiting.
+**Chat Availability:** Set `CHAT_ENABLED=false` to disable the chat widget, or toggle it at `/manage/system/settings` (Settings tab). See [docs/ai.md](docs/ai.md) for configuration details and rate limiting.
 
 ## Webhooks and Cron Jobs
 

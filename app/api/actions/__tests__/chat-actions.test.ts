@@ -36,7 +36,7 @@ mock.module("@/utils/ai/chat-tools", () => ({
 }))
 
 // Mock feature-flags
-const mockGetChatEnabled = mock(() => true)
+const mockGetChatEnabled = mock(() => Promise.resolve(true))
 
 mock.module("@/utils/feature-flags", () => ({
     getChatEnabled: mockGetChatEnabled,
@@ -55,7 +55,7 @@ describe("sendChatMessage", () => {
     })
 
     it("returns unavailable when chat disabled", async () => {
-        mockGetChatEnabled.mockImplementation(() => false)
+        mockGetChatEnabled.mockImplementation(() => Promise.resolve(false))
 
         const result = await sendChatMessage({ message: "hi" })
         expect(result.success).toBe(false)

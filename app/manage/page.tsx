@@ -72,7 +72,7 @@ export default async function ManageOverviewPage() {
             name: "System",
             description:
                 "Manage badges, platform settings, and maintenance tools.",
-            href: "/manage/system",
+            href: "/manage/system/settings",
             icon: <Settings className='w-6 h-6' />,
             color: "bg-purple-500/10 text-purple-700",
             adminOnly: true,
