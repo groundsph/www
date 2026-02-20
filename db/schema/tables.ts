@@ -678,3 +678,14 @@ export const userFollows = pgTable("user_follows", {
     // Prevent duplicate follows
     uniqueFollowIdx: uniqueIndex("user_follows_follower_following_unique").on(t.followerId, t.followingId),
 }))
+
+// ============================================================================
+// SITE SETTINGS TABLE
+// ============================================================================
+
+export const siteSettings = pgTable("site_settings", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    key: text("key").notNull().unique(),
+    value: text("value").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+})
