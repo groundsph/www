@@ -22,11 +22,17 @@ export async function getOrCreateChatSessionId(
 		return existingSessionId
 	}
 
+	// Check for existing session in cookies
+	const cookieStore = await cookies()
+	const cookieSessionId = cookieStore.get(CHAT_SESSION_COOKIE)?.value
+	if (cookieSessionId) {
+		return cookieSessionId
+	}
+
 	// Generate a new session ID using crypto.randomUUID()
 	const newSessionId = crypto.randomUUID()
 
 	// Set the cookie for anonymous users
-	const cookieStore = await cookies()
 	cookieStore.set(CHAT_SESSION_COOKIE, newSessionId, {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === "production",

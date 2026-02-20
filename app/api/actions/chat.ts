@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/auth"
 import { getOrCreateChatSessionId } from "@/utils/chat-session"
 import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { runChatWithTools } from "@/utils/ai/chat-tools"
-import { cookies } from "next/headers"
 import { z } from "zod"
 
 const sendChatMessageSchema = z.object({
@@ -40,9 +39,7 @@ export async function sendChatMessage(
         const user = await getCurrentUser()
 
         // Get or create session ID - use user ID if authenticated, otherwise use cookie
-        const cookieStore = await cookies()
-        const existingSessionId = cookieStore.get("chat_session_id")?.value ?? null
-        const sessionId = user?.id ?? await getOrCreateChatSessionId(existingSessionId)
+        const sessionId = user?.id ?? await getOrCreateChatSessionId(null)
 
         // Check rate limit
         const { canSend, remaining } = await checkChatLimit(sessionId)
