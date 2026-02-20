@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
+import { ChatWidget } from "@/components/chat/ChatWidget"
 import Footer from "./Footer"
 import Navbar from "./Navbar"
 
@@ -35,11 +36,15 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     // Hide footer on auth pages, and on menu pages for direct access
     const hideFooter = isAuthPage || (isMenuPage && !isInternalNavigation)
 
+    // Hide chat widget on auth pages
+    const hideChat = isAuthPage
+
     return (
         <>
             {!hideNav && <Navbar />}
             {children}
             {!hideFooter && <Footer />}
+            {!hideChat && <ChatWidget />}
         </>
     )
 }
