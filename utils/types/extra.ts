@@ -213,12 +213,7 @@ export interface CafeSubmission {
     finding_hint: string;
 
     // Chain cafe field
-    is_chain: boolean;
-
-    // Halal and straw fields
-    is_halal_certified: boolean;
-    straw_type: string;
-    straw_type_other: string;
+    is_chain: boolean,
 }
 
 // Serializable version of CafeSubmission for server actions (excludes File objects)
@@ -272,7 +267,4 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     is_hidden_gem: false,
     finding_hint: '',
     is_chain: false,
-    is_halal_certified: false,
-    straw_type: '',
-    straw_type_other: '',
 };
