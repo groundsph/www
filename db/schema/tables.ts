@@ -141,6 +141,9 @@ export const cafes = pgTable(
         hiddenGemLastEvaluatedPeriod: text("hidden_gem_last_evaluated_period"), // e.g., "2026-01"
         hiddenGemGraduatedAt: timestamp("hidden_gem_graduated_at", { withTimezone: true }),
         isChain: boolean("is_chain").default(false),
+        isHalalCertified: boolean("is_halal_certified").default(false),
+        strawType: text("straw_type"),
+        strawTypeOther: text("straw_type_other"),
         findingHint: text("finding_hint"),
         badgeStampUrl: text("badge_stamp_url"),
         ownerIds: uuid("owner_ids").array(),

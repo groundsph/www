@@ -42,6 +42,9 @@ export interface SuggestableFields {
     is_hidden_gem?: boolean;
     finding_hint?: string;
     is_chain?: boolean;
+    is_halal_certified?: boolean;
+    straw_type?: string;
+    straw_type_other?: string;
 }
 
 export interface SuggestedImageChanges {

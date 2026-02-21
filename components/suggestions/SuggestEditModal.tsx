@@ -30,6 +30,7 @@ import {
     Phone,
     MapPin,
     Link,
+    BadgeCheck,
 } from "lucide-react"
 
 import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
@@ -58,6 +59,7 @@ import {
     CAFE_VIBE_TAGS,
     BREW_METHODS,
     COFFEE_STYLES,
+    STRAW_TYPES,
 } from "@/utils/data/philippines"
 import React from "react"
 import dynamic from "next/dynamic"
@@ -96,6 +98,7 @@ const AMENITY_FIELDS = [
     { key: "has_decaf", label: "Decaf Options", icon: Coffee },
     { key: "serves_food", label: "Serves Food", icon: Utensils },
     { key: "is_work_friendly", label: "Work Friendly", icon: Briefcase },
+    { key: "is_halal_certified", label: "Halal Certified", icon: BadgeCheck },
 ] as const
 
 type AmenityKey = (typeof AMENITY_FIELDS)[number]["key"]
@@ -1437,6 +1440,37 @@ export default function SuggestEditModal({
                                                         </p>
                                                     </div>
                                                 )}
+
+                                                {/* Straw Type */}
+                                                <div className='mt-4 space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Straw Type
+                                                    </label>
+                                                    <div className='flex flex-wrap gap-2'>
+                                                        {STRAW_TYPES.map((type) => (
+                                                            <button
+                                                                key={type}
+                                                                onClick={() => updateChange("straw_type", type)}
+                                                                className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                                                                    (changes.straw_type ?? cafe.straw_type) === type
+                                                                        ? "border-primary bg-primary/20 text-primary"
+                                                                        : "border-text/10 bg-text/5 text-text/50"
+                                                                }`}
+                                                            >
+                                                                {type.replace(/_/g, " ")}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    {(changes.straw_type ?? cafe.straw_type) === "other" && (
+                                                        <input
+                                                            type='text'
+                                                            value={changes.straw_type_other ?? cafe.straw_type_other ?? ""}
+                                                            onChange={(e) => updateChange("straw_type_other", e.target.value || undefined)}
+                                                            placeholder="Describe the straw type"
+                                                            className="w-full bg-text/5 text-sm p-3 rounded-lg border border-text/10"
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>

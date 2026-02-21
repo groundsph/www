@@ -262,6 +262,9 @@ export async function getCafeForOwnerManagement(cafeId: string): Promise<CafeWit
         finding_hint: cafe.findingHint ?? null,
         is_chain: cafe.isChain ?? false,
         badge_stamp_url: cafe.badgeStampUrl ?? null,
+        is_halal_certified: cafe.isHalalCertified ?? false,
+        straw_type: cafe.strawType || "",
+        straw_type_other: cafe.strawTypeOther || "",
     }
 }
 
@@ -353,6 +356,9 @@ export async function updateCafeAsOwner(
         is_hidden_gem: boolean
         finding_hint: string | null
         badge_stamp_url: string | null
+        is_halal_certified: boolean
+        straw_type: string
+        straw_type_other: string
     }>
 ): Promise<OwnerActionResult> {
     const isOwner = await isOwnerOfCafe(cafeId)
@@ -407,6 +413,9 @@ export async function updateCafeAsOwner(
         is_hidden_gem: 'isHiddenGem',
         finding_hint: 'findingHint',
         badge_stamp_url: 'badgeStampUrl',
+        is_halal_certified: 'isHalalCertified',
+        straw_type: 'strawType',
+        straw_type_other: 'strawTypeOther',
     }
 
     for (const [key, value] of Object.entries(updates)) {
