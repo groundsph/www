@@ -1,5 +1,37 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
-import { runChatWithTools } from "@/utils/ai/chat-tools"
+
+// Mock database with chainable query builder
+function createMockQueryBuilder(results: unknown[] = []) {
+    const self = {
+        from: () => self,
+        leftJoin: () => self,
+        where: () => self,
+        and: () => self,
+        orderBy: () => self,
+        limit: () => self,
+        offset: () => self,
+        groupBy: () => self,
+        then: (resolve: (value: unknown[]) => unknown, reject?: (reason?: unknown) => unknown) => {
+            return Promise.resolve(results).then(resolve, reject)
+        },
+        [Symbol.asyncIterator]: async function* () {
+            for (const item of results) {
+                yield item
+            }
+        },
+    }
+    return self
+}
+
+// Mock database module
+mock.module("@/db", () => ({
+    db: {
+        select: () => createMockQueryBuilder([]),
+    },
+}))
+
+// Import after mocking
+const { runChatWithTools } = await import("@/utils/ai/chat-tools")
 
 describe("runChatWithTools", () => {
     let originalEnv: { [key: string]: string | undefined }

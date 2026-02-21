@@ -51,7 +51,9 @@ describe("sendChatMessage", () => {
         mockIncrementChatUsage.mockClear()
         mockRunChatWithTools.mockClear()
         mockGetChatEnabled.mockClear()
-        mockGetChatEnabled.mockImplementation(() => true)
+        mockGetChatEnabled.mockImplementation(() => Promise.resolve(true))
+        mockCheckChatLimit.mockImplementation(() => Promise.resolve({ canSend: true, remaining: 9 }))
+        mockRunChatWithTools.mockImplementation(() => Promise.resolve({ message: "Hello!" }))
     })
 
     it("returns unavailable when chat disabled", async () => {
