@@ -83,6 +83,10 @@ export type CafeWithRatings = Omit<Tables<'cafes'>, 'operating_hours' | 'socials
         display_name: string;
         avatar_url: string | null;
     }[];
+    // New fields from Task 1 (schema migration)
+    is_halal_certified?: boolean | null;
+    straw_type?: string | null;
+    straw_type_other?: string | null;
 };
 
 // 3. Define the custom Filter interface for your UI
@@ -179,6 +183,9 @@ export interface CafeSubmission {
     milk_options: string[];
     serves_food: boolean;
     is_work_friendly: boolean;
+    is_halal_certified: boolean;
+    straw_type: string;
+    straw_type_other: string;
     price_level: Database['public']['Enums']['price_level'];
     coffee_style: Database['public']['Enums']['coffee_style'] | null;
     payment_methods: string;
@@ -237,6 +244,9 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     milk_options: [],
     serves_food: false,
     is_work_friendly: false,
+    is_halal_certified: false,
+    straw_type: '',
+    straw_type_other: '',
     price_level: 'medium',
     coffee_style: null,
     payment_methods: '',

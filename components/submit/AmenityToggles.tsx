@@ -15,6 +15,7 @@ import {
     MilkOff,
     Coffee,
     Cigarette,
+    BadgeCheck,
 } from "lucide-react"
 import { cn } from "@/utils/cn"
 
@@ -39,6 +40,7 @@ const AMENITY_OPTIONS: AmenityOption[] = [
     { key: "has_decaf", label: "Decaf Options", icon: Coffee },
     { key: "serves_food", label: "Serves Food", icon: Utensils },
     { key: "is_work_friendly", label: "Work Friendly", icon: Laptop },
+    { key: "is_halal_certified", label: "Halal Certified", icon: BadgeCheck },
 ]
 
 interface AmenityTogglesProps {

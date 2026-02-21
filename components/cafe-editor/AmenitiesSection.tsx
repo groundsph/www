@@ -6,6 +6,7 @@ import {
     CAFE_SPECIALTIES,
     BREW_METHODS,
     PAYMENT_METHODS,
+    STRAW_TYPES,
 } from "@/utils/data/philippines"
 import AmenityToggles from "@/components/submit/AmenityToggles"
 
@@ -113,6 +114,7 @@ export default function AmenitiesSection({
                         has_decaf: cafe.has_decaf || false,
                         serves_food: cafe.serves_food || false,
                         is_work_friendly: cafe.is_work_friendly || false,
+                        is_halal_certified: cafe.is_halal_certified || false,
                     }}
                     onChange={(key, value) =>
                         onChange(key as keyof CafeWithRatings, value)
@@ -442,6 +444,46 @@ export default function AmenitiesSection({
                         )
                     })}
                 </div>
+            </div>
+
+            {/* Straw Type */}
+            <div>
+                <label className="block text-sm font-medium text-text/60 mb-2">
+                    Straw Type
+                </label>
+                <div className="flex flex-wrap gap-2">
+                    {STRAW_TYPES.map((type) => {
+                        const isSelected = cafe.straw_type === type
+                        return (
+                            <motion.button
+                                key={type}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => {
+                                    onChange("straw_type", type)
+                                    if (type !== "other") {
+                                        onChange("straw_type_other", "")
+                                    }
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-sm transition ${
+                                    isSelected
+                                        ? `${activeColorClass} border`
+                                        : "bg-text/5 border border-text/10 hover:bg-text/10"
+                                }`}
+                            >
+                                {formatLabel(type)}
+                            </motion.button>
+                        )
+                    })}
+                </div>
+                {cafe.straw_type === "other" && (
+                    <input
+                        type="text"
+                        value={cafe.straw_type_other || ""}
+                        onChange={(e) => onChange("straw_type_other", e.target.value)}
+                        placeholder="Describe the straw type"
+                        className="mt-2 w-full px-3 py-2 bg-background border border-text/10 rounded-lg text-sm"
+                    />
+                )}
             </div>
         </div>
     )
