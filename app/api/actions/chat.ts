@@ -81,6 +81,8 @@ export async function sendChatMessage(
             success: true,
             message: result.message,
             remaining: Math.max(0, remainingAfter),
+            cafes: result.cafes,
+            cardContext: result.cardContext,
         }
     } catch (error) {
         console.error("Error in sendChatMessage:", error)

@@ -271,4 +271,56 @@ describe("runChatWithTools", () => {
         expect(result.message.length).toBeGreaterThan(0)
         expect(result.toolCalls?.length).toBe(2)
     })
+
+    it("returns cafes when tool calls resolve", async () => {
+        let callCount = 0
+        const mockFetch = mock(() => {
+            callCount++
+            if (callCount === 1) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            choices: [
+                                {
+                                    message: {
+                                        content: null,
+                                        tool_calls: [
+                                            {
+                                                id: "call_1",
+                                                type: "function",
+                                                function: {
+                                                    name: "list_cities",
+                                                    arguments: "{}",
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            ],
+                        }),
+                } as Response)
+            }
+            return Promise.resolve({
+                ok: true,
+                json: () =>
+                    Promise.resolve({
+                        choices: [
+                            {
+                                message: {
+                                    content: "Here are the cities!",
+                                },
+                            },
+                        ],
+                    }),
+            } as Response)
+        })
+        global.fetch = mockFetch
+
+        const result = await runChatWithTools({
+            message: "List cities",
+            sessionId: "test-cards",
+        })
+        expect(result.cafes).toBeDefined()
+    })
 })

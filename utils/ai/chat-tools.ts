@@ -9,6 +9,8 @@ import {
 import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
 import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
+import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
+import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
 
 const MAX_TOOL_CALLS_DEFAULT = 4
 const MAX_TOOL_CALLS_LIMIT = 4
@@ -35,6 +37,8 @@ Rules:
 
 export interface ChatToolResult {
     message: string
+    cafes?: ChatCafeCard[]
+    cardContext?: ChatCardContext
     toolCalls?: ToolCallRecord[]
 }
 
@@ -222,6 +226,11 @@ function buildFallbackResponse(): ChatToolResult {
     }
 }
 
+function shouldForceCafeTool(text: string): boolean {
+    const query = text.toLowerCase()
+    return query.includes("cafe") || query.includes("cafes") || query.includes("near me") || query.includes("nearby")
+}
+
 export async function runChatWithTools(options: RunChatOptions): Promise<ChatToolResult> {
     const { message, sessionId, maxToolCalls } = options
 
@@ -244,6 +253,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
                 temperature: 0.7,
                 maxTokens: 1000,
                 timeoutMs: 60000, // 60 seconds for longer queries
+                toolChoice: shouldForceCafeTool(message) ? { type: "function", function: { name: "query_cafes" } } : "auto",
             })
 
             if (!response) {
@@ -291,15 +301,21 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
                 }
             } else {
                 messages.push(assistantMessage)
+                const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
                 return {
                     message: response.content ?? "I don't have a response for that.",
+                    cafes,
+                    cardContext,
                     toolCalls: toolCallRecords.length > 0 ? toolCallRecords : undefined,
                 }
             }
         }
 
+        const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
         return {
             message: "I needed to look up more information than expected. Here's what I found so far.",
+            cafes,
+            cardContext,
             toolCalls: toolCallRecords.length > 0 ? toolCallRecords : undefined,
         }
     } catch (error) {
