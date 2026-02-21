@@ -5,6 +5,7 @@ import { getOrCreateChatSessionId } from "@/utils/chat-session"
 import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { runChatWithTools } from "@/utils/ai/chat-tools"
 import { getChatEnabled } from "@/utils/feature-flags"
+import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
 import { z } from "zod"
 
 const sendChatMessageSchema = z.object({
@@ -20,6 +21,8 @@ export interface SendChatMessageResult {
     message?: string
     remaining: number
     error?: string
+    cafes?: ChatCafeCard[]
+    cardContext?: ChatCardContext
 }
 
 export async function sendChatMessage(

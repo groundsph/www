@@ -50,4 +50,35 @@ describe("chat schemas", () => {
         const req = { message: "hi", sessionId: "short" }
         expect(() => chatRequestSchema.parse(req)).toThrow()
     })
+
+    it("accepts cafe cards and card context", () => {
+        const res = {
+            success: true,
+            remaining: 9,
+            cafes: [
+                {
+                    id: "c1",
+                    slug: "demo-cafe",
+                    title: "Demo Cafe",
+                    coverImageUrl: "https://cdn.example.com/demo.jpg",
+                    city: "Manila",
+                    province: "Metro Manila",
+                    rating: 4.6,
+                    reviewCount: 120,
+                    filters: ["WiFi", "Sockets"],
+                    flags: ["Halal"],
+                    custom: "Near you",
+                },
+            ],
+            cardContext: {
+                queryType: "nearby",
+                title: "Near you",
+                subtitle: "Based on your location",
+                custom: "Near you",
+            },
+        }
+        const parsed = chatResponseSchema.parse(res)
+        expect(parsed.cafes?.length).toBe(1)
+        expect(parsed.cardContext?.queryType).toBe("nearby")
+    })
 })
