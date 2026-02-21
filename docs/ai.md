@@ -263,3 +263,41 @@ bun test app/api/actions/__tests__/chat-actions.test.ts
 - Verify `OPENAI_COMPATIBLE_MODEL` is set to a valid model ID
 - Run `bun run llm:models` to list available models
 - Check API key has access to the specified model
+
+## Chat Guardrails and Safety
+
+The chat system includes content moderation to prevent abuse:
+
+### Implemented Guardrails
+
+- **Prompt injection detection**: Blocks attempts to override system instructions
+- **Content filtering**: Detects malicious patterns (scripts, code injection)
+- **Input sanitization**: Removes HTML tags, limits message length to 1000 characters
+- **Rate limiting**: Prevents spam via session-based limits
+
+### Usage
+
+Guardrails are automatically applied to all chat messages before processing. Blocked messages return a user-friendly error without consuming rate limit quota.
+
+## Cafe Cards in Chat
+
+When the AI returns cafe search results, they are displayed as horizontal scrolling cards:
+
+- **Visual cards**: Show thumbnail, name, location, rating
+- **Halal badge**: Displayed on certified cafes
+- **Click-through**: Navigate to cafe detail page
+- **Animations**: Smooth entrance with motion effects
+
+## Structured Tool Responses
+
+The chat system now returns structured data alongside text responses:
+
+```typescript
+interface ChatResponse {
+    message: string
+    cafes?: CafeWithRatings[]  // For cafe queries
+    remaining: number          // Rate limit remaining
+}
+```
+
+This enables rich UI experiences like the cafe card carousel.
