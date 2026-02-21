@@ -16,12 +16,13 @@ import {
     Boxes,
     Stamp,
     Map,
+    Sparkles,
 } from "lucide-react"
 
 export const metadata: Metadata = {
     title: "Roadmap - What We're Building Next",
     description:
-        "See what's coming to Grounds. Our public roadmap shows features in progress like enhanced search and decaf filters, upcoming auth improvements, and future plans like a mobile app and dark mode.",
+        "See what's coming to Grounds. Our public roadmap shows features in progress like AI Chat for cafe recommendations, enhanced search and decaf filters, upcoming auth improvements, and future plans like a mobile app and dark mode.",
     keywords: [
         "Grounds roadmap",
         "cafe app features",
@@ -109,10 +110,25 @@ const recentlyShipped: RoadmapItem[] = [
 
 const inProgress: RoadmapItem[] = [
     {
+        title: "AI Chat",
+        description:
+            "A conversational cafe concierge with smart recommendations and structured cafe cards.",
+        icon: <Sparkles className='w-5 h-5' />,
+    },
+    {
         title: "Continued Cafe Additions",
         description:
             "Expanding our database with more cafes across the Philippines",
         icon: <Coffee className='w-5 h-5' />,
+    },
+]
+
+const upNext: RoadmapItem[] = [
+    {
+        title: "Spot Guides",
+        description:
+            "Visual step-by-step guides using photos or videos to help you navigate to hard-to-find cafes",
+        icon: <Navigation className='w-5 h-5' />,
     },
     {
         title: "Proper Social Sharing w/ Previews",
@@ -125,15 +141,6 @@ const inProgress: RoadmapItem[] = [
         description:
             "A sleek dark theme for night owls and low-light environments",
         icon: <Palette className='w-5 h-5' />,
-    },
-]
-
-const upNext: RoadmapItem[] = [
-    {
-        title: "Spot Guides",
-        description:
-            "Visual step-by-step guides using photos or videos to help you navigate to hard-to-find cafes",
-        icon: <Navigation className='w-5 h-5' />,
     },
 ]
 
