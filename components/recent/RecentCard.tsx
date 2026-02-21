@@ -63,6 +63,12 @@ export default function RecentCard({
                         {cafe.city_municipality}
                     </div>
                 )}
+                {/* Halal badge */}
+                {cafe.is_halal_certified && (
+                    <div className='absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm'>
+                        Halal
+                    </div>
+                )}
             </div>
 
             {/* Content */}

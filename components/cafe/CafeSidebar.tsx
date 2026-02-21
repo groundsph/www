@@ -24,6 +24,7 @@ import {
     Coffee,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
+import { formatCafeStrawType } from "@/utils/formatters"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import Image from "next/image"
@@ -615,6 +616,15 @@ export default function CafeSidebar({
                         Work Friendly
                     </motion.li>
                 )}
+                {cafe.is_halal_certified && (
+                    <motion.li
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.05 }}
+                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
+                    >
+                        Halal Certified
+                    </motion.li>
+                )}
                 {!cafe.has_wifi &&
                     !cafe.has_smoking &&
                     !cafe.has_sockets &&
@@ -627,7 +637,8 @@ export default function CafeSidebar({
                     !cafe.has_bidet &&
                     !cafe.has_non_dairy &&
                     !cafe.has_decaf &&
-                    !cafe.is_work_friendly && (
+                    !cafe.is_work_friendly &&
+                    !cafe.is_halal_certified && (
                         <li className='text-text/50'>No amenities listed</li>
                     )}
             </motion.ul>
@@ -720,9 +731,15 @@ export default function CafeSidebar({
                 {!cafe.serves_food &&
                     (!cafe.specialty || cafe.specialty.length === 0) &&
                     (!cafe.tags || cafe.tags.length === 0) &&
-                    (!cafe.brew_methods || cafe.brew_methods.length === 0) && (
+                    (!cafe.brew_methods || cafe.brew_methods.length === 0) &&
+                    (!cafe.straw_type) && (
                         <p className='text-sm text-text/50'>No extras listed</p>
                     )}
+                {cafe.straw_type && (
+                    <div className="text-sm text-text/60">
+                        Straw Type: {formatCafeStrawType(cafe.straw_type, cafe.straw_type_other)}
+                    </div>
+                )}
             </div>
 
             <div className='border-b border-text/10 my-3' />
