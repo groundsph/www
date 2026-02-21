@@ -164,6 +164,14 @@ export async function submitCafe(
             findingHint: formData.finding_hint?.trim() || null,
             isChain: formData.is_chain || false,
             ownerIds: null,
+
+            // New fields
+            isHalalCertified: formData.is_halal_certified,
+            strawType: formData.straw_type?.trim() || null,
+            strawTypeOther:
+                formData.straw_type === "other" && formData.straw_type_other?.trim()
+                    ? formData.straw_type_other.trim()
+                    : null,
         }).returning({ id: cafes.id, slug: cafes.slug })
 
         if (!cafe) {

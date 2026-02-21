@@ -30,6 +30,7 @@ import {
     Phone,
     MapPin,
     Link,
+    BadgeCheck,
 } from "lucide-react"
 
 import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
@@ -58,6 +59,7 @@ import {
     CAFE_VIBE_TAGS,
     BREW_METHODS,
     COFFEE_STYLES,
+    STRAW_TYPES,
 } from "@/utils/data/philippines"
 import React from "react"
 import dynamic from "next/dynamic"
@@ -96,6 +98,7 @@ const AMENITY_FIELDS = [
     { key: "has_decaf", label: "Decaf Options", icon: Coffee },
     { key: "serves_food", label: "Serves Food", icon: Utensils },
     { key: "is_work_friendly", label: "Work Friendly", icon: Briefcase },
+    { key: "is_halal_certified", label: "Halal Certified", icon: BadgeCheck },
 ] as const
 
 type AmenityKey = (typeof AMENITY_FIELDS)[number]["key"]
@@ -1437,6 +1440,63 @@ export default function SuggestEditModal({
                                                         </p>
                                                     </div>
                                                 )}
+
+                                                {/* Straw Type */}
+                                                <div className='mt-4 space-y-2'>
+                                                    <label className='text-sm font-medium text-text/60'>
+                                                        Straw Type
+                                                    </label>
+                                                    <div className='flex flex-wrap gap-2'>
+                                                        {STRAW_TYPES.map((type) => {
+                                                            const currentValue = cafe.straw_type ?? ''
+                                                            const hasChanged = changes.straw_type !== undefined
+                                                            const displayValue = hasChanged
+                                                                ? changes.straw_type
+                                                                : currentValue
+                                                            const isSelected = displayValue === type
+
+                                                            return (
+                                                                <button
+                                                                    key={type}
+                                                                    onClick={() => {
+                                                                        updateChange('straw_type', type)
+                                                                        if (type !== 'other') {
+                                                                            updateChange('straw_type_other', undefined)
+                                                                        }
+                                                                    }}
+                                                                    className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
+                                                                        isSelected
+                                                                            ? hasChanged
+                                                                                ? 'bg-primary/20 border-primary/40 text-primary'
+                                                                                : 'bg-amber-500/20 border-amber-500/40 text-amber-700'
+                                                                            : 'bg-text/5 border-text/10 text-text/50 hover:border-text/20'
+                                                                    }`}
+                                                                >
+                                                                    {type.replace(/_/g, ' ')}
+                                                                </button>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                    {(changes.straw_type !== undefined
+                                                        ? changes.straw_type
+                                                        : cafe.straw_type) === 'other' && (
+                                                        <div className='mt-2'>
+                                                            <input
+                                                                type='text'
+                                                                value={changes.straw_type_other ?? cafe.straw_type_other ?? ''}
+                                                                onChange={(e) =>
+                                                                    updateChange('straw_type_other', e.target.value || undefined)
+                                                                }
+                                                                placeholder='Describe the straw type'
+                                                                className={`w-full px-3 py-2 bg-background border rounded-lg text-sm outline-none transition-all ${
+                                                                    hasChange('straw_type_other')
+                                                                        ? 'border-primary/50 ring-2 ring-primary/20'
+                                                                        : 'border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                                                                }`}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>

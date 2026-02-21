@@ -40,6 +40,9 @@ const fieldMapping: Record<string, string> = {
     operating_hours: 'operatingHours',
     is_hidden_gem: 'isHiddenGem',
     finding_hint: 'findingHint',
+    is_halal_certified: 'isHalalCertified',
+    straw_type: 'strawType',
+    straw_type_other: 'strawTypeOther',
 }
 
 function mapSuggestableFieldsToDrizzle(fields: SuggestableFields): Record<string, unknown> {

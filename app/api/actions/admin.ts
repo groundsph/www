@@ -260,6 +260,9 @@ function mapCafeToCafeWithRatings(cafe: any, contributor?: any, ratings?: any): 
         finding_hint: cafe.findingHint ?? null,
         is_chain: cafe.isChain ?? false,
         badge_stamp_url: cafe.badgeStampUrl ?? null,
+        is_halal_certified: cafe.isHalalCertified ?? false,
+        straw_type: cafe.strawType ?? '',
+        straw_type_other: cafe.strawTypeOther ?? '',
         contributor: contributor ? {
             id: contributor.id,
             username: contributor.username,
@@ -748,6 +751,9 @@ export async function updateCafe(
         is_hidden_gem: boolean
         finding_hint: string | null
         is_chain: boolean
+        is_halal_certified: boolean
+        straw_type: string
+        straw_type_other: string
     }>
 ): Promise<AdminActionResult> {
     const currentUser = await getCurrentUser()
@@ -806,6 +812,9 @@ export async function updateCafe(
         is_hidden_gem: 'isHiddenGem',
         finding_hint: 'findingHint',
         is_chain: 'isChain',
+        is_halal_certified: 'isHalalCertified',
+        straw_type: 'strawType',
+        straw_type_other: 'strawTypeOther',
     }
 
     const drizzleUpdates: Record<string, unknown> = { updatedAt: new Date() }
