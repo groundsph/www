@@ -521,23 +521,26 @@ export default function CafeHero({
                         {getCafeDescription(cafe)}
                     </motion.p>
 
-                    {/* Claim Button - Only for unclaimed cafes */}
-                    {!cafe.is_claimed && user && onOpenClaim && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.5, delay: 0.28 }}
-                            className='mt-4'
-                        >
-                            <button
-                                onClick={onOpenClaim}
-                                className='flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg text-sm font-medium hover:bg-white/20 transition-all cursor-pointer'
+                    {/* Claim Button - Only for unclaimed cafes with no owners */}
+                    {!cafe.is_claimed &&
+                        !cafe.owner_ids?.length &&
+                        user &&
+                        onOpenClaim && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.5, delay: 0.28 }}
+                                className='mt-4'
                             >
-                                <Store className='w-4 h-4' />
-                                Own this cafe? Claim it
-                            </button>
-                        </motion.div>
-                    )}
+                                <button
+                                    onClick={onOpenClaim}
+                                    className='flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg text-sm font-medium hover:bg-white/20 transition-all cursor-pointer'
+                                >
+                                    <Store className='w-4 h-4' />
+                                    Own this cafe? Claim it
+                                </button>
+                            </motion.div>
+                        )}
                 </div>
             </div>
         </section>
