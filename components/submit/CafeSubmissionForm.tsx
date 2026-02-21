@@ -2153,7 +2153,8 @@ export default function CafeSubmissionForm({
                                             formData.has_bidet ||
                                             formData.has_non_dairy ||
                                             formData.has_decaf ||
-                                            formData.serves_food) && (
+                                            formData.serves_food ||
+                                            formData.is_halal_certified) && (
                                             <div>
                                                 <h2 className='text-lg font-serif font-semibold mb-3'>
                                                     Amenities
@@ -2248,7 +2249,26 @@ export default function CafeSubmissionForm({
                                                             Serves Food
                                                         </span>
                                                     )}
+                                                    {formData.is_halal_certified && (
+                                                        <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
+                                                            Halal Certified
+                                                        </span>
+                                                    )}
                                                 </div>
+                                            </div>
+                                        )}
+
+                                        {/* Straw Type */}
+                                        {formData.straw_type && (
+                                            <div>
+                                                <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                    Straw Type
+                                                </h2>
+                                                <p className='text-text/70'>
+                                                    {formData.straw_type === "other" && formData.straw_type_other
+                                                        ? formData.straw_type_other
+                                                        : formData.straw_type.replace(/_/g, " ")}
+                                                </p>
                                             </div>
                                         )}
 
