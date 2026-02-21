@@ -52,8 +52,8 @@ export default function ChatWindow({
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [currentRemaining, setCurrentRemaining] = useState(remainingMessages)
+    const [pendingMessage, setPendingMessage] = useState<Message | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
-    const lastLocationRequestRef = useRef(0)
 
     // Save to localStorage whenever messages change
     useEffect(() => {
@@ -75,7 +75,7 @@ export default function ChatWindow({
         error: locationError,
         refresh: refreshLocation,
         isEstimate,
-    } = useUserLocation({ skipInitialFetch: true })
+    } = useUserLocation({ skipInitialFetch: false })
 
     const locationSummary = useMemo(() => {
         if (location.lat && location.lng) {
@@ -148,12 +148,12 @@ export default function ChatWindow({
         setIsLoading(true)
         setError(null)
 
-        if (shouldRequestLocation(userMessage.content)) {
-            const now = Date.now()
-            if (now - lastLocationRequestRef.current > 5000) {
-                lastLocationRequestRef.current = now
-                refreshLocation()
-            }
+        // For near-me queries, queue message if location is still loading
+        if (shouldRequestLocation(userMessage.content) && locationLoading) {
+            refreshLocation()
+            setPendingMessage(userMessage)
+            setIsLoading(false)
+            return
         }
 
         try {
@@ -189,6 +189,49 @@ export default function ChatWindow({
             setTimeout(scrollToBottom, 100)
         }
     }
+
+    // Process pending message when location is ready
+    useEffect(() => {
+        if (!pendingMessage) return
+        if (locationLoading) return
+        if (!locationSummary && !location.lat && !location.lng && !locationError) return
+
+        void (async () => {
+            try {
+                const locationHint = location.lat && location.lng
+                    ? `\n\nUser location: ${location.lat}, ${location.lng}. Use get_nearby_cafes.`
+                    : locationSummary
+                        ? `\n\nUser location context: ${locationSummary}.`
+                        : ""
+
+                const result = await sendChatMessage({
+                    message: `${pendingMessage.content}${locationHint}`,
+                })
+
+                if (result.success && result.message) {
+                    const assistantMessage: Message = {
+                        id: crypto.randomUUID(),
+                        role: "assistant",
+                        content: result.message,
+                        timestamp: new Date(),
+                        cafes: result.cafes,
+                        cardContext: result.cardContext,
+                    }
+                    setMessages((prev) => [...prev, assistantMessage])
+                    setCurrentRemaining(result.remaining)
+                } else {
+                    setError(mapLocationError(result.error || "Failed to send message"))
+                    setCurrentRemaining(result.remaining)
+                }
+            } catch {
+                setError("An unexpected error occurred")
+            } finally {
+                setIsLoading(false)
+                setTimeout(scrollToBottom, 100)
+            }
+        })()
+        setPendingMessage(null)
+    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom])
 
     useEffect(() => {
         if (locationError) {
