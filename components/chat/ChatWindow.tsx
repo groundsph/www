@@ -250,6 +250,7 @@ export default function ChatWindow({
                 <AnimatePresence mode='popLayout'>
                     {messages.length === 0 && (
                         <motion.div
+                            id="messages-entry"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
