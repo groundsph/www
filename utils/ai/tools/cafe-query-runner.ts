@@ -12,11 +12,20 @@ export interface CafeResult {
     id: string
     name: string
     slug: string
+    thumbnail: string | null
     lat: number | null
     lng: number | null
     cityMunicipality: string
     province: string
     rating: number | null
+    totalReviews: number | null
+    hasWifi: boolean | null
+    hasSockets: boolean | null
+    isWorkFriendly: boolean | null
+    isPetFriendly: boolean | null
+    servesFood: boolean | null
+    hasOutdoorSeating: boolean | null
+    isHalalCertified: boolean | null
 }
 
 export interface CafeQueryResult {
@@ -54,11 +63,20 @@ export async function runCafeQuery(
                 id: cafes.id,
                 name: cafes.name,
                 slug: cafes.slug,
+                thumbnail: cafes.thumbnail,
                 lat: cafes.lat,
                 lng: cafes.lng,
                 cityMunicipality: cafes.cityMunicipality,
                 province: cafes.province,
                 rating: cafeRatingStats.averageRating,
+                totalReviews: cafeRatingStats.totalReviews,
+                hasWifi: cafes.hasWifi,
+                hasSockets: cafes.hasSockets,
+                isWorkFriendly: cafes.isWorkFriendly,
+                isPetFriendly: cafes.isPetFriendly,
+                servesFood: cafes.servesFood,
+                hasOutdoorSeating: cafes.hasOutdoorSeating,
+                isHalalCertified: cafes.isHalalCertified,
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
