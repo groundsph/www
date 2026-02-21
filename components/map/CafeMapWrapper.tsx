@@ -26,6 +26,7 @@ export default function CafeMapWrapper({
     const [isLoading, setIsLoading] = useState(false)
     const [includeChains, setIncludeChains] = useState(false)
     const [is24_7, setIs24_7] = useState(false)
+    const [isHalalCertified, setIsHalalCertified] = useState(false)
     const lastBoundsRef = useRef<MapBounds | null>(null)
 
     const handleBoundsChange = useCallback(
@@ -37,6 +38,7 @@ export default function CafeMapWrapper({
                     ...bounds,
                     includeChains,
                     is_24_7: is24_7,
+                    isHalalCertified,
                 })
                 setCafes(newCafes)
             } catch (error) {
@@ -45,7 +47,7 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         },
-        [includeChains, is24_7]
+        [includeChains, is24_7, isHalalCertified]
     )
 
     // Toggle chain visibility and refetch
@@ -60,6 +62,7 @@ export default function CafeMapWrapper({
                     ...lastBoundsRef.current,
                     includeChains: newIncludeChains,
                     is_24_7: is24_7,
+                    isHalalCertified,
                 })
                 setCafes(newCafes)
             } catch (error) {
@@ -68,7 +71,7 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         }
-    }, [includeChains, is24_7])
+    }, [includeChains, is24_7, isHalalCertified])
 
     // Toggle 24/7 filter and refetch
     const toggle24_7 = useCallback(async () => {
@@ -82,6 +85,7 @@ export default function CafeMapWrapper({
                     ...lastBoundsRef.current,
                     includeChains,
                     is_24_7: newIs24_7,
+                    isHalalCertified,
                 })
                 setCafes(newCafes)
             } catch (error) {
@@ -90,7 +94,30 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         }
-    }, [is24_7, includeChains])
+    }, [is24_7, includeChains, isHalalCertified])
+
+    // Toggle Halal Certified filter and refetch
+    const toggleHalalCertified = useCallback(async () => {
+        const newIsHalalCertified = !isHalalCertified
+        setIsHalalCertified(newIsHalalCertified)
+
+        if (lastBoundsRef.current) {
+            setIsLoading(true)
+            try {
+                const newCafes = await getCafesInBounds({
+                    ...lastBoundsRef.current,
+                    includeChains,
+                    is_24_7: is24_7,
+                    isHalalCertified: newIsHalalCertified,
+                })
+                setCafes(newCafes)
+            } catch (error) {
+                console.error("Failed to fetch cafes in bounds:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+    }, [isHalalCertified, includeChains, is24_7])
 
     return (
         <div className='relative w-full h-full'>
@@ -112,6 +139,18 @@ export default function CafeMapWrapper({
                     <Clock12 className='w-4 h-4' />
                     <span className='hidden sm:inline'>
                         24 Hours
+                    </span>
+                </button>
+                <button
+                    onClick={toggleHalalCertified}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
+                        isHalalCertified
+                            ? "bg-green-500 text-white"
+                            : "bg-background text-text/80 hover:bg-text/5"
+                    }`}
+                >
+                    <span className='hidden sm:inline'>
+                        Halal Certified
                     </span>
                 </button>
                 <button

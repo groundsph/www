@@ -39,6 +39,7 @@ export const cafeQuerySchema = z.object({
     isPublished: z.boolean().optional(),
     isHiddenGem: z.boolean().optional(),
     isChain: z.boolean().optional(),
+    isHalalCertified: z.boolean().optional().describe("Filter for Halal certified cafes"),
 
     // Tags
     tags: z.array(z.string()).optional(),

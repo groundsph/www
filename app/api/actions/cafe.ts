@@ -693,6 +693,9 @@ export async function getAllCafes(
             WHERE elem->>'day' = ${currentDay} AND elem->>'is_24_hours' = 'true'
         )`)
     }
+    if (filters.isHalalCertified) {
+        conditions.push(eq(cafes.isHalalCertified, true))
+    }
     // Exclude chains by default unless include_chains is true
     // Treat NULL as non-chain (include cafes where is_chain is false OR null)
     if (!filters.include_chains) {

@@ -105,6 +105,7 @@ export interface CafeFilters {
     has_decaf?: boolean;
     is_work_friendly?: boolean;
     is_24_7?: boolean;
+    isHalalCertified?: boolean;
     price_level?: Database['public']['Enums']['price_level']; // Uses of actual DB Enum type
     coffee_style?: Database['public']['Enums']['coffee_style']; // Classic (2nd-wave) or Artisan (3rd-wave)
     region?: string;

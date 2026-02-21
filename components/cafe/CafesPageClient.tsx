@@ -64,6 +64,7 @@ const INITIAL_FILTERS = {
     near_me: false,
     tags: [] as string[],
     include_chains: false,
+    is_halal_certified: false,
 }
 
 type SortOption = "recommended" | "rating" | "reviews"
@@ -84,6 +85,7 @@ const buildFilterParams = (search: string, filters: typeof INITIAL_FILTERS, sort
     has_decaf: filters.has_decaf,
     is_work_friendly: filters.is_work_friendly,
     is_24_7: filters.is_24_7 || undefined,
+    isHalalCertified: filters.is_halal_certified || undefined,
     price_level: filters.price_level || undefined,
     coffee_style: filters.coffee_style || undefined,
     region: filters.region || undefined,
@@ -822,6 +824,29 @@ export default function CafesPageClient() {
                                             )
                                         })}
                                     </div>
+                                </div>
+
+                                {/* Halal Certified Filter */}
+                                <div className='mt-3 pt-3 border-t border-text/10'>
+                                    <button
+                                        onClick={() =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                is_halal_certified:
+                                                    !prev.is_halal_certified,
+                                            }))
+                                        }
+                                        className={`flex flex-row items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                            filters.is_halal_certified
+                                                ? "bg-green-500 text-white border-green-500"
+                                                : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                        }`}
+                                    >
+                                        Halal Certified
+                                    </button>
+                                    <p className='text-[10px] text-text/40 mt-1.5'>
+                                        Show only Halal certified cafes
+                                    </p>
                                 </div>
 
                                 {/* Show Chain Cafes Toggle */}

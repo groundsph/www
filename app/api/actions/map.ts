@@ -13,6 +13,7 @@ export interface MapBounds {
     neLng: number
     includeChains?: boolean
     is_24_7?: boolean
+    isHalalCertified?: boolean
 }
 
 // Helper to get current day key from PH time
@@ -99,6 +100,8 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
                         WHERE elem->>'day' = ${getCurrentDayKey()} AND elem->>'is_24_hours' = 'true'
                     )`
                 ] : []),
+                // Filter for Halal certified cafes
+                ...(bounds.isHalalCertified ? [eq(cafes.isHalalCertified, true)] : []),
                 gte(cafes.lat, bounds.swLat),
                 lte(cafes.lat, bounds.neLat),
                 gte(cafes.lng, bounds.swLng),

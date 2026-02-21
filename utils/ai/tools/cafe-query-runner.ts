@@ -206,6 +206,10 @@ function buildConditions(params: CafeQueryInput) {
         conditions.push(eq(cafes.isChain, params.isChain))
     }
 
+    if (params.isHalalCertified !== undefined) {
+        conditions.push(eq(cafes.isHalalCertified, params.isHalalCertified))
+    }
+
     // Tags (array overlap)
     if (params.tags && params.tags.length > 0) {
         conditions.push(
