@@ -288,6 +288,87 @@ When the AI returns cafe search results, they are displayed as horizontal scroll
 - **Click-through**: Navigate to cafe detail page
 - **Animations**: Smooth entrance with motion effects
 
+## Chat Response Structure
+
+The chat API returns a structured JSON response that includes both the conversational message and rich cafe data for rendering cards.
+
+### Response Schema
+
+```typescript
+interface ChatResponse {
+    success: boolean
+    message: string
+    remaining: number
+    cafes?: CafeCard[]
+    cardContext?: CardContext
+}
+```
+
+### Cafe Card Schema
+
+Each cafe in the `cafes` array includes:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique cafe identifier (UUID) |
+| `slug` | `string` | URL-friendly identifier for navigation |
+| `title` | `string` | Cafe name |
+| `coverImageUrl` | `string` | Thumbnail image URL |
+| `filters` | `string[]` | Amenity badges (e.g., "WiFi", "Power sockets", "Outdoor seating") |
+| `flags` | `string[]` | Certification flags (e.g., "Halal") |
+| `custom` | `string` | Context label displayed on the card (e.g., "Near you", "Top rated") |
+
+### Card Context Schema
+
+The `cardContext` provides metadata for the card carousel header:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `queryType` | `"nearby" \| "top_rated" \| "search"` | Type of query performed |
+| `title` | `string` | Carousel header title |
+| `custom` | `string` | Short label for individual cards |
+
+### Query Type Mappings
+
+| Query Type | Context Title | Card Custom Label | Use Case |
+|------------|---------------|-------------------|----------|
+| `nearby` | "Near you" | "Near you" | Proximity-based searches |
+| `top_rated` | "Top rated" | "Top rated" | Best-rated cafes in area |
+| `search` | "Search results" | "Result" | General search/filter results |
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "message": "I found 3 great cafes near you!",
+  "remaining": 9,
+  "cafes": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "slug": "kape-lokal",
+      "title": "Kape Lokal",
+      "coverImageUrl": "https://example.com/cafe-thumb.jpg",
+      "filters": ["WiFi", "Power sockets", "Pet friendly"],
+      "flags": ["Halal"],
+      "custom": "Near you"
+    }
+  ],
+  "cardContext": {
+    "queryType": "nearby",
+    "title": "Near you",
+    "custom": "Near you"
+  }
+}
+```
+
+### Implementation Notes
+
+- Cards render in a horizontal scroll carousel
+- Clicking a card navigates to `/cafe/{slug}`
+- The `remaining` field shows rate limit quota for the session
+- Context is optional for non-cafe queries (returns `success: true` with just a message)
+
 ## Structured Tool Responses
 
 The chat system now returns structured data alongside text responses:
