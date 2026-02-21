@@ -74,6 +74,9 @@ function mapCafeToSnakeCase(c: {
     isHiddenGem?: boolean | null
     findingHint?: string | null
     isChain?: boolean | null
+    strawType?: string | null
+    strawTypeOther?: string | null
+    isHalalCertified?: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
     averageRating?: number | null
@@ -131,6 +134,9 @@ function mapCafeToSnakeCase(c: {
         is_hidden_gem: c.isHiddenGem ?? false,
         finding_hint: c.findingHint ?? null,
         is_chain: c.isChain ?? false,
+        is_halal_certified: c.isHalalCertified ?? false,
+        straw_type: c.strawType ?? '',
+        straw_type_other: c.strawTypeOther ?? '',
         created_at: c.createdAt?.toISOString() ?? null,
         updated_at: c.updatedAt?.toISOString() ?? null,
         average_rating: c.averageRating ?? null,
@@ -199,6 +205,9 @@ export async function getCafeBySlug(slug: string) {
             isHiddenGem: cafes.isHiddenGem,
             findingHint: cafes.findingHint,
             isChain: cafes.isChain,
+            isHalalCertified: cafes.isHalalCertified,
+            strawType: cafes.strawType,
+            strawTypeOther: cafes.strawTypeOther,
             createdAt: cafes.createdAt,
             updatedAt: cafes.updatedAt,
             averageRating: cafeRatingStats.averageRating,
@@ -584,7 +593,8 @@ export async function getAllCafes(
                     isWorkFriendly: cafes.isWorkFriendly, servesFood: cafes.servesFood, isActive: cafes.isActive,
                     isPublished: cafes.isPublished, isVerified: cafes.isVerified, isClaimed: cafes.isClaimed,
                     ownerIds: cafes.ownerIds, contributorId: cafes.contributorId, featuredUntil: cafes.featuredUntil,
-                    isHiddenGem: cafes.isHiddenGem, findingHint: cafes.findingHint,
+                    isHiddenGem: cafes.isHiddenGem, findingHint: cafes.findingHint, isChain: cafes.isChain,
+                    isHalalCertified: cafes.isHalalCertified, strawType: cafes.strawType, strawTypeOther: cafes.strawTypeOther,
                     createdAt: cafes.createdAt, updatedAt: cafes.updatedAt,
                     averageRating: cafeRatingStats.averageRating, totalReviews: cafeRatingStats.totalReviews,
                 })
@@ -932,6 +942,9 @@ export async function getCafesByIds(ids: string[]) {
             isHiddenGem: cafes.isHiddenGem,
             findingHint: cafes.findingHint,
             isChain: cafes.isChain,
+            isHalalCertified: cafes.isHalalCertified,
+            strawType: cafes.strawType,
+            strawTypeOther: cafes.strawTypeOther,
             createdAt: cafes.createdAt,
             updatedAt: cafes.updatedAt,
             averageRating: cafeRatingStats.averageRating,
@@ -1002,6 +1015,9 @@ export async function getCafesBySlugs(slugs: string[]) {
             isHiddenGem: cafes.isHiddenGem,
             findingHint: cafes.findingHint,
             isChain: cafes.isChain,
+            isHalalCertified: cafes.isHalalCertified,
+            strawType: cafes.strawType,
+            strawTypeOther: cafes.strawTypeOther,
             createdAt: cafes.createdAt,
             updatedAt: cafes.updatedAt,
             averageRating: cafeRatingStats.averageRating,

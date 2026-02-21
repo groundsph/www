@@ -2251,7 +2251,6 @@ export default function CafeSubmissionForm({
                                                     )}
                                                     {formData.is_halal_certified && (
                                                         <span className='inline-flex items-center gap-1.5 px-3 py-1.5 bg-text/5 rounded-full text-sm'>
-                                                            <BadgeCheck className='w-4 h-4 text-primary' />{" "}
                                                             Halal Certified
                                                         </span>
                                                     )}
@@ -2262,8 +2261,10 @@ export default function CafeSubmissionForm({
                                         {/* Straw Type */}
                                         {formData.straw_type && (
                                             <div>
-                                                <h2 className="text-lg font-serif font-semibold mb-3">Straw Type</h2>
-                                                <p className="text-text/70">
+                                                <h2 className='text-lg font-serif font-semibold mb-3'>
+                                                    Straw Type
+                                                </h2>
+                                                <p className='text-text/70'>
                                                     {formData.straw_type === "other" && formData.straw_type_other
                                                         ? formData.straw_type_other
                                                         : formData.straw_type.replace(/_/g, " ")}

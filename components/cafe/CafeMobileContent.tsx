@@ -29,6 +29,7 @@ import {
     Coffee,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
+import { formatCafeStrawType } from "@/utils/formatters"
 import dynamic from "next/dynamic"
 import RatingDistribution from "./RatingDistribution"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
@@ -661,6 +662,15 @@ export function DetailsTabContent({
                             Work Friendly
                         </motion.span>
                     )}
+                    {cafe.is_halal_certified && (
+                        <motion.span
+                            variants={itemVariants}
+                            whileTap={{ scale: 0.95 }}
+                            className='flex items-center gap-1 text-sm bg-secondary/40 px-3 py-1.5 rounded-full cursor-default'
+                        >
+                            Halal Certified
+                        </motion.span>
+                    )}
                     {!cafe.has_wifi &&
                         !cafe.has_smoking &&
                         !cafe.has_sockets &&
@@ -673,7 +683,8 @@ export function DetailsTabContent({
                         !cafe.has_bidet &&
                         !cafe.has_non_dairy &&
                         !cafe.has_decaf &&
-                        !cafe.is_work_friendly && (
+                        !cafe.is_work_friendly &&
+                        !cafe.is_halal_certified && (
                             <span className='text-sm text-text/50'>
                                 No amenities listed
                             </span>
@@ -716,7 +727,8 @@ export function DetailsTabContent({
             {((cafe.specialty && cafe.specialty.length > 0) ||
                 (cafe.tags && cafe.tags.length > 0) ||
                 (cafe.brew_methods && cafe.brew_methods.length > 0) ||
-                cafe.serves_food) && (
+                cafe.serves_food ||
+                cafe.straw_type) && (
                 <div className='bg-text/5 rounded-xl p-4'>
                     <h3 className='font-semibold font-serif mb-3'>
                         Extras
@@ -798,6 +810,16 @@ export function DetailsTabContent({
                                         </motion.span>
                                     ))}
                                 </motion.div>
+                            </div>
+                        )}
+                        {cafe.straw_type && (
+                            <div>
+                                <p className='text-xs text-text/60 mb-1'>
+                                    Straw Type
+                                </p>
+                                <p className='text-sm text-text'>
+                                    {formatCafeStrawType(cafe.straw_type, cafe.straw_type_other)}
+                                </p>
                             </div>
                         )}
                     </div>

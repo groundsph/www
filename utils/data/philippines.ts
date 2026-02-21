@@ -918,12 +918,17 @@ export const BREW_METHODS = [
     "Chemex", "V60", "Siphon", "Moka Pot", "Drip Coffee"
 ];
 
+// Straw type options
+export const STRAW_TYPES = ["plastic", "paper", "metal", "stalk", "other"] as const;
+
 // Payment method options
 export const PAYMENT_METHODS = [
-    "cash", "gcash", "maya", "credit_card", "debit_card", "bank_transfer"
+    "cash",
+    "credit_card",
+    "debit_card",
+    "gcash",
+    "maya",
+    "qrph",
+    "bank_transfer",
 ];
 
-// Straw type options
-export const STRAW_TYPES = [
-    "plastic", "paper", "metal", "stalk", "other"
-] as const;

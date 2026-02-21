@@ -633,6 +633,9 @@ export type Database = {
           is_claimed: boolean | null
           is_hidden_gem: boolean | null
           is_chain: boolean | null
+          is_halal_certified: boolean | null
+          straw_type: string | null
+          straw_type_other: string | null
           is_pet_friendly: boolean | null
           is_published: boolean | null
           is_verified: boolean | null
@@ -688,7 +691,11 @@ export type Database = {
           is_active?: boolean | null
           is_claimed?: boolean | null
           is_hidden_gem?: boolean | null
+          is_chain?: boolean | null
+          is_halal_certified?: boolean | null
           is_pet_friendly?: boolean | null
+          straw_type?: string | null
+          straw_type_other?: string | null
           is_published?: boolean | null
           is_verified?: boolean | null
           is_work_friendly?: boolean | null
@@ -745,6 +752,10 @@ export type Database = {
           is_active?: boolean | null
           is_claimed?: boolean | null
           is_hidden_gem?: boolean | null
+          is_chain?: boolean | null
+          is_halal_certified?: boolean | null
+          straw_type?: string | null
+          straw_type_other?: string | null
           is_pet_friendly?: boolean | null
           is_published?: boolean | null
           is_verified?: boolean | null

@@ -170,6 +170,14 @@ export async function submitCafe(
                     ? formData.straw_type_other.trim()
                     : null,
             ownerIds: null,
+
+            // New fields
+            isHalalCertified: formData.is_halal_certified,
+            strawType: formData.straw_type?.trim() || null,
+            strawTypeOther:
+                formData.straw_type === "other" && formData.straw_type_other?.trim()
+                    ? formData.straw_type_other.trim()
+                    : null,
         }).returning({ id: cafes.id, slug: cafes.slug })
 
         if (!cafe) {

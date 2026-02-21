@@ -261,8 +261,8 @@ function mapCafeToCafeWithRatings(cafe: any, contributor?: any, ratings?: any): 
         is_chain: cafe.isChain ?? false,
         badge_stamp_url: cafe.badgeStampUrl ?? null,
         is_halal_certified: cafe.isHalalCertified ?? false,
-        straw_type: cafe.strawType || "",
-        straw_type_other: cafe.strawTypeOther || "",
+        straw_type: cafe.strawType ?? '',
+        straw_type_other: cafe.strawTypeOther ?? '',
         contributor: contributor ? {
             id: contributor.id,
             username: contributor.username,

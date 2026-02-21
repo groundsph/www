@@ -485,6 +485,14 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                                         <Laptop className='w-3.5 h-3.5' />
                                                     </div>
                                                 )}
+                                                {cafe.is_halal_certified && (
+                                                    <div
+                                                        className='p-1.5 rounded-lg bg-green-500/10 text-green-600'
+                                                        title='Halal Certified'
+                                                    >
+                                                        <span className="text-xs font-bold">H</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 

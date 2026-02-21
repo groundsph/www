@@ -448,10 +448,10 @@ export default function AmenitiesSection({
 
             {/* Straw Type */}
             <div>
-                <label className="block text-sm font-medium text-text/60 mb-2">
+                <label className='block text-sm font-medium text-text/60 mb-2'>
                     Straw Type
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className='flex flex-wrap gap-2 mb-2'>
                     {STRAW_TYPES.map((type) => {
                         const isSelected = cafe.straw_type === type
                         return (
@@ -477,11 +477,17 @@ export default function AmenitiesSection({
                 </div>
                 {cafe.straw_type === "other" && (
                     <input
-                        type="text"
+                        type='text'
                         value={cafe.straw_type_other || ""}
-                        onChange={(e) => onChange("straw_type_other", e.target.value)}
-                        placeholder="Describe the straw type"
-                        className="mt-2 w-full px-3 py-2 bg-background border border-text/10 rounded-lg text-sm"
+                        onChange={(e) =>
+                            onChange("straw_type_other", e.target.value)
+                        }
+                        placeholder='Describe the straw type'
+                        className={`w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 ${
+                            colorScheme === "primary"
+                                ? "focus:ring-primary/50"
+                                : "focus:ring-accent/50"
+                        }`}
                     />
                 )}
             </div>

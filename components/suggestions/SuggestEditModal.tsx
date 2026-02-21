@@ -1447,28 +1447,54 @@ export default function SuggestEditModal({
                                                         Straw Type
                                                     </label>
                                                     <div className='flex flex-wrap gap-2'>
-                                                        {STRAW_TYPES.map((type) => (
-                                                            <button
-                                                                key={type}
-                                                                onClick={() => updateChange("straw_type", type)}
-                                                                className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                                                                    (changes.straw_type ?? cafe.straw_type) === type
-                                                                        ? "border-primary bg-primary/20 text-primary"
-                                                                        : "border-text/10 bg-text/5 text-text/50"
-                                                                }`}
-                                                            >
-                                                                {type.replace(/_/g, " ")}
-                                                            </button>
-                                                        ))}
+                                                        {STRAW_TYPES.map((type) => {
+                                                            const currentValue = cafe.straw_type ?? ''
+                                                            const hasChanged = changes.straw_type !== undefined
+                                                            const displayValue = hasChanged
+                                                                ? changes.straw_type
+                                                                : currentValue
+                                                            const isSelected = displayValue === type
+
+                                                            return (
+                                                                <button
+                                                                    key={type}
+                                                                    onClick={() => {
+                                                                        updateChange('straw_type', type)
+                                                                        if (type !== 'other') {
+                                                                            updateChange('straw_type_other', undefined)
+                                                                        }
+                                                                    }}
+                                                                    className={`px-3 py-1.5 text-sm rounded-full border transition-all cursor-pointer capitalize ${
+                                                                        isSelected
+                                                                            ? hasChanged
+                                                                                ? 'bg-primary/20 border-primary/40 text-primary'
+                                                                                : 'bg-amber-500/20 border-amber-500/40 text-amber-700'
+                                                                            : 'bg-text/5 border-text/10 text-text/50 hover:border-text/20'
+                                                                    }`}
+                                                                >
+                                                                    {type.replace(/_/g, ' ')}
+                                                                </button>
+                                                            )
+                                                        })}
                                                     </div>
-                                                    {(changes.straw_type ?? cafe.straw_type) === "other" && (
-                                                        <input
-                                                            type='text'
-                                                            value={changes.straw_type_other ?? cafe.straw_type_other ?? ""}
-                                                            onChange={(e) => updateChange("straw_type_other", e.target.value || undefined)}
-                                                            placeholder="Describe the straw type"
-                                                            className="w-full bg-text/5 text-sm p-3 rounded-lg border border-text/10"
-                                                        />
+                                                    {(changes.straw_type !== undefined
+                                                        ? changes.straw_type
+                                                        : cafe.straw_type) === 'other' && (
+                                                        <div className='mt-2'>
+                                                            <input
+                                                                type='text'
+                                                                value={changes.straw_type_other ?? cafe.straw_type_other ?? ''}
+                                                                onChange={(e) =>
+                                                                    updateChange('straw_type_other', e.target.value || undefined)
+                                                                }
+                                                                placeholder='Describe the straw type'
+                                                                className={`w-full px-3 py-2 bg-background border rounded-lg text-sm outline-none transition-all ${
+                                                                    hasChange('straw_type_other')
+                                                                        ? 'border-primary/50 ring-2 ring-primary/20'
+                                                                        : 'border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                                                                }`}
+                                                            />
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
