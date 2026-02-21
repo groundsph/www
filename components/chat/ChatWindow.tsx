@@ -7,12 +7,14 @@ import ChatMessage from "./ChatMessage"
 import { sendChatMessage } from "@/app/api/actions/chat"
 import { cn } from "@/utils/cn"
 import { useUserLocation } from "@/hooks/useUserLocation"
+import { CafeWithRatings } from "@/utils/types/extra"
 
 interface Message {
     id: string
     role: "user" | "assistant"
     content: string
     timestamp: Date
+    cafes?: CafeWithRatings[]
 }
 
 interface ChatWindowProps {
