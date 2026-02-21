@@ -7,14 +7,15 @@ import ChatMessage from "./ChatMessage"
 import { sendChatMessage } from "@/app/api/actions/chat"
 import { cn } from "@/utils/cn"
 import { useUserLocation } from "@/hooks/useUserLocation"
-import { CafeWithRatings } from "@/utils/types/extra"
+import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
 
 interface Message {
     id: string
     role: "user" | "assistant"
     content: string
     timestamp: Date
-    cafes?: CafeWithRatings[]
+    cafes?: ChatCafeCard[]
+    cardContext?: ChatCardContext
 }
 
 interface ChatWindowProps {
@@ -172,6 +173,8 @@ export default function ChatWindow({
                     role: "assistant",
                     content: result.message,
                     timestamp: new Date(),
+                    cafes: result.cafes,
+                    cardContext: result.cardContext,
                 }
                 setMessages((prev) => [...prev, assistantMessage])
                 setCurrentRemaining(result.remaining)
