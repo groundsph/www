@@ -31,3 +31,4 @@ describe("cafe constants and defaults", () => {
         expect(DEFAULT_CAFE_SUBMISSION.straw_type_other).toBe("")
     })
 })
+
