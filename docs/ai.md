@@ -382,3 +382,33 @@ interface ChatResponse {
 ```
 
 This enables rich UI experiences like the cafe card carousel.
+
+## Crawl Drafts in Chat
+
+When a user asks for a crawl/route, the chat response may include a `crawlDraft` payload.
+
+```json
+{
+  "crawlDraft": {
+    "title": "Cebu Coffee Crawl",
+    "description": "A short crawl curated from your request.",
+    "isPublic": false,
+    "items": [
+      {
+        "cafeId": "...",
+        "name": "Cafe Uno",
+        "slug": "cafe-uno",
+        "thumbnail": null,
+        "cityMunicipality": "Cebu City",
+        "region": "Central Visayas",
+        "lat": 10.3157,
+        "lng": 123.8854,
+        "sortOrder": 0,
+        "note": null
+      }
+    ]
+  }
+}
+```
+
+The chat UI renders a crawl preview card and provides a "Save Crawl" button that opens `/community/crawls/create?draft=chat` with the draft prefilled and set to private.
