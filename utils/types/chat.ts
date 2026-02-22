@@ -80,3 +80,41 @@ export type ChatCafeCard = z.infer<typeof chatCafeCardSchema>
 export type ChatCardContext = z.infer<typeof chatCardContextSchema>
 export type ChatCrawlDraft = z.infer<typeof chatCrawlDraftSchema>
 export type ChatCrawlItem = z.infer<typeof chatCrawlItemSchema>
+
+// Streaming chunk types
+export const chatStreamChunkSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("progress"),
+        message: z.string(),
+        step: z.number().int().optional(),
+    }),
+    z.object({
+        type: z.literal("tool"),
+        toolName: z.string(),
+        params: z.unknown(),
+    }),
+    z.object({
+        type: z.literal("cafes"),
+        cafes: z.array(chatCafeCardSchema),
+        cardContext: chatCardContextSchema.optional(),
+    }),
+    z.object({
+        type: z.literal("crawlDraft"),
+        crawlDraft: chatCrawlDraftSchema,
+    }),
+    z.object({
+        type: z.literal("complete"),
+        message: z.string(),
+        remaining: z.number().int(),
+    }),
+    z.object({
+        type: z.literal("error"),
+        error: z.string(),
+    }),
+    z.object({
+        type: z.literal("remaining"),
+        remaining: z.number().int(),
+    }),
+])
+
+export type ChatStreamChunk = z.infer<typeof chatStreamChunkSchema>
