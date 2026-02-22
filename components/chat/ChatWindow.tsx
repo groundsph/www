@@ -453,11 +453,11 @@ export default function ChatWindow({
                 <AnimatePresence mode='popLayout'>
                     {messages.length === 0 && (
                         <motion.div
-                            id="messages-entry"
+                            key="messages-entry"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className='flex flex-col items-center justify-center h-full text-center space-y-4'
+                            className='flex flex-col items-center justify-center text-center space-y-4'
                         >
                             <motion.div
                                 className='p-4 bg-secondary/10 rounded-2xl'
@@ -501,21 +501,13 @@ export default function ChatWindow({
                     ))}
                     {isLoading && streamState.progressMessage && (
                         <motion.div
+                            key="stream-progress"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             className='flex items-center gap-3 p-3 bg-secondary/5 rounded-xl w-fit'
                         >
                             <motion.div
-                                animate={{
-                                    scale: [1, 1.2, 1],
-                                    opacity: [0.5, 1, 0.5],
-                                }}
-                                transition={{
-                                    duration: 1.5,
-                                    repeat: Infinity,
-                                    ease: "easeInOut",
-                                }}
                             >
                                 <Loader2 className='w-4 h-4 text-secondary animate-spin' />
                             </motion.div>
@@ -533,6 +525,7 @@ export default function ChatWindow({
                     )}
                     {error && (
                         <motion.div
+                            key="error-message"
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
@@ -542,17 +535,9 @@ export default function ChatWindow({
                             <span className='text-sm'>{error}</span>
                         </motion.div>
                     )}
-                    {chatDebugEnabled && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className='text-[11px] text-text/50 bg-secondary/10 border border-secondary/20 rounded-xl p-3 font-mono'
-                        >
-                            Streaming mode active
-                        </motion.div>
-                    )}
                     {locationLoading && (
                         <motion.div
+                            key="location-loading"
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
@@ -564,6 +549,7 @@ export default function ChatWindow({
                     )}
                     {!locationLoading && isEstimate && locationSummary && (
                         <motion.div
+                            key="location-estimate"
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             className='text-xs text-text/60'

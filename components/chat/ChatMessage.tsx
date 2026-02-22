@@ -44,7 +44,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className={cn(
-                        "px-4 py-2.5 rounded-2xl border text-sm leading-relaxed",
+                        "px-4 py-2.5 rounded-2xl border text-sm leading-relaxed w-full",
                         isUser
                             ? "bg-secondary/10 border-secondary/20 rounded-br-md text-right"
                             : "bg-background border-primary/10 rounded-bl-md"
