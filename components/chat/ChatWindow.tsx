@@ -7,6 +7,13 @@ import ChatMessage from "./ChatMessage"
 import { sendChatMessage } from "@/app/api/actions/chat"
 import { cn } from "@/utils/cn"
 import { useUserLocation } from "@/hooks/useUserLocation"
+import {
+    clearChatHistory,
+    loadChatHistory,
+    migrateLegacyChatHistory,
+    saveChatHistory,
+    shouldClearChatHistory,
+} from "@/utils/chat-history"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
 
 interface Message {
@@ -24,30 +31,20 @@ interface ChatWindowProps {
     onClose: () => void
 }
 
-const CHAT_HISTORY_KEY = "chat-history"
-
 export default function ChatWindow({
     remainingMessages,
     onClose,
 }: ChatWindowProps) {
+    const isDev = process.env.NODE_ENV === "development"
     const [messages, setMessages] = useState<Message[]>(() => {
-        // Load from localStorage on mount
-        if (typeof window !== "undefined") {
-            try {
-                const saved = localStorage.getItem(CHAT_HISTORY_KEY)
-                if (saved) {
-                    const parsed = JSON.parse(saved)
-                    // Restore Date objects
-                    return parsed.map((m: Message) => ({
-                        ...m,
-                        timestamp: new Date(m.timestamp),
-                    }))
-                }
-            } catch {
-                // Ignore parse errors
-            }
+        if (typeof window === "undefined") return []
+        if (shouldClearChatHistory()) {
+            clearChatHistory()
+            return []
         }
-        return []
+        migrateLegacyChatHistory()
+        const saved = loadChatHistory<Message>()
+        return saved.map((m) => ({ ...m, timestamp: new Date(m.timestamp) }))
     })
     const [input, setInput] = useState("")
     const [isLoading, setIsLoading] = useState(false)
@@ -56,17 +53,18 @@ export default function ChatWindow({
     const [pendingMessage, setPendingMessage] = useState<Message | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
-    // Save to localStorage whenever messages change
     useEffect(() => {
-        if (typeof window !== "undefined" && messages.length > 0) {
-            localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages))
+        if (typeof window === "undefined") return
+        if (messages.length > 0) {
+            saveChatHistory(messages)
+            return
         }
+        clearChatHistory()
     }, [messages])
 
-    // Clear localStorage when rate limit reached
     useEffect(() => {
         if (currentRemaining <= 0 && typeof window !== "undefined") {
-            localStorage.removeItem(CHAT_HISTORY_KEY)
+            clearChatHistory()
         }
     }, [currentRemaining])
 
@@ -120,6 +118,13 @@ export default function ChatWindow({
 
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, [])
+
+    const handleClearHistory = useCallback(() => {
+        setMessages([])
+        setError(null)
+        setPendingMessage(null)
+        clearChatHistory()
     }, [])
 
     // Handle Escape key to close chat
@@ -282,18 +287,29 @@ export default function ChatWindow({
                         </motion.p>
                     </div>
                 </div>
-                <motion.button
-                    onClick={onClose}
-                    whileHover={{
-                        scale: 1.1,
-                        backgroundColor: "var(--primary-10)",
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    className='p-2 rounded-xl transition-colors hover:bg-primary/10'
-                    aria-label='Close chat'
-                >
-                    <X className='w-5 h-5' />
-                </motion.button>
+                <div className='flex items-center gap-2'>
+                    {isDev && (
+                        <button
+                            type="button"
+                            onClick={handleClearHistory}
+                            className="text-xs text-text/60 hover:text-text transition-colors"
+                        >
+                            Clear history
+                        </button>
+                    )}
+                    <motion.button
+                        onClick={onClose}
+                        whileHover={{
+                            scale: 1.1,
+                            backgroundColor: "var(--primary-10)",
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        className='p-2 rounded-xl transition-colors hover:bg-primary/10'
+                        aria-label='Close chat'
+                    >
+                        <X className='w-5 h-5' />
+                    </motion.button>
+                </div>
             </div>
 
             {/* Messages */}

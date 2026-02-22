@@ -2,8 +2,13 @@ import { describe, it, expect, mock, beforeEach } from "bun:test"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import ChatWindow from "@/components/chat/ChatWindow"
 
-// Mock localStorage for tests
 const localStorageMock = {
+    getItem: mock(() => null),
+    setItem: mock(() => {}),
+    removeItem: mock(() => {}),
+}
+
+const sessionStorageMock = {
     getItem: mock(() => null),
     setItem: mock(() => {}),
     removeItem: mock(() => {}),
@@ -11,6 +16,11 @@ const localStorageMock = {
 
 Object.defineProperty(global, "localStorage", {
     value: localStorageMock,
+    writable: true,
+})
+
+Object.defineProperty(global, "sessionStorage", {
+    value: sessionStorageMock,
     writable: true,
 })
 
