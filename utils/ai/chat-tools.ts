@@ -13,8 +13,8 @@ import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
 
-const MAX_TOOL_CALLS_DEFAULT = 4
-const MAX_TOOL_CALLS_LIMIT = 4
+const MAX_TOOL_CALLS_DEFAULT = 6
+const MAX_TOOL_CALLS_LIMIT = 8
 
 const CHAT_SYSTEM_PROMPT = `You are a helpful assistant for Grounds, a coffee discovery platform for the Philippines.
 
@@ -34,7 +34,8 @@ Rules:
 3. If the user asks for "top" or "best" cafes, use get_top_rated or sort by rating
 4. If the user asks for cafes "near" a location, use get_nearby_cafes
 5. Provide concise, helpful responses based on the tool results
-6. If no cafes match the query, politely inform the user`
+6. If no cafes match the query, politely inform the user
+7. When you have enough data, respond with a final answer and do not call more tools.`
 
 export interface ChatToolResult {
     message: string
@@ -42,6 +43,16 @@ export interface ChatToolResult {
     cardContext?: ChatCardContext
     toolCalls?: ToolCallRecord[]
     crawlDraft?: ChatCrawlDraft
+    debug?: {
+        maxCalls: number
+        callCount: number
+        reason?: "no_response" | "max_tool_calls" | "error"
+        lastAssistantContent?: string | null
+        toolCalls?: {
+            toolName: string
+            params: unknown
+        }[]
+    }
 }
 
 export interface ToolCallRecord {
@@ -230,7 +241,16 @@ function buildFallbackResponse(): ChatToolResult {
 
 function shouldForceCafeTool(text: string): boolean {
     const query = text.toLowerCase()
-    return query.includes("cafe") || query.includes("cafes") || query.includes("near me") || query.includes("nearby")
+    return query.includes("cafe") || query.includes("cafes") || query.includes("near me") || query.includes("nearby") || query.includes("crawl")
+}
+
+function shouldForceCityQuery(text: string): string | null {
+    const match = text.match(/\b(build|make|create|plan|design)?\s*(me\s*)?(a\s*)?(crawl|route|trail)\s*(for|in)?\s*([A-Za-z\s]+)?/i)
+    if (match && match[6]) {
+        const city = match[6].trim()
+        if (city.length > 2) return city
+    }
+    return null
 }
 
 export async function runChatWithTools(options: RunChatOptions): Promise<ChatToolResult> {
@@ -248,9 +268,30 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
         { role: "user", content: message },
     ]
     const toolCallRecords: ToolCallRecord[] = []
+    const debugEnabled = process.env.CHAT_DEBUG === "true"
+    let lastAssistantContent: string | null = null
+    let callCount = 0
+
+    const buildDebug = (reason?: "no_response" | "max_tool_calls" | "error", countOverride?: number) => {
+        if (!debugEnabled) return undefined
+        return {
+            maxCalls,
+            callCount: countOverride ?? callCount,
+            reason,
+            lastAssistantContent,
+            toolCalls: toolCallRecords.map(({ toolName, params }) => ({ toolName, params })),
+        }
+    }
 
     try {
-        for (let callCount = 0; callCount < maxCalls; callCount++) {
+        for (callCount = 0; callCount < maxCalls; callCount++) {
+            const forcedCity = shouldForceCityQuery(message)
+            if (forcedCity && callCount === 0) {
+                const result = await executeTool("query_cafes", JSON.stringify({ city: forcedCity }))
+                toolCallRecords.push({ toolName: "query_cafes", params: { city: forcedCity }, result })
+                break
+            }
+
             const response = await chatCompletionWithTools(messages, tools, {
                 temperature: 0.7,
                 maxTokens: 1000,
@@ -259,13 +300,17 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
             })
 
             if (!response) {
-                return buildFallbackResponse()
+                return {
+                    ...buildFallbackResponse(),
+                    debug: buildDebug("no_response", callCount + 1),
+                }
             }
 
             const assistantMessage: ChatMessage = {
                 role: "assistant",
                 content: response.content ?? "",
             }
+            lastAssistantContent = response.content ?? null
 
             if (response.toolCalls && response.toolCalls.length > 0) {
                 assistantMessage.tool_calls = response.toolCalls
@@ -311,6 +356,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
                     cardContext,
                     ...(crawlDraft ? { crawlDraft } : {}),
                     toolCalls: toolCallRecords.length > 0 ? toolCallRecords : undefined,
+                    debug: buildDebug(undefined, callCount + 1),
                 }
             }
         }
@@ -323,9 +369,13 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
             cardContext,
             ...(crawlDraft ? { crawlDraft } : {}),
             toolCalls: toolCallRecords.length > 0 ? toolCallRecords : undefined,
+            debug: buildDebug("max_tool_calls", maxCalls),
         }
     } catch (error) {
         console.error(`Chat error for session ${sessionId}:`, error)
-        return buildFallbackResponse()
+        return {
+            ...buildFallbackResponse(),
+            debug: buildDebug("error", callCount),
+        }
     }
 }

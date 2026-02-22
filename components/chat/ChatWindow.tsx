@@ -36,6 +36,7 @@ export default function ChatWindow({
     onClose,
 }: ChatWindowProps) {
     const isDev = process.env.NODE_ENV === "development"
+    const chatDebugEnabled = process.env.NEXT_PUBLIC_CHAT_DEBUG === "true"
     const [messages, setMessages] = useState<Message[]>(() => {
         if (typeof window === "undefined") return []
         if (shouldClearChatHistory()) {
@@ -51,6 +52,13 @@ export default function ChatWindow({
     const [error, setError] = useState<string | null>(null)
     const [currentRemaining, setCurrentRemaining] = useState(remainingMessages)
     const [pendingMessage, setPendingMessage] = useState<Message | null>(null)
+    const [debugInfo, setDebugInfo] = useState<{
+        maxCalls: number
+        callCount: number
+        reason?: "no_response" | "max_tool_calls" | "error"
+        lastAssistantContent?: string | null
+        toolCalls?: { toolName: string; params: unknown }[]
+    } | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -169,6 +177,7 @@ export default function ChatWindow({
         setInput("")
         setIsLoading(true)
         setError(null)
+        setDebugInfo(null)
 
         // For near-me queries, queue message if location is still loading
         if (shouldRequestLocation(userMessage.content) && locationLoading) {
@@ -201,9 +210,11 @@ export default function ChatWindow({
                 }
                 setMessages((prev) => [...prev, assistantMessage])
                 setCurrentRemaining(result.remaining)
+                setDebugInfo(result.debug ?? null)
             } else {
                 setError(mapLocationError(result.error || "Failed to send message"))
                 setCurrentRemaining(result.remaining)
+                setDebugInfo(result.debug ?? null)
             }
         } catch {
             setError("An unexpected error occurred")
@@ -243,9 +254,11 @@ export default function ChatWindow({
                     }
                     setMessages((prev) => [...prev, assistantMessage])
                     setCurrentRemaining(result.remaining)
+                    setDebugInfo(result.debug ?? null)
                 } else {
                     setError(mapLocationError(result.error || "Failed to send message"))
                     setCurrentRemaining(result.remaining)
+                    setDebugInfo(result.debug ?? null)
                 }
             } catch {
                 setError("An unexpected error occurred")
@@ -413,6 +426,28 @@ export default function ChatWindow({
                         >
                             <AlertCircle className='w-4 h-4 shrink-0' />
                             <span className='text-sm'>{error}</span>
+                        </motion.div>
+                    )}
+                    {chatDebugEnabled && debugInfo && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className='text-[11px] text-text/50 bg-secondary/10 border border-secondary/20 rounded-xl p-3 font-mono'
+                        >
+                            Debug: calls {debugInfo.callCount}/{debugInfo.maxCalls}
+                            {debugInfo.reason ? ` • reason: ${debugInfo.reason}` : ""}
+                            {debugInfo.lastAssistantContent
+                                ? ` • last: ${debugInfo.lastAssistantContent.slice(0, 120)}`
+                                : " • last: (none)"}
+                            {debugInfo.toolCalls && debugInfo.toolCalls.length > 0 && (
+                                <div className='mt-2 space-y-1'>
+                                    {debugInfo.toolCalls.map((call: { toolName: string; params: unknown }, index: number) => (
+                                        <div key={`${call.toolName}-${index}`}>
+                                            {call.toolName}: {JSON.stringify(call.params).slice(0, 180)}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
                     )}
                     {locationLoading && (

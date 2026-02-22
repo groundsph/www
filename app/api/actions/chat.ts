@@ -24,6 +24,12 @@ export interface SendChatMessageResult {
     cafes?: ChatCafeCard[]
     cardContext?: ChatCardContext
     crawlDraft?: ChatCrawlDraft
+    debug?: {
+        maxCalls: number
+        callCount: number
+        reason?: "no_response" | "max_tool_calls" | "error"
+        lastAssistantContent?: string | null
+    }
 }
 
 export async function sendChatMessage(
@@ -85,6 +91,7 @@ export async function sendChatMessage(
             cafes: result.cafes,
             cardContext: result.cardContext,
             crawlDraft: result.crawlDraft,
+            debug: result.debug,
         }
     } catch (error) {
         console.error("Error in sendChatMessage:", error)

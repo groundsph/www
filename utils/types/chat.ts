@@ -56,6 +56,22 @@ export const chatResponseSchema = z.object({
     cafes: z.array(chatCafeCardSchema).optional(),
     cardContext: chatCardContextSchema.optional(),
     crawlDraft: chatCrawlDraftSchema.optional(),
+    debug: z
+        .object({
+            maxCalls: z.number().int(),
+            callCount: z.number().int(),
+            reason: z.enum(["no_response", "max_tool_calls", "error"]).optional(),
+            lastAssistantContent: z.string().nullable().optional(),
+            toolCalls: z
+                .array(
+                    z.object({
+                        toolName: z.string(),
+                        params: z.unknown(),
+                    })
+                )
+                .optional(),
+        })
+        .optional(),
 })
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>
