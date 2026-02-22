@@ -104,7 +104,6 @@ export default function ChatWindow({
         progressMessage: null,
         progressStep: 0,
     })
-    const [partialMessage, setPartialMessage] = useState<Message | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -178,7 +177,6 @@ export default function ChatWindow({
         setMessages([])
         setError(null)
         setPendingMessage(null)
-        setPartialMessage(null)
         clearChatHistory()
     }, [])
 
@@ -225,7 +223,6 @@ export default function ChatWindow({
         setIsLoading(true)
         setError(null)
         setStreamState({ isStreaming: false, progressMessage: null, progressStep: 0 })
-        setPartialMessage(null)
 
         // For near-me queries, queue message if location is still loading
         if (shouldRequestLocation(userMessage.content) && locationLoading) {
@@ -258,11 +255,11 @@ export default function ChatWindow({
                         })
                         break
                     case "tool":
-                        setStreamState({
+                        setStreamState((prev) => ({
                             isStreaming: true,
                             progressMessage: `Searching ${chunk.toolName}...`,
-                            progressStep: streamState.progressStep + 1,
-                        })
+                            progressStep: prev.progressStep + 1,
+                        }))
                         break
                     case "cafes":
                         cafes.push(...chunk.cafes)
@@ -333,11 +330,11 @@ export default function ChatWindow({
                             })
                             break
                         case "tool":
-                            setStreamState({
+                            setStreamState((prev) => ({
                                 isStreaming: true,
                                 progressMessage: `Searching ${chunk.toolName}...`,
-                                progressStep: streamState.progressStep + 1,
-                            })
+                                progressStep: prev.progressStep + 1,
+                            }))
                             break
                         case "cafes":
                             cafes.push(...chunk.cafes)
