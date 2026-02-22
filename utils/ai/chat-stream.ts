@@ -212,6 +212,10 @@ function shouldForceCityQuery(text: string): string | null {
     return null
 }
 
+function stripLocationHint(text: string): string {
+    return text.replace(/\n\nUser location[\s\S]*$/i, "").trim()
+}
+
 export async function runChatStream(options: ChatStreamOptions): Promise<void> {
     const { message, sessionId, onChunk } = options
 
@@ -231,7 +235,8 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
     try {
         // Check for direct crawl query
-        const forcedCity = shouldForceCityQuery(message)
+        const cleanedMessage = stripLocationHint(message)
+        const forcedCity = shouldForceCityQuery(cleanedMessage)
         if (forcedCity) {
             await onChunk({ type: "progress", message: `Searching cafes in ${forcedCity}...`, step: 2 })
             
@@ -245,7 +250,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             })
 
             const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-            const crawlDraft = buildChatCrawlDraft(toolCallRecords, message)
+            const crawlDraft = buildChatCrawlDraft(toolCallRecords, cleanedMessage)
 
             if (cafes.length > 0) {
                 await onChunk({ type: "cafes", cafes, cardContext })
@@ -257,7 +262,9 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
             await onChunk({
                 type: "complete",
-                message: `I found ${cafes.length} cafes in ${forcedCity} for your crawl!`,
+                message: cafes.length > 0
+                    ? `I found ${cafes.length} cafes in ${forcedCity} for your crawl!`
+                    : `I couldn't find any cafes in ${forcedCity}. Want to try a nearby city or adjust filters?`,
                 remaining: 10,
             })
             return
@@ -331,7 +338,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             } else {
                 messages.push(assistantMessage)
                 const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-                const crawlDraft = buildChatCrawlDraft(toolCallRecords, message)
+                const crawlDraft = buildChatCrawlDraft(toolCallRecords, cleanedMessage)
 
                 if (cafes.length > 0) {
                     await onChunk({ type: "cafes", cafes, cardContext })
@@ -352,7 +359,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
         // Max tool calls reached
         const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-        const crawlDraft = buildChatCrawlDraft(toolCallRecords, message)
+        const crawlDraft = buildChatCrawlDraft(toolCallRecords, cleanedMessage)
 
         if (cafes.length > 0) {
             await onChunk({ type: "cafes", cafes, cardContext })
