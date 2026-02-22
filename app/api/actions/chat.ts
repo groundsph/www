@@ -5,7 +5,7 @@ import { getOrCreateChatSessionId } from "@/utils/chat-session"
 import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { runChatWithTools } from "@/utils/ai/chat-tools"
 import { getChatEnabled } from "@/utils/feature-flags"
-import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
+import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
 import { z } from "zod"
 
 const sendChatMessageSchema = z.object({
@@ -23,6 +23,7 @@ export interface SendChatMessageResult {
     error?: string
     cafes?: ChatCafeCard[]
     cardContext?: ChatCardContext
+    crawlDraft?: ChatCrawlDraft
 }
 
 export async function sendChatMessage(

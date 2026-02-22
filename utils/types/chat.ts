@@ -27,6 +27,26 @@ export const chatCardContextSchema = z.object({
     filters: z.array(z.string()).optional(),
 })
 
+export const chatCrawlItemSchema = z.object({
+    cafeId: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    thumbnail: z.string().nullable(),
+    cityMunicipality: z.string().nullable().optional(),
+    region: z.string().nullable().optional(),
+    lat: z.number().nullable().optional(),
+    lng: z.number().nullable().optional(),
+    sortOrder: z.number().int(),
+    note: z.string().nullable().optional(),
+})
+
+export const chatCrawlDraftSchema = z.object({
+    title: z.string(),
+    description: z.string().optional(),
+    isPublic: z.boolean().optional(),
+    items: z.array(chatCrawlItemSchema),
+})
+
 export const chatResponseSchema = z.object({
     success: z.boolean(),
     message: z.string().optional(),
@@ -35,9 +55,12 @@ export const chatResponseSchema = z.object({
     data: z.unknown().optional(),
     cafes: z.array(chatCafeCardSchema).optional(),
     cardContext: chatCardContextSchema.optional(),
+    crawlDraft: chatCrawlDraftSchema.optional(),
 })
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>
 export type ChatResponse = z.infer<typeof chatResponseSchema>
 export type ChatCafeCard = z.infer<typeof chatCafeCardSchema>
 export type ChatCardContext = z.infer<typeof chatCardContextSchema>
+export type ChatCrawlDraft = z.infer<typeof chatCrawlDraftSchema>
+export type ChatCrawlItem = z.infer<typeof chatCrawlItemSchema>

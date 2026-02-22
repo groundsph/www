@@ -81,4 +81,34 @@ describe("chat schemas", () => {
         expect(parsed.cafes?.length).toBe(1)
         expect(parsed.cardContext?.queryType).toBe("nearby")
     })
+
+    it("accepts crawlDraft payload", () => {
+        const res = {
+            success: true,
+            remaining: 9,
+            crawlDraft: {
+                title: "Cebu Coffee Crawl",
+                description: "A short walkable route of top cafes",
+                isPublic: false,
+                items: [
+                    {
+                        cafeId: "550e8400-e29b-41d4-a716-446655440000",
+                        name: "Cafe Uno",
+                        slug: "cafe-uno",
+                        thumbnail: null,
+                        cityMunicipality: "Cebu City",
+                        region: "Central Visayas",
+                        lat: 10.3157,
+                        lng: 123.8854,
+                        sortOrder: 0,
+                        note: null,
+                    },
+                ],
+            },
+        }
+
+        const parsed = chatResponseSchema.parse(res)
+        expect(parsed.crawlDraft?.items?.length).toBe(1)
+        expect(parsed.crawlDraft?.isPublic).toBe(false)
+    })
 })
