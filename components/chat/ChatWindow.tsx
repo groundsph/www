@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { X, Send, AlertCircle, Loader2, Sparkles } from "lucide-react"
 import ChatMessage from "./ChatMessage"
-import { sendChatMessage } from "@/app/api/actions/chat"
 import { cn } from "@/utils/cn"
 import { useUserLocation } from "@/hooks/useUserLocation"
 import {
@@ -14,7 +13,7 @@ import {
     saveChatHistory,
     shouldClearChatHistory,
 } from "@/utils/chat-history"
-import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
+import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatStreamChunk } from "@/utils/types/chat"
 
 interface Message {
     id: string
@@ -29,6 +28,54 @@ interface Message {
 interface ChatWindowProps {
     remainingMessages: number
     onClose: () => void
+}
+
+interface StreamState {
+    isStreaming: boolean
+    progressMessage: string | null
+    progressStep: number
+}
+
+async function sendChatMessageStream(
+    message: string,
+    onChunk: (chunk: ChatStreamChunk) => void
+): Promise<void> {
+    const response = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+    })
+
+    if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to send message")
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error("No response body")
+
+    const decoder = new TextDecoder()
+    let buffer = ""
+
+    while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+
+        for (const line of lines) {
+            if (line.startsWith("data: ")) {
+                try {
+                    const chunk = JSON.parse(line.slice(6))
+                    onChunk(chunk)
+                } catch {
+                    // Ignore parse errors
+                }
+            }
+        }
+    }
 }
 
 export default function ChatWindow({
@@ -52,13 +99,12 @@ export default function ChatWindow({
     const [error, setError] = useState<string | null>(null)
     const [currentRemaining, setCurrentRemaining] = useState(remainingMessages)
     const [pendingMessage, setPendingMessage] = useState<Message | null>(null)
-    const [debugInfo, setDebugInfo] = useState<{
-        maxCalls: number
-        callCount: number
-        reason?: "no_response" | "max_tool_calls" | "error"
-        lastAssistantContent?: string | null
-        toolCalls?: { toolName: string; params: unknown }[]
-    } | null>(null)
+    const [streamState, setStreamState] = useState<StreamState>({
+        isStreaming: false,
+        progressMessage: null,
+        progressStep: 0,
+    })
+    const [partialMessage, setPartialMessage] = useState<Message | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -132,6 +178,7 @@ export default function ChatWindow({
         setMessages([])
         setError(null)
         setPendingMessage(null)
+        setPartialMessage(null)
         clearChatHistory()
     }, [])
 
@@ -177,7 +224,8 @@ export default function ChatWindow({
         setInput("")
         setIsLoading(true)
         setError(null)
-        setDebugInfo(null)
+        setStreamState({ isStreaming: false, progressMessage: null, progressStep: 0 })
+        setPartialMessage(null)
 
         // For near-me queries, queue message if location is still loading
         if (shouldRequestLocation(userMessage.content) && locationLoading) {
@@ -194,32 +242,63 @@ export default function ChatWindow({
                     ? `\n\nUser location context: ${locationSummary}.`
                     : ""
 
-            const result = await sendChatMessage({
-                message: `${userMessage.content}${locationHint}`,
+            const cafes: ChatCafeCard[] = []
+            let cardContext: ChatCardContext | undefined
+            let crawlDraft: ChatCrawlDraft | undefined
+            let finalMessage = ""
+            let finalRemaining = currentRemaining
+
+            await sendChatMessageStream(`${userMessage.content}${locationHint}`, (chunk) => {
+                switch (chunk.type) {
+                    case "progress":
+                        setStreamState({
+                            isStreaming: true,
+                            progressMessage: chunk.message,
+                            progressStep: chunk.step ?? 0,
+                        })
+                        break
+                    case "tool":
+                        setStreamState({
+                            isStreaming: true,
+                            progressMessage: `Searching ${chunk.toolName}...`,
+                            progressStep: streamState.progressStep + 1,
+                        })
+                        break
+                    case "cafes":
+                        cafes.push(...chunk.cafes)
+                        cardContext = chunk.cardContext
+                        break
+                    case "crawlDraft":
+                        crawlDraft = chunk.crawlDraft
+                        break
+                    case "complete":
+                        finalMessage = chunk.message
+                        break
+                    case "remaining":
+                        finalRemaining = chunk.remaining
+                        break
+                    case "error":
+                        throw new Error(chunk.error)
+                }
             })
 
-            if (result.success && result.message) {
-                const assistantMessage: Message = {
-                    id: crypto.randomUUID(),
-                    role: "assistant",
-                    content: result.message,
-                    timestamp: new Date(),
-                    cafes: result.cafes,
-                    cardContext: result.cardContext,
-                    crawlDraft: result.crawlDraft,
-                }
-                setMessages((prev) => [...prev, assistantMessage])
-                setCurrentRemaining(result.remaining)
-                setDebugInfo(result.debug ?? null)
-            } else {
-                setError(mapLocationError(result.error || "Failed to send message"))
-                setCurrentRemaining(result.remaining)
-                setDebugInfo(result.debug ?? null)
+            const assistantMessage: Message = {
+                id: crypto.randomUUID(),
+                role: "assistant",
+                content: finalMessage,
+                timestamp: new Date(),
+                cafes: cafes.length > 0 ? cafes : undefined,
+                cardContext,
+                crawlDraft,
             }
-        } catch {
-            setError("An unexpected error occurred")
+
+            setMessages((prev) => [...prev, assistantMessage])
+            setCurrentRemaining(finalRemaining)
+        } catch (err) {
+            setError(mapLocationError(err instanceof Error ? err.message : "An unexpected error occurred"))
         } finally {
             setIsLoading(false)
+            setStreamState({ isStreaming: false, progressMessage: null, progressStep: 0 })
             setTimeout(scrollToBottom, 100)
         }
     }
@@ -238,37 +317,68 @@ export default function ChatWindow({
                         ? `\n\nUser location context: ${locationSummary}.`
                         : ""
 
-                const result = await sendChatMessage({
-                    message: `${pendingMessage.content}${locationHint}`,
+                const cafes: ChatCafeCard[] = []
+                let cardContext: ChatCardContext | undefined
+                let crawlDraft: ChatCrawlDraft | undefined
+                let finalMessage = ""
+                let finalRemaining = currentRemaining
+
+                await sendChatMessageStream(`${pendingMessage.content}${locationHint}`, (chunk) => {
+                    switch (chunk.type) {
+                        case "progress":
+                            setStreamState({
+                                isStreaming: true,
+                                progressMessage: chunk.message,
+                                progressStep: chunk.step ?? 0,
+                            })
+                            break
+                        case "tool":
+                            setStreamState({
+                                isStreaming: true,
+                                progressMessage: `Searching ${chunk.toolName}...`,
+                                progressStep: streamState.progressStep + 1,
+                            })
+                            break
+                        case "cafes":
+                            cafes.push(...chunk.cafes)
+                            cardContext = chunk.cardContext
+                            break
+                        case "crawlDraft":
+                            crawlDraft = chunk.crawlDraft
+                            break
+                        case "complete":
+                            finalMessage = chunk.message
+                            break
+                        case "remaining":
+                            finalRemaining = chunk.remaining
+                            break
+                        case "error":
+                            throw new Error(chunk.error)
+                    }
                 })
 
-                if (result.success && result.message) {
-                    const assistantMessage: Message = {
-                        id: crypto.randomUUID(),
-                        role: "assistant",
-                        content: result.message,
-                        timestamp: new Date(),
-                        cafes: result.cafes,
-                        cardContext: result.cardContext,
-                        crawlDraft: result.crawlDraft,
-                    }
-                    setMessages((prev) => [...prev, assistantMessage])
-                    setCurrentRemaining(result.remaining)
-                    setDebugInfo(result.debug ?? null)
-                } else {
-                    setError(mapLocationError(result.error || "Failed to send message"))
-                    setCurrentRemaining(result.remaining)
-                    setDebugInfo(result.debug ?? null)
+                const assistantMessage: Message = {
+                    id: crypto.randomUUID(),
+                    role: "assistant",
+                    content: finalMessage,
+                    timestamp: new Date(),
+                    cafes: cafes.length > 0 ? cafes : undefined,
+                    cardContext,
+                    crawlDraft,
                 }
-            } catch {
-                setError("An unexpected error occurred")
+
+                setMessages((prev) => [...prev, assistantMessage])
+                setCurrentRemaining(finalRemaining)
+            } catch (err) {
+                setError(mapLocationError(err instanceof Error ? err.message : "An unexpected error occurred"))
             } finally {
                 setIsLoading(false)
+                setPendingMessage(null)
+                setStreamState({ isStreaming: false, progressMessage: null, progressStep: 0 })
                 setTimeout(scrollToBottom, 100)
             }
         })()
-        setPendingMessage(null)
-    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom])
+    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom, currentRemaining])
 
     useEffect(() => {
         if (locationError) {
@@ -392,7 +502,7 @@ export default function ChatWindow({
                             <ChatMessage message={message} />
                         </motion.div>
                     ))}
-                    {isLoading && (
+                    {isLoading && streamState.progressMessage && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -412,9 +522,16 @@ export default function ChatWindow({
                             >
                                 <Loader2 className='w-4 h-4 text-secondary animate-spin' />
                             </motion.div>
-                            <span className='text-sm text-text/70'>
-                                Grounds AI is thinking...
-                            </span>
+                            <div className='flex flex-col'>
+                                <span className='text-sm text-text/70'>
+                                    {streamState.progressMessage}
+                                </span>
+                                {streamState.progressStep > 0 && (
+                                    <span className='text-xs text-text/40'>
+                                        Step {streamState.progressStep}
+                                    </span>
+                                )}
+                            </div>
                         </motion.div>
                     )}
                     {error && (
@@ -428,26 +545,13 @@ export default function ChatWindow({
                             <span className='text-sm'>{error}</span>
                         </motion.div>
                     )}
-                    {chatDebugEnabled && debugInfo && (
+                    {chatDebugEnabled && (
                         <motion.div
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             className='text-[11px] text-text/50 bg-secondary/10 border border-secondary/20 rounded-xl p-3 font-mono'
                         >
-                            Debug: calls {debugInfo.callCount}/{debugInfo.maxCalls}
-                            {debugInfo.reason ? ` • reason: ${debugInfo.reason}` : ""}
-                            {debugInfo.lastAssistantContent
-                                ? ` • last: ${debugInfo.lastAssistantContent.slice(0, 120)}`
-                                : " • last: (none)"}
-                            {debugInfo.toolCalls && debugInfo.toolCalls.length > 0 && (
-                                <div className='mt-2 space-y-1'>
-                                    {debugInfo.toolCalls.map((call: { toolName: string; params: unknown }, index: number) => (
-                                        <div key={`${call.toolName}-${index}`}>
-                                            {call.toolName}: {JSON.stringify(call.params).slice(0, 180)}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            Streaming mode active
                         </motion.div>
                     )}
                     {locationLoading && (
