@@ -36,4 +36,9 @@ describe("chat crawl draft storage", () => {
         clearChatCrawlDraft()
         expect(loadChatCrawlDraft()).toBeNull()
     })
+
+    it("returns null when no draft exists", () => {
+        localStorage.clear()
+        expect(loadChatCrawlDraft()).toBeNull()
+    })
 })

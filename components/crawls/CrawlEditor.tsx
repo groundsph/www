@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
     ArrowLeft,
     Save,
@@ -32,6 +32,7 @@ import { compressCollectionCover } from "@/utils/image-processing"
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 import { normalizeLatLng } from "@/utils/map/coords"
 import { motion, AnimatePresence } from "motion/react"
+import { loadChatCrawlDraft, clearChatCrawlDraft } from "@/utils/chat-crawl-draft"
 
 interface CrawlItem {
     id?: string
@@ -107,12 +108,40 @@ export default function CrawlEditor({
     const { addNotification } = useNotification()
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    const searchParams = useSearchParams()
+
     // Form state
     const [title, setTitle] = useState(crawl.title)
     const [description, setDescription] = useState(crawl.description || "")
     const [coverImage, setCoverImage] = useState(crawl.coverImage || "")
     const [isPublic, setIsPublic] = useState(crawl.isPublic ?? true)
     const [items, setItems] = useState<CrawlItem[]>(crawl.items || [])
+
+    // Load chat draft when draft=chat query param is present
+    useEffect(() => {
+        if (searchParams.get("draft") !== "chat") return
+        const draft = loadChatCrawlDraft()
+        if (!draft) return
+
+        setTitle(draft.title)
+        setDescription(draft.description ?? "")
+        setItems(
+            draft.items.map((item) => ({
+                cafeId: item.cafeId,
+                sortOrder: item.sortOrder,
+                note: item.note ?? null,
+                name: item.name,
+                slug: item.slug,
+                thumbnail: item.thumbnail,
+                cityMunicipality: item.cityMunicipality ?? undefined,
+                region: item.region ?? undefined,
+                lat: item.lat ?? undefined,
+                lng: item.lng ?? undefined,
+            })),
+        )
+        setIsPublic(false)
+        clearChatCrawlDraft()
+    }, [searchParams])
 
     // UI state
     const [isSaving, setIsSaving] = useState(false)
