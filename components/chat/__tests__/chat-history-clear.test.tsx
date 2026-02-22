@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach } from "bun:test"
+import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test"
 import { fireEvent, render, screen } from "@testing-library/react"
 import ChatWindow from "@/components/chat/ChatWindow"
 
@@ -34,8 +34,19 @@ mock.module("@/hooks/useUserLocation", () => ({
 }))
 
 describe("ChatWindow history clearing", () => {
+    const originalNodeEnv = process.env.NODE_ENV
+
     beforeEach(() => {
+        localStorageMock.getItem.mockClear()
+        localStorageMock.setItem.mockClear()
+        localStorageMock.removeItem.mockClear()
         sessionStorageMock.getItem.mockClear()
+        sessionStorageMock.setItem.mockClear()
+        sessionStorageMock.removeItem.mockClear()
+    })
+
+    afterEach(() => {
+        process.env.NODE_ENV = originalNodeEnv
     })
 
     it("shows dev clear button and clears messages", () => {
@@ -44,6 +55,8 @@ describe("ChatWindow history clearing", () => {
 
         expect(screen.getByText("Clear history")).toBeTruthy()
         fireEvent.click(screen.getByText("Clear history"))
+
         expect(sessionStorageMock.removeItem).toHaveBeenCalledWith("chat-history")
+        expect(screen.getByText("Ask me anything about cafes!")).toBeTruthy()
     })
 })
