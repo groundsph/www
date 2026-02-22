@@ -138,6 +138,22 @@ export default function ChatWindow({
         return () => document.removeEventListener("keydown", handleEscape)
     }, [onClose])
 
+    // Schedule daily reset at local midnight
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const now = new Date()
+        const nextMidnight = new Date(now)
+        nextMidnight.setHours(24, 0, 0, 0)
+        const timeoutMs = nextMidnight.getTime() - now.getTime()
+
+        const timeout = window.setTimeout(() => {
+            clearChatHistory()
+            setMessages([])
+        }, timeoutMs)
+
+        return () => window.clearTimeout(timeout)
+    }, [])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!input.trim() || isLoading || currentRemaining <= 0) return
