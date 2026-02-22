@@ -32,13 +32,28 @@ mock.module("@/db", () => ({
 
 // Mock buildChatCrawlDraft to return a draft when message contains "crawl"
 mock.module("@/utils/ai/chat-crawl-draft", () => ({
-    buildChatCrawlDraft: (records: unknown[], message: string) => {
+    buildChatCrawlDraft: (records: { params?: { city?: string; province?: string; region?: string }; result?: { cafes?: unknown[] } }[], message: string) => {
         if (message.toLowerCase().includes("crawl")) {
+            const params = records[0]?.params
+            const result = records[0]?.result
+            const location = params?.city || params?.province || params?.region || "Custom"
+            const cafes = result?.cafes || []
             return {
-                title: "Custom Coffee Crawl",
+                title: `${location} Coffee Crawl`,
                 description: "Draft",
                 isPublic: false,
-                items: [],
+                items: cafes.map((cafe: any, index: number) => ({
+                    cafeId: String(cafe.id || ""),
+                    name: String(cafe.name || ""),
+                    slug: String(cafe.slug || ""),
+                    thumbnail: cafe.thumbnail || null,
+                    cityMunicipality: cafe.cityMunicipality || null,
+                    region: cafe.region || null,
+                    lat: cafe.lat || null,
+                    lng: cafe.lng || null,
+                    sortOrder: index,
+                    note: null,
+                })),
             }
         }
         return null
