@@ -84,6 +84,7 @@ export async function sendChatMessage(
             remaining: Math.max(0, remainingAfter),
             cafes: result.cafes,
             cardContext: result.cardContext,
+            crawlDraft: result.crawlDraft,
         }
     } catch (error) {
         console.error("Error in sendChatMessage:", error)

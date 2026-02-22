@@ -10,7 +10,8 @@ import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
 import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
-import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
+import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
+import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
 
 const MAX_TOOL_CALLS_DEFAULT = 4
 const MAX_TOOL_CALLS_LIMIT = 4
@@ -40,6 +41,7 @@ export interface ChatToolResult {
     cafes?: ChatCafeCard[]
     cardContext?: ChatCardContext
     toolCalls?: ToolCallRecord[]
+    crawlDraft?: ChatCrawlDraft
 }
 
 export interface ToolCallRecord {
@@ -302,20 +304,24 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
             } else {
                 messages.push(assistantMessage)
                 const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
+                const crawlDraft = buildChatCrawlDraft(toolCallRecords, message)
                 return {
                     message: response.content ?? "I don't have a response for that.",
                     cafes,
                     cardContext,
+                    ...(crawlDraft ? { crawlDraft } : {}),
                     toolCalls: toolCallRecords.length > 0 ? toolCallRecords : undefined,
                 }
             }
         }
 
         const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
+        const crawlDraft = buildChatCrawlDraft(toolCallRecords, message)
         return {
             message: "I needed to look up more information than expected. Here's what I found so far.",
             cafes,
             cardContext,
+            ...(crawlDraft ? { crawlDraft } : {}),
             toolCalls: toolCallRecords.length > 0 ? toolCallRecords : undefined,
         }
     } catch (error) {

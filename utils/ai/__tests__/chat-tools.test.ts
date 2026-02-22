@@ -30,6 +30,21 @@ mock.module("@/db", () => ({
     },
 }))
 
+// Mock buildChatCrawlDraft to return a draft when message contains "crawl"
+mock.module("@/utils/ai/chat-crawl-draft", () => ({
+    buildChatCrawlDraft: (records: unknown[], message: string) => {
+        if (message.toLowerCase().includes("crawl")) {
+            return {
+                title: "Custom Coffee Crawl",
+                description: "Draft",
+                isPublic: false,
+                items: [],
+            }
+        }
+        return null
+    },
+}))
+
 // Import after mocking
 const { runChatWithTools } = await import("@/utils/ai/chat-tools")
 
@@ -322,5 +337,25 @@ describe("runChatWithTools", () => {
             sessionId: "test-cards",
         })
         expect(result.cafes).toBeDefined()
+    })
+
+    it("returns crawlDraft when builder provides one", async () => {
+        const mockFetch = mock(() =>
+            Promise.resolve({
+                ok: true,
+                json: () =>
+                    Promise.resolve({
+                        choices: [{ message: { content: "Here you go" } }],
+                    }),
+            } as Response)
+        )
+        global.fetch = mockFetch
+
+        const result = await runChatWithTools({
+            message: "Build a crawl",
+            sessionId: "test",
+        })
+
+        expect(result.crawlDraft).toBeDefined()
     })
 })
