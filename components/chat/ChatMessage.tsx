@@ -3,8 +3,9 @@
 import { motion } from "motion/react"
 import MarkdownRender from "@/components/ui/MarkdownRender"
 import { cn } from "@/utils/cn"
-import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
+import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
 import ChatCafeCarousel from "./ChatCafeCarousel"
+import ChatCrawlPreview from "./ChatCrawlPreview"
 
 interface Message {
     id: string
@@ -13,6 +14,7 @@ interface Message {
     timestamp: Date
     cafes?: ChatCafeCard[]
     cardContext?: ChatCardContext
+    crawlDraft?: ChatCrawlDraft
 }
 
 interface ChatMessageProps {
@@ -58,6 +60,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                     {message.cafes && message.cafes.length > 0 && (
                         <ChatCafeCarousel cafes={message.cafes} cardContext={message.cardContext} />
                     )}
+                    {message.crawlDraft && <ChatCrawlPreview draft={message.crawlDraft} />}
                 </motion.div>
                 
                 {/* {isUser && (
