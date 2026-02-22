@@ -62,9 +62,11 @@ export async function POST(request: NextRequest) {
                     await incrementChatUsage(sessionId)
 
                     // Send final remaining count
+                    // Handle Infinity for dev mode (JSON doesn't support Infinity)
+                    const finalRemaining = remaining === Infinity ? 1000 : Math.max(0, remaining - 1)
                     const finalChunk = JSON.stringify({
                         type: "remaining",
-                        remaining: Math.max(0, remaining - 1),
+                        remaining: finalRemaining,
                     })
                     controller.enqueue(encoder.encode(`data: ${finalChunk}\n\n`))
                 } catch (error) {
