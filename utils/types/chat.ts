@@ -12,6 +12,8 @@ export const chatCafeCardSchema = z.object({
     filters: z.array(z.string()).optional(),
     flags: z.array(z.string()).optional(),
     custom: z.string().optional(),
+    lat: z.number().nullable().optional(),
+    lng: z.number().nullable().optional(),
 })
 
 export const chatContextSchema = z.object({

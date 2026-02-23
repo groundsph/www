@@ -1,4 +1,4 @@
-import type { ChatCrawlDraft } from "@/utils/types/chat"
+import type { ChatCrawlDraft, ChatContext } from "@/utils/types/chat"
 import type { ToolCallRecord } from "@/utils/ai/chat-tools"
 import type { OperatingHours } from "@/utils/types/cafe"
 import { buildRoutePlan } from "@/utils/crawls/route-planner"
@@ -64,8 +64,52 @@ function parseCrawlTimePreferences(message: string) {
 
 export async function buildChatCrawlDraft(
     records: ToolCallRecord[],
-    message: string
+    message: string,
+    context?: ChatContext
 ): Promise<ChatCrawlDraft | null> {
+    // Check for recent cafes when crawl intent is present
+    if (context?.recentCafes?.length && hasCrawlIntent(message)) {
+        const prefs = parseCrawlTimePreferences(message)
+        const routeCafes = context.recentCafes.map((cafe) => ({
+            id: cafe.id,
+            name: cafe.title,
+            slug: cafe.slug,
+            lat: cafe.lat ?? null,
+            lng: cafe.lng ?? null,
+            operatingHours: null,
+        }))
+
+        const plan = await buildRoutePlan(routeCafes, {
+            startDay: prefs.day,
+            startTime: prefs.time,
+            travelMode: "foot",
+        })
+
+        const items = plan.ordered.map((item, index) => {
+            const originalCafe = context.recentCafes!.find((c) => c.id === item.id)
+            const scheduleItem = plan.schedule.find((s) => s.cafeId === item.id)
+            return {
+                cafeId: item.id,
+                name: item.name,
+                slug: item.slug,
+                thumbnail: originalCafe?.coverImageUrl ?? null,
+                cityMunicipality: originalCafe?.city ?? null,
+                region: null,
+                lat: item.lat,
+                lng: item.lng,
+                sortOrder: index,
+                note: scheduleItem?.note ?? null,
+            }
+        })
+
+        return {
+            title: "Coffee Crawl",
+            description: plan.reason,
+            isPublic: false,
+            items,
+        }
+    }
+
     if (!hasCrawlIntent(message)) return null
 
     const prefs = parseCrawlTimePreferences(message)

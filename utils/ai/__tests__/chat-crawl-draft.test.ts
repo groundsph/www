@@ -1,6 +1,21 @@
 import { describe, expect, it } from "bun:test"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
 
+describe("chat crawl from recent cafes", () => {
+    it("builds a crawl from recent cafes without new tool calls", async () => {
+        const recent = [
+            { id: "1", slug: "a", title: "Cafe A", coverImageUrl: null, city: "Cebu", lat: 10.3157, lng: 123.8854 },
+            { id: "2", slug: "b", title: "Cafe B", coverImageUrl: null, city: "Cebu", lat: 10.3170, lng: 123.8820 },
+        ]
+        const draft = await buildChatCrawlDraft(
+            [], // Empty records - no new tool calls
+            "Make a crawl from those",
+            { recentCafes: recent }
+        )
+        expect(draft?.items.length).toBe(2)
+    })
+})
+
 describe("buildChatCrawlDraft", () => {
     it("adds visit notes when hours are present", async () => {
         const draft = await buildChatCrawlDraft(

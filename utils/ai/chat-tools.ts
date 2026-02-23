@@ -11,7 +11,7 @@ import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
-import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
+import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatContext } from "@/utils/types/chat"
 
 const MAX_TOOL_CALLS_DEFAULT = 6
 const MAX_TOOL_CALLS_LIMIT = 8
@@ -65,6 +65,7 @@ export interface RunChatOptions {
     message: string
     sessionId: string
     maxToolCalls?: number
+    context?: ChatContext
 }
 
 interface ToolDefinition {
@@ -254,7 +255,7 @@ function shouldForceCityQuery(text: string): string | null {
 }
 
 export async function runChatWithTools(options: RunChatOptions): Promise<ChatToolResult> {
-    const { message, sessionId, maxToolCalls } = options
+    const { message, sessionId, maxToolCalls, context } = options
 
     if (!message?.trim()) {
         return {
@@ -349,7 +350,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
             } else {
                 messages.push(assistantMessage)
                 const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-                const crawlDraft = await buildChatCrawlDraft(toolCallRecords, message)
+                const crawlDraft = await buildChatCrawlDraft(toolCallRecords, message, context)
                 return {
                     message: response.content ?? "I don't have a response for that.",
                     cafes,
@@ -362,7 +363,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
         }
 
         const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-        const crawlDraft = await buildChatCrawlDraft(toolCallRecords, message)
+        const crawlDraft = await buildChatCrawlDraft(toolCallRecords, message, context)
         return {
             message: "I needed to look up more information than expected. Here's what I found so far.",
             cafes,

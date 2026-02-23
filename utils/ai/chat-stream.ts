@@ -36,7 +36,8 @@ Rules:
 4. If the user asks for cafes "near" a location, use get_nearby_cafes
 5. Provide concise, helpful responses based on the tool results
 6. If no cafes match the query, politely inform the user
-7. When you have enough data, respond with a final answer and do not call more tools.`
+7. When you have enough data, respond with a final answer and do not call more tools.
+8. If the user refers to the previous list or says things like "from those" or "make a crawl from these", use the recent context rather than calling tools again.`
 
 interface ToolDefinition {
     type: "function"
@@ -259,7 +260,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             })
 
             const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-            const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage)
+            const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage, options.context)
 
             if (cafes.length > 0) {
                 await onChunk({ type: "cafes", cafes, cardContext })
@@ -350,7 +351,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             } else {
                 messages.push(assistantMessage)
                 const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-                const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage)
+                const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage, options.context)
 
                 if (cafes.length > 0) {
                     await onChunk({ type: "cafes", cafes, cardContext })
@@ -376,7 +377,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
         // Max tool calls reached
         const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-        const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage)
+        const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage, options.context)
 
         if (cafes.length > 0) {
             await onChunk({ type: "cafes", cafes, cardContext })
