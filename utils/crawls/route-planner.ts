@@ -22,11 +22,36 @@ function centroid(cafes: RouteCafe[]) {
     return { lat, lng }
 }
 
+const RATIONALES = {
+    short: [
+        "Ordered to create a smooth walking route from the center outward.",
+        "Arranged for minimal walking between stops.",
+        "Plotted as an easy loop starting from the middle.",
+    ],
+    medium: [
+        "Ordered to create a smooth walking route from the center outward.",
+        "Arranged for minimal walking between stops, starting near the center.",
+        "Plotted as a walkable path that loops through the area.",
+    ],
+    long: [
+        "Ordered to create a smooth walking route from the center outward, keeping travel minimal between stops.",
+        "Arranged for an easy walk starting from the heart of the area and moving outward.",
+        "Plotted as a practical walking route that minimizes backtracking.",
+    ],
+}
+
+function pickRationale(count: number): string {
+    const pool = count <= 3 ? RATIONALES.short : count <= 6 ? RATIONALES.medium : RATIONALES.long
+    return pool[Math.floor(Math.random() * pool.length)]
+}
+
 export function buildRoutePlan(cafes: RouteCafe[]) {
     if (cafes.length <= 2) {
         return {
             ordered: cafes,
-            reason: "With only a couple of stops, the order follows the original listing.",
+            reason: cafes.length === 1 
+                ? "Just one stop—easy to find!" 
+                : "Two stops, ordered for a quick hop between them.",
         }
     }
 
@@ -48,6 +73,6 @@ export function buildRoutePlan(cafes: RouteCafe[]) {
 
     return {
         ordered,
-        reason: "Started near the route centroid and chose the nearest next stop to keep the path walkable.",
+        reason: pickRationale(cafes.length),
     }
 }

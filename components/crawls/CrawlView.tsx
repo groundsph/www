@@ -219,7 +219,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                 {/* Map Section */}
                 <motion.section variants={fadeInUp} className="mb-12">
                     <div className="rounded-2xl overflow-hidden border border-secondary/20 shadow-sm">
-                        <div className="h-[420px] w-full">
+                        <div className="aspect-square w-full max-h-[600px]">
                         <CrawlRouteMap
                             points={mapPoints}
                             showUserLocation={true}

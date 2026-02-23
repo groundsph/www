@@ -38,7 +38,7 @@ export default function ChatCrawlPreview({ draft }: ChatCrawlPreviewProps) {
                 </div>
                 <button
                     onClick={handleSave}
-                    className='px-3 py-2 text-xs font-bold rounded-lg bg-text text-background hover:bg-text/90 hover:scale-110 hover:shadow-2xs shadow-none transition-all'
+                    className='px-3 py-2 text-xs font-bold rounded-lg bg-text text-background hover:bg-text/90 hover:scale-110 hover:shadow-2xs shadow-none transition-all text-nowrap'
                 >
                     Save Crawl
                 </button>
