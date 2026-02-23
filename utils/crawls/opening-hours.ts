@@ -4,6 +4,9 @@ const DAYS: OperatingHour["day"][] = ["sun", "mon", "tue", "wed", "thu", "fri", 
 
 function toMinutes(time: string) {
     const [h, m] = time.split(":").map(Number)
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+        throw new Error(`Invalid time: ${time}`)
+    }
     return h * 60 + m
 }
 
@@ -31,6 +34,9 @@ export function nextOpenWindow(
         const entry = hours.find((h) => h.day === DAYS[idx] && !h.is_closed)
         if (!entry) continue
         if (i === 0 && isOpenAt(hours, day, time)) return entry
+        if (i === 0 && !isOpenAt(hours, day, time) && toMinutes(time) < toMinutes(entry.open)) {
+            return entry
+        }
         if (i > 0) return entry
     }
     return null
