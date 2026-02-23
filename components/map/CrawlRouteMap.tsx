@@ -6,8 +6,8 @@ const CrawlRouteMapInternal = dynamic(() => import("./CrawlRouteMapInternal"), {
     ssr: false,
     loading: () => (
         <div
-            className='w-full h-full flex items-center justify-center bg-secondary/20'
-            style={{ minHeight: "420px" }}
+            className='w-full h-full flex items-center justify-center bg-secondary/20 aspect-square'
+            style={{ minHeight: 'auto' }}
         >
             <p className='text-text/50 font-serif'>Loading map...</p>
         </div>

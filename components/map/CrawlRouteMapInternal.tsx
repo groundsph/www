@@ -1,7 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState, useMemo } from "react"
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet"
+import {
+    MapContainer,
+    TileLayer,
+    Marker,
+    Polyline,
+    useMap,
+} from "react-leaflet"
 import { DivIcon } from "leaflet"
 import { useRouter } from "next/navigation"
 import "leaflet/dist/leaflet.css"
@@ -12,7 +18,11 @@ import { invalidateMapSize } from "@/utils/map/leaflet"
 import { normalizeLatLng } from "@/utils/map/coords"
 import { buildOsrmUrl } from "@/utils/map/osrm"
 
-function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | null }) {
+function MapFocus({
+    focusPoint,
+}: {
+    focusPoint: { lat: number; lng: number } | null
+}) {
     const map = useMap()
 
     useEffect(() => {
@@ -24,9 +34,13 @@ function MapFocus({ focusPoint }: { focusPoint: { lat: number; lng: number } | n
             try {
                 if (!map.getContainer()) return
                 const currentZoom = map.getZoom()
-                const targetZoom = Number.isFinite(currentZoom) ? Math.max(currentZoom, 13) : 13
+                const targetZoom = Number.isFinite(currentZoom)
+                    ? Math.max(currentZoom, 13)
+                    : 13
                 map.stop()
-                map.setView([normalized.lat, normalized.lng], targetZoom, { animate: false })
+                map.setView([normalized.lat, normalized.lng], targetZoom, {
+                    animate: false,
+                })
             } catch {
                 // Silently ignore
             }
@@ -65,15 +79,24 @@ function MapBounds({ points }: { points: { lat: number; lng: number }[] }) {
 
     useEffect(() => {
         if (!map) return
-        const validPoints = points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+        const validPoints = points.filter(
+            (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng),
+        )
         if (validPoints.length < 2) return
 
         const timer = setTimeout(() => {
             try {
                 if (!map.getContainer()) return
-                const bounds = validPoints.map((p) => [p.lat, p.lng]) as [number, number][]
+                const bounds = validPoints.map((p) => [p.lat, p.lng]) as [
+                    number,
+                    number,
+                ][]
                 map.stop()
-                map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14, animate: false })
+                map.fitBounds(bounds, {
+                    padding: [30, 30],
+                    maxZoom: 14,
+                    animate: false,
+                })
             } catch {
                 // Silently ignore bounds errors
             }
@@ -86,7 +109,14 @@ function MapBounds({ points }: { points: { lat: number; lng: number }[] }) {
 }
 
 interface CrawlRouteMapProps {
-    points: { lat: number; lng: number; imageUrl?: string | null; label?: string; index?: number; cafeSlug?: string }[]
+    points: {
+        lat: number
+        lng: number
+        imageUrl?: string | null
+        label?: string
+        index?: number
+        cafeSlug?: string
+    }[]
     focusPoint?: { lat: number; lng: number } | null
     showUserLocation?: boolean
     animateTimeline?: boolean
@@ -95,16 +125,21 @@ interface CrawlRouteMapProps {
     showLoadingState?: boolean
 }
 
-const markerIcon = (point: CrawlRouteMapProps["points"][number], showTooltip: boolean, isActive = false, isRevealed = true) =>
+const markerIcon = (
+    point: CrawlRouteMapProps["points"][number],
+    showTooltip: boolean,
+    isActive = false,
+    isRevealed = true,
+) =>
     new DivIcon({
         className: `crawl-marker-icon ${isActive ? "crawl-marker-active" : ""} ${!isRevealed ? "crawl-marker-hidden" : ""}`,
-        html: buildCrawlMarkerHtml({ 
-            imageUrl: point.imageUrl ?? null, 
-            label: point.label, 
+        html: buildCrawlMarkerHtml({
+            imageUrl: point.imageUrl ?? null,
+            label: point.label,
             index: point.index,
             cafeSlug: point.cafeSlug,
             showTooltip,
-            isActive
+            isActive,
         }),
         iconSize: [44, 44],
         iconAnchor: [22, 44],
@@ -117,7 +152,9 @@ function UserLocationMarker() {
 
     useEffect(() => {
         map.locate({ setView: false, maxZoom: 14 })
-        map.on("locationfound", (e) => setPosition([e.latlng.lat, e.latlng.lng]))
+        map.on("locationfound", (e) =>
+            setPosition([e.latlng.lat, e.latlng.lng]),
+        )
     }, [map])
 
     if (!position) return null
@@ -137,11 +174,11 @@ function UserLocationMarker() {
 }
 
 // Individual marker component with click/tap handling
-function CrawlMarker({ 
-    point, 
+function CrawlMarker({
+    point,
     isActive,
-    isRevealed = true
-}: { 
+    isRevealed = true,
+}: {
     point: CrawlRouteMapProps["points"][number]
     isActive?: boolean
     isRevealed?: boolean
@@ -152,12 +189,13 @@ function CrawlMarker({
 
     const handleClick = () => {
         if (!point.cafeSlug) return
-        
+
         // Check if it's a mobile device
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-            navigator.userAgent
-        )
-        
+        const isMobile =
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+                navigator.userAgent,
+            )
+
         if (isMobile) {
             // On mobile: first tap shows tooltip, second tap opens cafe
             if (!showTooltip) {
@@ -198,10 +236,20 @@ function CrawlMarker({
     )
 }
 
-export default function CrawlRouteMap({ points, focusPoint, showUserLocation, animateTimeline = false, timelineDelayMs = 1500, revealSequence = false, showLoadingState = false }: CrawlRouteMapProps) {
+export default function CrawlRouteMap({
+    points,
+    focusPoint,
+    showUserLocation,
+    animateTimeline = false,
+    timelineDelayMs = 1500,
+    revealSequence = false,
+    showLoadingState = false,
+}: CrawlRouteMapProps) {
     const [segments, setSegments] = useState<[number, number][][]>([])
     const [gapCount, setGapCount] = useState(0)
-    const [activePointIndex, setActivePointIndex] = useState<number>(revealSequence ? -1 : 0)
+    const [activePointIndex, setActivePointIndex] = useState<number>(
+        revealSequence ? -1 : 0,
+    )
     const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1)
     const [isLoadingRoutes, setIsLoadingRoutes] = useState(showLoadingState)
     const [hasFetchedRoutes, setHasFetchedRoutes] = useState(!showLoadingState)
@@ -210,11 +258,20 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
         () =>
             points
                 .map((point) => ({ point, coords: normalizeLatLng(point) }))
-                .filter((entry): entry is { point: CrawlRouteMapProps["points"][number]; coords: { lat: number; lng: number } } =>
-                    entry.coords !== null
+                .filter(
+                    (
+                        entry,
+                    ): entry is {
+                        point: CrawlRouteMapProps["points"][number]
+                        coords: { lat: number; lng: number }
+                    } => entry.coords !== null,
                 )
-                .map(({ point, coords }) => ({ ...point, lat: coords.lat, lng: coords.lng })),
-        [points]
+                .map(({ point, coords }) => ({
+                    ...point,
+                    lat: coords.lat,
+                    lng: coords.lng,
+                })),
+        [points],
     )
 
     const normalizedFocus = normalizeLatLng(focusPoint ?? null)
@@ -236,12 +293,12 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                 }
                 return
             }
-            
+
             if (showLoadingState) {
                 setIsLoadingRoutes(true)
                 setHasFetchedRoutes(false)
             }
-            
+
             const requests = normalizedPoints.slice(0, -1).map((p, idx) => ({
                 start: p,
                 end: normalizedPoints[idx + 1],
@@ -252,18 +309,25 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                     const url = buildOsrmUrl(start, end, "driving")
                     const res = await fetch(url)
                     if (!res.ok) {
-                        console.error(`[CrawlRouteMap] Failed to fetch route: ${res.status}`)
+                        console.error(
+                            `[CrawlRouteMap] Failed to fetch route: ${res.status}`,
+                        )
                         return null
                     }
                     const data = await res.json()
                     if (!data?.routes?.[0]?.geometry?.coordinates) return null
                     // Transform GeoJSON [lng,lat] to Leaflet [lat,lng]
-                    return data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]])
-                })
+                    return data.routes[0].geometry.coordinates.map(
+                        (c: [number, number]) => [c[1], c[0]],
+                    )
+                }),
             )
 
             if (cancelled) return
-            const validSegments = results.filter(Boolean) as [number, number][][]
+            const validSegments = results.filter(Boolean) as [
+                number,
+                number,
+            ][][]
             setGapCount(results.filter((r) => !r).length)
             setSegments(validSegments)
 
@@ -292,10 +356,15 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
     const [isPaused, setIsPaused] = useState(false)
 
     useEffect(() => {
-        if (!animateTimeline || normalizedPoints.length === 0 || segments.length === 0) return
+        if (
+            !animateTimeline ||
+            normalizedPoints.length === 0 ||
+            segments.length === 0
+        )
+            return
 
         const totalSteps = normalizedPoints.length + segments.length
-        
+
         // If we're paused, wait 3 seconds before restarting
         if (isPaused) {
             const pauseTimeout = setTimeout(() => {
@@ -326,30 +395,40 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
         }, timelineDelayMs)
 
         return () => clearInterval(interval)
-    }, [animateTimeline, timelineDelayMs, normalizedPoints.length, segments.length, isPaused])
-
-
+    }, [
+        animateTimeline,
+        timelineDelayMs,
+        normalizedPoints.length,
+        segments.length,
+        isPaused,
+    ])
 
     return (
-        <div className="relative h-full w-full z-0">
+        <div className='relative aspect-square h-full md:aspect-auto md:h-[70svh] w-full z-0'>
             <MapContainer
                 center={defaultCenter}
                 zoom={6}
                 scrollWheelZoom
-                className="h-full w-full"
+                className='h-full w-full'
                 style={{ minHeight: "420px" }}
-                >
+            >
                 <TileLayer
                     attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
+                    url='https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
                 />
                 {/* Markers and routes - only show after successful fetch */}
-                <div className={`transition-opacity duration-700 ease-out ${!hasFetchedRoutes || isLoadingRoutes ? 'opacity-0' : 'opacity-100'}`}>
+                <div
+                    className={`transition-opacity duration-700 ease-out ${!hasFetchedRoutes || isLoadingRoutes ? "opacity-0" : "opacity-100"}`}
+                >
                     {normalizedPoints.map((p, idx) => (
                         <CrawlMarker
                             key={p.cafeSlug || idx}
                             point={p}
-                            isActive={animateTimeline ? idx === activePointIndex : false}
+                            isActive={
+                                animateTimeline
+                                    ? idx === activePointIndex
+                                    : false
+                            }
                             isRevealed={true}
                         />
                     ))}
@@ -357,7 +436,13 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                         <Polyline
                             key={`seg-${idx}`}
                             positions={segment}
-                            pathOptions={getCrawlSegmentStyle(idx, animateTimeline ? idx === activeSegmentIndex : false, true)}
+                            pathOptions={getCrawlSegmentStyle(
+                                idx,
+                                animateTimeline
+                                    ? idx === activeSegmentIndex
+                                    : false,
+                                true,
+                            )}
                         />
                     ))}
                 </div>
@@ -366,21 +451,25 @@ export default function CrawlRouteMap({ points, focusPoint, showUserLocation, an
                 <MapBounds points={normalizedPoints} />
                 {showUserLocation && <UserLocationMarker />}
             </MapContainer>
-            
+
             {/* Loading overlay with smooth fade - show until we have routes */}
-            <div 
+            <div
                 className={`absolute inset-0 bg-secondary/20 backdrop-blur-[2px] flex items-center justify-center z-10 transition-opacity duration-700 ease-out pointer-events-none ${
-                    !hasFetchedRoutes || isLoadingRoutes ? 'opacity-100' : 'opacity-0'
+                    !hasFetchedRoutes || isLoadingRoutes
+                        ? "opacity-100"
+                        : "opacity-0"
                 }`}
             >
-                <div className="text-center bg-background/90 px-6 py-4 rounded-xl shadow-lg">
-                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2" />
-                    <p className="text-text/60 text-sm font-medium">Loading route...</p>
+                <div className='text-center bg-background/90 px-6 py-4 rounded-xl shadow-lg'>
+                    <div className='w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2' />
+                    <p className='text-text/60 text-sm font-medium'>
+                        Loading route...
+                    </p>
                 </div>
             </div>
-            
+
             {gapCount > 0 && (
-                <div className="absolute top-3 right-3 bg-background/90 border border-secondary/30 text-xs text-text/70 px-3 py-2 rounded-lg shadow-sm">
+                <div className='absolute top-3 right-3 bg-background/90 border border-secondary/30 text-xs text-text/70 px-3 py-2 rounded-lg shadow-sm'>
                     {gapCount} route gap{gapCount > 1 ? "s" : ""} (no road path)
                 </div>
             )}
