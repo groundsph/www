@@ -172,7 +172,12 @@ export async function buildRoutePlan(
 ): Promise<RoutePlanResult> {
     const { startDay, startTime, travelMode = "foot", dwellMinutes = 45 } = options
 
-    const validCafes = cafes.filter((c) => c.lat != null && c.lng != null)
+    // Validate startTime format (HH:MM)
+    if (!/^\d{2}:\d{2}$/.test(options.startTime)) {
+        throw new Error(`Invalid startTime format: ${options.startTime}. Expected HH:MM`)
+    }
+
+    const validCafes = cafes.filter((c) => c.lat !== null && c.lng !== null)
 
     if (validCafes.length === 0) {
         return {
@@ -196,7 +201,9 @@ export async function buildRoutePlan(
     }
 
     if (validCafes.length === 2) {
-        const schedule = buildSchedule(validCafes, [0, 1], startDay, startTime, dwellMinutes)
+        const coords = validCafes.map((c) => ({ lat: c.lat!, lng: c.lng! }))
+        const durationMatrix = await fetchOsrmTable(coords, travelMode) ?? fallbackEuclideanDistanceMatrix(coords)
+        const schedule = buildSchedule(validCafes, [0, 1], durationMatrix, startDay, startTime, dwellMinutes)
         return {
             ordered: validCafes,
             reason: `Two stops, ordered for a quick ${travelMode === "foot" ? "walking" : "driving"} route.`,
@@ -213,29 +220,31 @@ export async function buildRoutePlan(
     }
 
     let orderIndices: number[]
+    let finalDurationMatrix: number[][]
 
     if (durationMatrix) {
         useExactTsp = true
+        finalDurationMatrix = durationMatrix
         const startIndex = findCentroidStartIndex(coords)
-        orderIndices = solveTspExact(durationMatrix, startIndex)
+        orderIndices = solveTspExact(finalDurationMatrix, startIndex)
     } else {
-        durationMatrix = fallbackEuclideanDistanceMatrix(coords)
+        finalDurationMatrix = fallbackEuclideanDistanceMatrix(coords)
         const startIndex = findCentroidStartIndex(coords)
 
         if (validCafes.length <= 10) {
-            orderIndices = solveTspExact(durationMatrix, startIndex)
+            orderIndices = solveTspExact(finalDurationMatrix, startIndex)
             useExactTsp = true
         } else {
             orderIndices = nearestNeighborOrder(
                 validCafes,
                 startIndex,
-                (a, b) => durationMatrix![a][b]
+                (a, b) => finalDurationMatrix[a][b]
             )
         }
     }
 
     const ordered = orderIndices.map((i) => validCafes[i])
-    const schedule = buildSchedule(ordered, orderIndices, startDay, startTime, dwellMinutes)
+    const schedule = buildSchedule(ordered, orderIndices, finalDurationMatrix, startDay, startTime, dwellMinutes)
 
     return {
         ordered,
@@ -247,6 +256,7 @@ export async function buildRoutePlan(
 function buildSchedule(
     cafes: RouteCafe[],
     orderIndices: number[],
+    durationMatrix: number[][],
     startDay: DayOfWeek,
     startTime: string,
     dwellMinutes: number
@@ -289,6 +299,10 @@ function buildSchedule(
 
         if (i < cafes.length - 1) {
             currentMinutes += dwellMinutes
+            // Add travel time to next cafe
+            const currentIdx = orderIndices[i]
+            const nextIdx = orderIndices[i + 1]
+            currentMinutes += durationMatrix[currentIdx][nextIdx]
             if (currentMinutes >= 24 * 60) {
                 currentMinutes -= 24 * 60
                 currentDay = getNextDay(currentDay)
