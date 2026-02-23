@@ -108,6 +108,7 @@ export const quickActions: SearchResult[] = [
 export const quickActionHelp: QuickAction[] = [
   { prefix: '>', description: 'Quick actions', example: '>submit, >map' },
   { prefix: '@', description: 'Search users', example: '@username' },
+  { prefix: '?', description: 'Ask Grounds AI', example: '?best cafes in cebu' },
 ]
 
 export const emptyStateSuggestions: SearchResult[] = [

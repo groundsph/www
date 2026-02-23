@@ -8,6 +8,7 @@ import { SearchEmptyState } from "./SearchEmptyState"
 import { useSearch } from "@/utils/hooks/useSearch"
 import { SearchResult } from "@/utils/types/search"
 import { useRouter } from "next/navigation"
+import { emitChatEvent } from "@/utils/chat-events"
 
 interface SearchModalProps {
   isOpen: boolean
@@ -33,9 +34,14 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   }, [isOpen, setQuery])
 
   const handleSelect = useCallback((result: SearchResult) => {
+    if (result.type === "chat") {
+      emitChatEvent({ type: "open", message: query.trim() })
+      onClose()
+      return
+    }
     router.push(result.href)
     onClose()
-  }, [router, onClose])
+  }, [router, onClose, query])
 
   useEffect(() => {
     if (!isOpen) return

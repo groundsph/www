@@ -18,6 +18,7 @@ export function createFuseIndex(items: SearchResult[]) {
 
 export function getResultIcon(type: string): string {
   switch (type) {
+    case "chat": return "Sparkles"
     case "page": return "FileText"
     case "cafe": return "Coffee"
     case "user": return "User"
@@ -27,5 +28,20 @@ export function getResultIcon(type: string): string {
     case "collection": return "Layers"
     case "event": return "Calendar"
     default: return "Search"
+  }
+}
+
+export function buildChatResult(query: string): SearchResult | null {
+  const trimmed = query.trim()
+  if (!trimmed || trimmed.length < 2) return null
+  if (trimmed.startsWith(">") || trimmed.startsWith("@")) return null
+
+  return {
+    id: "chat-ask",
+    type: "chat",
+    title: "Ask Grounds AI",
+    subtitle: `Ask about "${trimmed}"`,
+    href: "#",
+    priority: 100,
   }
 }

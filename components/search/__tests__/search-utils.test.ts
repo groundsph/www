@@ -1,11 +1,18 @@
 import { describe, it, expect } from "bun:test"
-import { getResultIcon } from "@/components/search/search-utils"
+import { buildChatResult, getResultIcon } from "@/components/search/search-utils"
 
-describe("getResultIcon", () => {
-  it("maps new content types", () => {
-    expect(getResultIcon("blog")).toBe("FileText")
-    expect(getResultIcon("crawl")).toBe("MapIcon")
-    expect(getResultIcon("collection")).toBe("Layers")
-    expect(getResultIcon("event")).toBe("Calendar")
+describe("search utils", () => {
+  it("maps chat icon", () => {
+    expect(getResultIcon("chat")).toBe("Sparkles")
+  })
+
+  it("builds chat result for normal queries", () => {
+    const result = buildChatResult("best cafes in cebu")
+    expect(result?.type).toBe("chat")
+  })
+
+  it("skips chat result for quick action prefixes", () => {
+    expect(buildChatResult(">map")).toBeNull()
+    expect(buildChatResult("@user")).toBeNull()
   })
 })

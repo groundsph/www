@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useDebounce } from "./useDebounce"
 import { SearchResult } from "@/utils/types/search"
 import { globalSearch } from "@/app/api/actions/search"
+import { buildChatResult } from "@/components/search/search-utils"
 
 export function useSearch(debounceMs = 150) {
   const [query, setQuery] = useState("")
@@ -20,7 +21,8 @@ export function useSearch(debounceMs = 150) {
     setError(null)
     try {
       const searchResults = await globalSearch(searchQuery)
-      setResults(searchResults)
+      const chatResult = buildChatResult(searchQuery)
+      setResults(chatResult ? [chatResult, ...searchResults] : searchResults)
     } catch (err) {
       setError("Failed to search")
       console.error("Search error:", err)
