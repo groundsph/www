@@ -15,6 +15,7 @@ import {
 } from "@/utils/chat-history"
 import { subscribeChatEvents } from "@/utils/chat-events"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatStreamChunk } from "@/utils/types/chat"
+import { getChatContext } from "@/utils/chat-context"
 
 interface Message {
     id: string
@@ -39,12 +40,18 @@ interface StreamState {
 
 async function sendChatMessageStream(
     message: string,
-    onChunk: (chunk: ChatStreamChunk) => void
+    onChunk: (chunk: ChatStreamChunk) => void,
+    context: {
+        recentCafes: ChatCafeCard[];
+        recentToolCalls: { toolName: string; params: unknown; result: unknown }[];
+        pathname: string;
+        pageTitle: string;
+    }
 ): Promise<void> {
     const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, context }),
     })
 
     if (!response.ok) {
@@ -105,6 +112,10 @@ export default function ChatWindow({
         progressMessage: null,
         progressStep: 0,
     })
+    const [recentCafes, setRecentCafes] = useState<ChatCafeCard[]>([])
+    const [recentToolCalls, setRecentToolCalls] = useState<
+        { toolName: string; params: unknown; result: unknown }[]
+    >([])
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -256,39 +267,54 @@ export default function ChatWindow({
             let finalMessage = ""
             let finalRemaining = currentRemaining
 
-            await sendChatMessageStream(`${userMessage.content}${locationHint}`, (chunk) => {
-                switch (chunk.type) {
-                    case "progress":
-                        setStreamState({
-                            isStreaming: true,
-                            progressMessage: chunk.message,
-                            progressStep: chunk.step ?? 0,
-                        })
-                        break
-                    case "tool":
-                        setStreamState((prev) => ({
-                            isStreaming: true,
-                            progressMessage: `Searching ${chunk.toolName}...`,
-                            progressStep: prev.progressStep + 1,
-                        }))
-                        break
-                    case "cafes":
-                        cafes.push(...chunk.cafes)
-                        cardContext = chunk.cardContext
-                        break
-                    case "crawlDraft":
-                        crawlDraft = chunk.crawlDraft
-                        break
-                    case "complete":
-                        finalMessage = chunk.message
-                        break
-                    case "remaining":
-                        finalRemaining = chunk.remaining
-                        break
-                    case "error":
-                        throw new Error(chunk.error)
+            const context = getChatContext()
+            await sendChatMessageStream(
+                `${userMessage.content}${locationHint}`,
+                (chunk) => {
+                    switch (chunk.type) {
+                        case "progress":
+                            setStreamState({
+                                isStreaming: true,
+                                progressMessage: chunk.message,
+                                progressStep: chunk.step ?? 0,
+                            })
+                            break
+                        case "tool":
+                            setStreamState((prev) => ({
+                                isStreaming: true,
+                                progressMessage: `Searching ${chunk.toolName}...`,
+                                progressStep: prev.progressStep + 1,
+                            }))
+                            setRecentToolCalls((prev) => [
+                                ...prev,
+                                { toolName: chunk.toolName, params: chunk.params, result: {} },
+                            ])
+                            break
+                        case "cafes":
+                            cafes.push(...chunk.cafes)
+                            cardContext = chunk.cardContext
+                            setRecentCafes((prev) => [...prev, ...chunk.cafes])
+                            break
+                        case "crawlDraft":
+                            crawlDraft = chunk.crawlDraft
+                            break
+                        case "complete":
+                            finalMessage = chunk.message
+                            break
+                        case "remaining":
+                            finalRemaining = chunk.remaining
+                            break
+                        case "error":
+                            throw new Error(chunk.error)
+                    }
+                },
+                {
+                    recentCafes,
+                    recentToolCalls,
+                    pathname: window.location.pathname,
+                    pageTitle: document.title,
                 }
-            })
+            )
 
             const assistantMessage: Message = {
                 id: crypto.randomUUID(),
@@ -331,39 +357,53 @@ export default function ChatWindow({
                 let finalMessage = ""
                 let finalRemaining = currentRemaining
 
-                await sendChatMessageStream(`${pendingMessage.content}${locationHint}`, (chunk) => {
-                    switch (chunk.type) {
-                        case "progress":
-                            setStreamState({
-                                isStreaming: true,
-                                progressMessage: chunk.message,
-                                progressStep: chunk.step ?? 0,
-                            })
-                            break
-                        case "tool":
-                            setStreamState((prev) => ({
-                                isStreaming: true,
-                                progressMessage: `Searching ${chunk.toolName}...`,
-                                progressStep: prev.progressStep + 1,
-                            }))
-                            break
-                        case "cafes":
-                            cafes.push(...chunk.cafes)
-                            cardContext = chunk.cardContext
-                            break
-                        case "crawlDraft":
-                            crawlDraft = chunk.crawlDraft
-                            break
-                        case "complete":
-                            finalMessage = chunk.message
-                            break
-                        case "remaining":
-                            finalRemaining = chunk.remaining
-                            break
-                        case "error":
-                            throw new Error(chunk.error)
+                await sendChatMessageStream(
+                    `${pendingMessage.content}${locationHint}`,
+                    (chunk) => {
+                        switch (chunk.type) {
+                            case "progress":
+                                setStreamState({
+                                    isStreaming: true,
+                                    progressMessage: chunk.message,
+                                    progressStep: chunk.step ?? 0,
+                                })
+                                break
+                            case "tool":
+                                setStreamState((prev) => ({
+                                    isStreaming: true,
+                                    progressMessage: `Searching ${chunk.toolName}...`,
+                                    progressStep: prev.progressStep + 1,
+                                }))
+                                setRecentToolCalls((prev) => [
+                                    ...prev,
+                                    { toolName: chunk.toolName, params: chunk.params, result: {} },
+                                ])
+                                break
+                            case "cafes":
+                                cafes.push(...chunk.cafes)
+                                cardContext = chunk.cardContext
+                                setRecentCafes((prev) => [...prev, ...chunk.cafes])
+                                break
+                            case "crawlDraft":
+                                crawlDraft = chunk.crawlDraft
+                                break
+                            case "complete":
+                                finalMessage = chunk.message
+                                break
+                            case "remaining":
+                                finalRemaining = chunk.remaining
+                                break
+                            case "error":
+                                throw new Error(chunk.error)
+                        }
+                    },
+                    {
+                        recentCafes,
+                        recentToolCalls,
+                        pathname: window.location.pathname,
+                        pageTitle: document.title,
                     }
-                })
+                )
 
                 const assistantMessage: Message = {
                     id: crypto.randomUUID(),

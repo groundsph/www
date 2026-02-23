@@ -24,13 +24,22 @@ Object.defineProperty(global, "sessionStorage", {
     writable: true,
 })
 
-const mockSendChatMessage = mock(() =>
-    Promise.resolve({ success: true, message: "ok", remaining: 9 })
+// Mock fetch for streaming API
+const mockFetch = mock(() =>
+    Promise.resolve({
+        ok: true,
+        body: {
+            getReader: () => ({
+                read: () => Promise.resolve({ done: true, value: undefined }),
+            }),
+        },
+    })
 )
 
-mock.module("@/app/api/actions/chat", () => ({
-    sendChatMessage: mockSendChatMessage,
-}))
+Object.defineProperty(global, "fetch", {
+    value: mockFetch,
+    writable: true,
+})
 
 const mockRefresh = mock(() => {})
 const mockUseUserLocation = mock(() => ({
@@ -49,7 +58,7 @@ mock.module("@/hooks/useUserLocation", () => ({
 
 describe("ChatWindow location behavior", () => {
     beforeEach(() => {
-        mockSendChatMessage.mockClear()
+        mockFetch.mockClear()
         mockRefresh.mockClear()
         // Reset mock to default state
         mockUseUserLocation.mockReturnValue({
@@ -86,7 +95,7 @@ describe("ChatWindow location behavior", () => {
             expect(mockRefresh).toHaveBeenCalled()
         })
         // Message should not be sent yet while location is loading
-        expect(mockSendChatMessage).not.toHaveBeenCalled()
+        expect(mockFetch).not.toHaveBeenCalled()
     })
 
     it("does not request location for general queries", async () => {
@@ -99,10 +108,45 @@ describe("ChatWindow location behavior", () => {
         fireEvent.submit(input.closest("form") as HTMLFormElement)
 
         await waitFor(() => {
-            expect(mockSendChatMessage).toHaveBeenCalled()
+            expect(mockFetch).toHaveBeenCalled()
         })
 
         expect(mockRefresh).not.toHaveBeenCalled()
+    })
+
+    it("includes context in request payload", async () => {
+        mockUseUserLocation.mockReturnValue({
+            location: { city: "Cebu City", region: "Central Visayas", lat: 10.3157, lng: 123.8854 },
+            loading: false,
+            error: null,
+            permissionState: "granted",
+            isEstimate: false,
+            source: "gps",
+            refresh: mockRefresh,
+        })
+
+        render(<ChatWindow remainingMessages={10} onClose={() => {}} />)
+        const input = screen.getByPlaceholderText(
+            "Ask about cafes, locations, or recommendations..."
+        )
+        fireEvent.change(input, { target: { value: "cafes near me" } })
+        fireEvent.submit(input.closest("form") as HTMLFormElement)
+
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalled()
+        })
+
+        const call = mockFetch.mock.calls[0]
+        const [url, options] = call
+        expect(url).toBe("/api/chat/stream")
+        expect(options.method).toBe("POST")
+        
+        const body = JSON.parse(options.body)
+        expect(body.context).toBeDefined()
+        expect(body.context.recentCafes).toBeDefined()
+        expect(body.context.recentToolCalls).toBeDefined()
+        expect(body.context.pathname).toBeDefined()
+        expect(body.context.pageTitle).toBeDefined()
     })
 
     it("includes location hint when available", async () => {
@@ -124,10 +168,12 @@ describe("ChatWindow location behavior", () => {
         fireEvent.submit(input.closest("form") as HTMLFormElement)
 
         await waitFor(() => {
-            expect(mockSendChatMessage).toHaveBeenCalled()
+            expect(mockFetch).toHaveBeenCalled()
         })
 
-        const call = mockSendChatMessage.mock.calls[0][0]
-        expect(call.message).toContain("User location")
+        const call = mockFetch.mock.calls[0]
+        const [, options] = call
+        const body = JSON.parse(options.body)
+        expect(body.message).toContain("User location")
     })
 })
