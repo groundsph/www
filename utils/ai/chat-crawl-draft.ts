@@ -1,5 +1,6 @@
 import type { ChatCrawlDraft } from "@/utils/types/chat"
 import type { ToolCallRecord } from "@/utils/ai/chat-tools"
+import type { OperatingHours } from "@/utils/types/cafe"
 import { buildRoutePlan } from "@/utils/crawls/route-planner"
 
 const CRAWL_KEYWORDS = ["crawl", "route", "trail", "itinerary", "tour"]
@@ -17,6 +18,7 @@ function toRouteCafes(items: Record<string, unknown>[]) {
         slug: String(cafe.slug ?? ""),
         lat: typeof cafe.lat === "number" ? cafe.lat : null,
         lng: typeof cafe.lng === "number" ? cafe.lng : null,
+        operatingHours: (cafe.operatingHours as OperatingHours) ?? null,
     }))
 }
 
