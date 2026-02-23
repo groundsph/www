@@ -53,6 +53,12 @@ interface RoadmapItem {
 
 const recentlyShipped: RoadmapItem[] = [
     {
+        title: "AI Chat",
+        description:
+            "A conversational cafe concierge with smart recommendations and structured cafe cards.",
+        icon: <Sparkles className='w-5 h-5' />,
+    },
+    {
         title: "Cafe Crawls",
         description:
             "Organized tours of multiple cafes, perfect for discovering new spots with friends",
@@ -109,12 +115,6 @@ const recentlyShipped: RoadmapItem[] = [
 ]
 
 const inProgress: RoadmapItem[] = [
-    {
-        title: "AI Chat",
-        description:
-            "A conversational cafe concierge with smart recommendations and structured cafe cards.",
-        icon: <Sparkles className='w-5 h-5' />,
-    },
     {
         title: "Continued Cafe Additions",
         description:
