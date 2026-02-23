@@ -2,6 +2,7 @@ import { db } from "@/db"
 import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, or, desc, ilike, sql, isNull } from "drizzle-orm"
 import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
+import type { OperatingHours } from "@/utils/types/cafe"
 import {
     sortByDistance,
     filterByDistance,
@@ -26,6 +27,7 @@ export interface CafeResult {
     servesFood: boolean | null
     hasOutdoorSeating: boolean | null
     isHalalCertified: boolean | null
+    operatingHours: OperatingHours | null
 }
 
 export interface CafeQueryResult {
@@ -77,6 +79,7 @@ export async function runCafeQuery(
                 servesFood: cafes.servesFood,
                 hasOutdoorSeating: cafes.hasOutdoorSeating,
                 isHalalCertified: cafes.isHalalCertified,
+                operatingHours: cafes.operatingHours,
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
@@ -132,8 +135,14 @@ export async function runCafeQuery(
         const total = results.length
         const paginatedResults = results.slice(offset, offset + limit)
 
+        // Cast operatingHours to proper type
+        const cafesWithTypedHours: CafeResult[] = paginatedResults.map((cafe) => ({
+            ...cafe,
+            operatingHours: cafe.operatingHours as OperatingHours | null,
+        }))
+
         return {
-            cafes: paginatedResults,
+            cafes: cafesWithTypedHours,
             total,
             metadata: {
                 filters: params,
