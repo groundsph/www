@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { MapPin, Route } from "lucide-react"
 import type { ChatCrawlDraft } from "@/utils/types/chat"
 import { saveChatCrawlDraft } from "@/utils/chat-crawl-draft"
+import { emitChatEvent } from "@/utils/chat-events"
 
 interface ChatCrawlPreviewProps {
     draft: ChatCrawlDraft
@@ -14,6 +15,7 @@ export default function ChatCrawlPreview({ draft }: ChatCrawlPreviewProps) {
 
     const handleSave = () => {
         saveChatCrawlDraft({ ...draft, isPublic: false })
+        emitChatEvent("close")
         router.push("/community/crawls/create?draft=chat")
     }
 

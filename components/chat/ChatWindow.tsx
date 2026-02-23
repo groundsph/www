@@ -13,6 +13,7 @@ import {
     saveChatHistory,
     shouldClearChatHistory,
 } from "@/utils/chat-history"
+import { subscribeChatEvents } from "@/utils/chat-events"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatStreamChunk } from "@/utils/types/chat"
 
 interface Message {
@@ -206,6 +207,16 @@ export default function ChatWindow({
 
         return () => window.clearTimeout(timeout)
     }, [])
+
+    // Listen for close events from other components
+    useEffect(() => {
+        const unsubscribe = subscribeChatEvents((event) => {
+            if (event === "close") onClose()
+        })
+        return () => {
+            unsubscribe()
+        }
+    }, [onClose])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
