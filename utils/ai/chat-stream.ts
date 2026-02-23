@@ -260,11 +260,14 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                 await onChunk({ type: "crawlDraft", crawlDraft })
             }
 
+            const baseMessage = cafes.length > 0
+                ? `I found ${cafes.length} cafes in ${forcedCity} for your crawl!`
+                : `I couldn't find any cafes in ${forcedCity}. Want to try a nearby city or adjust filters?`
+            const finalMessage = crawlDraft ? `${baseMessage} ${crawlDraft.description}` : baseMessage
+
             await onChunk({
                 type: "complete",
-                message: cafes.length > 0
-                    ? `I found ${cafes.length} cafes in ${forcedCity} for your crawl!`
-                    : `I couldn't find any cafes in ${forcedCity}. Want to try a nearby city or adjust filters?`,
+                message: finalMessage,
                 remaining: 10,
             })
             return
@@ -348,9 +351,14 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                     await onChunk({ type: "crawlDraft", crawlDraft })
                 }
 
+                const baseMessage = response.content ?? "I don't have a response for that."
+                const finalMessage = (cafes.length > 0 && crawlDraft)
+                    ? `I found ${cafes.length} cafes for your crawl! ${crawlDraft.description}`
+                    : baseMessage
+
                 await onChunk({
                     type: "complete",
-                    message: response.content ?? "I don't have a response for that.",
+                    message: finalMessage,
                     remaining: 10,
                 })
                 return
@@ -369,9 +377,14 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             await onChunk({ type: "crawlDraft", crawlDraft })
         }
 
+        const baseMessage = "I needed to look up more information than expected. Here's what I found so far."
+        const finalMessage = (cafes.length > 0 && crawlDraft)
+            ? `I found ${cafes.length} cafes for your crawl! ${crawlDraft.description}`
+            : baseMessage
+
         await onChunk({
             type: "complete",
-            message: "I needed to look up more information than expected. Here's what I found so far.",
+            message: finalMessage,
             remaining: 10,
         })
     } catch (error) {
