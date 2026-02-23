@@ -15,7 +15,6 @@ import {
 } from "@/utils/chat-history"
 import { subscribeChatEvents } from "@/utils/chat-events"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatStreamChunk } from "@/utils/types/chat"
-import { getChatContext } from "@/utils/chat-context"
 
 interface Message {
     id: string
@@ -95,7 +94,6 @@ export default function ChatWindow({
     autoSend,
 }: ChatWindowProps) {
     const isDev = process.env.NODE_ENV === "development"
-    const chatDebugEnabled = process.env.NEXT_PUBLIC_CHAT_DEBUG === "true"
     const [messages, setMessages] = useState<Message[]>(() => {
         if (typeof window === "undefined") return []
         if (shouldClearChatHistory()) {
@@ -289,7 +287,6 @@ export default function ChatWindow({
             let finalMessage = ""
             let finalRemaining = currentRemaining
 
-            const context = getChatContext()
             await sendChatMessageStream(
                 `${userMessage.content}${locationHint}`,
                 (chunk) => {
@@ -448,7 +445,7 @@ export default function ChatWindow({
                 setTimeout(scrollToBottom, 100)
             }
         })()
-    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom, currentRemaining])
+    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom, currentRemaining, recentCafes, recentToolCalls])
 
     useEffect(() => {
         if (locationError) {

@@ -29,7 +29,7 @@ export const chatContextSchema = z.object({
         isEstimate: z.boolean().optional(),
     }).optional(),
     navigationHistory: z.array(z.string()).optional(),
-    uiContext: z.record(z.unknown()).optional(),
+    uiContext: z.record(z.string(), z.unknown()).optional(),
     recentCafes: z.array(chatCafeCardSchema).optional(),
     recentToolCalls: z.array(z.object({
         toolName: z.string(),
