@@ -4,7 +4,7 @@ export const chatCafeCardSchema = z.object({
     id: z.string(),
     slug: z.string(),
     title: z.string(),
-    coverImageUrl: z.string().url().nullable(),
+    coverImageUrl: z.string().nullable(),
     city: z.string().nullable().optional(),
     province: z.string().nullable().optional(),
     rating: z.number().nullable().optional(),
