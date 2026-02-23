@@ -1,6 +1,7 @@
 export function solveTspExact(matrix: number[][], startIndex = 0): number[] {
     const n = matrix.length
-    if (n <= 1) return [0]
+    if (n === 0) return []
+    if (n === 1) return [0]
 
     const fullMask = (1 << n) - 1
     const dp = new Map<string, { cost: number; prev: number }>()
