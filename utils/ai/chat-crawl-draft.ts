@@ -27,10 +27,10 @@ function buildTitle(params: Record<string, unknown>): string {
     return "Custom Coffee Crawl"
 }
 
-export function buildChatCrawlDraft(
+export async function buildChatCrawlDraft(
     records: ToolCallRecord[],
     message: string
-): ChatCrawlDraft | null {
+): Promise<ChatCrawlDraft | null> {
     if (!hasCrawlIntent(message)) return null
 
     for (const record of records) {
@@ -42,7 +42,11 @@ export function buildChatCrawlDraft(
             const cafes = (result as Record<string, unknown>).cafes as Record<string, unknown>[]
             if (!cafes.length) return null
             const routeCafes = toRouteCafes(cafes)
-            const plan = buildRoutePlan(routeCafes)
+            const plan = await buildRoutePlan(routeCafes, {
+                startDay: "mon",
+                startTime: "09:00",
+                travelMode: "foot",
+            })
             const items = plan.ordered.map((item, index) => ({
                 cafeId: item.id,
                 name: item.name,
@@ -67,7 +71,11 @@ export function buildChatCrawlDraft(
             const cafes = result as Record<string, unknown>[]
             if (!cafes.length) return null
             const routeCafes = toRouteCafes(cafes)
-            const plan = buildRoutePlan(routeCafes)
+            const plan = await buildRoutePlan(routeCafes, {
+                startDay: "mon",
+                startTime: "09:00",
+                travelMode: "foot",
+            })
             const items = plan.ordered.map((item, index) => ({
                 cafeId: item.id,
                 name: item.name,
