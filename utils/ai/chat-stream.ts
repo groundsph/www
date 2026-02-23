@@ -204,10 +204,18 @@ async function executeTool(toolName: string, args: string): Promise<unknown> {
 }
 
 function shouldForceCityQuery(text: string): string | null {
-    const match = text.match(/\b(build|make|create|plan|design)?\s*(me\s*)?(a\s*)?(crawl|route|trail)\s*(for|in)?\s*([A-Za-z\s]+)?/i)
+    // Don't force city query if user is asking for nearby/near me
+    const nearbyKeywords = ["near me", "nearby", "closest", "around me"]
+    const isNearbyQuery = nearbyKeywords.some(kw => text.toLowerCase().includes(kw))
+    if (isNearbyQuery) return null
+    
+    const match = text.match(/\b(build|make|create|plan|design)?\s*(me\s*)?(a\s*)?(crawl|route|trail)\s*(for|in)\s+([A-Za-z\s]{3,})/i)
     if (match && match[6]) {
         const city = match[6].trim()
-        if (city.length > 2) return city
+        // Validate it looks like a city name (starts with capital, no small words)
+        if (city.length > 2 && /^[A-Z][a-z]+$/.test(city.split(/\s+/)[0])) {
+            return city
+        }
     }
     return null
 }
