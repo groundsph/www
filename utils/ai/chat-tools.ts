@@ -349,7 +349,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
             } else {
                 messages.push(assistantMessage)
                 const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-                const crawlDraft = buildChatCrawlDraft(toolCallRecords, message)
+                const crawlDraft = await buildChatCrawlDraft(toolCallRecords, message)
                 return {
                     message: response.content ?? "I don't have a response for that.",
                     cafes,
@@ -362,7 +362,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
         }
 
         const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-        const crawlDraft = buildChatCrawlDraft(toolCallRecords, message)
+        const crawlDraft = await buildChatCrawlDraft(toolCallRecords, message)
         return {
             message: "I needed to look up more information than expected. Here's what I found so far.",
             cafes,

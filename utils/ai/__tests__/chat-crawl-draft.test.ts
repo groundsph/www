@@ -1,9 +1,37 @@
-import { describe, it, expect } from "bun:test"
+import { describe, expect, it } from "bun:test"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
 
 describe("buildChatCrawlDraft", () => {
-    it("builds a draft when crawl intent is present", () => {
-        const draft = buildChatCrawlDraft(
+    it("adds visit notes when hours are present", async () => {
+        const draft = await buildChatCrawlDraft(
+            [
+                {
+                    toolName: "query_cafes",
+                    params: { city: "Cebu" },
+                    result: {
+                        cafes: [
+                            {
+                                id: "1",
+                                name: "A",
+                                slug: "a",
+                                lat: 10.3157,
+                                lng: 123.8854,
+                                operatingHours: [
+                                    { day: "mon", open: "08:00", close: "18:00", is_24_hours: false },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            ],
+            "Build me a crawl in Cebu on Monday at 9am"
+        )
+
+        expect(draft?.items[0].note).toContain("Visit")
+    })
+
+    it("builds a draft when crawl intent is present", async () => {
+        const draft = await buildChatCrawlDraft(
             [
                 {
                     toolName: "query_cafes",
@@ -32,8 +60,8 @@ describe("buildChatCrawlDraft", () => {
         expect(draft?.isPublic).toBe(false)
     })
 
-    it("returns null when no crawl intent", () => {
-        const draft = buildChatCrawlDraft([], "Top cafes in Cebu")
+    it("returns null when no crawl intent", async () => {
+        const draft = await buildChatCrawlDraft([], "Top cafes in Cebu")
         expect(draft).toBeNull()
     })
 })

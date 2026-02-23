@@ -258,7 +258,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             })
 
             const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-            const crawlDraft = buildChatCrawlDraft(toolCallRecords, cleanedMessage)
+            const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage)
 
             if (cafes.length > 0) {
                 await onChunk({ type: "cafes", cafes, cardContext })
@@ -349,7 +349,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             } else {
                 messages.push(assistantMessage)
                 const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-                const crawlDraft = buildChatCrawlDraft(toolCallRecords, cleanedMessage)
+                const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage)
 
                 if (cafes.length > 0) {
                     await onChunk({ type: "cafes", cafes, cardContext })
@@ -375,7 +375,7 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
         // Max tool calls reached
         const { cafes, cardContext } = buildChatCafeCards(toolCallRecords)
-        const crawlDraft = buildChatCrawlDraft(toolCallRecords, cleanedMessage)
+        const crawlDraft = await buildChatCrawlDraft(toolCallRecords, cleanedMessage)
 
         if (cafes.length > 0) {
             await onChunk({ type: "cafes", cafes, cardContext })

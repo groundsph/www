@@ -29,11 +29,46 @@ function buildTitle(params: Record<string, unknown>): string {
     return "Custom Coffee Crawl"
 }
 
+function parseCrawlTimePreferences(message: string) {
+    const lower = message.toLowerCase()
+    const dayMap: Record<string, "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat"> = {
+        sunday: "sun",
+        sun: "sun",
+        monday: "mon",
+        mon: "mon",
+        tuesday: "tue",
+        tue: "tue",
+        wednesday: "wed",
+        wed: "wed",
+        thursday: "thu",
+        thu: "thu",
+        friday: "fri",
+        fri: "fri",
+        saturday: "sat",
+        sat: "sat",
+    }
+    const dayMatch = Object.keys(dayMap).find((d) => lower.includes(d))
+    const timeMatch = lower.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/)
+    const day = dayMatch ? dayMap[dayMatch] : "sat"
+    let time = "09:00"
+    if (timeMatch) {
+        const h = Number(timeMatch[1]) % 12
+        const m = Number(timeMatch[2] ?? "00")
+        const isPm = timeMatch[3] === "pm"
+        const hh = String(h + (isPm ? 12 : 0)).padStart(2, "0")
+        const mm = String(m).padStart(2, "0")
+        time = `${hh}:${mm}`
+    }
+    return { day, time }
+}
+
 export async function buildChatCrawlDraft(
     records: ToolCallRecord[],
     message: string
 ): Promise<ChatCrawlDraft | null> {
     if (!hasCrawlIntent(message)) return null
+
+    const prefs = parseCrawlTimePreferences(message)
 
     for (const record of records) {
         if (!record || typeof record !== "object") continue
@@ -45,22 +80,27 @@ export async function buildChatCrawlDraft(
             if (!cafes.length) return null
             const routeCafes = toRouteCafes(cafes)
             const plan = await buildRoutePlan(routeCafes, {
-                startDay: "mon",
-                startTime: "09:00",
+                startDay: prefs.day,
+                startTime: prefs.time,
                 travelMode: "foot",
             })
-            const items = plan.ordered.map((item, index) => ({
-                cafeId: item.id,
-                name: item.name,
-                slug: item.slug,
-                thumbnail: typeof cafes[index]?.thumbnail === "string" ? (cafes[index]?.thumbnail as string) : null,
-                cityMunicipality: typeof cafes[index]?.cityMunicipality === "string" ? (cafes[index]?.cityMunicipality as string) : null,
-                region: typeof cafes[index]?.region === "string" ? (cafes[index]?.region as string) : null,
-                lat: item.lat,
-                lng: item.lng,
-                sortOrder: index,
-                note: null,
-            }))
+            const cafeMap = new Map(cafes.map((c) => [String(c.id), c]))
+            const items = plan.ordered.map((item, index) => {
+                const originalCafe = cafeMap.get(item.id)
+                const scheduleItem = plan.schedule.find((s) => s.cafeId === item.id)
+                return {
+                    cafeId: item.id,
+                    name: item.name,
+                    slug: item.slug,
+                    thumbnail: typeof originalCafe?.thumbnail === "string" ? (originalCafe?.thumbnail as string) : null,
+                    cityMunicipality: typeof originalCafe?.cityMunicipality === "string" ? (originalCafe?.cityMunicipality as string) : null,
+                    region: typeof originalCafe?.region === "string" ? (originalCafe?.region as string) : null,
+                    lat: item.lat,
+                    lng: item.lng,
+                    sortOrder: index,
+                    note: scheduleItem?.note ?? null,
+                }
+            })
             return {
                 title: buildTitle(params as Record<string, unknown>),
                 description: plan.reason,
@@ -74,22 +114,27 @@ export async function buildChatCrawlDraft(
             if (!cafes.length) return null
             const routeCafes = toRouteCafes(cafes)
             const plan = await buildRoutePlan(routeCafes, {
-                startDay: "mon",
-                startTime: "09:00",
+                startDay: prefs.day,
+                startTime: prefs.time,
                 travelMode: "foot",
             })
-            const items = plan.ordered.map((item, index) => ({
-                cafeId: item.id,
-                name: item.name,
-                slug: item.slug,
-                thumbnail: typeof cafes[index]?.thumbnail === "string" ? (cafes[index]?.thumbnail as string) : null,
-                cityMunicipality: typeof cafes[index]?.cityMunicipality === "string" ? (cafes[index]?.cityMunicipality as string) : null,
-                region: typeof cafes[index]?.region === "string" ? (cafes[index]?.region as string) : null,
-                lat: item.lat,
-                lng: item.lng,
-                sortOrder: index,
-                note: null,
-            }))
+            const cafeMap = new Map(cafes.map((c) => [String(c.id), c]))
+            const items = plan.ordered.map((item, index) => {
+                const originalCafe = cafeMap.get(item.id)
+                const scheduleItem = plan.schedule.find((s) => s.cafeId === item.id)
+                return {
+                    cafeId: item.id,
+                    name: item.name,
+                    slug: item.slug,
+                    thumbnail: typeof originalCafe?.thumbnail === "string" ? (originalCafe?.thumbnail as string) : null,
+                    cityMunicipality: typeof originalCafe?.cityMunicipality === "string" ? (originalCafe?.cityMunicipality as string) : null,
+                    region: typeof originalCafe?.region === "string" ? (originalCafe?.region as string) : null,
+                    lat: item.lat,
+                    lng: item.lng,
+                    sortOrder: index,
+                    note: scheduleItem?.note ?? null,
+                }
+            })
             return {
                 title: buildTitle(params as Record<string, unknown>),
                 description: plan.reason,
