@@ -14,5 +14,6 @@ describe("search utils", () => {
   it("skips chat result for quick action prefixes", () => {
     expect(buildChatResult(">map")).toBeNull()
     expect(buildChatResult("@user")).toBeNull()
+    expect(buildChatResult("?best cafes")).toBeNull()
   })
 })

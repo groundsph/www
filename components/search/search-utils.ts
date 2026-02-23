@@ -34,7 +34,7 @@ export function getResultIcon(type: string): string {
 export function buildChatResult(query: string): SearchResult | null {
   const trimmed = query.trim()
   if (!trimmed || trimmed.length < 2) return null
-  if (trimmed.startsWith(">") || trimmed.startsWith("@")) return null
+  if (trimmed.startsWith(">") || trimmed.startsWith("@") || trimmed.startsWith("?")) return null
 
   return {
     id: "chat-ask",
