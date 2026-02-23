@@ -16,6 +16,7 @@ import {
 import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 import CrawlActions from "@/components/crawls/CrawlActions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import { useChatContext } from "@/hooks/useChatContext"
 
 const staggerContainer = {
     initial: {},
@@ -77,6 +78,15 @@ interface CrawlViewProps {
 }
 
 export default function CrawlView({ crawl }: CrawlViewProps) {
+    // Publish UI context to chat
+    useChatContext({
+        uiContext: {
+            pageType: "crawl_view",
+            crawlTitle: crawl.title,
+            itemCount: crawl.cafes.length,
+        },
+    })
+
     const validCafes = crawl.cafes.filter(
         (c): c is CafeItem & { lat: number; lng: number } =>
             c != null && c.lat != null && c.lng != null

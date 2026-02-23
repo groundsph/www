@@ -33,6 +33,7 @@ import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 import { normalizeLatLng } from "@/utils/map/coords"
 import { motion, AnimatePresence } from "motion/react"
 import { loadChatCrawlDraft, clearChatCrawlDraft } from "@/utils/chat-crawl-draft"
+import { useChatContext } from "@/hooks/useChatContext"
 
 interface CrawlItem {
     id?: string
@@ -160,6 +161,16 @@ export default function CrawlEditor({
     const [croppingImage, setCroppingImage] = useState<File | null>(null)
     const [showCropper, setShowCropper] = useState(false)
     const [isUploadingCover, setIsUploadingCover] = useState(false)
+
+    // Publish UI context to chat
+    useChatContext({
+        uiContext: {
+            pageType: "crawl_editor",
+            crawlTitle: title,
+            itemCount: items.length,
+            items: items.map((i) => ({ name: i.name, slug: i.slug })),
+        },
+    })
 
     const mapPoints = useMemo(
         () =>
