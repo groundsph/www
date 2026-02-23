@@ -15,7 +15,7 @@ export default function ChatCrawlPreview({ draft }: ChatCrawlPreviewProps) {
 
     const handleSave = () => {
         saveChatCrawlDraft({ ...draft, isPublic: false })
-        emitChatEvent("close")
+        emitChatEvent({ type: "close" })
         router.push("/community/crawls/create?draft=chat")
     }
 

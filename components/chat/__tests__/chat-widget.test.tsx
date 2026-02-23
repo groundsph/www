@@ -1,14 +1,27 @@
-import { render, screen } from "@testing-library/react"
+import { describe, it, expect, beforeEach, afterEach } from "bun:test"
+import { render, screen, cleanup } from "@testing-library/react"
 import { ChatWidget } from "@/components/chat/ChatWidget"
+import { clearChatListeners } from "@/utils/chat-events"
 
-test("renders chat button", () => {
-    render(<ChatWidget />)
-    const button = screen.getByRole("button")
-    expect(button).toBeDefined()
-    expect(button.tagName).toBe("BUTTON")
-})
+describe("ChatWidget original tests", () => {
+    beforeEach(() => {
+        clearChatListeners()
+    })
 
-test("does not render when disabled", () => {
-    render(<ChatWidget isEnabled={false} />)
-    expect(screen.queryByRole("button")).toBeNull()
+    afterEach(() => {
+        cleanup()
+        clearChatListeners()
+    })
+
+    it("renders chat button", () => {
+        render(<ChatWidget />)
+        const button = screen.getByRole("button")
+        expect(button).toBeDefined()
+        expect(button.tagName).toBe("BUTTON")
+    })
+
+    it("does not render when disabled", () => {
+        render(<ChatWidget isEnabled={false} />)
+        expect(screen.queryByRole("button")).toBeNull()
+    })
 })

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { MessageSquare, X } from "lucide-react"
 import ChatWindow from "./ChatWindow"
 import { usePathname } from "next/navigation"
+import { subscribeChatEvents } from "@/utils/chat-events"
 
 interface ChatWidgetProps {
     remainingMessages?: number
@@ -16,10 +17,30 @@ export function ChatWidget({
     isEnabled = true,
 }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false)
+    const [prefillMessage, setPrefillMessage] = useState<string | null>(null)
+    const [autoSend, setAutoSend] = useState(false)
 
     const curPath = usePathname()
 
+    useEffect(() => {
+        const unsubscribe = subscribeChatEvents((event) => {
+            if (event.type === "open") {
+                setPrefillMessage(event.message ?? null)
+                setAutoSend(event.autoSend ?? false)
+                setIsOpen(true)
+                return
+            }
+            if (event.type === "close") {
+                setIsOpen(false)
+            }
+        })
+        return () => {
+            unsubscribe()
+        }
+    }, [])
+
     function isDisabledForPath() {
+        if (!curPath) return false
         if (curPath.includes("/manage")) return true
         if (curPath.includes("/owner")) return true
         return false
@@ -53,6 +74,8 @@ export function ChatWidget({
                                 <ChatWindow
                                     remainingMessages={remainingMessages}
                                     onClose={() => setIsOpen(false)}
+                                    prefillMessage={prefillMessage ?? undefined}
+                                    autoSend={autoSend}
                                 />
                             </motion.div>
                         )}

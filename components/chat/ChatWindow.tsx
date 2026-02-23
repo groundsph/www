@@ -30,6 +30,8 @@ interface Message {
 interface ChatWindowProps {
     remainingMessages: number
     onClose: () => void
+    prefillMessage?: string
+    autoSend?: boolean
 }
 
 interface StreamState {
@@ -89,6 +91,8 @@ async function sendChatMessageStream(
 export default function ChatWindow({
     remainingMessages,
     onClose,
+    prefillMessage,
+    autoSend,
 }: ChatWindowProps) {
     const isDev = process.env.NODE_ENV === "development"
     const chatDebugEnabled = process.env.NEXT_PUBLIC_CHAT_DEBUG === "true"
@@ -222,12 +226,30 @@ export default function ChatWindow({
     // Listen for close events from other components
     useEffect(() => {
         const unsubscribe = subscribeChatEvents((event) => {
-            if (event === "close") onClose()
+            if (event.type === "close") onClose()
         })
         return () => {
             unsubscribe()
         }
     }, [onClose])
+
+    // Prefill input when prefillMessage is provided
+    useEffect(() => {
+        if (!prefillMessage) return
+        setInput((prev) => (prev.trim() ? prev : prefillMessage))
+    }, [prefillMessage])
+
+    // Auto-send when both prefillMessage and autoSend are provided
+    useEffect(() => {
+        if (!autoSend || !prefillMessage || !input.trim()) return
+        if (isLoading || currentRemaining <= 0) return
+
+        const form = document.querySelector('form[class*="p-3"]') as HTMLFormElement | null
+        if (form) {
+            const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+            form.dispatchEvent(submitEvent)
+        }
+    }, [autoSend, prefillMessage, input, isLoading, currentRemaining])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
