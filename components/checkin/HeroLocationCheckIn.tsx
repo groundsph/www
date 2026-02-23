@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { motion } from "motion/react"
 import { NearbyCafe } from "@/app/api/actions/nearby"
-import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
+import GroupCheckInModal, { UserResult as Companion } from "@/components/checkin/GroupCheckInModal"
 import { recordVisit, getTodayCheckIn, getVisitCount, updateCheckIn } from "@/app/api/actions/profile"
 import { useAuth } from "@/components/layout/AuthProvider"
 import { useRouter } from "next/navigation"
@@ -11,13 +11,6 @@ import Link from "next/link"
 
 interface HeroLocationCheckInProps {
     nearbyCafe: NearbyCafe | null
-}
-
-type Companion = {
-    id: string
-    username: string
-    displayName: string
-    avatarUrl: string | null
 }
 
 export default function HeroLocationCheckIn({
@@ -31,14 +24,7 @@ export default function HeroLocationCheckIn({
     const [isCheckingStatus, setIsCheckingStatus] = useState(false)
     const { user } = useAuth()
     const router = useRouter()
-
-    useEffect(() => {
-        if (nearbyCafe && user) {
-            getTodayCheckIn(nearbyCafe.id).then((result) => {
-                setHasCheckedIn(!!result)
-            })
-        }
-    }, [nearbyCafe, user])
+    const prevCafeIdRef = useRef<string | null>(null)
 
     const refreshVisitStatus = useCallback(async () => {
         if (!nearbyCafe || !user) {
@@ -59,10 +45,24 @@ export default function HeroLocationCheckIn({
             setHasCheckedIn(!!todayCheckIn)
             setInitialCompanions(todayCheckIn?.companions ?? [])
             setVisitCount(countResult.count ?? 0)
+        } catch (error) {
+            console.error("Failed to refresh visit status:", error)
         } finally {
             setIsCheckingStatus(false)
         }
     }, [nearbyCafe, user])
+
+    // Store refreshVisitStatus in a ref to avoid circular dependency
+    const refreshRef = useRef(refreshVisitStatus)
+    refreshRef.current = refreshVisitStatus
+
+    useEffect(() => {
+        const cafeId = nearbyCafe?.id ?? null
+        if (cafeId && user?.id && cafeId !== prevCafeIdRef.current) {
+            prevCafeIdRef.current = cafeId
+            refreshRef.current()
+        }
+    }, [nearbyCafe?.id, user?.id])
 
     // Don't render anything if no nearby cafe (this means user either
     // hasn't granted GPS permission or isn't near a registered cafe)

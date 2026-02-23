@@ -16,7 +16,7 @@ import CompanionSelector from "./CompanionSelector"
 import type { CheckInResult } from "@/app/api/actions/profile"
 import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
 
-interface UserResult {
+export interface UserResult {
     id: string
     username: string
     displayName: string
@@ -184,7 +184,7 @@ export default function GroupCheckInModal({
 
                 {/* Content */}
                 <div className='p-5 space-y-4'>
-                    {/* Already visited message (only show if not editing mode) */}
+                    {/* Already visited message shown on modal open when user already checked in today */}
                     {visitedToday && !result && !onUpdateCheckIn && (
                         <div className='bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3'>
                             <p className='text-sm text-amber-700 dark:text-amber-300'>
@@ -238,7 +238,7 @@ export default function GroupCheckInModal({
                         </div>
                     )}
 
-                    {/* Already visited today message */}
+                    {/* Already visited message shown after failed check-in attempt */}
                     {result?.alreadyVisitedToday && (
                         <div className='bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3'>
                             <p className='text-sm text-amber-700 dark:text-amber-300'>
