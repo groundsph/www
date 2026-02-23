@@ -306,7 +306,7 @@ export default function CrawlRouteMap({
 
             const results = await Promise.all(
                 requests.map(async ({ start, end }) => {
-                    const url = buildOsrmUrl(start, end, "driving")
+                    const url = buildOsrmUrl(start, end, "foot")
                     const res = await fetch(url)
                     if (!res.ok) {
                         console.error(
