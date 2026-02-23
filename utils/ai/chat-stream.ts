@@ -13,6 +13,7 @@ import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
+import { getGroundsInfo } from "@/utils/ai/grounds-info"
 import type { ChatStreamChunk, ChatContext } from "@/utils/types/chat"
 
 const MAX_TOOL_CALLS = 6
@@ -28,16 +29,19 @@ Available tools:
 - list_cities: List all cities with cafe counts
 - get_nearby_cafes: Find cafes near a specific location
 - get_top_rated: Get top rated cafes in a city
+- get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
 1. Always use tools when the user asks for specific cafe information
 2. If a location is mentioned (e.g., "Cebu", "Manila"), use query_cafes with the city filter
 3. If the user asks for "top" or "best" cafes, use get_top_rated or sort by rating
 4. If the user asks for cafes "near" a location, use get_nearby_cafes
-5. Provide concise, helpful responses based on the tool results
-6. If no cafes match the query, politely inform the user
-7. When you have enough data, respond with a final answer and do not call more tools.
-8. If the user refers to the previous list or says things like "from those" or "make a crawl from these", use the recent context rather than calling tools again.`
+5. Use get_grounds_info for questions about Grounds.ph platform, features, or how to use the site
+6. Ask clarifying questions if day/time or start location is missing for crawl requests
+7. Provide concise, helpful responses based on the tool results
+8. If no cafes match the query, politely inform the user
+9. When you have enough data, respond with a final answer and do not call more tools.
+10. If the user refers to the previous list or says things like "from those" or "make a crawl from these", use the recent context rather than calling tools again.`
 
 interface ToolDefinition {
     type: "function"
@@ -145,6 +149,14 @@ const tools: ToolDefinition[] = [
             },
         },
     },
+    {
+        type: "function",
+        function: {
+            name: "get_grounds_info",
+            description: "Return general information about Grounds.ph features and how to use the platform",
+            parameters: { type: "object", properties: {} },
+        },
+    },
 ]
 
 interface ToolCall {
@@ -199,6 +211,9 @@ async function executeTool(toolName: string, args: string): Promise<unknown> {
         case "get_top_rated": {
             const result = await getTopRatedCafes(parsed.city as string, parsed.limit ?? 10)
             return result
+        }
+        case "get_grounds_info": {
+            return getGroundsInfo()
         }
         default:
             throw new Error(`Unknown tool: ${toolName}`)

@@ -1,4 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
+import { AVAILABLE_TOOLS } from "@/utils/ai/chat-tools"
+
+describe("chat tools", () => {
+    it("includes get_grounds_info tool", () => {
+        const toolNames = AVAILABLE_TOOLS.map((t) => t.function.name)
+        expect(toolNames).toContain("get_grounds_info")
+    })
+})
 
 // Mock database with chainable query builder
 function createMockQueryBuilder(results: unknown[] = []) {

@@ -11,6 +11,7 @@ import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
+import { getGroundsInfo } from "@/utils/ai/grounds-info"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatContext } from "@/utils/types/chat"
 
 const MAX_TOOL_CALLS_DEFAULT = 6
@@ -77,7 +78,7 @@ interface ToolDefinition {
     }
 }
 
-const tools: ToolDefinition[] = [
+export const AVAILABLE_TOOLS: ToolDefinition[] = [
     {
         type: "function",
         function: {
@@ -174,6 +175,14 @@ const tools: ToolDefinition[] = [
             },
         },
     },
+    {
+        type: "function",
+        function: {
+            name: "get_grounds_info",
+            description: "Return general information about Grounds.ph features and how to use the platform",
+            parameters: { type: "object", properties: {} },
+        },
+    },
 ]
 
 interface ToolCall {
@@ -221,6 +230,9 @@ async function executeTool(toolName: string, args: string): Promise<unknown> {
         case "get_top_rated": {
             const result = await getTopRatedCafes(parsed.city as string, parsed.limit ?? 10)
             return result
+        }
+        case "get_grounds_info": {
+            return getGroundsInfo()
         }
         default:
             throw new Error(`Unknown tool: ${toolName}`)
@@ -293,7 +305,7 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
                 break
             }
 
-            const response = await chatCompletionWithTools(messages, tools, {
+            const response = await chatCompletionWithTools(messages, AVAILABLE_TOOLS, {
                 temperature: 0.7,
                 maxTokens: 1000,
                 timeoutMs: 60000, // 60 seconds for longer queries
