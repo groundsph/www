@@ -238,6 +238,15 @@ export default function GroupCheckInModal({
                         </div>
                     )}
 
+                    {/* Already visited today message */}
+                    {result?.alreadyVisitedToday && (
+                        <div className='bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3'>
+                            <p className='text-sm text-amber-700 dark:text-amber-300'>
+                                You&apos;ve already checked in here today! Check back tomorrow.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Check-in form */}
                     {(!visitedToday || onUpdateCheckIn) && !result && (
                         <>
