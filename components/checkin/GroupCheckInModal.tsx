@@ -323,7 +323,7 @@ export default function GroupCheckInModal({
                                         ? "Update Check-in"
                                         : "Check In"}
                                     {selectedCompanions.length > 0 &&
-                                        ` with ${selectedCompanions.length} companion ${selectedCompanions.length > 1 ? "s" : ""}`}
+                                        ` with ${selectedCompanions.length} companion${selectedCompanions.length > 1 ? "s" : ""}`}
                                 </>
                             )}
                         </button>

@@ -41,7 +41,8 @@ Rules:
 7. Provide concise, helpful responses based on the tool results
 8. If no cafes match the query, politely inform the user
 9. When you have enough data, respond with a final answer and do not call more tools.
-10. If the user refers to the previous list or says things like "from those" or "make a crawl from these", use the recent context rather than calling tools again.`
+10. If the user refers to the previous list or says things like "from those" or "make a crawl from these", use the recent context rather than calling tools again.
+11. If you render tables, use proper Markdown tables with each row on its own line. If you cannot format a table, use bullet points instead.`
 
 interface ToolDefinition {
     type: "function"
@@ -258,9 +259,35 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
     const toolCallRecords: { toolName: string; params: unknown; result: unknown }[] = []
 
+    const cleanedMessage = stripLocationHint(message)
+
+    // Check for context-based crawl BEFORE any tool calls
+    console.log("[runChatStream] Checking for context:", {
+        hasContext: !!options.context,
+        recentCafesCount: options.context?.recentCafes?.length ?? 0,
+        messageLength: cleanedMessage.length,
+    })
+
+    if (options.context?.recentCafes?.length && cleanedMessage.length > 0) {
+        console.log("[runChatStream] Attempting to build crawl from context...")
+        const contextCrawlDraft = await buildChatCrawlDraft([], cleanedMessage, options.context)
+        if (contextCrawlDraft) {
+            console.log("[runChatStream] ✅ Successfully built crawl from context")
+            await onChunk({ type: "crawlDraft", crawlDraft: contextCrawlDraft })
+            await onChunk({
+                type: "complete",
+                message: `Built a crawl from your previous list with ${contextCrawlDraft.items.length} stops. ${contextCrawlDraft.description}`,
+                remaining: 10,
+            })
+            return
+        }
+        console.log("[runChatStream] ❌ buildChatCrawlDraft returned null, continuing to tool calls")
+    } else {
+        console.log("[runChatStream] No context available or empty message, proceeding to tool calls")
+    }
+
     try {
         // Check for direct crawl query
-        const cleanedMessage = stripLocationHint(message)
         const forcedCity = shouldForceCityQuery(cleanedMessage)
         if (forcedCity) {
             await onChunk({ type: "progress", message: `Searching cafes in ${forcedCity}...`, step: 2 })
@@ -298,8 +325,8 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             return
         }
 
-        // Normal tool-calling flow
-        for (let callCount = 0; callCount < MAX_TOOL_CALLS; callCount++) {
+    // Normal tool-calling flow
+    for (let callCount = 0; callCount < MAX_TOOL_CALLS; callCount++) {
             const response = await chatCompletionWithTools(messages, tools, {
                 temperature: 0.7,
                 maxTokens: 1000,

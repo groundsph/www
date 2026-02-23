@@ -36,7 +36,8 @@ Rules:
 4. If the user asks for cafes "near" a location, use get_nearby_cafes
 5. Provide concise, helpful responses based on the tool results
 6. If no cafes match the query, politely inform the user
-7. When you have enough data, respond with a final answer and do not call more tools.`
+7. When you have enough data, respond with a final answer and do not call more tools.
+8. If you render tables, use proper Markdown tables with each row on its own line. If you cannot format a table, use bullet points instead.`
 
 export interface ChatToolResult {
     message: string
@@ -297,6 +298,16 @@ export async function runChatWithTools(options: RunChatOptions): Promise<ChatToo
     }
 
     try {
+        const contextCrawlDraft = await buildChatCrawlDraft(toolCallRecords, message, context)
+        if (contextCrawlDraft) {
+            return {
+                message: `Built a crawl from your previous list. ${contextCrawlDraft.description}`,
+                crawlDraft: contextCrawlDraft,
+                toolCalls: toolCallRecords.length > 0 ? toolCallRecords : undefined,
+                debug: buildDebug(undefined, callCount),
+            }
+        }
+
         for (callCount = 0; callCount < maxCalls; callCount++) {
             const forcedCity = shouldForceCityQuery(message)
             if (forcedCity && callCount === 0) {

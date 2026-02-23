@@ -1,18 +1,70 @@
 import { describe, expect, it } from "bun:test"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
 
+const mockFetch = (durations: number[][]) => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async () =>
+        ({ ok: true, json: async () => ({ durations }) }) as unknown as Response) as typeof fetch
+    return () => {
+        globalThis.fetch = originalFetch
+    }
+}
+
 describe("chat crawl from recent cafes", () => {
     it("builds a crawl from recent cafes without new tool calls", async () => {
         const recent = [
             { id: "1", slug: "a", title: "Cafe A", coverImageUrl: null, city: "Cebu", lat: 10.3157, lng: 123.8854 },
             { id: "2", slug: "b", title: "Cafe B", coverImageUrl: null, city: "Cebu", lat: 10.3170, lng: 123.8820 },
         ]
+        const restoreFetch = mockFetch([
+            [0, 1],
+            [1, 0],
+        ])
+        try {
+            const draft = await buildChatCrawlDraft(
+                [], // Empty records - no new tool calls
+                "Make a crawl from those",
+                { recentCafes: recent }
+            )
+            expect(draft?.items.length).toBe(2)
+        } finally {
+            restoreFetch()
+        }
+    })
+
+    it("uses recent cafes when asking for the first count", async () => {
+        const recent = [
+            { id: "1", slug: "a", title: "Cafe A", coverImageUrl: null, city: "Cebu", lat: 10.3157, lng: 123.8854 },
+            { id: "2", slug: "b", title: "Cafe B", coverImageUrl: null, city: "Cebu", lat: 10.3170, lng: 123.8820 },
+            { id: "3", slug: "c", title: "Cafe C", coverImageUrl: null, city: "Cebu", lat: 10.3180, lng: 123.8830 },
+        ]
+        const restoreFetch = mockFetch([
+            [0, 1, 2],
+            [1, 0, 1],
+            [2, 1, 0],
+        ])
+        try {
+            const draft = await buildChatCrawlDraft(
+                [],
+                "Make a crawl from the first 2",
+                { recentCafes: recent }
+            )
+            expect(draft?.items.length).toBe(2)
+        } finally {
+            restoreFetch()
+        }
+    })
+
+    it("does not use recent cafes without a reference", async () => {
+        const recent = [
+            { id: "1", slug: "a", title: "Cafe A", coverImageUrl: null, city: "Cebu", lat: 10.3157, lng: 123.8854 },
+        ]
         const draft = await buildChatCrawlDraft(
-            [], // Empty records - no new tool calls
-            "Make a crawl from those",
+            [],
+            "Make a crawl",
             { recentCafes: recent }
         )
-        expect(draft?.items.length).toBe(2)
+        expect(draft).toBeNull()
     })
 })
 

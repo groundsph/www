@@ -4,11 +4,43 @@ import type { OperatingHours } from "@/utils/types/cafe"
 import { buildRoutePlan } from "@/utils/crawls/route-planner"
 
 const CRAWL_KEYWORDS = ["crawl", "route", "trail", "itinerary", "tour"]
+const CONTEXT_REFERENCE_KEYWORDS = [
+    "from those",
+    "from them",
+    "from these",
+    "from that",
+    "from that list",
+    "from the list",
+    "previous list",
+    "last list",
+    "those cafes",
+    "these cafes",
+    "closest",
+    "nearby",
+    "near me",
+    "first",
+    "top",
+    "same list",
+]
 const MAX_ITEMS = 8
 
 function hasCrawlIntent(message: string): boolean {
     const text = message.toLowerCase()
     return CRAWL_KEYWORDS.some((k) => text.includes(k))
+}
+
+function shouldUseRecentContext(message: string): boolean {
+    const text = message.toLowerCase()
+    return CONTEXT_REFERENCE_KEYWORDS.some((k) => text.includes(k))
+}
+
+function getRequestedCount(message: string, fallback: number): number {
+    const text = message.toLowerCase()
+    const match = text.match(/\b(first|top|closest)\s+(\d+)\b/)
+    if (!match) return fallback
+    const count = Number.parseInt(match[2], 10)
+    if (Number.isNaN(count) || count <= 0) return fallback
+    return Math.min(count, fallback)
 }
 
 function toRouteCafes(items: Record<string, unknown>[]) {
@@ -67,10 +99,27 @@ export async function buildChatCrawlDraft(
     message: string,
     context?: ChatContext
 ): Promise<ChatCrawlDraft | null> {
+    // Debug logging
+    const hasContext = !!context
+    const recentCafesCount = context?.recentCafes?.length ?? 0
+    const crawlIntent = hasCrawlIntent(message)
+    const useContext = shouldUseRecentContext(message)
+
+    console.log("[buildChatCrawlDraft] Checking context:", {
+        hasContext,
+        recentCafesCount,
+        crawlIntent,
+        useContext,
+        message: message.substring(0, 50),
+    })
+
     // Check for recent cafes when crawl intent is present
-    if (context?.recentCafes?.length && hasCrawlIntent(message)) {
+    if (recentCafesCount > 0 && crawlIntent && useContext) {
+        console.log("[buildChatCrawlDraft] ✅ Using recent context with", recentCafesCount, "cafes")
         const prefs = parseCrawlTimePreferences(message)
-        const routeCafes = context.recentCafes.map((cafe) => ({
+        const requestedCount = getRequestedCount(message, Math.min(recentCafesCount, MAX_ITEMS))
+        const limitedCafes = context!.recentCafes!.slice(0, requestedCount)
+        const routeCafes = limitedCafes.map((cafe) => ({
             id: cafe.id,
             name: cafe.title,
             slug: cafe.slug,
@@ -86,7 +135,7 @@ export async function buildChatCrawlDraft(
         })
 
         const items = plan.ordered.map((item, index) => {
-            const originalCafe = context.recentCafes!.find((c) => c.id === item.id)
+            const originalCafe = limitedCafes.find((c) => c.id === item.id)
             const scheduleItem = plan.schedule.find((s) => s.cafeId === item.id)
             return {
                 cafeId: item.id,
@@ -122,13 +171,15 @@ export async function buildChatCrawlDraft(
         if (toolName === "query_cafes" && Array.isArray((result as Record<string, unknown>).cafes)) {
             const cafes = (result as Record<string, unknown>).cafes as Record<string, unknown>[]
             if (!cafes.length) return null
-            const routeCafes = toRouteCafes(cafes)
+            const requestedCount = getRequestedCount(message, Math.min(cafes.length, MAX_ITEMS))
+            const limitedCafes = cafes.slice(0, requestedCount)
+            const routeCafes = toRouteCafes(limitedCafes)
             const plan = await buildRoutePlan(routeCafes, {
                 startDay: prefs.day,
                 startTime: prefs.time,
                 travelMode: "foot",
             })
-            const cafeMap = new Map(cafes.map((c) => [String(c.id), c]))
+            const cafeMap = new Map(limitedCafes.map((c) => [String(c.id), c]))
             const items = plan.ordered.map((item, index) => {
                 const originalCafe = cafeMap.get(item.id)
                 const scheduleItem = plan.schedule.find((s) => s.cafeId === item.id)
@@ -156,13 +207,15 @@ export async function buildChatCrawlDraft(
         if ((toolName === "get_nearby_cafes" || toolName === "get_top_rated") && Array.isArray(result)) {
             const cafes = result as Record<string, unknown>[]
             if (!cafes.length) return null
-            const routeCafes = toRouteCafes(cafes)
+            const requestedCount = getRequestedCount(message, Math.min(cafes.length, MAX_ITEMS))
+            const limitedCafes = cafes.slice(0, requestedCount)
+            const routeCafes = toRouteCafes(limitedCafes)
             const plan = await buildRoutePlan(routeCafes, {
                 startDay: prefs.day,
                 startTime: prefs.time,
                 travelMode: "foot",
             })
-            const cafeMap = new Map(cafes.map((c) => [String(c.id), c]))
+            const cafeMap = new Map(limitedCafes.map((c) => [String(c.id), c]))
             const items = plan.ordered.map((item, index) => {
                 const originalCafe = cafeMap.get(item.id)
                 const scheduleItem = plan.schedule.find((s) => s.cafeId === item.id)

@@ -16,6 +16,8 @@ describe("buildChatCafeCards", () => {
                             thumbnail: "uno.jpg",
                             cityMunicipality: "Cebu City",
                             province: "Cebu",
+                            lat: 10.3157,
+                            lng: 123.8854,
                             rating: 4.4,
                             totalReviews: 14,
                             hasWifi: true,
@@ -29,6 +31,8 @@ describe("buildChatCafeCards", () => {
 
         expect(result.cafes.length).toBe(1)
         expect(result.cafes[0].title).toBe("Cafe Uno")
+        expect(result.cafes[0].lat).toBe(10.3157)
+        expect(result.cafes[0].lng).toBe(123.8854)
         expect(result.cardContext?.title).toBe("Cebu")
     })
 })

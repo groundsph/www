@@ -63,6 +63,8 @@ function toCard(cafe: Record<string, unknown>, custom?: string): ChatCafeCard {
         province: typeof cafe.province === "string" ? cafe.province : null,
         rating: typeof cafe.rating === "number" ? cafe.rating : null,
         reviewCount: typeof cafe.totalReviews === "number" ? cafe.totalReviews : null,
+        lat: typeof cafe.lat === "number" ? cafe.lat : null,
+        lng: typeof cafe.lng === "number" ? cafe.lng : null,
         filters: buildFilters(cafe),
         flags: buildFlags(cafe),
         custom,
