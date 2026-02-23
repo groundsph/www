@@ -54,7 +54,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                         <p className="whitespace-pre-wrap">{message.content}</p>
                     ) : (
                         <div className="max-w-none prose prose-sm">
-                            <MarkdownRender content={message.content} />
+                            <MarkdownRender content={message.content} compact />
                         </div>
                     )}
                     {message.cafes && message.cafes.length > 0 && (
