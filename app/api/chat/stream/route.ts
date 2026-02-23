@@ -4,10 +4,13 @@ import { getCurrentUser } from "@/lib/auth"
 import { getOrCreateChatSessionId } from "@/utils/chat-session"
 import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { getChatEnabled } from "@/utils/feature-flags"
+import { chatContextSchema } from "@/utils/types/chat"
 import { z } from "zod"
 
 const requestSchema = z.object({
     message: z.string().min(1).max(2000),
+    sessionId: z.string().min(8).optional(),
+    context: chatContextSchema.optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest) {
                     await runChatStream({
                         message: validated.data.message,
                         sessionId,
+                        context: validated.data.context,
                         onChunk: async (chunk) => {
                             const data = JSON.stringify(chunk)
                             controller.enqueue(encoder.encode(`data: ${data}\n\n`))

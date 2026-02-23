@@ -1,10 +1,5 @@
 import { z } from "zod"
 
-export const chatRequestSchema = z.object({
-    message: z.string().min(1).max(2000),
-    sessionId: z.string().min(8),
-})
-
 export const chatCafeCardSchema = z.object({
     id: z.string(),
     slug: z.string(),
@@ -17,6 +12,34 @@ export const chatCafeCardSchema = z.object({
     filters: z.array(z.string()).optional(),
     flags: z.array(z.string()).optional(),
     custom: z.string().optional(),
+})
+
+export const chatContextSchema = z.object({
+    pathname: z.string().optional(),
+    pageTitle: z.string().optional(),
+    cafeSlug: z.string().optional(),
+    crawlSlug: z.string().optional(),
+    location: z.object({
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+        city: z.string().optional(),
+        region: z.string().optional(),
+        isEstimate: z.boolean().optional(),
+    }).optional(),
+    navigationHistory: z.array(z.string()).optional(),
+    uiContext: z.record(z.unknown()).optional(),
+    recentCafes: z.array(chatCafeCardSchema).optional(),
+    recentToolCalls: z.array(z.object({
+        toolName: z.string(),
+        params: z.unknown(),
+        result: z.unknown(),
+    })).optional(),
+})
+
+export const chatRequestSchema = z.object({
+    message: z.string().min(1).max(2000),
+    sessionId: z.string().min(8),
+    context: chatContextSchema.optional(),
 })
 
 export const chatCardContextSchema = z.object({
@@ -75,6 +98,7 @@ export const chatResponseSchema = z.object({
 })
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>
+export type ChatContext = z.infer<typeof chatContextSchema>
 export type ChatResponse = z.infer<typeof chatResponseSchema>
 export type ChatCafeCard = z.infer<typeof chatCafeCardSchema>
 export type ChatCardContext = z.infer<typeof chatCardContextSchema>

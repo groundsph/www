@@ -112,3 +112,14 @@ describe("chat schemas", () => {
         expect(parsed.crawlDraft?.isPublic).toBe(false)
     })
 })
+
+describe("chat request schema", () => {
+    it("accepts optional context", () => {
+        const parsed = chatRequestSchema.parse({
+            message: "hello",
+            sessionId: "session-12345",
+            context: { pathname: "/cafes/demo" },
+        })
+        expect(parsed.context?.pathname).toBe("/cafes/demo")
+    })
+})

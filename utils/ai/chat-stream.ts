@@ -13,7 +13,7 @@ import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
-import type { ChatStreamChunk } from "@/utils/types/chat"
+import type { ChatStreamChunk, ChatContext } from "@/utils/types/chat"
 
 const MAX_TOOL_CALLS = 6
 
@@ -166,6 +166,7 @@ interface ChatMessage {
 export interface ChatStreamOptions {
     message: string
     sessionId: string
+    context?: ChatContext
     onChunk: (chunk: ChatStreamChunk) => void | Promise<void>
 }
 
