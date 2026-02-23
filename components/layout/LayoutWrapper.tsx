@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { ChatWidget } from "@/components/chat/ChatWidget"
 import Footer from "./Footer"
 import Navbar from "./Navbar"
+import { setChatContext } from "@/utils/chat-context"
 
 interface LayoutWrapperProps {
     children: React.ReactNode
@@ -54,6 +55,10 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
         fetchChatStatus()
     }, [])
+
+    useEffect(() => {
+        setChatContext({ pathname, pageTitle: document.title })
+    }, [pathname])
 
     // Hide navbar on auth pages and menu pages (menu page has its own conditional header)
     const hideNav = isAuthPage || isMenuPage
