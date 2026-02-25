@@ -14,6 +14,10 @@ export const routes: Route[] = [
         href: '/cafes',
     },
     {
+        title: 'map',
+        href: '/map',
+    },
+    {
         title: 'community',
         href: '/community',
         children: [
