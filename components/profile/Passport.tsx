@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { AnimatePresence, motion } from "motion/react"
 import { Bookmark, Coffee, Heart, MapPin, Stamp, Star } from "lucide-react"
 import Link from "next/link"
@@ -34,6 +35,7 @@ export default function Passport({
     wishlist,
     className = "",
 }: PassportProps) {
+    const { trigger } = useHaptics()
     const [activeTab, setActiveTab] = useState<TabType>("visited")
 
     // Get Randomized Stamp from Cafe Title (ensure same stamp is used for same cafe)
@@ -56,7 +58,10 @@ export default function Passport({
                 <div className='flex items-center gap-2 ml-auto w-full sm:w-auto'>
                     <div className='ml-auto flex bg-text/5 p-1 rounded-lg w-full sm:w-auto'>
                         <button
-                            onClick={() => setActiveTab("visited")}
+                            onClick={() => {
+                                trigger("selection")
+                                setActiveTab("visited")
+                            }}
                             className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                                 activeTab === "visited"
                                     ? "bg-background shadow-xs text-primary"
@@ -66,7 +71,10 @@ export default function Passport({
                             Visited
                         </button>
                         <button
-                            onClick={() => setActiveTab("favorites")}
+                            onClick={() => {
+                                trigger("selection")
+                                setActiveTab("favorites")
+                            }}
                             className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                                 activeTab === "favorites"
                                     ? "bg-background shadow-xs text-red-500"
@@ -76,7 +84,10 @@ export default function Passport({
                             Favorites
                         </button>
                         <button
-                            onClick={() => setActiveTab("wishlist")}
+                            onClick={() => {
+                                trigger("selection")
+                                setActiveTab("wishlist")
+                            }}
                             className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                                 activeTab === "wishlist"
                                     ? "bg-background shadow-xs text-secondary"
@@ -162,6 +173,7 @@ export default function Passport({
                                         >
                                             <Link
                                                 href={`/cafes/${cafe.slug}`}
+                                                onClick={() => trigger("rigid")}
                                                 className='group w-full h-full'
                                             >
                                                 {/* Stamp Visual */}

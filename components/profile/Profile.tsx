@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useAuth } from "@/components/layout/AuthProvider"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { getFullProfileData, updateProfile } from "@/app/api/actions/profile"
@@ -142,6 +143,7 @@ export default function Profile() {
     const router = useRouter()
     const { user, refreshProfile } = useAuth()
     const { addNotification } = useNotification()
+    const { trigger } = useHaptics()
 
     // States
     const [profileData, setProfileData] = useState<ProfileWithBadges | null>(
@@ -396,6 +398,7 @@ export default function Profile() {
     const handleSave = async () => {
         if (!user) return
         setIsSaving(true)
+        trigger("medium")
         try {
             const result = await updateProfile(user.id, {
                 display_name: editDisplayName,
@@ -403,6 +406,7 @@ export default function Profile() {
             })
 
             if (result.success) {
+                trigger("success")
                 setProfileData((prev) =>
                     prev
                         ? {
@@ -417,10 +421,12 @@ export default function Profile() {
                 // Refresh in background, don't block UI
                 refreshProfile()
             } else {
+                trigger("error")
                 addNotification("Failed to update profile", "error")
             }
         } catch (error) {
             console.error("Error saving profile:", error)
+            trigger("error")
             addNotification("An error occurred while saving", "error")
         } finally {
             setIsSaving(false)
@@ -630,9 +636,12 @@ export default function Profile() {
                             }}
                         />
                         <div
-                            onClick={() =>
-                                isEditing && fileInputRef.current?.click()
-                            }
+                            onClick={() => {
+                                if (isEditing) {
+                                    trigger("light")
+                                    fileInputRef.current?.click()
+                                }
+                            }}
                             className={`w-28 h-28 rounded-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden border-4 border-background relative group ${isEditing ? "cursor-pointer" : ""}`}
                         >
                             {profileData.avatar_url ? (
@@ -712,7 +721,10 @@ export default function Profile() {
                                 {!isEditing && (
                                     <>
                                         <button
-                                            onClick={() => setIsEditing(true)}
+                                            onClick={() => {
+                                                trigger("light")
+                                                setIsEditing(true)
+                                            }}
                                             className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
                                             title='Edit Profile'
                                         >

@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState, useCallback, useEffect } from "react"
 import { UserPlus, UserMinus, Loader2 } from "lucide-react"
 
@@ -21,6 +22,7 @@ export default function FollowButton({
     const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
     const [isLoading, setIsLoading] = useState(false)
     const [isHovering, setIsHovering] = useState(false)
+    const { trigger } = useHaptics()
 
     // Sync with prop changes
     useEffect(() => {
@@ -28,6 +30,7 @@ export default function FollowButton({
     }, [initialIsFollowing])
 
     const handleClick = useCallback(async () => {
+        trigger(isFollowing ? "soft" : "medium")
         setIsLoading(true)
         try {
             if (isFollowing) {
@@ -51,7 +54,7 @@ export default function FollowButton({
         } finally {
             setIsLoading(false)
         }
-    }, [isFollowing, targetUserId, onFollowChange])
+    }, [isFollowing, targetUserId, onFollowChange, trigger])
 
     // Size variants
     const sizeClasses = {
