@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { getCafeDescription, getCafeThumbnailUrl, getPriceLevel, isOpenNow } from "@/utils/extras"
 import Image from "next/image"
 import { AnimatePresence, motion } from "motion/react"
@@ -106,6 +107,8 @@ const SCROLL_RESTORATION_MAX_RETRIES = 20
 const IS_SCROLL_RESTORE_ENABLED = false
 
 export default function CafesPageClient() {
+    const { trigger } = useHaptics()
+
     // States
     const [cafes, setCafes] = useState<CafeWithRatings[]>([])
     const [loading, setLoading] = useState(true)
@@ -391,6 +394,7 @@ export default function CafesPageClient() {
             async (entries) => {
                 const target = entries[0]
                 if (target.isIntersecting && hasMore && !isLoadingMore) {
+                    trigger("light")
                     const nextPage = currentPage + 1
                     setCurrentPage(nextPage)
                     setIsLoadingMore(true)
@@ -416,9 +420,10 @@ export default function CafesPageClient() {
         observer.observe(scrollSentinelRef.current)
 
         return () => observer.disconnect()
-    }, [currentPage, hasMore, isLoadingMore, getFilterParams])
+    }, [currentPage, hasMore, isLoadingMore, getFilterParams, trigger])
 
     const toggleFilter = (key: keyof typeof filters) => {
+        trigger("selection")
         if (key === "near_me") {
             hasUserToggledLocation.current = true
         }
@@ -574,10 +579,14 @@ export default function CafesPageClient() {
                         placeholder='Search cafes...'
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
+                        onFocus={() => trigger("light")}
                         className='flex-1 min-w-40 px-4 py-2 rounded-lg border border-text/20 bg-transparent focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all text-sm'
                     />
                     <button
-                        onClick={() => setFiltersOpen(!filtersOpen)}
+                        onClick={() => {
+                            trigger(filtersOpen ? "soft" : "medium")
+                            setFiltersOpen(!filtersOpen)
+                        }}
                         className={`flex flex-row items-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer text-sm font-medium ${
                             filtersOpen || activeFilterCount > 0
                                 ? "bg-text text-background border-text"
@@ -594,7 +603,10 @@ export default function CafesPageClient() {
                     </button>
                     <select
                         value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as SortOption)}
+                        onChange={(e) => {
+                            trigger("selection")
+                            setSortBy(e.target.value as SortOption)
+                        }}
                         className='px-3 py-2 rounded-lg border border-text/20 bg-background focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all cursor-pointer text-sm'
                     >
                         <option value='recommended'>Recommended</option>
@@ -642,6 +654,7 @@ export default function CafesPageClient() {
                                     {activeFilterCount > 0 && (
                                         <button
                                             onClick={() => {
+                                                trigger("soft")
                                                 hasUserToggledLocation.current = false
                                                 setFilters(INITIAL_FILTERS)
                                             }}
@@ -924,7 +937,10 @@ export default function CafesPageClient() {
                                     key={cafe.id}
                                     layout
                                     data-cafe-slug={cafe.slug}
-                                    onClick={() => handleCafeClick(cafe.slug)}
+                                    onClick={() => {
+                                        trigger("light")
+                                        handleCafeClick(cafe.slug)
+                                    }}
                                     className={`py-4 px-6 bg-background rounded-xl border-2 border-text/5 flex flex-col-reverse md:flex-row gap-4 md:gap-0 group ${
                                         cafe.membership_tier === "premium"
                                             ? "shadow-lg shadow-amber-500/30 border-amber-400/30 hover:shadow-amber-500/40"
