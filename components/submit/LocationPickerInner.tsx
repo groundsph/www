@@ -1,5 +1,6 @@
 "use client"
 
+import { WebHaptics } from "web-haptics"
 import { useEffect, useState, useCallback, useRef } from "react"
 import {
     MapPin,
@@ -20,6 +21,9 @@ import {
 } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
+
+// Module-level singleton for Leaflet haptics (outside React lifecycle)
+const haptics = typeof window !== "undefined" ? new WebHaptics() : null
 
 // Fix Leaflet default marker icon issue with Next.js
 const markerIcon = new L.Icon({
@@ -55,6 +59,7 @@ function ClickHandler({
 }) {
     useMapEvents({
         click: (e) => {
+            haptics?.trigger("medium")
             onClick(e.latlng.lat, e.latlng.lng)
         },
     })

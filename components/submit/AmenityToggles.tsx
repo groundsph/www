@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import {
     WifiIcon,
     PlugIcon,
@@ -52,6 +53,13 @@ export default function AmenityToggles({
     values,
     onChange,
 }: AmenityTogglesProps) {
+    const { trigger } = useHaptics()
+
+    const handleToggle = (key: string, isCurrentlyActive: boolean) => {
+        trigger(isCurrentlyActive ? "selection" : "rigid")
+        onChange(key, !isCurrentlyActive)
+    }
+
     return (
         <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
             {AMENITY_OPTIONS.map((amenity) => {
@@ -62,7 +70,7 @@ export default function AmenityToggles({
                     <button
                         key={amenity.key}
                         type='button'
-                        onClick={() => onChange(amenity.key, !isActive)}
+                        onClick={() => handleToggle(amenity.key, isActive)}
                         className={cn(
                             "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all cursor-pointer",
                             isActive

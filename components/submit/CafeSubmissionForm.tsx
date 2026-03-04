@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import confetti from "canvas-confetti"
@@ -114,6 +115,7 @@ export default function CafeSubmissionForm({
     onSuccess,
 }: CafeSubmissionFormProps) {
     const { addNotification } = useNotification()
+    const { trigger } = useHaptics()
     const [currentStep, setCurrentStep] = useState(0)
     const [formData, setFormData] = useState<CafeSubmission>(
         DEFAULT_CAFE_SUBMISSION,
@@ -320,10 +322,12 @@ export default function CafeSubmissionForm({
     const nextStep = () => {
         const validationError = validateStep(currentStep)
         if (validationError) {
+            trigger("warning")
             setError(validationError)
             return
         }
         setError(null)
+        trigger("medium")
 
         // Auto-fill cafe name from search query when moving from step 0 to 1
         if (
@@ -395,6 +399,7 @@ export default function CafeSubmissionForm({
     }
 
     const prevStep = () => {
+        trigger("soft")
         setError(null)
         setCurrentStep((prev) => Math.max(prev - 1, 0))
         window.scrollTo({ top: 0, behavior: "smooth" })
@@ -496,6 +501,7 @@ export default function CafeSubmissionForm({
         setUploadProgress({})
         setProcessingStatus("Preparing images...")
         setIsProcessing(true)
+        trigger("medium")
 
         try {
             console.log("[Cafe Submit] Starting submission...")
@@ -666,6 +672,7 @@ export default function CafeSubmissionForm({
 
             // Success!
             console.log("[Cafe Submit] Success!")
+            trigger("success")
             clearDraft()
             setSuccess(true)
 
@@ -682,6 +689,7 @@ export default function CafeSubmissionForm({
             onSuccess?.(result.cafeId!, result.slug!)
         } catch (err: unknown) {
             console.error("[Cafe Submit] Error:", err)
+            trigger("error")
             const errorMessage =
                 err instanceof Error ? err.message : "An error occurred"
             setError(errorMessage)
