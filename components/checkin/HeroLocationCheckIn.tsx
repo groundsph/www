@@ -6,6 +6,7 @@ import { NearbyCafe } from "@/app/api/actions/nearby"
 import GroupCheckInModal, { UserResult as Companion } from "@/components/checkin/GroupCheckInModal"
 import { recordVisit, getTodayCheckIn, getVisitCount, updateCheckIn } from "@/app/api/actions/profile"
 import { useAuth } from "@/components/layout/AuthProvider"
+import { useHaptics } from "@/hooks/useHaptics"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -23,6 +24,7 @@ export default function HeroLocationCheckIn({
     const [initialCompanions, setInitialCompanions] = useState<Companion[]>([])
     const [isCheckingStatus, setIsCheckingStatus] = useState(false)
     const { user } = useAuth()
+    const { trigger } = useHaptics()
     const router = useRouter()
     const prevCafeIdRef = useRef<string | null>(null)
 
@@ -69,6 +71,7 @@ export default function HeroLocationCheckIn({
     if (!nearbyCafe) return null
 
     const handleCheckInClick = async () => {
+        trigger("medium")
         if (!user) {
             router.push("/auth?callbackUrl=/cafes/" + nearbyCafe.slug)
             return
@@ -125,6 +128,11 @@ export default function HeroLocationCheckIn({
                     if (result?.alreadyVisitedToday) {
                         setHasCheckedIn(true)
                         setVisitedToday(true)
+                    }
+                    if (result?.success) {
+                        trigger("success")
+                    } else if (result?.error) {
+                        trigger("error")
                     }
                     return result
                 }}

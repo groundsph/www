@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
 import { useLandingLocation } from "@/hooks/useLandingLocation"
+import { useHaptics } from "@/hooks/useHaptics"
 import RandomCafeButton from "@/components/map/RandomCafeButton"
 import HeroLocationCheckIn from "@/components/checkin/HeroLocationCheckIn"
 import { getCafeDescription } from "@/utils/extras"
@@ -21,6 +22,7 @@ export default function LandingHero({
 }: LandingHeroProps) {
     const { featured, isLocalFeatured, locationName, isEstimate, nearbyCafe } =
         useLandingLocation(initialFeatured)
+    const { trigger } = useHaptics()
 
     return (
         <section
@@ -146,6 +148,7 @@ export default function LandingHero({
                                         href='/map'
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
+                                        onClick={() => trigger("light")}
                                         className='px-4 py-1 w-max text-sm md:text-base bg-text text-background font-serif italic font-semibold rounded-lg transition-colors hover:bg-text/60 relative group shadow-lg hover:shadow-xl text-nowrap flex flex-row gap-2 items-center'
                                     >
                                         Find Cafes Near Me
@@ -218,6 +221,7 @@ export default function LandingHero({
                             href={`/cafes/${featured.slug}`}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
+                            onClick={() => trigger("light")}
                             className='absolute bottom-4 right-4 z-10 px-2 py-1 w-max rounded-md bg-background/10 text-white text-lg font-semibold backdrop-blur-sm hover:bg-background/20 transition-colors shadow-lg hover:shadow-xl'
                         >
                             Learn More

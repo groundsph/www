@@ -15,6 +15,7 @@ import Image from "next/image"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { getNearbyCafes, pickRandomCafe, formatDistance } from "@/utils/geo"
 import { useUserLocation } from "@/hooks/useUserLocation"
+import { useHaptics } from "@/hooks/useHaptics"
 import { getCafeThumbnailUrl, getPriceLevel, isOpenNow } from "@/utils/extras"
 import { getAllCafes } from "@/app/api/actions/cafe"
 
@@ -36,6 +37,7 @@ export default function RandomCafeButton({
         permissionState,
         refresh: refreshLocation,
     } = useUserLocation()
+    const { trigger } = useHaptics()
     const [isOpen, setIsOpen] = useState(false)
     const [selectedCafe, setSelectedCafe] = useState<CafeWithDistance | null>(
         null
@@ -103,6 +105,7 @@ export default function RandomCafeButton({
     }, [isOpen, nearbyCafes.length, selectedCafe, isSpinning, pickRandom])
 
     const handleClick = () => {
+        trigger("medium")
         setIsOpen(true)
         fetchCafesIfNeeded()
         // If no location yet and permission isn't denied, try to get it
