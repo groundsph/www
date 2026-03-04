@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import { useHaptics } from "@/hooks/useHaptics"
 
 interface ImageLightboxProps {
     images: string[]
@@ -20,6 +21,27 @@ export default function ImageLightbox({
     altPrefix = "Image",
 }: ImageLightboxProps) {
     const [currentIndex, setCurrentIndex] = useState(initialIndex)
+    const { trigger: hapticTrigger } = useHaptics()
+
+    const handleClose = useCallback(() => {
+        hapticTrigger("soft")
+        onClose()
+    }, [hapticTrigger, onClose])
+
+    const goToPrevious = useCallback(() => {
+        hapticTrigger("selection")
+        setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
+    }, [hapticTrigger, images.length])
+
+    const goToNext = useCallback(() => {
+        hapticTrigger("selection")
+        setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
+    }, [hapticTrigger, images.length])
+
+    const goToIndex = useCallback((idx: number) => {
+        hapticTrigger("selection")
+        setCurrentIndex(idx)
+    }, [hapticTrigger])
 
     // Handle keyboard navigation
     const handleKeyDown = useCallback(
@@ -28,21 +50,17 @@ export default function ImageLightbox({
 
             switch (e.key) {
                 case "Escape":
-                    onClose()
+                    handleClose()
                     break
                 case "ArrowLeft":
-                    setCurrentIndex((prev) =>
-                        prev > 0 ? prev - 1 : images.length - 1
-                    )
+                    goToPrevious()
                     break
                 case "ArrowRight":
-                    setCurrentIndex((prev) =>
-                        prev < images.length - 1 ? prev + 1 : 0
-                    )
+                    goToNext()
                     break
             }
         },
-        [isOpen, images.length, onClose]
+        [isOpen, handleClose, goToPrevious, goToNext]
     )
 
     useEffect(() => {
@@ -64,14 +82,6 @@ export default function ImageLightbox({
 
     if (!isOpen || images.length === 0) return null
 
-    const goToPrevious = () => {
-        setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
-    }
-
-    const goToNext = () => {
-        setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
-    }
-
     return (
         <div
             className='fixed inset-0 z-50 flex items-center justify-center'
@@ -82,12 +92,12 @@ export default function ImageLightbox({
             {/* Backdrop */}
             <div
                 className='absolute inset-0 bg-black/90 backdrop-blur-sm'
-                onClick={onClose}
+                onClick={handleClose}
             />
 
             {/* Close button */}
             <button
-                onClick={onClose}
+                onClick={handleClose}
                 className='absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer'
                 aria-label='Close lightbox'
             >
@@ -137,9 +147,9 @@ export default function ImageLightbox({
             {images.length > 1 && (
                 <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 p-2 rounded-xl bg-black/50 backdrop-blur-sm max-w-[90vw] overflow-x-auto'>
                     {images.map((image, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => setCurrentIndex(idx)}
+                            <button
+                                key={idx}
+                                onClick={() => goToIndex(idx)}
                             className={`relative w-12 h-12 rounded-lg overflow-hidden shrink-0 transition-all cursor-pointer ${
                                 idx === currentIndex
                                     ? "ring-2 ring-white ring-offset-2 ring-offset-black/50"

@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react"
 import { cn } from "@/utils/cn"
+import { useHaptics } from "@/hooks/useHaptics"
 
 interface SearchTriggerProps {
   onClick: () => void
@@ -10,10 +11,17 @@ interface SearchTriggerProps {
 }
 
 export function SearchTrigger({ onClick, variant = "desktop", className }: SearchTriggerProps) {
+  const { trigger: hapticTrigger } = useHaptics()
+
+  const handleClick = () => {
+    hapticTrigger("medium")
+    onClick()
+  }
+
   if (variant === "mobile") {
     return (
       <button
-        onClick={onClick}
+        onClick={handleClick}
         className={cn(
           "flex items-center justify-center w-10 h-10 rounded-xl",
           "bg-text/5 hover:bg-text/10 text-text/70 hover:text-text",
@@ -29,7 +37,7 @@ export function SearchTrigger({ onClick, variant = "desktop", className }: Searc
 
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-xl",
         "bg-text/5 hover:bg-text/10 text-text/70 hover:text-text",

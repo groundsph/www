@@ -15,6 +15,7 @@ import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { SearchModal, SearchTrigger } from "@/components/search"
 import { useSearchKeyboard } from "@/utils/hooks/useSearchKeyboard"
+import { useHaptics } from "@/hooks/useHaptics"
 
 export default function Navbar() {
     // Context
@@ -24,6 +25,9 @@ export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
     const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+    // Haptics
+    const { trigger: hapticTrigger } = useHaptics()
 
     // Constants
     const curPath = usePathname()
@@ -93,9 +97,10 @@ export default function Navbar() {
                             >
                                 {route.children ? (
                                     <button
-                                        onClick={(e) =>
+                                        onClick={(e) => {
+                                            hapticTrigger("light")
                                             toggleDropdown(e, route.title)
-                                        }
+                                        }}
                                         className={`relative px-1 py-1 flex items-center gap-1 ${
                                             isRouteActive(route)
                                                 ? "text-text"
@@ -129,6 +134,7 @@ export default function Navbar() {
                                     </button>
                                 ) : (
                                     <Link
+                                        onClick={() => hapticTrigger("light")}
                                         href={route.href}
                                         className={`relative px-1 py-1 ${
                                             curPath === route.href
@@ -183,11 +189,10 @@ export default function Navbar() {
                                                             <li
                                                                 key={child.href}
                                                             >
-                                                                <Link
-                                                                    href={
-                                                                        child.href
-                                                                    }
-                                                                    className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                                            <Link
+                                                onClick={() => hapticTrigger("light")}
+                                                href={child.href}
+                                                className={`block px-4 py-2 text-sm font-medium transition-colors ${
                                                                         curPath ===
                                                                         child.href
                                                                             ? "text-text bg-text/5"
@@ -210,6 +215,7 @@ export default function Navbar() {
                         {user && (
                             <li className='relative'>
                                 <Link
+                                    onClick={() => hapticTrigger("light")}
                                     href='/profile'
                                     className={`relative px-1 py-1 ${
                                         curPath === "/profile"
@@ -235,6 +241,7 @@ export default function Navbar() {
                         {isAdmin && (
                             <li>
                                 <Link
+                                    onClick={() => hapticTrigger("light")}
                                     href='/manage'
                                     className={`relative px-1 py-1 ${
                                         curPath === "/manage"
@@ -260,6 +267,7 @@ export default function Navbar() {
                         {isWriter && (
                             <li>
                                 <Link
+                                    onClick={() => hapticTrigger("light")}
                                     href='/writer'
                                     className={`relative px-1 py-1 ${
                                         curPath === "/writer"
@@ -286,13 +294,19 @@ export default function Navbar() {
                         {/* Desktop Search */}
                         <li className='hidden lg:block'>
                             <SearchTrigger
-                                onClick={() => setIsSearchOpen(true)}
+                                onClick={() => {
+                                    hapticTrigger("medium")
+                                    setIsSearchOpen(true)
+                                }}
                             />
                         </li>
                         <li className='hidden lg:hidden md:block'>
                             <SearchTrigger
                                 variant='mobile'
-                                onClick={() => setIsSearchOpen(true)}
+                                onClick={() => {
+                                    hapticTrigger("medium")
+                                    setIsSearchOpen(true)
+                                }}
                             />
                         </li>
                     </ul>
@@ -308,10 +322,16 @@ export default function Navbar() {
             <div className='md:hidden z-50 flex items-center gap-2'>
                 <SearchTrigger
                     variant='mobile'
-                    onClick={() => setIsSearchOpen(true)}
+                    onClick={() => {
+                        hapticTrigger("medium")
+                        setIsSearchOpen(true)
+                    }}
                 />
                 <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    onClick={() => {
+                        hapticTrigger(isMobileMenuOpen ? "soft" : "medium")
+                        setIsMobileMenuOpen(!isMobileMenuOpen)
+                    }}
                     className='p-1'
                 >
                     <AnimatePresence mode='wait'>
@@ -422,11 +442,10 @@ export default function Navbar() {
                                                                         child.href
                                                                     }
                                                                 >
-                                                                    <Link
-                                                                        href={
-                                                                            child.href
-                                                                        }
-                                                                        className={`text-xl font-medium ${
+                                    <Link
+                                        onClick={() => hapticTrigger("light")}
+                                        href={child.href}
+                                        className={`text-xl font-medium ${
                                                                             curPath ===
                                                                             child.href
                                                                                 ? "text-text"
@@ -467,6 +486,7 @@ export default function Navbar() {
                                     }}
                                 >
                                     <Link
+                                        onClick={() => hapticTrigger("light")}
                                         href='/profile'
                                         className={`text-3xl font-semibold ${
                                             curPath === "/profile"
@@ -487,6 +507,7 @@ export default function Navbar() {
                                     }}
                                 >
                                     <Link
+                                        onClick={() => hapticTrigger("light")}
                                         href='/manage'
                                         className={`text-3xl font-semibold ${
                                             curPath === "/manage"
@@ -507,6 +528,7 @@ export default function Navbar() {
                                     }}
                                 >
                                     <Link
+                                        onClick={() => hapticTrigger("light")}
                                         href='/writer'
                                         className={`text-3xl font-semibold ${
                                             curPath === "/writer"

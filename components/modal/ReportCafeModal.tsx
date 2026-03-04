@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { AlertTriangle, X, Check, Loader2 } from "lucide-react"
 import { submitCafeReport, ReportReason } from "@/app/api/actions/report"
+import { useHaptics } from "@/hooks/useHaptics"
 
 interface ReportCafeModalProps {
     cafeId: string
@@ -26,6 +27,7 @@ export default function ReportCafeModal({
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const { trigger: hapticTrigger } = useHaptics()
 
     if (!isOpen) return null
 
@@ -35,11 +37,13 @@ export default function ReportCafeModal({
 
         setIsSubmitting(true)
         setError(null)
+        hapticTrigger("medium")
 
         try {
             const result = await submitCafeReport(cafeId, reason, details)
 
             if (result.success) {
+                hapticTrigger("success")
                 setSuccess(true)
                 setTimeout(() => {
                     onClose()
@@ -48,9 +52,11 @@ export default function ReportCafeModal({
                     setDetails("")
                 }, 2000)
             } else {
+                hapticTrigger("error")
                 setError(result.error || "Failed to submit report")
             }
         } catch {
+            hapticTrigger("error")
             setError("An unexpected error occurred")
         } finally {
             setIsSubmitting(false)

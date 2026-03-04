@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { submitCafeClaim } from "@/app/api/actions/claim"
 import { uploadOwnershipProofWithProgress } from "@/utils/storage/client"
+import { useHaptics } from "@/hooks/useHaptics"
 
 interface ClaimCafeModalProps {
     isOpen: boolean
@@ -36,6 +37,7 @@ export default function ClaimCafeModal({
     } | null>(null)
     const [proofFile, setProofFile] = useState<File | null>(null)
     const [uploadProgress, setUploadProgress] = useState(0)
+    const { trigger: hapticTrigger } = useHaptics()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -52,6 +54,7 @@ export default function ClaimCafeModal({
         setIsSubmitting(true)
         setResult(null)
         setUploadProgress(0)
+        hapticTrigger("medium")
 
         try {
             let proofUrl: string | undefined
@@ -79,6 +82,7 @@ export default function ClaimCafeModal({
             )
 
             if (response.success) {
+                hapticTrigger("success")
                 setResult({
                     success: true,
                     message:
@@ -88,12 +92,14 @@ export default function ClaimCafeModal({
                 setProofFile(null)
                 setUploadProgress(0)
             } else {
+                hapticTrigger("error")
                 setResult({
                     success: false,
                     message: response.error || "Failed to submit claim",
                 })
             }
         } catch (error) {
+            hapticTrigger("error")
             console.error("Error submitting claim:", error)
             setResult({
                 success: false,
