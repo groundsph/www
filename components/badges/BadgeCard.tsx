@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { motion } from "motion/react"
 import Image from "next/image"
 import { getLucideIcon } from "./iconUtils"
+import { useHaptics } from "@/hooks/useHaptics"
 
 // Badge metadata structure for icon-based badges
 interface BadgeMetadata {
@@ -29,6 +30,7 @@ interface BadgeCardProps {
     isAdmin?: boolean
     onEdit?: () => void
     onDelete?: () => void
+    onClick?: () => void
 }
 
 const sizeClasses = {
@@ -63,6 +65,7 @@ export default function BadgeCard({
     isAdmin = false,
     onEdit,
     onDelete,
+    onClick,
 }: BadgeCardProps) {
     // Check if this badge uses a Lucide icon
     const metadata = badge.metadata as BadgeMetadata | null | undefined
@@ -73,14 +76,23 @@ export default function BadgeCard({
         () => (iconName ? getLucideIcon(iconName) : null),
         [iconName]
     )
+    const { trigger } = useHaptics()
 
     const iconSize = size === "lg" ? 32 : size === "md" ? 24 : 16
 
+    const handleClick = () => {
+        if (onClick) {
+            trigger("rigid")
+            onClick()
+        }
+    }
+
     return (
         <motion.div
-            className='group relative'
+            className={`group relative ${onClick ? "cursor-pointer" : ""}`}
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            onClick={handleClick}
         >
             <div
                 className={`

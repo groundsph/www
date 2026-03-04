@@ -15,6 +15,7 @@ import {
 import CompanionSelector from "./CompanionSelector"
 import type { CheckInResult } from "@/app/api/actions/profile"
 import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
+import { useHaptics } from "@/hooks/useHaptics"
 
 export interface UserResult {
     id: string
@@ -56,6 +57,7 @@ export default function GroupCheckInModal({
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [result, setResult] = useState<CheckInResult | null>(null)
     const { showBadgeNotifications } = useBadgeNotification()
+    const { trigger } = useHaptics()
 
     // Sync selected companions with initial companions when modal opens
     useEffect(() => {
@@ -67,14 +69,17 @@ export default function GroupCheckInModal({
     }, [isOpen])
 
     const handleSelect = useCallback((user: UserResult) => {
+        trigger("selection")
         setSelectedCompanions((prev) => [...prev, user])
-    }, [])
+    }, [trigger])
 
     const handleRemove = useCallback((userId: string) => {
+        trigger("selection")
         setSelectedCompanions((prev) => prev.filter((c) => c.id !== userId))
-    }, [])
+    }, [trigger])
 
     const handleCheckIn = async () => {
+        trigger("medium")
         setIsSubmitting(true)
         try {
             const companionIds = selectedCompanions.map((c) => c.id)
@@ -91,6 +96,11 @@ export default function GroupCheckInModal({
 
             if (checkInResult) {
                 setResult(checkInResult)
+                if (checkInResult.success) {
+                    trigger("success")
+                } else {
+                    trigger("error")
+                }
                 if (
                     checkInResult.awardedBadges &&
                     checkInResult.awardedBadges.length > 0

@@ -15,6 +15,8 @@ import {
     Youtube,
     ShoppingBag,
     Globe,
+    Copy,
+    Check,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
@@ -26,6 +28,7 @@ import ReportCafeModal from "@/components/modal/ReportCafeModal"
 import { motion } from "motion/react"
 import { useState, useEffect } from "react"
 import { getCafeVisitStats, getTodayVisitors } from "@/app/api/actions/profile"
+import { useHaptics } from "@/hooks/useHaptics"
 
 // Day mapping and order
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -94,6 +97,22 @@ export default function CafeSidebar({
     const openStatus = isOpenNow(cafe.operating_hours)
     const socials = (cafe.socials as unknown as CafeSocial[]) ?? []
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+    const [copied, setCopied] = useState(false)
+    const { trigger } = useHaptics()
+
+    const handleCopyAddress = () => {
+        const textToCopy = cafe.lat !== null && cafe.lng !== null
+            ? `${cafe.address_display} (${cafe.lat}, ${cafe.lng})`
+            : cafe.address_display
+        navigator.clipboard.writeText(textToCopy)
+        trigger("rigid")
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
+
+    const handleSocialClick = () => {
+        trigger("light")
+    }
 
     // Visitor stats state
     const [visitStats, setVisitStats] = useState<{
@@ -151,14 +170,27 @@ export default function CafeSidebar({
                     </div>
 
                     {/* Address Link */}
-                    <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='text-sm font-semibold text-text/60 hover:text-text/60 transition-colors hover:underline'
-                    >
-                        {cafe.address_display}
-                    </a>
+                    <div className="flex items-center gap-2">
+                        <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${cafe.lat},${cafe.lng}`}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-sm font-semibold text-text/60 hover:text-text/60 transition-colors hover:underline'
+                        >
+                            {cafe.address_display}
+                        </a>
+                        <button
+                            onClick={handleCopyAddress}
+                            className='p-1.5 hover:bg-text/10 rounded-lg transition-colors'
+                            title={copied ? "Copied!" : "Copy address"}
+                        >
+                            {copied ? (
+                                <Check className='w-4 h-4 text-green-500' />
+                            ) : (
+                                <Copy className='w-4 h-4 text-text/40' />
+                            )}
+                        </button>
+                    </div>
                 </>
             ) : cafe.is_hidden_gem ? (
                 /* Hidden Gem - Show finding hint instead of map */
@@ -225,6 +257,7 @@ export default function CafeSidebar({
                                     target='_blank'
                                     rel='noopener noreferrer'
                                     className='flex items-center gap-2 text-sm font-semibold text-text hover:text-primary transition-colors hover:underline'
+                                    onClick={handleSocialClick}
                                 >
                                     {getSocialIcon(social)}
                                     {social.title}

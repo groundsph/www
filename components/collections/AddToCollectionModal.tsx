@@ -10,6 +10,7 @@ import {
     removeCafeFromCollection,
     createCollection,
 } from "@/app/api/actions/collection"
+import { useHaptics } from "@/hooks/useHaptics"
 
 interface CollectionWithStatus {
     id: string
@@ -40,6 +41,7 @@ export default function AddToCollectionModal({
     const [showCreateForm, setShowCreateForm] = useState(false)
     const [newCollectionName, setNewCollectionName] = useState("")
     const [creating, setCreating] = useState(false)
+    const { trigger } = useHaptics()
 
     // Fetch collections on mount
     useEffect(() => {
@@ -52,6 +54,7 @@ export default function AddToCollectionModal({
     }, [isOpen, cafeId])
 
     const handleToggle = (collection: CollectionWithStatus) => {
+        trigger("selection")
         startTransition(async () => {
             try {
                 if (collection.hasCafe) {
@@ -81,6 +84,7 @@ export default function AddToCollectionModal({
 
     const handleCreateCollection = async () => {
         if (!newCollectionName.trim()) return
+        trigger("medium")
         setCreating(true)
         try {
             const result = await createCollection({
@@ -94,8 +98,10 @@ export default function AddToCollectionModal({
             setCollections(updated)
             setNewCollectionName("")
             setShowCreateForm(false)
+            trigger("success")
         } catch (error) {
             console.error("Failed to create collection:", error)
+            trigger("error")
         } finally {
             setCreating(false)
         }
