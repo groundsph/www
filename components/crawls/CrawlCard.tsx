@@ -1,3 +1,6 @@
+"use client"
+
+import { useHaptics } from "@/hooks/useHaptics"
 import Link from "next/link"
 import Image from "next/image"
 import { Coffee, Eye, Bookmark, Heart, MapIcon } from "lucide-react"
@@ -16,9 +19,11 @@ export interface CrawlCardProps {
 }
 
 export default function CrawlCard({ crawl }: CrawlCardProps) {
+    const { trigger } = useHaptics()
     return (
         <Link
             href={`/community/crawls/${crawl.slug}`}
+            onClick={() => trigger("light")}
             className="group block bg-background border border-secondary/20 rounded-2xl overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all"
         >
             <div className="relative aspect-16/10 bg-secondary/10">

@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "motion/react"
@@ -78,6 +79,8 @@ interface CrawlViewProps {
 }
 
 export default function CrawlView({ crawl }: CrawlViewProps) {
+    const { trigger } = useHaptics()
+
     // Publish UI context to chat
     useChatContext({
         uiContext: {
@@ -283,6 +286,7 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                                     >
                                         <Link
                                             href={`/cafes/${cafe.slug}`}
+                                            onClick={() => trigger("light")}
                                             className="flex gap-4 p-4 bg-background border border-secondary/20 hover:border-secondary/40 rounded-xl transition-all group shadow-sm hover:shadow-md"
                                         >
                                         {/* Index */}

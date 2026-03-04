@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -107,6 +108,7 @@ export default function CrawlEditor({
 }: CrawlEditorProps) {
     const router = useRouter()
     const { addNotification } = useNotification()
+    const { trigger } = useHaptics()
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const searchParams = useSearchParams()
@@ -215,13 +217,14 @@ export default function CrawlEditor({
     }, [searchQuery, items])
 
     const addCafe = (cafe: CafeSearchResult) => {
+        trigger("rigid")
         // Validate coordinates before adding
         const normalized = normalizeLatLng({ lat: cafe.lat, lng: cafe.lng })
         if (!normalized) {
             console.warn('[CrawlEditor] Cannot add cafe - invalid coordinates:', cafe.lat, cafe.lng)
             return
         }
-        
+
         const newItem: CrawlItem = {
             cafeId: cafe.id,
             sortOrder: items.length,
@@ -241,6 +244,7 @@ export default function CrawlEditor({
 
     // Remove cafe from crawl
     const removeCafe = (cafeId: string) => {
+        trigger("soft")
         setItems((prev) => {
             const filtered = prev.filter((item) => item.cafeId !== cafeId)
             // Reorder remaining items
@@ -278,11 +282,13 @@ export default function CrawlEditor({
     // Save crawl
     const handleSave = async () => {
         if (!title.trim()) {
+            trigger("warning")
             addNotification("Title is required", "error")
             return
         }
 
         setIsSaving(true)
+        trigger("medium")
 
         try {
             const crawlData = {
@@ -301,9 +307,11 @@ export default function CrawlEditor({
             if (mode === "create") {
                 const result = await createCafeCrawl(crawlData)
                 if (result.success) {
+                    trigger("success")
                     addNotification("Crawl created!", "success")
                     router.push(`/community/crawls/${result.data?.slug}`)
                 } else {
+                    trigger("error")
                     addNotification(
                         result.error || "Failed to create crawl",
                         "error",
@@ -312,8 +320,10 @@ export default function CrawlEditor({
             } else if (crawl.id) {
                 const result = await updateCafeCrawl(crawl.id, crawlData)
                 if (result.success) {
+                    trigger("success")
                     addNotification("Crawl saved!", "success")
                 } else {
+                    trigger("error")
                     addNotification(
                         result.error || "Failed to save crawl",
                         "error",
@@ -322,6 +332,7 @@ export default function CrawlEditor({
             }
         } catch (err) {
             console.error(err)
+            trigger("error")
             addNotification("Failed to save crawl", "error")
         } finally {
             setIsSaving(false)

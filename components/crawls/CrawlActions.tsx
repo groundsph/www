@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState } from "react"
 import { Bookmark, Share2, Heart } from "lucide-react"
 import { toggleSaveCafeCrawl, toggleLikeCafeCrawl } from "@/app/api/actions/cafe-crawls"
@@ -26,6 +27,7 @@ export default function CrawlActions({
     isOwner = false,
 }: CrawlActionsProps) {
     const { user } = useAuth()
+    const { trigger } = useHaptics()
     const [saved, setSaved] = useState(initialSaved)
     const [savesCount, setSavesCount] = useState(initialSavesCount)
     const [liked, setLiked] = useState(initialLiked)
@@ -38,6 +40,7 @@ export default function CrawlActions({
         if (!user) return
         if (isSaving) return
 
+        trigger(saved ? "soft" : "medium")
         setIsSaving(true)
         try {
             const result = await toggleSaveCafeCrawl(crawlId)
@@ -56,6 +59,7 @@ export default function CrawlActions({
         if (!user) return
         if (isLiking) return
 
+        trigger(liked ? "soft" : "medium")
         setIsLiking(true)
         try {
             const result = await toggleLikeCafeCrawl(crawlId)
@@ -71,6 +75,7 @@ export default function CrawlActions({
     }
 
     const handleShare = async () => {
+        trigger("rigid")
         const url = `${window.location.origin}/community/crawls/${slug}`
         try {
             await navigator.clipboard.writeText(url)
