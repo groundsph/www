@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { XIcon, Loader2 } from "lucide-react"
@@ -32,6 +33,7 @@ export default function ReviewModal({
     existingReview,
 }: ReviewModalProps) {
     const router = useRouter()
+    const { trigger } = useHaptics()
     const [rating, setRating] = useState(existingReview?.rating || 0)
     const [comment, setComment] = useState(existingReview?.comment || "")
     // Update state type to accept strings and Files
@@ -54,6 +56,7 @@ export default function ReviewModal({
 
         setIsSubmitting(true)
         setError(null)
+        trigger("medium")
 
         try {
             // Separate existing URLs from new Files
@@ -105,8 +108,10 @@ export default function ReviewModal({
             }
 
             if (result.error) {
+                trigger("error")
                 setError(result.error)
             } else {
+                trigger("success")
                 if (!existingReview) {
                     const awardedBadges = (
                         result as unknown as { awardedBadges?: string[] }
@@ -119,6 +124,7 @@ export default function ReviewModal({
                 onClose()
             }
         } catch (e: unknown) {
+            trigger("error")
             setError(
                 e instanceof Error ? e.message : "An unexpected error occurred",
             )

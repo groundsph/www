@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/static-components -- ReviewsSection is an intentional render helper */
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
@@ -86,6 +87,7 @@ export default function CafeDetails({
 }) {
     // Auth
     const authUser = useAuth().user
+    const { trigger } = useHaptics()
 
     // Cafe Actions Hook
     const {
@@ -145,7 +147,24 @@ export default function CafeDetails({
 
     // Open the check-in modal instead of direct check-in
     const handleCheckInClick = () => {
+        trigger("medium")
         setIsCheckInModalOpen(true)
+    }
+
+    // Haptic-wrapped toggle handlers
+    const handleToggleFavorite = async () => {
+        trigger(isFavorite ? "soft" : "medium")
+        await toggleFavorite()
+    }
+
+    const handleToggleWishlist = async () => {
+        trigger(isInWishlist ? "soft" : "rigid")
+        await toggleWishlist()
+    }
+
+    const handleToggleVisited = async () => {
+        trigger(isVisited ? "soft" : "medium")
+        await toggleVisited()
     }
 
     // Computed
@@ -244,9 +263,9 @@ export default function CafeDetails({
                 visitedToday={visitedToday}
                 isCheckingIn={isCheckingIn}
                 onCheckIn={handleCheckInClick}
-                onToggleVisited={toggleVisited}
-                onToggleFavorite={toggleFavorite}
-                onToggleWishlist={toggleWishlist}
+                onToggleVisited={handleToggleVisited}
+                onToggleFavorite={handleToggleFavorite}
+                onToggleWishlist={handleToggleWishlist}
                 onOpenClaim={() => setIsClaimOpen(true)}
                 onOpenAddToCollection={() => setIsAddToCollectionOpen(true)}
                 heroImage={heroImage}

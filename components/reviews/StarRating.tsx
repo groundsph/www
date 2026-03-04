@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { StarIcon } from "lucide-react"
 import { useState } from "react"
 
@@ -18,6 +19,7 @@ export default function StarRating({
     size = "md",
     readOnly = false,
 }: StarRatingProps) {
+    const { trigger } = useHaptics()
     const [hoverRating, setHoverRating] = useState<number | null>(null)
 
     const handleMouseEnter = (index: number) => {
@@ -34,6 +36,7 @@ export default function StarRating({
 
     const handleClick = (index: number) => {
         if (!readOnly && onRatingChange) {
+            trigger("rigid")
             onRatingChange(index + 1)
         }
     }

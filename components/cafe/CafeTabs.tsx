@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { Info, List, MessageSquare, UtensilsCrossed } from "lucide-react"
@@ -35,6 +36,7 @@ export default function CafeTabs({
     reviewCount,
     menuCount,
 }: CafeTabsProps) {
+    const { trigger } = useHaptics()
     const [activeTab, setActiveTab] = useState<TabId>("about")
 
     return (
@@ -50,7 +52,10 @@ export default function CafeTabs({
                     return (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => {
+                                trigger("selection")
+                                setActiveTab(tab.id)
+                            }}
                             className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 font-semibold text-sm transition-colors relative cursor-pointer ${
                                 isActive
                                     ? "text-primary"
