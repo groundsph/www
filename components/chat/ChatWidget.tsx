@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { MessageSquare, X } from "lucide-react"
@@ -19,6 +20,7 @@ export function ChatWidget({
     const [isOpen, setIsOpen] = useState(false)
     const [prefillMessage, setPrefillMessage] = useState<string | null>(null)
     const [autoSend, setAutoSend] = useState(false)
+    const { trigger } = useHaptics()
 
     const curPath = usePathname()
 
@@ -82,7 +84,10 @@ export function ChatWidget({
                     </AnimatePresence>
 
                     <motion.button
-                        onClick={() => setIsOpen(!isOpen)}
+                        onClick={() => {
+                            trigger(isOpen ? "soft" : "medium")
+                            setIsOpen(!isOpen)
+                        }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         animate={{

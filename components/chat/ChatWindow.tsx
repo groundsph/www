@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { X, Send, AlertCircle, Loader2, Sparkles } from "lucide-react"
@@ -94,6 +95,7 @@ export default function ChatWindow({
     autoSend,
 }: ChatWindowProps) {
     const isDev = process.env.NODE_ENV === "development"
+    const { trigger } = useHaptics()
     const [messages, setMessages] = useState<Message[]>(() => {
         if (typeof window === "undefined") return []
         if (shouldClearChatHistory()) {
@@ -131,9 +133,17 @@ export default function ChatWindow({
 
     useEffect(() => {
         if (currentRemaining <= 0 && typeof window !== "undefined") {
+            trigger("warning")
             clearChatHistory()
         }
-    }, [currentRemaining])
+    }, [currentRemaining, trigger])
+
+    // Haptic feedback on error
+    useEffect(() => {
+        if (error && !isLoading) {
+            trigger("error")
+        }
+    }, [error, isLoading, trigger])
 
     const {
         location,
@@ -253,6 +263,7 @@ export default function ChatWindow({
         e.preventDefault()
         if (!input.trim() || isLoading || currentRemaining <= 0) return
 
+        trigger("rigid")
         const userMessage: Message = {
             id: crypto.randomUUID(),
             role: "user",

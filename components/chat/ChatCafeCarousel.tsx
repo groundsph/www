@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import Image from "next/image"
 import { Coffee, MapPin, Star } from "lucide-react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
@@ -11,6 +12,7 @@ interface ChatCafeCarouselProps {
 }
 
 export default function ChatCafeCarousel({ cafes, cardContext }: ChatCafeCarouselProps) {
+    const { trigger } = useHaptics()
     if (!cafes.length) return null
     return (
         <div className="mt-3 max-w-full">
@@ -22,6 +24,7 @@ export default function ChatCafeCarousel({ cafes, cardContext }: ChatCafeCarouse
                     <a
                         key={cafe.id}
                         href={`/cafes/${cafe.slug}`}
+                        onClick={() => trigger("light")}
                         className="group shrink-0 w-4/5 max-w-[85svw] snap-start flex flex-col gap-3"
                     >
                         <div className="flex items-center gap-3 bg-background rounded-lg p-2 shadow-sm shadow-black/10">
