@@ -1,5 +1,22 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, vi } from "bun:test"
+import { render } from "@testing-library/react"
 import CrawlCard from "@/components/crawls/CrawlCard"
+
+// Mock web-haptics for tests
+vi.mock("web-haptics/react", () => ({
+    useWebHaptics: () => ({
+        trigger: vi.fn(),
+        cancel: vi.fn(),
+        isSupported: false,
+    }),
+}))
+
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({
+        push: vi.fn(),
+    }),
+}))
 
 describe("CrawlCard", () => {
     it("exports a component", () => {
@@ -21,8 +38,7 @@ describe("CrawlCard", () => {
             savesCount: 10,
         }
 
-        const element = CrawlCard({ crawl: mockCrawl })
-        expect(element).toBeDefined()
-        expect(element.props.href).toBe("/community/crawls/test-crawl")
+        const { container } = render(<CrawlCard crawl={mockCrawl} />)
+        expect(container.querySelector('a')?.getAttribute('href')).toBe("/community/crawls/test-crawl")
     })
 })

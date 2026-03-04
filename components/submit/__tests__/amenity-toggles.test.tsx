@@ -1,6 +1,15 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, vi } from "bun:test"
 import { render, fireEvent } from "@testing-library/react"
 import AmenityToggles from "@/components/submit/AmenityToggles"
+
+// Mock web-haptics for tests
+vi.mock("web-haptics/react", () => ({
+    useWebHaptics: () => ({
+        trigger: vi.fn(),
+        cancel: vi.fn(),
+        isSupported: false,
+    }),
+}))
 
 describe("AmenityToggles", () => {
     it("toggles Halal Certified", () => {
