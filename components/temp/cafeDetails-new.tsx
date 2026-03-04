@@ -1,33 +1,24 @@
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
+import Image from "next/image"
 import {
-    Wifi,
-    BatteryCharging,
     Users,
-    Clock,
     MapPin,
     Star,
-    ChevronRight,
-    Globe,
     Instagram,
     Share2,
     Heart,
     Coffee,
     CheckCircle2,
-    Navigation,
     MessageSquare,
     Search,
     ChevronDown,
     Facebook,
-    CreditCard,
-    Banknote,
-    Smartphone,
     ImageIcon,
     Maximize2,
     Zap,
 } from "lucide-react"
 
 const App = () => {
-    const [activeTab, setActiveTab] = useState("overview")
     const [photoFilter, setPhotoFilter] = useState("all")
 
     const cafe = {
@@ -92,11 +83,6 @@ const App = () => {
         ],
     }
 
-    const filteredPhotos =
-        photoFilter === "all"
-            ? cafe.gallery
-            : cafe.gallery.filter((p) => p.type === photoFilter)
-
     return (
         <div className='min-h-screen bg-[#FDFBF7] font-sans text-[#2D2D2D]'>
             {/* Navbar - Matching grounds.ph header */}
@@ -153,10 +139,13 @@ const App = () => {
 
             {/* Hero Section */}
             <div className='relative h-[480px] w-full overflow-hidden'>
-                <img
+                <Image
                     src='https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=2000'
                     className='w-full h-full object-cover'
                     alt='Cafe Interior'
+                    width={2000}
+                    height={480}
+                    unoptimized
                 />
                 <div className='absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20' />
 
@@ -221,9 +210,9 @@ const App = () => {
                                 Hidden Gem
                             </div>
                             <p className='text-[11px] leading-relaxed text-neutral-500'>
-                                The MERCI Bakery & Brunch is a long title cafe
-                                and it's not fast talking so we are some space
-                                for text. Up to the ends notes as they say it's
+                                The MERCI Bakery &amp; Brunch is a long title cafe
+                                and it&apos;s not fast talking so we are some space
+                                for text. Up to the ends notes as they say it&apos;s
                                 right.
                             </p>
                         </div>
@@ -364,13 +353,16 @@ const App = () => {
                         <div className='grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-3 h-[450px]'>
                             {/* Large Featured Photo */}
                             <div className='md:col-span-2 md:row-span-2 relative group cursor-pointer rounded-xl overflow-hidden shadow-sm'>
-                                <img
+                                <Image
                                     src={
                                         cafe.gallery[0].url +
                                         "?auto=format&fit=crop&q=80&w=800"
                                     }
                                     className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
                                     alt='Featured Interior'
+                                    width={800}
+                                    height={900}
+                                    unoptimized
                                 />
                                 <div className='absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors' />
                                 {cafe.gallery[0].tag && (
@@ -385,18 +377,21 @@ const App = () => {
                             </div>
 
                             {/* Smaller Photos */}
-                            {cafe.gallery.slice(1, 4).map((p, idx) => (
+                            {cafe.gallery.slice(1, 4).map((p) => (
                                 <div
                                     key={p.id}
                                     className='relative group cursor-pointer rounded-xl overflow-hidden shadow-sm'
                                 >
-                                    <img
+                                    <Image
                                         src={
                                             p.url +
                                             "?auto=format&fit=crop&q=80&w=400"
                                         }
                                         className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-110'
                                         alt={`Cafe ${p.type}`}
+                                        width={400}
+                                        height={450}
+                                        unoptimized
                                     />
                                     <div className='absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors' />
                                     {p.tag && (
@@ -525,16 +520,19 @@ const App = () => {
                                 </div>
                             </div>
                             <p className='text-sm text-neutral-600 leading-relaxed italic border-l-2 border-[#D4AF37] pl-4'>
-                                "Two pastries for me 👍 and the hot chocolate is
+                                &quot;Two pastries for me 👍 and the hot chocolate is
                                 so good inside. However, the whole interior wall
-                                is bright giving me a bit of eye strain."
+                                is bright giving me a bit of eye strain.&quot;
                             </p>
-                            <div className='flex gap-3'>
+                                <div className='flex gap-3'>
                                 <div className='w-24 h-24 rounded-lg overflow-hidden border border-neutral-200 shadow-sm cursor-zoom-in group'>
-                                    <img
+                                    <Image
                                         src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=200'
                                         className='w-full h-full object-cover group-hover:scale-110 transition-transform'
                                         alt='Review'
+                                        width={200}
+                                        height={200}
+                                        unoptimized
                                     />
                                 </div>
                             </div>

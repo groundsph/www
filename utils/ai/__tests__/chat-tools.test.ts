@@ -1,6 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 import { AVAILABLE_TOOLS } from "@/utils/ai/chat-tools"
 
+interface MockCafe {
+    id?: unknown
+    name?: unknown
+    slug?: unknown
+    thumbnail?: unknown
+    cityMunicipality?: unknown
+    region?: unknown
+    lat?: unknown
+    lng?: unknown
+}
+
 describe("chat tools", () => {
     it("includes get_grounds_info tool", () => {
         const toolNames = AVAILABLE_TOOLS.map((t) => t.function.name)
@@ -50,7 +61,7 @@ mock.module("@/utils/ai/chat-crawl-draft", () => ({
                 title: `${location} Coffee Crawl`,
                 description: "Draft",
                 isPublic: false,
-                items: cafes.map((cafe: any, index: number) => ({
+                items: cafes.map((cafe: MockCafe, index: number) => ({
                     cafeId: String(cafe.id || ""),
                     name: String(cafe.name || ""),
                     slug: String(cafe.slug || ""),

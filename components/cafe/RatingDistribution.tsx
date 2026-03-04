@@ -1,7 +1,5 @@
 "use client"
 
-import { useState } from "react"
-
 interface RatingDistributionProps {
     reviews: { rating: number }[]
     maxRating?: number
@@ -15,9 +13,6 @@ export default function RatingDistribution({
     reviews,
     maxRating = 5,
 }: RatingDistributionProps) {
-    const [hoveredRating, setHoveredRating] = useState<number | null>(null)
-
-    // Calculate distribution
     const distribution: Record<number, number> = {}
     for (let i = 1; i <= maxRating; i++) {
         distribution[i] = 0
@@ -59,8 +54,6 @@ export default function RatingDistribution({
                         <div
                             key={rating}
                             className='flex items-center gap-2 text-xs'
-                            onMouseEnter={() => setHoveredRating(rating)}
-                            onMouseLeave={() => setHoveredRating(null)}
                         >
                             {/* Star number */}
                             <span className='w-3 text-right text-text/50 font-medium shrink-0 select-none'>

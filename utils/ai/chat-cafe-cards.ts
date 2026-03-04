@@ -77,9 +77,9 @@ export function buildChatCafeCards(records: ToolCallRecord[]): CardResult {
         const { toolName, params, result } = record
         if (!result || typeof result !== "object") continue
 
-        if (toolName === "query_cafes" && Array.isArray((result as any).cafes)) {
+        if (toolName === "query_cafes" && "cafes" in result && Array.isArray(result.cafes)) {
             const context = buildContext(toolName, params as Record<string, unknown>)
-            const cafes = (result as any).cafes.map((cafe: Record<string, unknown>) =>
+            const cafes = result.cafes.map((cafe: Record<string, unknown>) =>
                 toCard(cafe, context.custom)
             )
             return { cafes, cardContext: context }
@@ -87,7 +87,7 @@ export function buildChatCafeCards(records: ToolCallRecord[]): CardResult {
 
         if ((toolName === "get_nearby_cafes" || toolName === "get_top_rated") && Array.isArray(result)) {
             const context = buildContext(toolName, params as Record<string, unknown>)
-            const cafes = (result as any).map((cafe: Record<string, unknown>) => toCard(cafe, context.custom))
+            const cafes = result.map((cafe: Record<string, unknown>) => toCard(cafe, context.custom))
             return { cafes, cardContext: context }
         }
 
@@ -98,9 +98,10 @@ export function buildChatCafeCards(records: ToolCallRecord[]): CardResult {
 
         if (toolName === "compare_cafes" && result && typeof result === "object") {
             const context = buildContext(toolName, params as Record<string, unknown>)
+            const compareResult = result as { cafeA?: Record<string, unknown>; cafeB?: Record<string, unknown> }
             const cafes = [
-                (result as any).cafeA ? toCard((result as any).cafeA, context.custom) : null,
-                (result as any).cafeB ? toCard((result as any).cafeB, context.custom) : null,
+                compareResult.cafeA ? toCard(compareResult.cafeA, context.custom) : null,
+                compareResult.cafeB ? toCard(compareResult.cafeB, context.custom) : null,
             ].filter(Boolean) as ChatCafeCard[]
             return { cafes, cardContext: context }
         }

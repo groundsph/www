@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Coffee, MapPin, Star } from "lucide-react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
@@ -26,9 +27,11 @@ export default function ChatCafeCarousel({ cafes, cardContext }: ChatCafeCarouse
                         <div className="flex items-center gap-3 bg-background rounded-lg p-2 shadow-sm shadow-black/10">
                             <div className="w-14 h-14 rounded-lg overflow-hidden bg-text/5 shrink-0">
                                 {cafe.coverImageUrl ? (
-                                    <img
+                                    <Image
                                         src={getCafeThumbnailUrl(cafe.coverImageUrl)}
                                         alt={cafe.title}
+                                        width={56}
+                                        height={56}
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
