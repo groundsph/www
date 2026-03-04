@@ -1,5 +1,6 @@
 "use client"
 
+import { useHaptics } from "@/hooks/useHaptics"
 import { CafeWithRatings } from "@/utils/types/extra"
 import dynamic from "next/dynamic"
 import { useState, useCallback, useRef } from "react"
@@ -22,6 +23,7 @@ interface CafeMapWrapperProps {
 export default function CafeMapWrapper({
     cafes: initialCafes,
 }: CafeMapWrapperProps) {
+    const { trigger } = useHaptics()
     const [cafes, setCafes] = useState<CafeWithRatings[]>(initialCafes)
     const [isLoading, setIsLoading] = useState(false)
     const [includeChains, setIncludeChains] = useState(false)
@@ -52,6 +54,7 @@ export default function CafeMapWrapper({
 
     // Toggle chain visibility and refetch
     const toggleChains = useCallback(async () => {
+        trigger("selection")
         const newIncludeChains = !includeChains
         setIncludeChains(newIncludeChains)
 
@@ -71,10 +74,11 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         }
-    }, [includeChains, is24_7, isHalalCertified])
+    }, [includeChains, is24_7, isHalalCertified, trigger])
 
     // Toggle 24/7 filter and refetch
     const toggle24_7 = useCallback(async () => {
+        trigger("selection")
         const newIs24_7 = !is24_7
         setIs24_7(newIs24_7)
 
@@ -94,10 +98,11 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         }
-    }, [is24_7, includeChains, isHalalCertified])
+    }, [is24_7, includeChains, isHalalCertified, trigger])
 
     // Toggle Halal Certified filter and refetch
     const toggleHalalCertified = useCallback(async () => {
+        trigger("selection")
         const newIsHalalCertified = !isHalalCertified
         setIsHalalCertified(newIsHalalCertified)
 
@@ -117,7 +122,7 @@ export default function CafeMapWrapper({
                 setIsLoading(false)
             }
         }
-    }, [isHalalCertified, includeChains, is24_7])
+    }, [isHalalCertified, includeChains, is24_7, trigger])
 
     return (
         <div className='relative w-full h-full'>

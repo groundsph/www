@@ -1,5 +1,6 @@
 "use client"
 
+import { WebHaptics } from "web-haptics"
 import { CafeWithRatings } from "@/utils/types/extra"
 import {
     MapContainer,
@@ -14,6 +15,9 @@ import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
 import Link from "next/link"
 import { useMemo, useState, useEffect, useCallback, useRef } from "react"
+
+// Module-level singleton for Leaflet haptics (outside React lifecycle)
+const haptics = typeof window !== "undefined" ? new WebHaptics() : null
 import {
     StarIcon,
     Wifi,
@@ -75,10 +79,12 @@ function LocationMarker() {
         map.locate({ setView: true, maxZoom: 14 })
 
         map.on("locationfound", (e) => {
+            haptics?.trigger("success")
             setPosition([e.latlng.lat, e.latlng.lng])
         })
 
         map.on("locationerror", () => {
+            haptics?.trigger("error")
             // Silently fall back to default center if location denied
             console.log("Location access denied, using default center")
         })
@@ -293,6 +299,11 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                     ? premiumIcon
                                     : regularIcon
                             }
+                            eventHandlers={{
+                                click: () => {
+                                    haptics?.trigger("light")
+                                },
+                            }}
                         >
                             <Popup className='cafe-popup'>
                                 <div className='w-72 max-w-[70svw] flex flex-col rounded-xl overflow-hidden shadow-lg border border-secondary/20 bg-background'>
@@ -522,6 +533,7 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                                             </div>
                                             <Link
                                                 href={`/cafes/${cafe.slug}`}
+                                                onClick={() => haptics?.trigger("light")}
                                                 className='group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-xs font-semibold rounded-full transition-all hover:gap-2 shadow-sm text-text!'
                                             >
                                                 Explore
