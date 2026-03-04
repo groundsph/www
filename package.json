@@ -47,6 +47,7 @@
         "resend": "^6.6.0",
         "tailwind-merge": "^3.4.0",
         "tldts": "^7.0.19",
+        "web-haptics": "^0.0.6",
         "zod": "^4.2.1"
     },
     "devDependencies": {
