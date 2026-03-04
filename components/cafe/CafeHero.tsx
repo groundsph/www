@@ -206,9 +206,12 @@ export default function CafeHero({
                 </div>
             )}
 
+            {/* Bottom gradient overlay */}
+            <div className='absolute inset-0 bg-linear-to-t from-black/80 from-0% via-10% to-40% via-black/30 to-transparent pointer-events-none z-0' />
+
             {/* Content */}
-            <div className='z-1 w-full h-full flex flex-col px-4 py-10 items-center text-background'>
-                <div className='w-full max-w-7xl flex flex-col'>
+            <div className='absolute bottom-0 left-0 right-0 z-10 px-4 pb-10 pt-6 text-background'>
+                <div className='w-full max-w-7xl mx-auto flex flex-col'>
                     {/* Cafe Name */}
                     <motion.h1
                         initial={{ opacity: 0 }}
@@ -255,7 +258,7 @@ export default function CafeHero({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
-                        className='flex flex-row items-center gap-2 mt-2 font-serif w-full'
+                        className='flex flex-row flex-wrap items-center gap-2 mt-2 font-serif w-full'
                     >
                         <span className='px-2 py-0.5 rounded-md bg-background/20 text-sm font-semibold'>
                             {cafe.city_municipality}
@@ -264,6 +267,59 @@ export default function CafeHero({
                         <span className='font-semibold text-lg'>
                             {cafe.province}
                         </span>
+                        <span className='text-background/60'>|</span>
+
+                        {/* Open/Closed Status */}
+                        <div
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold backdrop-blur-sm ${
+                                openStatus.isOpen
+                                    ? "bg-green-500/20 text-green-300"
+                                    : "bg-white/10 text-white/70"
+                            }`}
+                        >
+                            <Clock className='w-3 h-3' />
+                            {openStatus.isOpen ? "Open Now" : "Closed"}
+                        </div>
+
+                        {/* Price Level */}
+                        <div className='flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-white/10 text-white backdrop-blur-sm'>
+                            {cafe.price_level === "low" && "₱"}
+                            {cafe.price_level === "medium" && "₱₱"}
+                            {cafe.price_level === "high" && "₱₱₱"}
+                        </div>
+
+                        {/* Coffee Style */}
+                        {cafe.coffee_style && (
+                            <div className='flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 backdrop-blur-sm'>
+                                {cafe.coffee_style === "classic"
+                                    ? "Classic"
+                                    : "Artisan"}
+                            </div>
+                        )}
+
+                        {/* WiFi */}
+                        {cafe.has_wifi && (
+                            <div className='flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 backdrop-blur-sm'>
+                                <WifiIcon className='w-3 h-3' />
+                                WiFi
+                            </div>
+                        )}
+
+                        {/* Smoking */}
+                        {cafe.has_smoking && (
+                            <div className='flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-zinc-500/20 text-zinc-300 backdrop-blur-sm'>
+                                <Cigarette className='w-3 h-3' />
+                                Smoking Area
+                            </div>
+                        )}
+
+                        {/* Rating */}
+                        {cafe.average_rating && (
+                            <div className='flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 backdrop-blur-sm'>
+                                <StarIcon className='w-3 h-3 fill-current' />
+                                {cafe.average_rating.toFixed(1)}
+                            </div>
+                        )}
                     </motion.div>
 
                     {/* Address */}
@@ -275,66 +331,6 @@ export default function CafeHero({
                     >
                         {cafe.address_display}
                     </motion.h2>
-
-                    {/* Quick Facts Pills */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
-                        className='flex flex-row flex-wrap items-center gap-2 mt-4'
-                    >
-                        {/* Open/Closed Status */}
-                        <div
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold backdrop-blur-sm ${
-                                openStatus.isOpen
-                                    ? "bg-green-500/20 text-green-300"
-                                    : "bg-white/10 text-white/70"
-                            }`}
-                        >
-                            <Clock className='w-3.5 h-3.5' />
-                            {openStatus.isOpen ? "Open Now" : "Closed"}
-                        </div>
-
-                        {/* Price Level */}
-                        <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-white/10 text-white backdrop-blur-sm'>
-                            {cafe.price_level === "low" && "₱"}
-                            {cafe.price_level === "medium" && "₱₱"}
-                            {cafe.price_level === "high" && "₱₱₱"}
-                        </div>
-
-                        {/* Coffee Style */}
-                        {cafe.coffee_style && (
-                            <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-amber-500/20 text-amber-300 backdrop-blur-sm'>
-                                {cafe.coffee_style === "classic"
-                                    ? "Classic"
-                                    : "Artisan"}
-                            </div>
-                        )}
-
-                        {/* WiFi Indicator */}
-                        {cafe.has_wifi && (
-                            <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-blue-500/20 text-blue-300 backdrop-blur-sm'>
-                                <WifiIcon className='w-3.5 h-3.5' />
-                                WiFi
-                            </div>
-                        )}
-
-                        {/* Smoking Indicator */}
-                        {cafe.has_smoking && (
-                            <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-zinc-500/20 text-zinc-300 backdrop-blur-sm'>
-                                <Cigarette className='w-3.5 h-3.5' />
-                                Smoking Area
-                            </div>
-                        )}
-
-                        {/* Rating */}
-                        {cafe.average_rating && (
-                            <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-amber-500/20 text-amber-300 backdrop-blur-sm'>
-                                <StarIcon className='w-3.5 h-3.5 fill-current' />
-                                {cafe.average_rating.toFixed(1)}
-                            </div>
-                        )}
-                    </motion.div>
 
                     {/* Action Buttons */}
                     <motion.div

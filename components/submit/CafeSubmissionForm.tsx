@@ -1362,7 +1362,6 @@ export default function CafeSubmissionForm({
                                                     ),
                                                 )
                                             }
-                                            maxImages={5}
                                             progress={
                                                 // Convert "gallery-i" keys to numeric index keys for ImageUpload
                                                 Object.entries(uploadProgress)
@@ -2332,7 +2331,6 @@ export default function CafeSubmissionForm({
                                                 </h2>
                                                 <div className='flex gap-2 overflow-x-auto pb-2'>
                                                     {galleryFiles
-                                                        .slice(0, 5)
                                                         .map((file, idx) => (
                                                             <div
                                                                 key={idx}
@@ -2369,16 +2367,6 @@ export default function CafeSubmissionForm({
                                                                     )}
                                                             </div>
                                                         ))}
-                                                    {galleryFiles.length >
-                                                        5 && (
-                                                        <div className='w-24 h-24 rounded-lg bg-text/10 flex items-center justify-center shrink-0'>
-                                                            <span className='text-text/50 text-sm font-medium'>
-                                                                +
-                                                                {galleryFiles.length -
-                                                                    5}
-                                                            </span>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         )}

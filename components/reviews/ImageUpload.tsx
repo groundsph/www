@@ -19,7 +19,7 @@ export default function ImageUpload({
     value = [], // Default to empty array to be safe
     onChange,
     disabled,
-    maxImages = 3, // Default to 3 for backwards compatibility, 0 = unlimited
+    maxImages = 0, // 0 = unlimited
     progress = {},
 }: ImageUploadProps) {
     const [previewUrls, setPreviewUrls] = useState<Map<File, string>>(new Map())

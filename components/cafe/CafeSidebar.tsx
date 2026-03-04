@@ -4,27 +4,19 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
 import {
     StarIcon,
-    WifiIcon,
-    PlugIcon,
-    CarIcon,
-    SnowflakeIcon,
-    PawPrintIcon,
-    SunIcon,
-    BriefcaseIcon,
-    CoffeeIcon,
     UserIcon,
     CalendarIcon,
     History,
-    Toilet,
-    Droplet,
-    MilkOff,
-    Armchair,
     MapPin,
-    Cigarette,
-    Coffee,
+    Instagram,
+    Facebook,
+    Music2,
+    Twitter,
+    Youtube,
+    ShoppingBag,
+    Globe,
 } from "lucide-react"
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
-import { formatCafeStrawType } from "@/utils/formatters"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import Image from "next/image"
@@ -34,27 +26,6 @@ import ReportCafeModal from "@/components/modal/ReportCafeModal"
 import { motion } from "motion/react"
 import { useState, useEffect } from "react"
 import { getCafeVisitStats, getTodayVisitors } from "@/app/api/actions/profile"
-
-// Animation variants
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.05,
-        },
-    },
-}
-
-const itemVariants = {
-    hidden: { opacity: 0, y: 10, scale: 0.95 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        transition: { duration: 0.2 },
-    },
-}
 
 // Day mapping and order
 const DAY_NAMES: Record<OperatingHour["day"], string> = {
@@ -76,6 +47,28 @@ const DAY_ORDER: OperatingHour["day"][] = [
     "sat",
     "sun",
 ]
+
+// Helper function to get social icon based on platform
+function getSocialIcon(social: { title: string; url: string }): React.ReactNode {
+    const lower = (social.url + social.title).toLowerCase()
+    if (lower.includes("instagram"))
+        return <Instagram className='w-4 h-4 shrink-0' />
+    if (lower.includes("facebook") || lower.includes("fb.com"))
+        return <Facebook className='w-4 h-4 shrink-0' />
+    if (lower.includes("tiktok"))
+        return <Music2 className='w-4 h-4 shrink-0' />
+    if (lower.includes("twitter") || lower.includes("x.com"))
+        return <Twitter className='w-4 h-4 shrink-0' />
+    if (lower.includes("youtube") || lower.includes("youtu.be"))
+        return <Youtube className='w-4 h-4 shrink-0' />
+    if (
+        lower.includes("grab") ||
+        lower.includes("foodpanda") ||
+        lower.includes("shopeefood")
+    )
+        return <ShoppingBag className='w-4 h-4 shrink-0' />
+    return <Globe className='w-4 h-4 shrink-0' />
+}
 
 // Dynamic import for mini map
 const DynamicCafeMiniMap = dynamic(() => import("@/components/map/CafeMiniMap"), {
@@ -218,10 +211,8 @@ export default function CafeSidebar({
             {/* Socials */}
             {socials && socials.length > 0 && (
                 <>
-                    <p className='text-sm font-semibold text-text/60'>
-                        Socials
-                    </p>
-                    <ul className='flex flex-row items-center gap-4 overflow-x-auto text-sm font-semibold text-text/60'>
+                    <p className='text-sm font-semibold text-text/60'>Socials</p>
+                    <ul className='flex flex-col gap-2'>
                         {socials.map((social) => (
                             <li key={social.title}>
                                 <a
@@ -233,8 +224,9 @@ export default function CafeSidebar({
                                     }
                                     target='_blank'
                                     rel='noopener noreferrer'
-                                    className='text-text hover:text-text/60 transition-colors hover:underline'
+                                    className='flex items-center gap-2 text-sm font-semibold text-text hover:text-primary transition-colors hover:underline'
                                 >
+                                    {getSocialIcon(social)}
                                     {social.title}
                                 </a>
                             </li>
@@ -302,11 +294,11 @@ export default function CafeSidebar({
             </div>
 
             {/* Price Range */}
-            <div className='flex flex-row items-center gap-2'>
+            <div className='flex flex-row items-center justify-between'>
                 <p className='text-sm font-semibold text-text/60'>
                     Price Range
                 </p>
-                <span className='text-sm font-bold text-text'>
+                <span className='text-base font-bold text-primary'>
                     {cafe.price_level === "low" && "₱"}
                     {cafe.price_level === "medium" && "₱₱"}
                     {cafe.price_level === "high" && "₱₱₱"}
@@ -333,7 +325,7 @@ export default function CafeSidebar({
                     <p className='text-sm font-semibold text-text/60'>
                         Payment Methods
                     </p>
-                    <ul className='flex flex-row items-center gap-4 flex-wrap text-sm font-semibold text-text/60'>
+                    <ul className='flex flex-row items-center gap-2 flex-wrap text-sm font-semibold text-text/60'>
                         {cafe.payment_methods
                             .split(",")
                             .map((method) => method.trim())
@@ -341,7 +333,7 @@ export default function CafeSidebar({
                             .map((method) => (
                                 <li
                                     key={method}
-                                    className='text-text capitalize bg-secondary/40 px-2 py-1 rounded-full h-max w-max text-nowrap'
+                                    className='text-text capitalize bg-secondary/40 px-2 py-1 rounded-lg h-max w-max text-nowrap'
                                 >
                                     {method.split("_").join(" ")}
                                 </li>
@@ -466,279 +458,6 @@ export default function CafeSidebar({
                     <p className='text-xs text-text/50 italic'>
                         No visitors yet today
                     </p>
-                )}
-            </div>
-
-            <div className='border-b border-text/10 my-3' />
-
-            {/* Amenities */}
-            <div className='font-semibold text-lg font-serif text-text'>
-                Amenities
-            </div>
-            <motion.ul
-                className='flex flex-row flex-wrap items-center gap-2 text-sm font-semibold'
-                variants={containerVariants}
-                initial='hidden'
-                animate='visible'
-            >
-                {cafe.has_wifi && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <WifiIcon className='w-4 h-4' />
-                        WiFi
-                    </motion.li>
-                )}
-                {cafe.has_smoking && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <Cigarette className='w-4 h-4' />
-                        Smoking Area
-                    </motion.li>
-                )}
-                {cafe.has_sockets && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <PlugIcon className='w-4 h-4' />
-                        Power Outlets
-                    </motion.li>
-                )}
-                {cafe.has_parking && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <CarIcon className='w-4 h-4' />
-                        Parking
-                    </motion.li>
-                )}
-                {cafe.has_aircon && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <SnowflakeIcon className='w-4 h-4' />
-                        Air Conditioning
-                    </motion.li>
-                )}
-                {cafe.is_pet_friendly && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <PawPrintIcon className='w-4 h-4' />
-                        Pet Friendly
-                    </motion.li>
-                )}
-                {cafe.has_outdoor_seating && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <SunIcon className='w-4 h-4' />
-                        Outdoor Seating
-                    </motion.li>
-                )}
-                {cafe.has_indoor_seating && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <Armchair className='w-4 h-4' />
-                        Indoor Seating
-                    </motion.li>
-                )}
-                {cafe.has_restroom && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <Toilet className='w-4 h-4' />
-                        Restroom
-                    </motion.li>
-                )}
-                {cafe.has_bidet && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <Droplet className='w-4 h-4' />
-                        Bidet
-                    </motion.li>
-                )}
-                {cafe.has_non_dairy && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <MilkOff className='w-4 h-4' />
-                        Non-Dairy Milk
-                        {cafe.milk_options && cafe.milk_options.length > 0 && (
-                            <span className='text-xs text-text/60'>
-                                ({cafe.milk_options.join(", ")})
-                            </span>
-                        )}
-                    </motion.li>
-                )}
-                {cafe.has_decaf && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <Coffee className='w-4 h-4' />
-                        Decaf Options
-                    </motion.li>
-                )}
-                {cafe.is_work_friendly && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        <BriefcaseIcon className='w-4 h-4' />
-                        Work Friendly
-                    </motion.li>
-                )}
-                {cafe.is_halal_certified && (
-                    <motion.li
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className='text-text bg-secondary/40 px-2 py-1 rounded-full flex flex-row items-center gap-1 cursor-default'
-                    >
-                        Halal Certified
-                    </motion.li>
-                )}
-                {!cafe.has_wifi &&
-                    !cafe.has_smoking &&
-                    !cafe.has_sockets &&
-                    !cafe.has_parking &&
-                    !cafe.has_aircon &&
-                    !cafe.is_pet_friendly &&
-                    !cafe.has_outdoor_seating &&
-                    !cafe.has_indoor_seating &&
-                    !cafe.has_restroom &&
-                    !cafe.has_bidet &&
-                    !cafe.has_non_dairy &&
-                    !cafe.has_decaf &&
-                    !cafe.is_work_friendly &&
-                    !cafe.is_halal_certified && (
-                        <li className='text-text/50'>No amenities listed</li>
-                    )}
-            </motion.ul>
-
-            <div className='border-b border-text/10 my-3' />
-
-            {/* Extras */}
-            <div className='font-semibold text-lg font-serif text-text flex flex-row items-center gap-2'>
-                Extras
-                {cafe.serves_food && (
-                    <span className='text-xs text-text/80 bg-secondary/40 px-2 py-1 rounded-lg'>
-                        Serves Food
-                    </span>
-                )}
-            </div>
-            <div className='flex flex-col gap-2'>
-                {cafe.brew_methods && cafe.brew_methods.length > 0 && (
-                    <>
-                        <p className='text-sm font-semibold text-text/60 flex items-center gap-1'>
-                            <CoffeeIcon className='w-3.5 h-3.5' />
-                            Brew Methods
-                        </p>
-                        <motion.ul
-                            className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'
-                            variants={containerVariants}
-                            initial='hidden'
-                            animate='visible'
-                        >
-                            {cafe.brew_methods.map((method) => (
-                                <motion.li
-                                    key={method}
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05 }}
-                                    className='text-amber-700 bg-amber-500/20 px-2 py-1 rounded-full capitalize cursor-default'
-                                >
-                                    {method.split("_").join(" ")}
-                                </motion.li>
-                            ))}
-                        </motion.ul>
-                    </>
-                )}
-                {cafe.specialty && cafe.specialty.length > 0 && (
-                    <>
-                        <p className='text-sm font-semibold text-text/60'>
-                            Specialties
-                        </p>
-                        <motion.ul
-                            className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'
-                            variants={containerVariants}
-                            initial='hidden'
-                            animate='visible'
-                        >
-                            {cafe.specialty.map((item) => (
-                                <motion.li
-                                    key={item}
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05 }}
-                                    className='text-text bg-primary/20 px-2 py-1 rounded-full capitalize text-nowrap cursor-default'
-                                >
-                                    {item.split("_").join(" ")}
-                                </motion.li>
-                            ))}
-                        </motion.ul>
-                    </>
-                )}
-                {cafe.tags && cafe.tags.length > 0 && (
-                    <>
-                        <p className='text-sm font-semibold text-text/60'>
-                            Vibe
-                        </p>
-                        <motion.ul
-                            className='flex flex-row flex-wrap items-center gap-2 text-xs font-semibold'
-                            variants={containerVariants}
-                            initial='hidden'
-                            animate='visible'
-                        >
-                            {cafe.tags.map((tag) => (
-                                <motion.li
-                                    key={tag}
-                                    variants={itemVariants}
-                                    whileHover={{ scale: 1.05 }}
-                                    className='text-text/80 bg-text/10 px-2 py-1 rounded-full capitalize cursor-default'
-                                >
-                                    {tag.split("_").join(" ")}
-                                </motion.li>
-                            ))}
-                        </motion.ul>
-                    </>
-                )}
-                {!cafe.serves_food &&
-                    (!cafe.specialty || cafe.specialty.length === 0) &&
-                    (!cafe.tags || cafe.tags.length === 0) &&
-                    (!cafe.brew_methods || cafe.brew_methods.length === 0) &&
-                    (!cafe.straw_type) && (
-                        <p className='text-sm text-text/50'>No extras listed</p>
-                    )}
-                {cafe.straw_type && (
-                    <div className="text-sm text-text/60">
-                        Straw Type: {formatCafeStrawType(cafe.straw_type, cafe.straw_type_other)}
-                    </div>
                 )}
             </div>
 

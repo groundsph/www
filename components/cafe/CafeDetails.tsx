@@ -5,8 +5,22 @@ import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
 import Image from "next/image"
-import { useState, useRef, useEffect, useMemo } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import {
+    WifiIcon,
+    PlugIcon,
+    CarIcon,
+    SnowflakeIcon,
+    PawPrintIcon,
+    SunIcon,
+    BriefcaseIcon,
+    Toilet,
+    Droplet,
+    MilkOff,
+    Armchair,
+    Cigarette,
+    Coffee,
+} from "lucide-react"
 
 // Components
 import CafeHero from "@/components/cafe/CafeHero"
@@ -143,45 +157,24 @@ export default function CafeDetails({
         ? reviews.find((r) => r.user_id === user.id)
         : undefined
 
-    // Gallery Scroll Logic
-    const scrollContainerRef = useRef<HTMLDivElement>(null)
-    const [canScrollLeft, setCanScrollLeft] = useState(false)
-    const [canScrollRight, setCanScrollRight] = useState(true)
-
-    const checkScroll = () => {
-        if (scrollContainerRef.current) {
-            const { scrollLeft, scrollWidth, clientWidth } =
-                scrollContainerRef.current
-            setCanScrollLeft(scrollLeft > 0)
-            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth)
-        }
-    }
-
-    useEffect(() => {
-        checkScroll()
-        window.addEventListener("resize", checkScroll)
-        return () => window.removeEventListener("resize", checkScroll)
-    }, [gallery])
-
     // Track page view for analytics
     useEffect(() => {
         trackCafePageView(cafe.id)
     }, [cafe.id])
 
-    const scroll = (direction: "left" | "right") => {
-        if (scrollContainerRef.current) {
-            const scrollAmount = 300
-            const newScrollLeft =
-                direction === "left"
-                    ? scrollContainerRef.current.scrollLeft - scrollAmount
-                    : scrollContainerRef.current.scrollLeft + scrollAmount
-
-            scrollContainerRef.current.scrollTo({
-                left: newScrollLeft,
-                behavior: "smooth",
-            })
-        }
-    }
+    // Amenity Pill Component
+    const AmenityPill = ({
+        icon,
+        label,
+    }: {
+        icon?: React.ReactNode
+        label: string
+    }) => (
+        <li className='flex items-center gap-1.5 text-text bg-secondary/40 px-2 py-1 rounded-full text-xs font-semibold cursor-default'>
+            {icon}
+            {label}
+        </li>
+    )
 
     // Reviews Section Component (shared between mobile tabs and desktop)
     const ReviewsSection = () => (
@@ -368,98 +361,293 @@ export default function CafeDetails({
             {/* Desktop Layout (>= md) */}
             <section
                 id='desktop-body'
-                className='hidden md:flex w-full flex-row items-start justify-start px-4 py-4 gap-4'
+                className='hidden md:grid md:grid-cols-12 w-full px-4 py-4 gap-6 mx-auto'
             >
                 {/* Sidebar */}
-                <CafeSidebar
-                    cafe={cafe}
-                    reviews={reviews}
-                    onOpenHistory={() => setIsHistoryOpen(true)}
-                />
+                <aside className='md:col-span-3'>
+                    <CafeSidebar
+                        cafe={cafe}
+                        reviews={reviews}
+                        onOpenHistory={() => setIsHistoryOpen(true)}
+                    />
+                </aside>
 
                 {/* Main Content */}
-                <div className='flex-1 flex flex-col gap-6'>
-                    {/* Gallery - Horizontal Scroll */}
+                <div className='md:col-span-9 flex flex-col gap-6'>
+                    {/* Gallery — Mosaic Grid (desktop only) */}
                     {gallery.length > 0 && (
-                        <div className='w-full relative group'>
-                            {/* Left Scroll Button */}
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    scroll("left")
-                                }}
-                                className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm transition-all duration-200 ${
-                                    canScrollLeft
-                                        ? ""
-                                        : "opacity-0 pointer-events-none"
-                                }`}
-                                aria-label='Scroll left'
-                            >
-                                <ChevronLeft className='w-5 h-5' />
-                            </button>
-
-                            {/* Right Scroll Button */}
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    scroll("right")
-                                }}
-                                className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center px-2 py-10 rounded-lg bg-white/10 hover:bg-white/20 text-white cursor-pointer border-2 border-white/10 active:border-white/40 backdrop-blur-sm transition-all duration-200 ${
-                                    canScrollRight
-                                        ? ""
-                                        : "opacity-0 pointer-events-none"
-                                }`}
-                                aria-label='Scroll right'
-                            >
-                                <ChevronRight className='w-5 h-5' />
-                            </button>
+                        <section className='w-full'>
+                            <h2 className='text-xl font-semibold font-serif flex items-center gap-2 mb-4'>
+                                Gallery
+                            </h2>
                             <div
-                                ref={scrollContainerRef}
-                                onScroll={checkScroll}
-                                className='flex flex-row gap-3 overflow-x-auto pb-2 scrollbar-hide'
+                                className={`grid gap-2 rounded-xl overflow-hidden ${
+                                    gallery.length === 1
+                                        ? "grid-cols-1"
+                                        : gallery.length === 2
+                                          ? "grid-cols-2"
+                                          : "grid-cols-4 grid-rows-2"
+                                }`}
                                 style={{
-                                    scrollSnapType: "x mandatory",
-                                    scrollBehavior: "smooth",
-                                    msOverflowStyle: "none",
-                                    scrollbarWidth: "none",
+                                    height:
+                                        gallery.length >= 3 ? "420px" : "300px",
                                 }}
                             >
-                                {gallery.map((image, idx) => (
-                                    <div
-                                        key={`${cafe.id}-gallery-${idx}`}
-                                        className='shrink-0 h-48 sm:h-56 md:h-64 overflow-hidden rounded-sm shadow-md shadow-black/10 cursor-pointer hover:opacity-90 transition-opacity'
-                                        style={{ scrollSnapAlign: "start" }}
-                                        onClick={() => {
-                                            setLightboxIndex(idx)
-                                            setIsLightboxOpen(true)
-                                        }}
-                                    >
-                                        <Image
-                                            src={image}
-                                            alt={`${cafe.name} photo ${idx + 1}`}
-                                            width={400}
-                                            height={300}
-                                            loading='lazy'
-                                            className='h-full w-auto object-cover transition-transform duration-300'
-                                            placeholder='blur'
-                                            blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAUH/8QAIhAAAAUDBAMAAAAAAAAAAAAAAAECAwQFESESBhMxQVH/xAAVAQEBAAAAAAAAAAAAAAAAAAADBP/EABoRAAICAwAAAAAAAAAAAAAAAAECABEDITH/2gAMAwEAAhEDEEA/ALS9cV6W3HuVPUYuT/qZSyH6k+AAFZdD/9k='
-                                        />
-                                    </div>
-                                ))}
+                                {gallery.length >= 3 ? (
+                                    <>
+                                        {/* Large featured — 2 cols × 2 rows */}
+                                        <div
+                                            className='col-span-2 row-span-2 relative group cursor-pointer overflow-hidden'
+                                            onClick={() => {
+                                                setLightboxIndex(0)
+                                                setIsLightboxOpen(true)
+                                            }}
+                                        >
+                                            <Image
+                                                src={gallery[0]}
+                                                alt={`${cafe.name} photo 1`}
+                                                fill
+                                                className='object-cover transition-transform duration-500 group-hover:scale-105'
+                                                sizes='(min-width: 768px) 50vw, 100vw'
+                                                priority
+                                            />
+                                            <div className='absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors' />
+                                        </div>
+
+                                        {/* Smaller photos — up to 4 */}
+                                        {gallery
+                                            .slice(1, 5)
+                                            .map((image, idx) => {
+                                                const isLastVisible =
+                                                    idx === 3 &&
+                                                    gallery.length > 5
+                                                return (
+                                                    <div
+                                                        key={`${cafe.id}-mosaic-${idx + 1}`}
+                                                        className='relative group cursor-pointer overflow-hidden'
+                                                        onClick={() => {
+                                                            setLightboxIndex(
+                                                                idx + 1,
+                                                            )
+                                                            setIsLightboxOpen(
+                                                                true,
+                                                            )
+                                                        }}
+                                                    >
+                                                        <Image
+                                                            src={image}
+                                                            alt={`${cafe.name} photo ${idx + 2}`}
+                                                            fill
+                                                            loading='lazy'
+                                                            className='object-cover transition-transform duration-500 group-hover:scale-110'
+                                                            sizes='(min-width: 768px) 25vw, 50vw'
+                                                        />
+                                                        <div className='absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors' />
+                                                        {isLastVisible && (
+                                                            <div className='absolute inset-0 bg-black/50 flex items-center justify-center'>
+                                                                <span className='text-white font-bold text-sm'>
+                                                                    +
+                                                                    {gallery.length -
+                                                                        5}{" "}
+                                                                    more
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                    </>
+                                ) : (
+                                    gallery.slice(0, 2).map((image, idx) => (
+                                        <div
+                                            key={`${cafe.id}-mosaic-${idx}`}
+                                            className='relative group cursor-pointer overflow-hidden'
+                                            onClick={() => {
+                                                setLightboxIndex(idx)
+                                                setIsLightboxOpen(true)
+                                            }}
+                                        >
+                                            <Image
+                                                src={image}
+                                                alt={`${cafe.name} photo ${idx + 1}`}
+                                                fill
+                                                className='object-cover transition-transform duration-500 group-hover:scale-105'
+                                                sizes='(min-width: 768px) 50vw, 100vw'
+                                                priority={idx === 0}
+                                            />
+                                            <div className='absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors' />
+                                        </div>
+                                    ))
+                                )}
                             </div>
-                            {gallery.length > 1 && (
-                                <>
-                                    <p className='text-xs text-text/40 mt-2 text-center'>
-                                        ← Scroll to see {gallery.length} photos
-                                        →
-                                    </p>
-                                    {(canScrollLeft || canScrollRight) && (
-                                        <p className='text-xs text-text/40 text-center'>
-                                            or navigate using the buttons above
-                                        </p>
+                        </section>
+                    )}
+
+                    {/* Amenities & Extras — moved from sidebar */}
+                    {(cafe.has_wifi ||
+                        cafe.has_sockets ||
+                        cafe.has_parking ||
+                        cafe.has_aircon ||
+                        cafe.is_pet_friendly ||
+                        cafe.has_outdoor_seating ||
+                        cafe.has_indoor_seating ||
+                        cafe.has_restroom ||
+                        cafe.has_bidet ||
+                        cafe.has_non_dairy ||
+                        cafe.has_decaf ||
+                        cafe.is_work_friendly ||
+                        cafe.is_halal_certified ||
+                        cafe.has_smoking ||
+                        cafe.serves_food ||
+                        (cafe.brew_methods && cafe.brew_methods.length > 0) ||
+                        (cafe.specialty && cafe.specialty.length > 0) ||
+                        (cafe.tags && cafe.tags.length > 0)) && (
+                        <div className='grid grid-cols-2 gap-8 p-6 bg-text/5 border border-text/10 rounded-xl'>
+                            {/* Amenities column */}
+                            <section>
+                                <h3 className='text-xs font-bold uppercase tracking-widest text-text/40 mb-4'>
+                                    Amenities
+                                </h3>
+                                <ul className='flex flex-row flex-wrap gap-2'>
+                                    {cafe.has_wifi && (
+                                        <AmenityPill
+                                            icon={
+                                                <WifiIcon className='w-3.5 h-3.5' />
+                                            }
+                                            label='WiFi'
+                                        />
                                     )}
-                                </>
-                            )}
+                                    {cafe.has_sockets && (
+                                        <AmenityPill
+                                            icon={
+                                                <PlugIcon className='w-3.5 h-3.5' />
+                                            }
+                                            label='Power Outlets'
+                                        />
+                                    )}
+                                    {cafe.has_parking && (
+                                        <AmenityPill
+                                            icon={
+                                                <CarIcon className='w-3.5 h-3.5' />
+                                            }
+                                            label='Parking'
+                                        />
+                                    )}
+                                    {cafe.has_aircon && (
+                                        <AmenityPill
+                                            icon={
+                                                <SnowflakeIcon className='w-3.5 h-3.5' />
+                                            }
+                                            label='Air Conditioning'
+                                        />
+                                    )}
+                                    {cafe.is_pet_friendly && (
+                                        <AmenityPill
+                                            icon={
+                                                <PawPrintIcon className='w-3.5 h-3.5' />
+                                            }
+                                            label='Pet Friendly'
+                                        />
+                                    )}
+                                    {cafe.has_outdoor_seating && (
+                                        <AmenityPill
+                                            icon={
+                                                <SunIcon className='w-3.5 h-3.5' />
+                                            }
+                                            label='Outdoor Seating'
+                                        />
+                                    )}
+                                    {cafe.has_indoor_seating && (
+                                        <AmenityPill
+                                            icon={
+                                                <Armchair className='w-3.5 h-3.5' />
+                                            }
+                                            label='Indoor Seating'
+                                        />
+                                    )}
+                                    {cafe.has_restroom && (
+                                        <AmenityPill
+                                            icon={
+                                                <Toilet className='w-3.5 h-3.5' />
+                                            }
+                                            label='Restroom'
+                                        />
+                                    )}
+                                    {cafe.has_bidet && (
+                                        <AmenityPill
+                                            icon={
+                                                <Droplet className='w-3.5 h-3.5' />
+                                            }
+                                            label='Bidet'
+                                        />
+                                    )}
+                                    {cafe.has_non_dairy && (
+                                        <AmenityPill
+                                            icon={
+                                                <MilkOff className='w-3.5 h-3.5' />
+                                            }
+                                            label='Non-Dairy Milk'
+                                        />
+                                    )}
+                                    {cafe.has_decaf && (
+                                        <AmenityPill
+                                            icon={
+                                                <Coffee className='w-3.5 h-3.5' />
+                                            }
+                                            label='Decaf Options'
+                                        />
+                                    )}
+                                    {cafe.is_work_friendly && (
+                                        <AmenityPill
+                                            icon={
+                                                <BriefcaseIcon className='w-3.5 h-3.5' />
+                                            }
+                                            label='Work Friendly'
+                                        />
+                                    )}
+                                    {cafe.is_halal_certified && (
+                                        <AmenityPill label='Halal Certified' />
+                                    )}
+                                    {cafe.has_smoking && (
+                                        <AmenityPill
+                                            icon={
+                                                <Cigarette className='w-3.5 h-3.5' />
+                                            }
+                                            label='Smoking Area'
+                                        />
+                                    )}
+                                </ul>
+                            </section>
+
+                            {/* Extras / Vibe column */}
+                            <section>
+                                <h3 className='text-xs font-bold uppercase tracking-widest text-text/40 mb-4'>
+                                    Vibe & Extras
+                                </h3>
+                                <ul className='flex flex-row flex-wrap gap-2'>
+                                    {cafe.serves_food && (
+                                        <AmenityPill label='Serves Food' />
+                                    )}
+                                    {cafe.brew_methods?.map((m) => (
+                                        <AmenityPill
+                                            key={m}
+                                            label={m.split("_").join(" ")}
+                                        />
+                                    ))}
+                                    {cafe.specialty?.map((s) => (
+                                        <AmenityPill
+                                            key={s}
+                                            label={s.split("_").join(" ")}
+                                        />
+                                    ))}
+                                    {cafe.tags?.map((t) => (
+                                        <AmenityPill
+                                            key={t}
+                                            label={t.split("_").join(" ")}
+                                        />
+                                    ))}
+                                </ul>
+                            </section>
                         </div>
                     )}
 
@@ -490,7 +678,7 @@ export default function CafeDetails({
 
                     {/* Menu Section - Preview with specialties priority */}
                     {menuItems.length > 0 && (
-                        <section className='w-full mt-6'>
+                        <section className='w-full'>
                             <div className='flex items-center justify-between mb-4'>
                                 <h2 className='text-xl font-semibold'>Menu</h2>
                                 <Link

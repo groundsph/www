@@ -8,8 +8,8 @@ interface RatingDistributionProps {
 }
 
 /**
- * Visual rating distribution chart with colorful bars
- * Shows count on hover
+ * Visual rating distribution chart with horizontal stacked bars
+ * Shows count always visible (no tooltip)
  */
 export default function RatingDistribution({
     reviews,
@@ -43,71 +43,44 @@ export default function RatingDistribution({
         return colors[rating] || "bg-gray-500"
     }
 
-    // Calculate bar height (min 8px for visibility, max 64px)
-    const getBarHeight = (count: number): number => {
-        if (count === 0) return 8
-        return Math.max(8, Math.round((count / maxCount) * 64))
-    }
-
     if (reviews.length === 0) {
-        return (
-            <div className='bg-text/5 rounded-xl p-4'>
-                <h3 className='font-semibold font-serif mb-3'>
-                    Score Distribution
-                </h3>
-                <p className='text-sm text-text/50'>No reviews yet</p>
-            </div>
-        )
+        return <p className='text-xs text-text/50'>No reviews yet</p>
     }
 
     return (
-        <div className='bg-text/5 rounded-xl p-4'>
-            <h3 className='font-semibold font-serif mb-3'>
-                Score Distribution
-            </h3>
-            <div className='bg-text/5 rounded-lg p-4'>
-                <div className='flex items-end justify-between gap-2 h-20'>
-                    {Array.from({ length: maxRating }, (_, i) => i + 1).map(
-                        (rating) => {
-                            const count = distribution[rating]
-                            const height = getBarHeight(count)
-                            const isHovered = hoveredRating === rating
+        <div className='space-y-1.5'>
+            {Array.from({ length: maxRating }, (_, i) => maxRating - i).map(
+                (rating) => {
+                    const count = distribution[rating]
+                    const percentage =
+                        maxCount > 0 ? (count / maxCount) * 100 : 0
 
-                            return (
+                    return (
+                        <div
+                            key={rating}
+                            className='flex items-center gap-2 text-xs'
+                            onMouseEnter={() => setHoveredRating(rating)}
+                            onMouseLeave={() => setHoveredRating(null)}
+                        >
+                            {/* Star number */}
+                            <span className='w-3 text-right text-text/50 font-medium shrink-0 select-none'>
+                                {rating}
+                            </span>
+                            {/* Bar track */}
+                            <div className='flex-1 h-1.5 bg-text/10 rounded-full overflow-hidden'>
                                 <div
-                                    key={rating}
-                                    className='flex-1 flex flex-col items-center gap-1 relative'
-                                    onMouseEnter={() =>
-                                        setHoveredRating(rating)
-                                    }
-                                    onMouseLeave={() => setHoveredRating(null)}
-                                >
-                                    {/* Tooltip */}
-                                    {isHovered && (
-                                        <div className='absolute -top-8 left-1/2 -translate-x-1/2 bg-text text-background text-xs font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap z-10'>
-                                            {count}{" "}
-                                            {count === 1 ? "review" : "reviews"}
-                                        </div>
-                                    )}
-                                    {/* Bar */}
-                                    <div
-                                        className={`w-full max-w-6 rounded-full transition-all duration-200 cursor-pointer ${getBarColor(rating)} ${
-                                            isHovered
-                                                ? "opacity-100 scale-110"
-                                                : "opacity-80"
-                                        }`}
-                                        style={{ height: `${height}px` }}
-                                    />
-                                    {/* Rating label */}
-                                    <span className='text-[10px] text-text/50 font-medium'>
-                                        {rating}
-                                    </span>
-                                </div>
-                            )
-                        }
-                    )}
-                </div>
-            </div>
+                                    className={`h-full rounded-full transition-all duration-300 ${getBarColor(rating)}`}
+                                    style={{ width: `${percentage}%` }}
+                                />
+                            </div>
+                            {/* Count — always visible, no tooltip needed */}
+                            <span className='w-4 text-right text-text/50 font-medium shrink-0 select-none'>
+                                {count}
+                            </span>
+                        </div>
+                    )
+                }
+            )}
         </div>
     )
 }
