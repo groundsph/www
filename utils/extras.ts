@@ -126,7 +126,7 @@ export function getCafeThumbnailUrl(thumbnail: string): string {
  */
 export function getCafeDescription(cafe: Partial<CafeWithRatings> | null | undefined): string {
     if (!cafe) return "";
-    
+
     // If a valid description exists, use it
     if (cafe.description && cafe.description.trim().length > 10) {
         return cafe.description;
@@ -137,10 +137,11 @@ export function getCafeDescription(cafe: Partial<CafeWithRatings> | null | undef
 
     // Part 1: Intro & Location
     const style = cafe.coffee_style === "artisan" ? "specialty coffee" : "coffee";
-    const location = cafe.city_municipality 
-        ? `located in ${cafe.city_municipality}` 
+    const location = cafe.city_municipality
+        ? `located in ${cafe.city_municipality}`
         : "in your area";
-    parts.push(`${cafe.name || "This cafe"} is a ${style} spot ${location}.`);
+    const capitalizedName = cafe.name ? cafe.name.charAt(0).toUpperCase() + cafe.name.slice(1) : "This cafe";
+    parts.push(`${capitalizedName.split('-').slice(0, -1).join('-')} is a ${style} spot ${location}.`);
 
     // Part 2: Vibe & Suitability
     const activities = [];
@@ -148,7 +149,7 @@ export function getCafeDescription(cafe: Partial<CafeWithRatings> | null | undef
     if (cafe.is_pet_friendly) activities.push("hanging out with pets");
     if (cafe.has_outdoor_seating) activities.push("enjoying the outdoors");
     if (activities.length === 0) activities.push("relaxing with a good cup");
-    
+
     parts.push(`It's a great place for ${activities.join(" and ")}.`);
 
     // Part 3: Amenities
@@ -156,9 +157,9 @@ export function getCafeDescription(cafe: Partial<CafeWithRatings> | null | undef
     if (cafe.has_wifi) amenities.push("WiFi");
     if (cafe.has_sockets) amenities.push("power outlets");
     if (cafe.has_parking) amenities.push("parking");
-    
+
     if (amenities.length > 0) {
-        const amenityText = amenities.length > 1 
+        const amenityText = amenities.length > 1
             ? `${amenities.slice(0, -1).join(", ")} and ${amenities.slice(-1)}`
             : amenities[0];
         parts.push(`They offer ${amenityText} for your convenience.`);

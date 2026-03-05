@@ -28,7 +28,11 @@ import {
     Cigarette,
     Coffee,
 } from "lucide-react"
-import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
+import {
+    formatTimeTo12Hour,
+    getCafeDescription,
+    isOpenNow,
+} from "@/utils/extras"
 import { formatCafeStrawType } from "@/utils/formatters"
 import dynamic from "next/dynamic"
 import RatingDistribution from "./RatingDistribution"
@@ -82,14 +86,19 @@ const DAY_ORDER: OperatingHour["day"][] = [
 ]
 
 // Dynamic import for mini map
-const DynamicCafeMiniMap = dynamic(() => import("@/components/map/CafeMiniMap"), {
-    ssr: false,
-    loading: () => (
-        <div className='w-full h-full min-h-[180px] flex items-center justify-center bg-secondary/20 rounded-xl'>
-            <p className='text-text/50 font-serif text-sm'>Loading map...</p>
-        </div>
-    ),
-})
+const DynamicCafeMiniMap = dynamic(
+    () => import("@/components/map/CafeMiniMap"),
+    {
+        ssr: false,
+        loading: () => (
+            <div className='w-full h-full min-h-[180px] flex items-center justify-center bg-secondary/20 rounded-xl'>
+                <p className='text-text/50 font-serif text-sm'>
+                    Loading map...
+                </p>
+            </div>
+        ),
+    },
+)
 
 interface CafeMobileContentProps {
     cafe: CafeWithRatings
@@ -111,6 +120,12 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
 
     return (
         <div className='flex flex-col gap-4'>
+            {/* Description */}
+
+            <p className='flex items-center gap-2 p-3 bg-text/5 rounded-xl transition-colors text-justify font-medium text-sm'>
+                {getCafeDescription(cafe)}
+            </p>
+
             {/* Gallery - Horizontal Scroll */}
             {gallery.length > 0 && (
                 <div className='w-screen -mx-4'>
@@ -236,7 +251,7 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
                     <div className='space-y-1'>
                         {DAY_ORDER.map((day) => {
                             const hours = cafe.operating_hours?.find(
-                                (h) => h.day === day
+                                (h) => h.day === day,
                             )
                             const today = new Date()
                                 .toLocaleDateString("en-US", {
@@ -270,9 +285,9 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
                                                 </span>
                                             ) : (
                                                 `${formatTimeTo12Hour(
-                                                    hours.open
+                                                    hours.open,
                                                 )} - ${formatTimeTo12Hour(
-                                                    hours.close
+                                                    hours.close,
                                                 )}`
                                             )
                                         ) : (
@@ -818,7 +833,10 @@ export function DetailsTabContent({
                                     Straw Type
                                 </p>
                                 <p className='text-sm text-text'>
-                                    {formatCafeStrawType(cafe.straw_type, cafe.straw_type_other)}
+                                    {formatCafeStrawType(
+                                        cafe.straw_type,
+                                        cafe.straw_type_other,
+                                    )}
                                 </p>
                             </div>
                         )}
@@ -839,7 +857,7 @@ export function DetailsTabContent({
                                     month: "short",
                                     day: "numeric",
                                     year: "numeric",
-                                }
+                                },
                             )}
                         </span>
                         {onOpenHistory && (
