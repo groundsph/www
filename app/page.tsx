@@ -13,6 +13,7 @@ import StoriesEventsSection from "@/components/recent/StoriesEventsSection"
 import RecentReviewsSection from "@/components/recent/RecentReviewsSection"
 import ActivityFeedWrapper from "@/components/feed/ActivityFeedWrapper"
 import { CafeWithRatings } from "@/utils/types/extra"
+import CafeLeaderboardSection from "@/components/landing/CafeLeaderboardSection"
 
 // Dynamic rendering for Dokploy build compatibility
 export const dynamic = "force-dynamic"
@@ -86,6 +87,9 @@ export default async function Home() {
                 latestPosts={latestPosts}
                 upcomingEvents={upcomingEvents}
             />
+
+            {/* Cafe Leaderboard */}
+            <CafeLeaderboardSection />
 
             <SubmitCafeSection cafeCount={cafeCount} />
 
