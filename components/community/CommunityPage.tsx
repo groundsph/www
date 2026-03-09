@@ -9,7 +9,6 @@ import {
     Calendar,
     Users,
     Search,
-    User,
     Loader2,
     Star,
     Trophy,
