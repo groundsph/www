@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { isAdmin, getUserRole } from "@/app/api/actions/admin"
-import LeaderboardBackfillClient from "@/components/manage/LeaderboardBackfillClient"
+import { LeaderboardBackfillClient } from "@/components/manage/LeaderboardBackfillClient"
 
 export const metadata = {
     title: "Leaderboard Backfill | Manage",

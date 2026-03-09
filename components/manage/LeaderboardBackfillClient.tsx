@@ -1,222 +1,165 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar, Database, RefreshCw, Trash2, AlertTriangle, CheckCircle } from "lucide-react"
-import { backfillLeaderboardSnapshots, deleteLeaderboardSnapshots } from "@/app/api/actions/admin"
+import { useEffect, useState, useCallback, useMemo } from "react"
+import { getLeaderboardSnapshotStatus, backfillLeaderboardSnapshots, backfillAllMissingLeaderboardSnapshots, deleteLeaderboardSnapshots } from "@/app/api/actions/admin"
 
-export default function LeaderboardBackfillClient() {
-    const [yearMonth, setYearMonth] = useState("")
-    const [isLoading, setIsLoading] = useState(false)
-    const [isDeleting, setIsDeleting] = useState(false)
-    const [result, setResult] = useState<{
-        type: "success" | "error"
-        message: string
-        details?: { userCount?: number; cafeCount?: number; deletedCount?: number }
-    } | null>(null)
+interface MonthStatus {
+    yearMonth: string
+    userCount: number
+    cafeCount: number
+    hasMissing: boolean
+}
 
-    const handleBackfill = async () => {
-        if (!yearMonth) return
-
-        setIsLoading(true)
-        setResult(null)
-
-        try {
-            const response = await backfillLeaderboardSnapshots(yearMonth)
-            setResult({
-                type: response.success ? "success" : "error",
-                message: response.message,
-                details: response.success
-                    ? { userCount: response.userCount, cafeCount: response.cafeCount }
-                    : undefined,
-            })
-        } catch (error) {
-            setResult({
-                type: "error",
-                message: error instanceof Error ? error.message : "Unknown error",
-            })
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    const handleDelete = async () => {
-        if (!yearMonth) return
-        if (!confirm(`Are you sure you want to delete all snapshots for ${yearMonth}? This cannot be undone.`)) {
-            return
-        }
-
-        setIsDeleting(true)
-        setResult(null)
-
-        try {
-            const response = await deleteLeaderboardSnapshots(yearMonth)
-            setResult({
-                type: response.success ? "success" : "error",
-                message: response.message,
-                details: response.success ? { deletedCount: response.deletedCount } : undefined,
-            })
-        } catch (error) {
-            setResult({
-                type: "error",
-                message: error instanceof Error ? error.message : "Unknown error",
-            })
-        } finally {
-            setIsDeleting(false)
-        }
-    }
-
-    // Get current month in YYYY-MM format for max attribute
+function getLast24Months(): string[] {
+    const months: string[] = []
     const now = new Date()
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    for (let i = 0; i < 24; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
+    }
+    return months
+}
+
+export function LeaderboardBackfillClient() {
+    const [months, setMonths] = useState<MonthStatus[]>([])
+    const [loaded, setLoaded] = useState(false)
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+    const [processing, setProcessing] = useState<string | "all" | null>(null)
+
+    const monthList = useMemo(() => getLast24Months(), [])
+
+    const fetchStatus = useCallback(async () => {
+        const result = await getLeaderboardSnapshotStatus(monthList)
+        return result.success && result.data ? result.data : []
+    }, [monthList])
+
+    useEffect(() => {
+        let cancelled = false
+        if (!loaded) {
+            fetchStatus().then((data) => {
+                if (!cancelled) {
+                    setMonths(data)
+                    setLoaded(true)
+                }
+            })
+        }
+        return () => { cancelled = true }
+    }, [fetchStatus, loaded])
+
+    const handleBackfillMonth = useCallback(async (yearMonth: string) => {
+        setProcessing(yearMonth)
+        await backfillLeaderboardSnapshots(yearMonth)
+        const updated = await fetchStatus()
+        setMonths(updated)
+        setProcessing(null)
+    }, [fetchStatus])
+
+    const handleDeleteMonth = useCallback(async (yearMonth: string) => {
+        setProcessing(yearMonth)
+        await deleteLeaderboardSnapshots(yearMonth)
+        setDeleteTarget(null)
+        const updated = await fetchStatus()
+        setMonths(updated)
+        setProcessing(null)
+    }, [fetchStatus])
+
+    const handleBackfillAll = useCallback(async () => {
+        setProcessing("all")
+        const missing = months.filter((m) => m.hasMissing).map((m) => m.yearMonth)
+        await backfillAllMissingLeaderboardSnapshots(missing)
+        const updated = await fetchStatus()
+        setMonths(updated)
+        setProcessing(null)
+    }, [months, fetchStatus])
+
+    if (!loaded) return <div>Loading...</div>
 
     return (
-        <div className='space-y-6'>
-            {/* Input Section */}
-            <div className='bg-background rounded-xl p-6 shadow-sm border border-tertiary/50'>
-                <h2 className='text-lg font-semibold text-text mb-4'>Select Month</h2>
-
-                <div className='flex flex-col sm:flex-row gap-4'>
-                    <div className='flex-1'>
-                        <label className='block text-sm font-medium text-text/70 mb-2'>
-                            Year-Month (YYYY-MM)
-                        </label>
-                        <div className='relative'>
-                            <Calendar className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40' />
-                            <input
-                                type='month'
-                                value={yearMonth}
-                                onChange={(e) => setYearMonth(e.target.value)}
-                                max={currentMonth}
-                                className='w-full pl-10 pr-4 py-2 rounded-lg border border-tertiary/50 bg-background text-text focus:outline-hidden focus:ring-2 focus:ring-primary/50'
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className='flex flex-wrap gap-3 mt-6'>
-                    <button
-                        onClick={handleBackfill}
-                        disabled={!yearMonth || isLoading || isDeleting}
-                        className='flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-                    >
-                        {isLoading ? (
-                            <>
-                                <RefreshCw className='w-4 h-4 animate-spin' />
-                                Backfilling...
-                            </>
-                        ) : (
-                            <>
-                                <Database className='w-4 h-4' />
-                                Backfill Snapshots
-                            </>
-                        )}
-                    </button>
-
-                    <button
-                        onClick={handleDelete}
-                        disabled={!yearMonth || isLoading || isDeleting}
-                        className='flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-                    >
-                        {isDeleting ? (
-                            <>
-                                <RefreshCw className='w-4 h-4 animate-spin' />
-                                Deleting...
-                            </>
-                        ) : (
-                            <>
-                                <Trash2 className='w-4 h-4' />
-                                Delete Snapshots
-                            </>
-                        )}
-                    </button>
-                </div>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Leaderboard Snapshots</h2>
+                <button
+                    onClick={handleBackfillAll}
+                    disabled={processing !== null}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md disabled:opacity-50"
+                >
+                    {processing === "all" ? "Processing..." : "Generate All Missing"}
+                </button>
             </div>
 
-            {/* Result Section */}
-            {result && (
-                <div
-                    className={`rounded-xl p-6 border ${
-                        result.type === "success"
-                            ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-                            : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-                    }`}
-                >
-                    <div className='flex items-start gap-3'>
-                        {result.type === "success" ? (
-                            <CheckCircle className='w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5' />
-                        ) : (
-                            <AlertTriangle className='w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5' />
-                        )}
-                        <div>
-                            <h3
-                                className={`font-semibold ${
-                                    result.type === "success"
-                                        ? "text-green-800 dark:text-green-200"
-                                        : "text-red-800 dark:text-red-200"
-                                }`}
-                            >
-                                {result.type === "success" ? "Success" : "Error"}
-                            </h3>
-                            <p
-                                className={`mt-1 ${
-                                    result.type === "success"
-                                        ? "text-green-700 dark:text-green-300"
-                                        : "text-red-700 dark:text-red-300"
-                                }`}
-                            >
-                                {result.message}
-                            </p>
+            <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                    <thead className="bg-muted">
+                        <tr>
+                            <th className="px-4 py-2 text-left">Month</th>
+                            <th className="px-4 py-2 text-right">User Rows</th>
+                            <th className="px-4 py-2 text-right">Cafe Rows</th>
+                            <th className="px-4 py-2 text-center">Status</th>
+                            <th className="px-4 py-2 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {months.map((m) => (
+                            <tr key={m.yearMonth} className="border-t">
+                                <td className="px-4 py-3">{m.yearMonth}</td>
+                                <td className="px-4 py-3 text-right">{m.userCount}</td>
+                                <td className="px-4 py-3 text-right">{m.cafeCount}</td>
+                                <td className="px-4 py-3 text-center">
+                                    {m.hasMissing ? (
+                                        <span className="text-destructive text-sm">Missing</span>
+                                    ) : (
+                                        <span className="text-green-600 text-sm">Complete</span>
+                                    )}
+                                </td>
+                                <td className="px-4 py-3 text-right space-x-2">
+                                    {m.hasMissing && (
+                                        <button
+                                            onClick={() => handleBackfillMonth(m.yearMonth)}
+                                            disabled={processing !== null}
+                                            className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50"
+                                        >
+                                            {processing === m.yearMonth ? "..." : "Generate"}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setDeleteTarget(m.yearMonth)}
+                                        disabled={processing !== null || (m.userCount === 0 && m.cafeCount === 0)}
+                                        className="px-3 py-1 bg-destructive text-destructive-foreground rounded text-sm disabled:opacity-50"
+                                    >
+                                        {processing === m.yearMonth ? "..." : "Delete"}
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
 
-                            {result.details && result.type === "success" && (
-                                <div className='mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4'>
-                                    {result.details.userCount !== undefined && (
-                                        <div className='bg-white dark:bg-black/20 rounded-lg p-3'>
-                                            <div className='text-2xl font-bold text-green-700 dark:text-green-300'>
-                                                {result.details.userCount}
-                                            </div>
-                                            <div className='text-sm text-green-600 dark:text-green-400'>User Snapshots</div>
-                                        </div>
-                                    )}
-                                    {result.details.cafeCount !== undefined && (
-                                        <div className='bg-white dark:bg-black/20 rounded-lg p-3'>
-                                            <div className='text-2xl font-bold text-green-700 dark:text-green-300'>
-                                                {result.details.cafeCount}
-                                            </div>
-                                            <div className='text-sm text-green-600 dark:text-green-400'>Cafe Snapshots</div>
-                                        </div>
-                                    )}
-                                    {result.details.deletedCount !== undefined && (
-                                        <div className='bg-white dark:bg-black/20 rounded-lg p-3'>
-                                            <div className='text-2xl font-bold text-green-700 dark:text-green-300'>
-                                                {result.details.deletedCount}
-                                            </div>
-                                            <div className='text-sm text-green-600 dark:text-green-400'>Deleted</div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+            {/* Delete confirmation dialog */}
+            {deleteTarget && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-background rounded-xl p-6 space-y-4 max-w-sm w-full m-4">
+                        <p className="font-semibold">Delete snapshots for {deleteTarget}?</p>
+                        <p className="text-sm text-muted-foreground">
+                            This will delete all user and cafe snapshots for this month. This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setDeleteTarget(null)}
+                                className="px-4 py-2 rounded-md border"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDeleteMonth(deleteTarget)}
+                                className="px-4 py-2 rounded-md bg-destructive text-destructive-foreground"
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* Info Section */}
-            <div className='bg-text/5 rounded-xl p-6'>
-                <h3 className='font-semibold text-text mb-3'>About Backfill</h3>
-                <ul className='space-y-2 text-sm text-text/70'>
-                    <li>
-                        • Use this tool to manually backfill leaderboard data for months that weren&apos;t automatically snapshotted by the cron job.
-                    </li>
-                    <li>• The backfill process computes live leaderboard data and stores it in the database as snapshots.
-                    </li>
-                    <li>• Once snapshotted, future requests for that month will use the cached data instead of computing live.
-                    </li>
-                    <li>• If you need to re-backfill a month, first delete the existing snapshots, then run backfill again.
-                    </li>
-                    <li>• Backfilling creates snapshots for all regions (global + all 16 PH regions) for both users and cafes.
-                    </li>
-                </ul>
-            </div>
         </div>
     )
 }

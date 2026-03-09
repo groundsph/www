@@ -165,6 +165,97 @@ async function updateContributorScoutStats(contributorId: string): Promise<void>
     return updateUserActivityStats(contributorId)
 }
 
+// ============================================
+// Leaderboard Snapshot Backfill Functions
+// ============================================
+
+/**
+ * Get the snapshot status for multiple months.
+ * Returns user and cafe counts for each month, along with whether any are missing.
+ */
+export async function getLeaderboardSnapshotStatus(months: string[]): Promise<{
+    success: boolean
+    data?: Array<{
+        yearMonth: string
+        userCount: number
+        cafeCount: number
+        hasMissing: boolean
+    }>
+    error?: string
+}> {
+    const user = await getCurrentUser()
+    if (!user || (await getUserRole()) !== "admin") {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    try {
+        const rows = await db
+            .select({
+                yearMonth: monthlyLeaderboardSnapshots.yearMonth,
+                type: monthlyLeaderboardSnapshots.type,
+                count: sql<number>`count(*)::int`,
+            })
+            .from(monthlyLeaderboardSnapshots)
+            .where(inArray(monthlyLeaderboardSnapshots.yearMonth, months))
+            .groupBy(monthlyLeaderboardSnapshots.yearMonth, monthlyLeaderboardSnapshots.type)
+
+        const byMonth = new Map<string, { user: number; cafe: number }>()
+        for (const row of rows) {
+            if (!byMonth.has(row.yearMonth)) byMonth.set(row.yearMonth, { user: 0, cafe: 0 })
+            const entry = byMonth.get(row.yearMonth)!
+            if (row.type === "user") entry.user = row.count
+            if (row.type === "cafe") entry.cafe = row.count
+        }
+
+        return {
+            success: true,
+            data: months.map((ym) => {
+                const counts = byMonth.get(ym) ?? { user: 0, cafe: 0 }
+                return {
+                    yearMonth: ym,
+                    userCount: counts.user,
+                    cafeCount: counts.cafe,
+                    hasMissing: counts.user === 0 || counts.cafe === 0,
+                }
+            }),
+        }
+    } catch (e) {
+        console.error(e)
+        return { success: false, error: "Failed to fetch snapshot status" }
+    }
+}
+
+/**
+ * Backfill all missing leaderboard snapshots for the given months.
+ * Processes each month that has missing data.
+ */
+export async function backfillAllMissingLeaderboardSnapshots(months: string[]): Promise<{
+    success: boolean
+    message: string
+    processed?: number
+}> {
+    const user = await getCurrentUser()
+    if (!user || (await getUserRole()) !== "admin") {
+        return { success: false, message: "Unauthorized" }
+    }
+
+    try {
+        let processed = 0
+        for (const month of months) {
+            const result = await backfillLeaderboardSnapshots(month)
+            if (result.success) processed++
+        }
+        return {
+            success: true,
+            message: `Processed ${processed} months`,
+            processed,
+        }
+    } catch (e) {
+        console.error(e)
+        return { success: false, message: String(e) }
+    }
+}
+
 /**
  * Check if the current user has admin or moderator role
  */
