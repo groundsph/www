@@ -1,20 +1,19 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Star, Info } from "lucide-react"
+import { Trophy, Medal, Crown, Star, Info, Users, ChevronDown } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
-import { PH_REGIONS } from "@/utils/ph-regions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 
 import { groupByRank } from "./leaderboard-utils"
 import { CafeLeaderboardEntry } from "@/utils/types/leaderboard"
 
 interface CafeLeaderboardProps {
-    region?: string | null
-    yearMonth?: string
+    region: string | null
+    yearMonth: string
 }
 
 function CafeRankCard({
@@ -156,42 +155,14 @@ export default function CafeMonthlyLeaderboard({
     yearMonth,
 }: CafeLeaderboardProps) {
     const [leaderboard, setLeaderboard] = useState<CafeLeaderboardEntry[]>([])
-    const [selectedRegion, setSelectedRegion] = useState<string | null>(region || null)
     const [isLoading, setIsLoading] = useState(true)
-    const [showRegionDropdown, setShowRegionDropdown] = useState(false)
-    const dropdownRef = useRef<HTMLDivElement>(null)
-
-    // Close dropdowns when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(event.target as Node)
-            ) {
-                setShowRegionDropdown(false)
-            }
-        }
-
-        if (showRegionDropdown) {
-            document.addEventListener("mousedown", handleClickOutside)
-        }
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside)
-        }
-    }, [showRegionDropdown])
-
-    // Philippines regions for dropdown
-    const regions = PH_REGIONS
 
     // Fetch leaderboard when region or month changes
     useEffect(() => {
         const fetchLeaderboard = async () => {
-            if (!yearMonth) return
-
             setIsLoading(true)
             try {
-                const result = await getCafeMonthlyLeaderboard(selectedRegion, 20, yearMonth)
+                const result = await getCafeMonthlyLeaderboard(region, 20, yearMonth)
                 setLeaderboard(result.leaderboard)
             } catch (error) {
                 console.error("Failed to fetch cafe leaderboard:", error)
@@ -200,7 +171,7 @@ export default function CafeMonthlyLeaderboard({
             }
         }
         fetchLeaderboard()
-    }, [selectedRegion, yearMonth])
+    }, [region, yearMonth])
 
     const getRankIcon = (rank: number) => {
         switch (rank) {
@@ -216,71 +187,6 @@ export default function CafeMonthlyLeaderboard({
 
     return (
         <div>
-            {/* Filters - Only show region selector since parent handles the header */}
-            <div className="flex flex-wrap items-center gap-2 mb-8">
-                <button
-                    onClick={() => setSelectedRegion(null)}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer ${
-                        selectedRegion === null
-                            ? "bg-primary text-white shadow-sm"
-                            : "bg-background border border-secondary/20 text-text/70 hover:border-primary/30 hover:text-text"
-                    }`}
-                >
-                    <Users className="w-4 h-4" />
-                    Nationwide
-                </button>
-
-                <div
-                    className="relative"
-                    ref={dropdownRef}
-                >
-                    <button
-                        onClick={() =>
-                            setShowRegionDropdown(!showRegionDropdown)
-                        }
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer ${
-                            selectedRegion
-                                ? "bg-primary text-white shadow-sm"
-                                : "bg-background border border-secondary/20 text-text/70 hover:border-primary/30 hover:text-text"
-                        }`}
-                    >
-                        <MapPin className="w-4 h-4" />
-                        {selectedRegion || "Select Region"}
-                        <ChevronDown
-                            className={`w-4 h-4 transition-transform ${showRegionDropdown ? "rotate-180" : ""}`}
-                        />
-                    </button>
-
-                    <AnimatePresence>
-                        {showRegionDropdown && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute top-full left-0 mt-2 w-56 bg-background border border-secondary/20 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto"
-                            >
-                                {regions.map((region) => (
-                                    <button
-                                        key={region}
-                                        onClick={() => {
-                                            setSelectedRegion(region)
-                                            setShowRegionDropdown(false)
-                                        }}
-                                        className={`w-full px-4 py-2.5 text-left text-sm hover:bg-secondary/10 transition-colors ${
-                                            selectedRegion === region
-                                                ? "bg-primary/10 text-primary font-medium"
-                                                : "text-text/80"
-                                        }`}
-                                    >
-                                        {region}
-                                    </button>
-                                ))}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </div>
-
             {/* Leaderboard Grid */}
             {isLoading ? (
                 <div className="flex items-center justify-center py-16">
