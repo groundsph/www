@@ -266,8 +266,8 @@ export default function CommunityPage({
         },
         leaderboard: {
             tag: "Check-in Champions",
-            title: "Monthly Check-ins",
-            description: "See who's been exploring the most cafes this month. Check in at your favorite spots to climb the leaderboard and earn recognition.",
+            title: "Monthly Leaderboards",
+            description: "See which scouts explored the most cafes and which cafes earned the highest community scores this month.",
             icon: Trophy,
         },
     }

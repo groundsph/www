@@ -9,6 +9,7 @@ import {
     contributionLogs,
     profiles,
     user,
+    monthlyLeaderboardSnapshots,
 } from "@/db/schema"
 import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
@@ -3983,5 +3984,180 @@ export async function getProfilesForAdmin(options: {
         total: Number(countResult[0]?.count ?? 0),
         totalSupporters: Number(stats.totalSupporters),
         totalContribution,
+    }
+}
+
+/**
+ * Manually backfill leaderboard snapshots for a specific month.
+ * Admin-only: Used to backfill historical data when snapshots don't exist.
+ */
+export async function backfillLeaderboardSnapshots(
+    yearMonth: string
+): Promise<{ success: boolean; message: string; userCount?: number; cafeCount?: number }> {
+    const hasAccess = await isAdmin()
+    if (!hasAccess) {
+        return { success: false, message: "Unauthorized" }
+    }
+
+    try {
+        // Import here to avoid circular dependencies
+        const { getMonthlyLeaderboard } = await import("@/app/api/actions/profile")
+        const { getCafeMonthlyLeaderboard } = await import("@/app/api/actions/leaderboard")
+        const { parseYearMonth } = await import("@/utils/date/leaderboard-months")
+        const { isFutureMonth } = await import("@/utils/date/leaderboard-months")
+
+        const parsed = parseYearMonth(yearMonth)
+        if (!parsed) {
+            return { success: false, message: "Invalid year-month format (use YYYY-MM)" }
+        }
+
+        if (isFutureMonth(parsed)) {
+            return { success: false, message: "Cannot backfill future months" }
+        }
+
+        // Check if snapshots already exist
+        const existingUserSnapshot = await db
+            .select({ id: monthlyLeaderboardSnapshots.id })
+            .from(monthlyLeaderboardSnapshots)
+            .where(and(
+                eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth),
+                eq(monthlyLeaderboardSnapshots.type, "user")
+            ))
+            .limit(1)
+
+        if (existingUserSnapshot.length > 0) {
+            return { success: false, message: `Snapshots already exist for ${yearMonth}. Delete them first if you want to re-backfill.` }
+        }
+
+        // Philippines regions (same as in cron)
+        const PH_REGIONS = [
+            "NCR - National Capital Region",
+            "Region I - Ilocos Region",
+            "Region II - Cagayan Valley",
+            "Region III - Central Luzon",
+            "Region IV-A - CALABARZON",
+            "Region IV-B - MIMAROPA",
+            "Region V - Bicol Region",
+            "Region VI - Western Visayas",
+            "Region VII - Central Visayas",
+            "Region VIII - Eastern Visayas",
+            "Region IX - Zamboanga Peninsula",
+            "Region X - Northern Mindanao",
+            "Region XI - Davao Region",
+            "Region XII - SOCCSKSARGEN",
+            "Region XIII - Caraga",
+            "BARMM - Bangsamoro",
+        ]
+
+        const regionsToSnapshot = [null, ...PH_REGIONS]
+        let totalUserSnapshots = 0
+        let totalCafeSnapshots = 0
+
+        // Snapshot user leaderboards
+        for (const region of regionsToSnapshot) {
+            const result = await getMonthlyLeaderboard(region, 100, yearMonth)
+
+            if (result.leaderboard.length === 0) {
+                continue
+            }
+
+            const entries = result.leaderboard.map((entry) => ({
+                yearMonth,
+                type: "user" as const,
+                entityId: entry.userId,
+                rank: entry.rank,
+                score: entry.score,
+                breakdown: { visitCount: entry.visitCount },
+                region,
+            }))
+
+            await db.insert(monthlyLeaderboardSnapshots).values(entries)
+            totalUserSnapshots += entries.length
+        }
+
+        // Snapshot cafe leaderboards
+        for (const region of regionsToSnapshot) {
+            const result = await getCafeMonthlyLeaderboard(region, 100, yearMonth)
+
+            if (result.leaderboard.length === 0) {
+                continue
+            }
+
+            const entries = result.leaderboard.map((entry) => ({
+                yearMonth,
+                type: "cafe" as const,
+                entityId: entry.cafeId,
+                rank: entry.rank,
+                score: entry.score,
+                breakdown: {
+                    visitCount: entry.visitCount,
+                    reviewCount: entry.reviewCount,
+                    avgRating: entry.avgRating,
+                },
+                region,
+            }))
+
+            await db.insert(monthlyLeaderboardSnapshots).values(entries)
+            totalCafeSnapshots += entries.length
+        }
+
+        return {
+            success: true,
+            message: `Backfilled ${yearMonth} successfully`,
+            userCount: totalUserSnapshots,
+            cafeCount: totalCafeSnapshots,
+        }
+    } catch (error) {
+        console.error("[Backfill] Error:", error)
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Unknown error",
+        }
+    }
+}
+
+/**
+ * Delete existing leaderboard snapshots for a specific month.
+ * Admin-only: Used before re-backfilling.
+ */
+export async function deleteLeaderboardSnapshots(
+    yearMonth: string
+): Promise<{ success: boolean; message: string; deletedCount?: number }> {
+    const hasAccess = await isAdmin()
+    if (!hasAccess) {
+        return { success: false, message: "Unauthorized" }
+    }
+
+    try {
+        const { parseYearMonth } = await import("@/utils/date/leaderboard-months")
+
+        const parsed = parseYearMonth(yearMonth)
+        if (!parsed) {
+            return { success: false, message: "Invalid year-month format (use YYYY-MM)" }
+        }
+
+        // Count existing snapshots before deleting
+        const countResult = await db
+            .select({ count: drizzleCount() })
+            .from(monthlyLeaderboardSnapshots)
+            .where(eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth))
+
+        const existingCount = Number(countResult[0]?.count ?? 0)
+
+        await db
+            .delete(monthlyLeaderboardSnapshots)
+            .where(eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth))
+
+        return {
+            success: true,
+            message: `Deleted snapshots for ${yearMonth}`,
+            deletedCount: existingCount,
+        }
+    } catch (error) {
+        console.error("[Delete Snapshots] Error:", error)
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : "Unknown error",
+        }
     }
 }

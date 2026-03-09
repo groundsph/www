@@ -10,6 +10,7 @@ import {
     RefreshCw,
     Settings,
     Upload,
+    Database,
 } from "lucide-react"
 import {
     type BadgeDefinition,
@@ -21,6 +22,7 @@ import {
 } from "@/app/api/actions/admin"
 import { ChatSettings } from "@/components/admin/ChatSettings"
 import { uploadBadgeImageAction } from "@/utils/storage/actions"
+import Link from "next/link"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
 import AwardBadgeModal from "@/components/admin/AwardBadgeModal"
@@ -550,6 +552,23 @@ export default function SystemManagement({
                                 {cleanupMessage}
                             </div>
                         )}
+                    </div>
+
+                    <div className='bg-background rounded-xl p-5 shadow-sm border border-tertiary/50'>
+                        <h3 className='font-semibold mb-2 flex items-center gap-2'>
+                            <Database className='w-5 h-5' />
+                            Leaderboard Backfill
+                        </h3>
+                        <p className='text-text/60 text-sm mb-4'>
+                            Manually backfill leaderboard snapshots for historical months.
+                        </p>
+                        <Link
+                            href='/manage/system/leaderboard-backfill'
+                            className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition'
+                        >
+                            <RefreshCw className='w-4 h-4' />
+                            Open Backfill Tool
+                        </Link>
                     </div>
                 </div>
             )}

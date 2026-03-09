@@ -6,6 +6,7 @@ import {
 import { getUpcomingEvents } from "@/app/api/actions/events"
 import { getPublishedBlogPosts } from "@/app/api/actions/blog"
 import { getRecentReviews } from "@/app/api/actions/review"
+import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
 import LandingHero from "@/components/landing/LandingHero"
 import RecentlyAddedSection from "@/components/recent/RecentlyAddedSection"
 import SubmitCafeSection from "@/components/recent/SubmitCafeSection"
@@ -61,6 +62,7 @@ export default async function Home() {
         upcomingEvents,
         blogResult,
         recentReviews,
+        cafeLeaderboardResult,
     ] = await Promise.all([
         getDailyFeatured() as Promise<CafeWithRatings | null>,
         getAllCafes(1, 10, { exclude_hidden_gems: true }) as Promise<
@@ -70,6 +72,7 @@ export default async function Home() {
         getUpcomingEvents(5),
         getPublishedBlogPosts({ pageSize: 4 }),
         getRecentReviews(6),
+        getCafeMonthlyLeaderboard(null, 3),
     ])
 
     const latestPosts = blogResult.posts
@@ -89,7 +92,7 @@ export default async function Home() {
             />
 
             {/* Cafe Leaderboard */}
-            <CafeLeaderboardSection />
+            <CafeLeaderboardSection topCafes={cafeLeaderboardResult.leaderboard} />
 
             <SubmitCafeSection cafeCount={cafeCount} />
 

@@ -13,6 +13,7 @@ interface LeaderboardEntry {
     displayName: string
     avatarUrl: string | null
     visitCount: number
+    score: number
 }
 
 interface ExpandableRankCardProps {
@@ -93,8 +94,9 @@ export default function ExpandableRankCard({
                         <p className="text-white/70 text-sm">@{entries[0].username}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-white font-bold text-2xl">{entries[0].visitCount}</p>
-                        <p className="text-white/70 text-sm">visits</p>
+                        <p className="text-white font-bold text-2xl">{entries[0].score}</p>
+                        <p className="text-white/70 text-sm">points</p>
+                        <p className="text-white/60 text-xs">{entries[0].visitCount} visits</p>
                     </div>
                 </Link>
             </div>
@@ -140,7 +142,8 @@ export default function ExpandableRankCard({
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-white font-bold">{entry.visitCount}</p>
+                                            <p className="text-white font-bold">{entry.score}</p>
+                                            <p className="text-white/60 text-xs">{entry.visitCount} visits</p>
                                         </div>
                                     </Link>
                                 </div>
