@@ -109,7 +109,6 @@ export default function RecentReviewsSection({
                                 src={review.author.avatar_url}
                                 alt={review.author.display_name}
                                 size={24}
-                                className="rounded-full"
                             />
                             <span className='text-xs text-text/60 truncate'>
                                 {review.author.display_name}
