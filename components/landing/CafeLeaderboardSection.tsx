@@ -1,6 +1,6 @@
 "use client"
 
-import { CrownIcon, Star, Trophy } from "lucide-react"
+import { CrownIcon, Star, ArrowRight } from "lucide-react"
 import { motion } from "motion/react"
 import Image from "next/image"
 import Link from "next/link"
@@ -53,17 +53,26 @@ export default function CafeLeaderboardSection({
             id='cafe-leaderboard'
             className='w-full px-6 mb-8 space-y-2'
         >
-            <motion.h2
-                initial={{ opacity: 0 }}
-                whileInView={{
-                    opacity: 1,
-                    transition: { duration: 0.6, ease: "easeOut" },
-                }}
-                viewport={{ once: true, margin: "-50px" }}
-                className='font-semibold font-serif text-2xl'
-            >
-                Community Favorites
-            </motion.h2>
+            <div className="flex items-center justify-between">
+                <motion.h2
+                    initial={{ opacity: 0 }}
+                    whileInView={{
+                        opacity: 1,
+                        transition: { duration: 0.6, ease: "easeOut" },
+                    }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    className='font-semibold font-serif text-2xl'
+                >
+                    Community Favorites
+                </motion.h2>
+                <Link 
+                    href="/community?tab=leaderboard" 
+                    className="text-sm font-medium flex items-center gap-1 text-primary hover:underline"
+                >
+                    View Leaderboard
+                    <ArrowRight className="w-4 h-4" />
+                </Link>
+            </div>
             <div className='flex flex-col md:flex-row gap-4 w-full'>
                 {/* 1st Place - Hero Card */}
                 <motion.div
@@ -84,14 +93,6 @@ export default function CafeLeaderboardSection({
                         href={`/cafes/${firstPlace.slug}`}
                         className='block w-full h-full'
                     >
-                        {/* Trophy icon */}
-                        <div className='absolute top-4 left-4 z-10'>
-                            <Trophy className='w-8 h-8 text-yellow-400' />
-                        </div>
-                        {/* Rank badge */}
-                        <div className='absolute top-4 right-4 z-10 bg-background/90 rounded-full px-3 py-1 text-sm font-semibold'>
-                            #1
-                        </div>
                         <div className='absolute left-2 top-16 z-10 bg-background px-3 py-1 pl-12 rounded-full text-xs md:text-sm font-semibold shadow-md'>
                             <div className='w-10 h-10 p-2 absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm'>
                                 <CrownIcon className='w-full' />
@@ -116,7 +117,7 @@ export default function CafeLeaderboardSection({
                                         {firstPlace.avgRating.toFixed(1)}
                                     </span>
                                 )}
-                                <span className='text-xs bg-background/80 px-2 py-0.5 rounded-full'>{firstPlace.region}</span>
+                                <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full'>{firstPlace.region}</span>
                             </div>
                         </div>
                     </Link>
@@ -151,13 +152,6 @@ export default function CafeLeaderboardSection({
                                 href={`/cafes/${secondPlace.slug}`}
                                 className='flex flex-row gap-3 w-full'
                             >
-                                {/* Rank badge */}
-                                <div className='absolute top-4 right-4 bg-background/90 rounded-full px-3 py-1 text-xs font-semibold z-10'>
-                                    #2
-                                </div>
-                                <div className='w-8 h-8 rounded-full absolute top-2 left-2 flex items-center justify-center z-10 bg-linear-to-br from-gray-400 to-gray-500 font-semibold text-white'>
-                                    2
-                                </div>
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image
                                         src={getCafeThumbnailUrl(secondPlace.thumbnail || "placeholder")}
@@ -179,7 +173,7 @@ export default function CafeLeaderboardSection({
                                             </span>
                                         )}
                                     </div>
-                                    <span className='text-xs bg-text/10 px-2 py-0.5 rounded-full w-fit mt-1'>{secondPlace.region}</span>
+                                    <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full w-fit mt-1'>{secondPlace.region}</span>
                                 </div>
                             </Link>
                         </motion.div>
@@ -212,13 +206,6 @@ export default function CafeLeaderboardSection({
                                 href={`/cafes/${thirdPlace.slug}`}
                                 className='flex flex-row gap-3 w-full'
                             >
-                                {/* Rank badge */}
-                                <div className='absolute top-4 right-4 bg-background/90 rounded-full px-3 py-1 text-xs font-semibold z-10'>
-                                    #3
-                                </div>
-                                <div className='w-8 h-8 rounded-full absolute top-2 left-2 flex items-center justify-center z-10 bg-linear-to-br from-amber-700 to-amber-800 font-semibold text-white'>
-                                    3
-                                </div>
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image
                                         src={getCafeThumbnailUrl(thirdPlace.thumbnail || "placeholder")}
@@ -240,7 +227,7 @@ export default function CafeLeaderboardSection({
                                             </span>
                                         )}
                                     </div>
-                                    <span className='text-xs bg-text/10 px-2 py-0.5 rounded-full w-fit mt-1'>{thirdPlace.region}</span>
+                                    <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full w-fit mt-1'>{thirdPlace.region}</span>
                                 </div>
                             </Link>
                         </motion.div>
