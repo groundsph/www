@@ -17,22 +17,23 @@ export interface RankedLeaderboardEntry extends LeaderboardEntry {
  * @returns Array with rank property added
  */
 export function applyTieRanking<T extends LeaderboardEntry>(
-  entries: T[]
+  entries: T[],
+  options?: { scoreKey?: keyof T }
 ): (T & { rank: number })[] {
   if (entries.length === 0) return []
 
+  const scoreKey = (options?.scoreKey ?? "visitCount") as keyof T
   const result: (T & { rank: number })[] = []
   let currentRank = 1
 
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i]
-    
-    // If not the first entry and visit count differs from previous,
-    // increment rank (dense ranking - no skipping)
-    if (i > 0 && entry.visitCount !== entries[i - 1].visitCount) {
+    const prev = entries[i - 1]
+
+    if (i > 0 && entry[scoreKey] !== prev[scoreKey]) {
       currentRank++
     }
-    
+
     result.push({ ...entry, rank: currentRank })
   }
 

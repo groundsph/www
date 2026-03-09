@@ -54,4 +54,23 @@ describe("applyTieRanking", () => {
     expect(result[1].userId).toBe("b")
     expect(result[1].visitCount).toBe(10)
   })
+
+  it("supports custom score keys", () => {
+    const input = [
+      { userId: "a", score: 12 },
+      { userId: "b", score: 12 },
+      { userId: "c", score: 6 },
+    ]
+    const result = applyTieRanking(input, { scoreKey: "score" })
+    expect(result.map((r) => r.rank)).toEqual([1, 1, 2])
+  })
+
+  it("defaults to visitCount when scoreKey not provided", () => {
+    const input = [
+      { userId: "a", visitCount: 5 },
+      { userId: "b", visitCount: 4 },
+    ]
+    const result = applyTieRanking(input)
+    expect(result.map((r) => r.rank)).toEqual([1, 2])
+  })
 })
