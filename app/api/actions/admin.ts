@@ -4064,10 +4064,10 @@ export async function backfillLeaderboardSnapshots(
             const entries = result.leaderboard.map((entry) => ({
                 yearMonth,
                 type: "user" as const,
-                entityId: entry.userId,
+                userId: entry.userId,
                 rank: entry.rank,
                 score: entry.score,
-                breakdown: { visitCount: entry.visitCount },
+                visitCount: entry.visitCount,
                 region,
             }))
 
@@ -4086,14 +4086,11 @@ export async function backfillLeaderboardSnapshots(
             const entries = result.leaderboard.map((entry) => ({
                 yearMonth,
                 type: "cafe" as const,
-                entityId: entry.cafeId,
+                cafeId: entry.cafeId,
                 rank: entry.rank,
                 score: entry.score,
-                breakdown: {
-                    visitCount: entry.visitCount,
-                    reviewCount: entry.reviewCount,
-                    avgRating: entry.avgRating,
-                },
+                visitCount: entry.visitCount,
+                reviewCount: entry.reviewCount,
                 region,
             }))
 

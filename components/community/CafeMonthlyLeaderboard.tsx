@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Calendar, Star } from "lucide-react"
+import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Star, Info } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
-import { getLastNMonths, formatYearMonth } from "@/utils/date/leaderboard-months"
+
 import { groupByRank } from "./leaderboard-utils"
 import { CafeLeaderboardEntry } from "@/utils/types/leaderboard"
 
@@ -169,13 +169,7 @@ export default function CafeMonthlyLeaderboard({
     const [selectedRegion, setSelectedRegion] = useState<string | null>(region || null)
     const [isLoading, setIsLoading] = useState(true)
     const [showRegionDropdown, setShowRegionDropdown] = useState(false)
-    const [showMonthDropdown, setShowMonthDropdown] = useState(false)
-    const [selectedMonth, setSelectedMonth] = useState<string>(yearMonth || "")
     const dropdownRef = useRef<HTMLDivElement>(null)
-    const monthDropdownRef = useRef<HTMLDivElement>(null)
-
-    // Get available months (last 12 months)
-    const availableMonths = getLastNMonths(12)
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -186,22 +180,16 @@ export default function CafeMonthlyLeaderboard({
             ) {
                 setShowRegionDropdown(false)
             }
-            if (
-                monthDropdownRef.current &&
-                !monthDropdownRef.current.contains(event.target as Node)
-            ) {
-                setShowMonthDropdown(false)
-            }
         }
 
-        if (showRegionDropdown || showMonthDropdown) {
+        if (showRegionDropdown) {
             document.addEventListener("mousedown", handleClickOutside)
         }
 
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
         }
-    }, [showRegionDropdown, showMonthDropdown])
+    }, [showRegionDropdown])
 
     // Philippines regions for dropdown
     const regions = [
@@ -223,23 +211,14 @@ export default function CafeMonthlyLeaderboard({
         "BARMM - Bangsamoro",
     ]
 
-    // Initialize selected month to current month if not provided
-    useEffect(() => {
-        if (!selectedMonth) {
-            const now = new Date()
-            const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`
-            setSelectedMonth(currentMonth)
-        }
-    }, [selectedMonth])
-
     // Fetch leaderboard when region or month changes
     useEffect(() => {
         const fetchLeaderboard = async () => {
-            if (!selectedMonth) return
+            if (!yearMonth) return
 
             setIsLoading(true)
             try {
-                const result = await getCafeMonthlyLeaderboard(selectedRegion, 20, selectedMonth)
+                const result = await getCafeMonthlyLeaderboard(selectedRegion, 20, yearMonth)
                 setLeaderboard(result.leaderboard)
             } catch (error) {
                 console.error("Failed to fetch cafe leaderboard:", error)
@@ -248,7 +227,7 @@ export default function CafeMonthlyLeaderboard({
             }
         }
         fetchLeaderboard()
-    }, [selectedRegion, selectedMonth])
+    }, [selectedRegion, yearMonth])
 
     const getRankIcon = (rank: number) => {
         switch (rank) {
@@ -262,24 +241,9 @@ export default function CafeMonthlyLeaderboard({
         }
     }
 
-    // Get formatted month name for display
-    const monthName = selectedMonth ? formatYearMonth(selectedMonth) : ""
-
     return (
         <div>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h2 className="text-2xl font-serif font-bold text-text">
-                        Cafe Leaderboard
-                    </h2>
-                    <p className="text-text/60 mt-1">
-                        {monthName} — Most popular cafes
-                    </p>
-                </div>
-            </div>
-
-            {/* Region and Month Toggle */}
+            {/* Filters - Only show region selector since parent handles the header */}
             <div className="flex flex-wrap items-center gap-2 mb-8">
                 <button
                     onClick={() => setSelectedRegion(null)}
@@ -336,53 +300,6 @@ export default function CafeMonthlyLeaderboard({
                                         }`}
                                     >
                                         {region}
-                                    </button>
-                                ))}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Month Selector */}
-                <div
-                    className="relative"
-                    ref={monthDropdownRef}
-                >
-                    <button
-                        onClick={() =>
-                            setShowMonthDropdown(!showMonthDropdown)
-                        }
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer bg-background border border-secondary/20 text-text/70 hover:border-primary/30 hover:text-text"
-                    >
-                        <Calendar className="w-4 h-4" />
-                        {selectedMonth ? formatYearMonth(selectedMonth) : "Select Month"}
-                        <ChevronDown
-                            className={`w-4 h-4 transition-transform ${showMonthDropdown ? "rotate-180" : ""}`}
-                        />
-                    </button>
-
-                    <AnimatePresence>
-                        {showMonthDropdown && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute top-full left-0 mt-2 w-48 bg-background border border-secondary/20 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto"
-                            >
-                                {availableMonths.map((month) => (
-                                    <button
-                                        key={month}
-                                        onClick={() => {
-                                            setSelectedMonth(month)
-                                            setShowMonthDropdown(false)
-                                        }}
-                                        className={`w-full px-4 py-2.5 text-left text-sm hover:bg-secondary/10 transition-colors ${
-                                            selectedMonth === month
-                                                ? "bg-primary/10 text-primary font-medium"
-                                                : "text-text/80"
-                                        }`}
-                                    >
-                                        {formatYearMonth(month)}
                                     </button>
                                 ))}
                             </motion.div>
@@ -451,15 +368,30 @@ export default function CafeMonthlyLeaderboard({
                     {/* Rest of Leaderboard */}
                     {leaderboard.length > 3 && (
                         <div className="bg-background border border-secondary/20 rounded-2xl overflow-hidden">
+                            {/* Header Row with Labels */}
+                            <div className="flex items-center gap-4 px-4 py-3 bg-secondary/5 border-b border-secondary/10 text-xs font-medium text-text/50 uppercase tracking-wider">
+                                <div className="w-8 text-center">Rank</div>
+                                <div className="w-12"></div>
+                                <div className="flex-1">Cafe</div>
+                                <div className="hidden sm:flex items-center gap-6 text-right">
+                                    <div className="w-16 text-center">Rating</div>
+                                    <div className="w-16 text-center">Visits</div>
+                                    <div className="w-16 text-center">Reviews</div>
+                                </div>
+                                <div className="flex items-center gap-1" title="Composite score based on visits, reviews, and engagement">
+                                    <span>Score</span>
+                                    <Info className="w-3 h-3 text-text/30" />
+                                </div>
+                            </div>
                             <div className="divide-y divide-secondary/10">
                                 {leaderboard.slice(3).map((entry) => (
                                     <Link
                                         key={entry.cafeId}
                                         href={`/cafes/${entry.slug}`}
-                                        className="flex items-center gap-4 p-4 hover:bg-secondary/5 transition-colors"
+                                        className="flex items-center gap-4 p-4 hover:bg-secondary/5 transition-colors group"
                                     >
                                         {/* Rank */}
-                                        <div className="w-8 h-8 flex items-center justify-center text-lg font-bold text-text/40">
+                                        <div className="w-8 h-8 flex items-center justify-center text-base font-bold text-text/60">
                                             {entry.rank}
                                         </div>
 
@@ -482,54 +414,50 @@ export default function CafeMonthlyLeaderboard({
 
                                         {/* Name and Region */}
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-text truncate">
+                                            <p className="font-medium text-text truncate group-hover:text-primary transition-colors">
                                                 {entry.name}
                                             </p>
-                                            <p className="text-sm text-text/50 truncate">
+                                            <p className="text-xs text-text/50 truncate">
                                                 {entry.region}
                                             </p>
                                         </div>
 
                                         {/* Stats */}
-                                        <div className="flex items-center gap-4 text-right">
+                                        <div className="hidden sm:flex items-center gap-6 text-right">
                                             {/* Rating */}
-                                            {entry.avgRating ? (
-                                                <div className="flex items-center gap-1">
-                                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                                    <span className="text-sm font-medium text-text">
-                                                        {entry.avgRating.toFixed(1)}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-sm text-text/40">—</span>
-                                            )}
+                                            <div className="w-16 flex items-center justify-center gap-1">
+                                                {entry.avgRating ? (
+                                                    <>
+                                                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                                        <span className="text-sm font-medium text-text">
+                                                            {entry.avgRating.toFixed(1)}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-sm text-text/30">—</span>
+                                                )}
+                                            </div>
 
                                             {/* Visits */}
-                                            <div className="hidden sm:block">
-                                                <span className="text-sm font-medium text-text">
+                                            <div className="w-16">
+                                                <span className="text-sm font-semibold text-text">
                                                     {entry.visitCount}
-                                                </span>
-                                                <span className="text-sm text-text/50 ml-1">
-                                                    visits
                                                 </span>
                                             </div>
 
                                             {/* Reviews */}
-                                            <div className="hidden sm:block">
-                                                <span className="text-sm font-medium text-text">
+                                            <div className="w-16">
+                                                <span className="text-sm font-semibold text-text">
                                                     {entry.reviewCount}
                                                 </span>
-                                                <span className="text-sm text-text/50 ml-1">
-                                                    reviews
-                                                </span>
                                             </div>
+                                        </div>
 
-                                            {/* Score */}
-                                            <div>
-                                                <span className="text-lg font-bold text-primary">
-                                                    {entry.score}
-                                                </span>
-                                            </div>
+                                        {/* Score */}
+                                        <div className="w-16 text-right">
+                                            <span className="text-lg font-bold text-primary">
+                                                {entry.score.toLocaleString()}
+                                            </span>
                                         </div>
                                     </Link>
                                 ))}

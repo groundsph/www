@@ -206,7 +206,7 @@ export default function MonthlyLeaderboard({
                     </p>
                 </div>
 
-                {/* Mode Toggle */}
+                    {/* Mode Toggle */}
                 <div className='flex items-center gap-1 bg-secondary/10 rounded-lg p-1'>
                     <button
                         onClick={() => setMode("users")}
@@ -217,7 +217,7 @@ export default function MonthlyLeaderboard({
                         }`}
                     >
                         <Users className='w-4 h-4' />
-                        Top Scouts
+                        Top Users
                     </button>
                     <button
                         onClick={() => setMode("cafes")}

@@ -154,16 +154,17 @@ export async function getCafeMonthlyLeaderboard(
             const snapshotResults = await db
                 .select({
                     rank: monthlyLeaderboardSnapshots.rank,
-                    cafeId: monthlyLeaderboardSnapshots.entityId,
+                    cafeId: monthlyLeaderboardSnapshots.cafeId,
                     name: cafes.name,
                     slug: cafes.slug,
                     thumbnail: cafes.thumbnail,
                     region: cafes.region,
                     score: monthlyLeaderboardSnapshots.score,
-                    breakdown: monthlyLeaderboardSnapshots.breakdown,
+                    visitCount: monthlyLeaderboardSnapshots.visitCount,
+                    reviewCount: monthlyLeaderboardSnapshots.reviewCount,
                 })
                 .from(monthlyLeaderboardSnapshots)
-                .innerJoin(cafes, eq(monthlyLeaderboardSnapshots.entityId, cafes.id))
+                .innerJoin(cafes, eq(monthlyLeaderboardSnapshots.cafeId, cafes.id))
                 .where(
                     and(
                         eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
@@ -183,14 +184,11 @@ export async function getCafeMonthlyLeaderboard(
                     const entries = liveResult.map((entry) => ({
                         yearMonth: selectedMonth,
                         type: "cafe" as const,
-                        entityId: entry.cafeId,
+                        cafeId: entry.cafeId,
                         rank: entry.rank,
                         score: entry.score,
-                        breakdown: {
-                            visitCount: entry.visitCount,
-                            reviewCount: entry.reviewCount,
-                            avgRating: entry.avgRating,
-                        },
+                        visitCount: entry.visitCount,
+                        reviewCount: entry.reviewCount,
                         region: region ?? null,
                     }))
 
@@ -209,28 +207,18 @@ export async function getCafeMonthlyLeaderboard(
                 }
             }
 
-            const leaderboard: CafeLeaderboardEntry[] = snapshotResults.map((r) => {
-                const breakdown = (r.breakdown as {
-                    visitCount?: number
-                    uniqueVisitors?: number
-                    reviewCount?: number
-                    avgRating?: number
-                    likesCount?: number
-                    pageViews?: number
-                }) || {}
-                return {
-                    rank: r.rank,
-                    cafeId: r.cafeId,
-                    name: r.name,
-                    slug: r.slug,
-                    thumbnail: r.thumbnail,
-                    region: r.region,
-                    score: Math.round(r.score),
-                    visitCount: breakdown.visitCount || 0,
-                    reviewCount: breakdown.reviewCount || 0,
-                    avgRating: breakdown.avgRating ?? null,
-                }
-            })
+            const leaderboard: CafeLeaderboardEntry[] = snapshotResults.map((r) => ({
+                rank: r.rank,
+                cafeId: r.cafeId!,
+                name: r.name,
+                slug: r.slug,
+                thumbnail: r.thumbnail,
+                region: r.region,
+                score: Math.round(r.score),
+                visitCount: r.visitCount || 0,
+                reviewCount: r.reviewCount || 0,
+                avgRating: null, // Not stored in snapshot schema
+            }))
 
             return {
                 leaderboard,
