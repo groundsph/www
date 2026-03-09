@@ -16,6 +16,7 @@ import {
     BookOpen,
     Map,
 } from "lucide-react"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { getPublicCollections, searchUsers, getPublicCafeCrawls, searchCommunityContent } from "@/app/api/actions/community"
 import CrawlCard from "@/components/crawls/CrawlCard"
 import CollectionCard from "@/components/collections/CollectionCard"
@@ -713,19 +714,7 @@ function UserCard({ user }: { user: UserResult }) {
         >
             {/* Avatar */}
             <div className='relative mb-3'>
-                {user.avatarUrl ? (
-                    <Image
-                        src={user.avatarUrl}
-                        alt={user.displayName}
-                        width={64}
-                        height={64}
-                        className='rounded-full'
-                    />
-                ) : (
-                    <div className='w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center'>
-                        <User className='w-8 h-8 text-primary' />
-                    </div>
-                )}
+                <UserAvatar src={user.avatarUrl} alt={user.displayName} size={64} />
                 {user.isSupporter && (
                     <div className='absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center'>
                         <Star className='w-3.5 h-3.5 text-white fill-white' />

@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { ChevronDown, MedalIcon, Users } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 
 interface LeaderboardEntry {
     rank: number
@@ -74,13 +74,7 @@ export default function ExpandableRankCard({
                 >
                     <div className="relative">
                         {entries[0].avatarUrl ? (
-                            <Image
-                                src={entries[0].avatarUrl}
-                                alt={entries[0].displayName}
-                                width={56}
-                                height={56}
-                                className="w-14 h-14 rounded-full object-cover border-2 border-white/50"
-                            />
+                            <UserAvatar src={entries[0].avatarUrl} alt={entries[0].displayName} size={56} className="border-2 border-white/50" />
                         ) : (
                             <div className="w-14 h-14 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-xl border-2 border-white/50">
                                 {entries[0].displayName.charAt(0)}
@@ -121,13 +115,7 @@ export default function ExpandableRankCard({
                                         className="flex items-center gap-3"
                                     >
                                         {entry.avatarUrl ? (
-                                            <Image
-                                                src={entry.avatarUrl}
-                                                alt={entry.displayName}
-                                                width={40}
-                                                height={40}
-                                                className="w-10 h-10 rounded-full object-cover border border-white/30"
-                                            />
+                                            <UserAvatar src={entry.avatarUrl} alt={entry.displayName} size={40} className="border border-white/30" />
                                         ) : (
                                             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30">
                                                 {entry.displayName.charAt(0)}

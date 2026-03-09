@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Calendar, Coffee } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { getMonthlyLeaderboard } from "@/app/api/actions/profile"
 import CafeMonthlyLeaderboard from "./CafeMonthlyLeaderboard"
 import { useUserLocation } from "@/hooks/useUserLocation"
@@ -423,13 +423,7 @@ export default function MonthlyLeaderboard({
                                         {/* Avatar */}
                                         <div className='w-12 h-12 rounded-full overflow-hidden bg-secondary/20 shrink-0'>
                                             {entry.avatarUrl ? (
-                                                <Image
-                                                    src={entry.avatarUrl}
-                                                    alt={entry.displayName}
-                                                    width={48}
-                                                    height={48}
-                                                    className='w-full h-full object-cover'
-                                                />
+                                                <UserAvatar src={entry.avatarUrl} alt={entry.displayName} size={48} />
                                             ) : (
                                                 <div className='w-full h-full flex items-center justify-center text-text/40 font-bold'>
                                                     {entry.displayName

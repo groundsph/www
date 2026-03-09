@@ -10,11 +10,11 @@ import {
     MapPin,
     Star,
     Coffee,
-    User,
     Lock,
     Pencil,
     Bookmark,
 } from "lucide-react"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { useState } from "react"
 import { toggleLikeCollection, toggleSaveCollection } from "@/app/api/actions/collection"
 import { useAuth } from "@/components/layout/AuthProvider"
@@ -188,19 +188,7 @@ export default function CollectionView({
                             href={`/profile/${collection.author.username}`}
                             className='inline-flex items-center gap-2 md:gap-3 group mb-2 md:mb-4'
                         >
-                            {collection.author.avatarUrl ? (
-                                <Image
-                                    src={collection.author.avatarUrl}
-                                    alt={collection.author.displayName}
-                                    width={36}
-                                    height={36}
-                                    className='rounded-full w-7 h-7 md:w-9 md:h-9'
-                                />
-                            ) : (
-                                <div className='w-7 h-7 md:w-9 md:h-9 rounded-full bg-primary/20 flex items-center justify-center'>
-                                    <User className='w-3.5 h-3.5 md:w-4 md:h-4 text-primary' />
-                                </div>
-                            )}
+                            <UserAvatar src={collection.author.avatarUrl} alt={collection.author.displayName} size={36} className="w-7 h-7 md:w-9 md:h-9" />
                             <div>
                                 <p className='font-medium text-sm md:text-base text-text group-hover:text-primary transition-colors'>
                                     {collection.author.displayName}
