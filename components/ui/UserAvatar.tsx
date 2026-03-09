@@ -38,6 +38,7 @@ export function UserAvatar({ src, alt, size, className }: UserAvatarProps) {
                     src="/icon.png"
                     alt="Default avatar"
                     fill
+                    sizes={`${size}px`}
                     className="object-cover"
                 />
             ) : (
@@ -45,6 +46,7 @@ export function UserAvatar({ src, alt, size, className }: UserAvatarProps) {
                     src={src}
                     alt={alt}
                     fill
+                    sizes={`${size}px`}
                     className="object-cover"
                     onError={() => setHasError(true)}
                 />
