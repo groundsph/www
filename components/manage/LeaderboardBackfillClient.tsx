@@ -133,7 +133,7 @@ export function LeaderboardBackfillClient() {
                     <button
                         onClick={handleBackfillAll}
                         disabled={processing !== null || missingCount === 0}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
                     >
                         {processing === "all" ? (
                             <>
