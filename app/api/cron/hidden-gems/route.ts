@@ -3,16 +3,18 @@ import { evaluateHiddenGems } from '@/app/api/actions/hidden-gems'
 
 /**
  * Cron Job: Evaluate Hidden Gem Cafes
- * 
+ *
+ * @deprecated Use `/api/cron/daily` instead. This route is kept for backward compatibility.
+ *
  * This endpoint should be called daily by Dokploy or any cron service.
  * It evaluates all hidden gem cafes based on the previous calendar month's
  * unique visitor count and graduates those exceeding the threshold.
- * 
+ *
  * The job is idempotent - safe to run multiple times per month.
  * First run of each month performs evaluation; subsequent runs are no-ops.
- * 
+ *
  * Security: Requires CRON_SECRET to be passed in Authorization header
- * 
+ *
  * @example
  * curl -X GET https://your-domain.com/api/cron/hidden-gems \
  *   -H "Authorization: Bearer your-cron-secret"

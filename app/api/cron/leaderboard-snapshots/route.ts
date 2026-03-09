@@ -10,6 +10,8 @@ import { PH_REGIONS } from "@/utils/ph-regions"
 /**
  * Cron Job: Snapshot Monthly Leaderboards
  *
+ * @deprecated Use `/api/cron/daily` instead. This route is kept for backward compatibility.
+ *
  * This endpoint should be called daily by Dokploy or any cron service.
  * It snapshots the previous month's leaderboard data for both users and cafes.
  *

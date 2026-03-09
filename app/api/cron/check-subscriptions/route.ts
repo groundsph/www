@@ -5,11 +5,13 @@ import { eq, lt, and, isNotNull } from 'drizzle-orm'
 
 /**
  * Cron Job: Check Expired Subscriptions
- * 
+ *
+ * @deprecated Use `/api/cron/daily` instead. This route is kept for backward compatibility.
+ *
  * This endpoint should be called daily by Dokploy or any cron service.
  * It checks for subscriptions that have passed their expiration date
  * and downgrades the associated cafes to the free tier.
- * 
+ *
  * Security: Requires CRON_SECRET to be passed in Authorization header
  */
 export async function GET(request: NextRequest) {
