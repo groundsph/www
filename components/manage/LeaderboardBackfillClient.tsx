@@ -11,13 +11,19 @@ interface MonthStatus {
     hasMissing: boolean
 }
 
-function getLast24Months(): string[] {
+function getMonthsFromLaunch(): string[] {
     const months: string[] = []
+    // Grounds.ph started December 2025
+    const startDate = new Date(2025, 11, 1) // December 2025
     const now = new Date()
-    for (let i = 0; i < 24; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
+    
+    const current = new Date(now.getFullYear(), now.getMonth(), 1)
+    
+    while (current >= startDate) {
+        months.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`)
+        current.setMonth(current.getMonth() - 1)
     }
+    
     return months
 }
 
@@ -27,7 +33,7 @@ export function LeaderboardBackfillClient() {
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | "all" | null>(null)
 
-    const monthList = useMemo(() => getLast24Months(), [])
+    const monthList = useMemo(() => getMonthsFromLaunch(), [])
 
     const fetchStatus = useCallback(async () => {
         const result = await getLeaderboardSnapshotStatus(monthList)
