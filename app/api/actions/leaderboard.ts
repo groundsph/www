@@ -38,7 +38,7 @@ export async function getCafeMonthlyLeaderboard(
             selectedYearMonth = currentMonth
         }
 
-        const selectedMonth = \`\${selectedYearMonth.year}-\${selectedYearMonth.month.toString().padStart(2, "0")}\`
+        const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
         const isCurrentMonth = selectedYearMonth.year === currentMonth.year && selectedYearMonth.month === currentMonth.month
 
         // For past months, read from snapshot
@@ -60,14 +60,21 @@ export async function getCafeMonthlyLeaderboard(
                     and(
                         eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
                         eq(monthlyLeaderboardSnapshots.type, "cafe"),
-                        region ? eq(monthlyLeaderboardSnapshots.region, region) : sql\`\${monthlyLeaderboardSnapshots.region} IS NULL\`
+                        region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
                     )
                 )
                 .orderBy(monthlyLeaderboardSnapshots.rank)
                 .limit(limit)
 
             const leaderboard: CafeLeaderboardEntry[] = snapshotResults.map((r) => {
-                const breakdown = (r.breakdown as { visitCount?: number; reviewCount?: number; avgRating?: number }) || {}
+                const breakdown = (r.breakdown as {
+                    visitCount?: number
+                    uniqueVisitors?: number
+                    reviewCount?: number
+                    avgRating?: number
+                    likesCount?: number
+                    pageViews?: number
+                }) || {}
                 return {
                     rank: r.rank,
                     cafeId: r.cafeId,
@@ -100,28 +107,28 @@ export async function getCafeMonthlyLeaderboard(
                 slug: cafes.slug,
                 thumbnail: cafes.thumbnail,
                 region: cafes.region,
-                visitCount: sql<number>\`count(\${cafeVisits.id})\`.as("visitCount"),
-                uniqueVisitors: sql<number>\`count(distinct \${cafeVisits.userId})\`.as("uniqueVisitors"),
-                reviewCount: sql<number>\`count(distinct case when \${reviews.status} = 'published' then \${reviews.id} end)\`.as("reviewCount"),
-                avgRating: sql<number | null>\`avg(case when \${reviews.status} = 'published' then \${reviews.rating} end)\`.as("avgRating"),
-                likesCount: sql<number>\`coalesce(sum(\${reviews.likesCount}), 0)\`.as("likesCount"),
-                pageViews: sql<number>\`count(distinct \${cafePageViews.visitorId})\`.as("pageViews"),
+                visitCount: sql<number>`count(${cafeVisits.id})`.as("visitCount"),
+                uniqueVisitors: sql<number>`count(distinct ${cafeVisits.userId})`.as("uniqueVisitors"),
+                reviewCount: sql<number>`count(distinct case when ${reviews.status} = 'published' then ${reviews.id} end)`.as("reviewCount"),
+                avgRating: sql<number | null>`avg(case when ${reviews.status} = 'published' then ${reviews.rating} end)`.as("avgRating"),
+                likesCount: sql<number>`coalesce(sum(${reviews.likesCount}), 0)`.as("likesCount"),
+                pageViews: sql<number>`count(distinct ${cafePageViews.visitorId})`.as("pageViews"),
             })
             .from(cafes)
             .leftJoin(cafeVisits, and(
                 eq(cafeVisits.cafeId, cafes.id),
-                sql\`\${cafeVisits.visitedAt} >= \${startDate.toISOString()}\`,
-                sql\`\${cafeVisits.visitedAt} < \${endDate.toISOString()}\`
+                sql`${cafeVisits.visitedAt} >= ${startDate.toISOString()}`,
+                sql`${cafeVisits.visitedAt} < ${endDate.toISOString()}`
             ))
             .leftJoin(reviews, and(
                 eq(reviews.cafeId, cafes.id),
-                sql\`\${reviews.createdAt} >= \${startDate.toISOString()}\`,
-                sql\`\${reviews.createdAt} < \${endDate.toISOString()}\`
+                sql`${reviews.createdAt} >= ${startDate.toISOString()}`,
+                sql`${reviews.createdAt} < ${endDate.toISOString()}`
             ))
             .leftJoin(cafePageViews, and(
                 eq(cafePageViews.cafeId, cafes.id),
-                sql\`\${cafePageViews.viewedAt} >= \${startDate.toISOString()}\`,
-                sql\`\${cafePageViews.viewedAt} < \${endDate.toISOString()}\`
+                sql`${cafePageViews.viewedAt} >= ${startDate.toISOString()}`,
+                sql`${cafePageViews.viewedAt} < ${endDate.toISOString()}`
             ))
             .where(
                 and(

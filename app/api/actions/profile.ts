@@ -2,7 +2,7 @@
 
 import { getPHTime, getPHTodayStart } from "@/utils/featured"
 import { db } from "@/db"
-import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits, collections } from "@/db/schema"
+import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits, collections, monthlyLeaderboardSnapshots } from "@/db/schema"
 import { eq, and, ne, desc, inArray, arrayContains, count, sql, asc } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
@@ -1691,6 +1691,7 @@ export async function getMonthlyLeaderboard(
         displayName: string
         avatarUrl: string | null
         visitCount: number
+        score: number
     }[]
     userRank: number | null
     region: string | null
@@ -1701,75 +1702,166 @@ export async function getMonthlyLeaderboard(
     try {
         // Parse and validate yearMonth, default to current month
         let selectedYearMonth = parseYearMonth(yearMonth || "")
+        const nowPH = getPHTime()
+        const currentMonth = {
+            year: nowPH.getFullYear(),
+            month: nowPH.getMonth() + 1, // 1-12
+        }
+        
         if (!selectedYearMonth || isFutureMonth(selectedYearMonth)) {
-            // Default to current month if invalid or future
-            const nowPH = getPHTime()
-            selectedYearMonth = {
-                year: nowPH.getFullYear(),
-                month: nowPH.getMonth() + 1, // 1-12
+            selectedYearMonth = currentMonth
+        }
+
+        const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
+        const isCurrentMonth = selectedYearMonth.year === currentMonth.year && selectedYearMonth.month === currentMonth.month
+
+        // For past months, read from snapshot
+        if (!isCurrentMonth) {
+            const snapshotResults = await db
+                .select({
+                    rank: monthlyLeaderboardSnapshots.rank,
+                    userId: monthlyLeaderboardSnapshots.entityId,
+                    username: profiles.username,
+                    displayName: profiles.displayName,
+                    avatarUrl: profiles.avatarUrl,
+                    score: monthlyLeaderboardSnapshots.score,
+                    breakdown: monthlyLeaderboardSnapshots.breakdown,
+                })
+                .from(monthlyLeaderboardSnapshots)
+                .innerJoin(profiles, eq(monthlyLeaderboardSnapshots.entityId, profiles.id))
+                .where(
+                    and(
+                        eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
+                        eq(monthlyLeaderboardSnapshots.type, "user"),
+                        region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
+                    )
+                )
+                .orderBy(asc(monthlyLeaderboardSnapshots.rank))
+                .limit(limit)
+
+            const leaderboard = snapshotResults.map((r) => {
+                const breakdown = (r.breakdown as { visitCount?: number }) || {}
+                return {
+                    rank: r.rank,
+                    userId: r.userId,
+                    username: r.username,
+                    displayName: r.displayName,
+                    avatarUrl: r.avatarUrl,
+                    visitCount: breakdown.visitCount || 0,
+                    score: Math.round(r.score),
+                }
+            })
+
+            // Find current user's rank if logged in
+            let userRank: number | null = null
+            if (user) {
+                const userEntry = leaderboard.find((e) => e.userId === user.id)
+                if (userEntry) {
+                    userRank = userEntry.rank
+                } else {
+                    // Query user's rank from snapshot
+                    const userSnapshot = await db
+                        .select({ rank: monthlyLeaderboardSnapshots.rank })
+                        .from(monthlyLeaderboardSnapshots)
+                        .where(
+                            and(
+                                eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
+                                eq(monthlyLeaderboardSnapshots.type, "user"),
+                                eq(monthlyLeaderboardSnapshots.entityId, user.id),
+                                region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
+                            )
+                        )
+                        .limit(1)
+                    
+                    if (userSnapshot.length > 0) {
+                        userRank = userSnapshot[0].rank
+                    }
+                }
+            }
+
+            return {
+                leaderboard,
+                userRank,
+                region: region || null,
+                selectedMonth,
             }
         }
 
-        // Get date range for the selected month
+        // For current month, calculate composite score live
         const { startDate: monthStartPH, endDate: monthEndPH } = getMonthDateRange(selectedYearMonth)
-        // Convert to UTC (subtract 8 hours for PH time)
         const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
         const monthEndUTC = new Date(monthEndPH.getTime() - 8 * 60 * 60 * 1000)
 
-        // Build base query with month range
-        let query = db
+        // Build query with composite score calculation
+        const baseQuery = db
             .select({
                 userId: cafeVisits.userId,
                 username: profiles.username,
                 displayName: profiles.displayName,
                 avatarUrl: profiles.avatarUrl,
-                visitCount: count(),
+                uniqueVisits: sql<number>`count(distinct ${cafeVisits.cafeId})`.as("uniqueVisits"),
+                reviewCount: sql<number>`count(distinct case when ${reviews.status} = 'published' then ${reviews.id} end)`.as("reviewCount"),
+                likesReceived: sql<number>`coalesce(sum(${reviews.likesCount}), 0)`.as("likesReceived"),
+                photoCount: sql<number>`coalesce(sum(array_length(${reviews.images}, 1)), 0)`.as("photoCount"),
+                verifiedCount: sql<number>`count(*) filter (where ${reviews.isVerifiedVisit} = true)`.as("verifiedCount"),
+                regionDiversity: sql<number>`count(distinct ${cafes.region})`.as("regionDiversity"),
             })
             .from(cafeVisits)
             .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
+            .leftJoin(reviews, and(
+                eq(reviews.userId, cafeVisits.userId),
+                sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
+                sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
+            ))
+            .leftJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
             .where(
                 and(
                     sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
+                    sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
+                    region ? eq(cafes.region, region) : undefined
                 )
             )
 
-        // Add region filter if specified
-        if (region) {
-            query = db
-                .select({
-                    userId: cafeVisits.userId,
-                    username: profiles.username,
-                    displayName: profiles.displayName,
-                    avatarUrl: profiles.avatarUrl,
-                    visitCount: count(),
-                })
-                .from(cafeVisits)
-                .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
-                .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-                .where(
-                    and(
-                        sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                        sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
-                        eq(cafes.region, region)
-                    )
-                )
-        }
-
-        const results = await query
+        const results = await baseQuery
             .groupBy(cafeVisits.userId, profiles.id, profiles.username, profiles.displayName, profiles.avatarUrl)
-            .orderBy(desc(count()), asc(profiles.username))
-            .limit(limit)
 
-        // Apply tie-aware ranking
-        const rankedResults = applyTieRanking(
-            results.map((r) => ({
+        // Calculate composite scores
+        const scoredResults = results.map((r) => {
+            const uniqueVisits = Number(r.uniqueVisits) || 0
+            const reviewCount = Number(r.reviewCount) || 0
+            const likesReceived = Number(r.likesReceived) || 0
+            const photoCount = Number(r.photoCount) || 0
+            const verifiedCount = Number(r.verifiedCount) || 0
+            const regionDiversity = Number(r.regionDiversity) || 0
+
+            const score = 
+                uniqueVisits * 3 +
+                reviewCount * 5 +
+                likesReceived * 1 +
+                photoCount * 2 +
+                verifiedCount * 2 +
+                regionDiversity * 1
+
+            return {
                 userId: r.userId,
                 username: r.username,
                 displayName: r.displayName,
                 avatarUrl: r.avatarUrl,
-                visitCount: r.visitCount,
-            }))
+                visitCount: uniqueVisits,
+                score,
+            }
+        })
+
+        // Sort by score DESC, then username ASC for tie-breaking
+        scoredResults.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score
+            return a.username.localeCompare(b.username)
+        })
+
+        // Apply tie-aware ranking with scoreKey
+        const rankedResults = applyTieRanking(
+            scoredResults.slice(0, limit),
+            { scoreKey: "score" }
         )
 
         // Build leaderboard with ranks
@@ -1780,90 +1872,40 @@ export async function getMonthlyLeaderboard(
             displayName: r.displayName,
             avatarUrl: r.avatarUrl,
             visitCount: r.visitCount,
+            score: r.score,
         }))
 
         // Find current user's rank if logged in
         let userRank: number | null = null
         if (user) {
             const userEntry = leaderboard.find((e) => e.userId === user.id)
-            userRank = userEntry?.rank || null
+            if (userEntry) {
+                userRank = userEntry.rank
+            } else {
+                // Calculate user's score and rank
+                const userResult = results.find((r) => r.userId === user.id)
+                if (userResult) {
+                    const uniqueVisits = Number(userResult.uniqueVisits) || 0
+                    const reviewCount = Number(userResult.reviewCount) || 0
+                    const likesReceived = Number(userResult.likesReceived) || 0
+                    const photoCount = Number(userResult.photoCount) || 0
+                    const verifiedCount = Number(userResult.verifiedCount) || 0
+                    const regionDiversity = Number(userResult.regionDiversity) || 0
 
-            // If user not in top results, query their rank
-            if (!userRank) {
-                // Count users with more visits than current user
-                const userVisitCountQuery = region
-                    ? db
-                        .select({ visitCount: count() })
-                        .from(cafeVisits)
-                        .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-                        .where(
-                            and(
-                                eq(cafeVisits.userId, user.id),
-                                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                                sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
-                                eq(cafes.region, region)
-                            )
-                        )
-                    : db
-                        .select({ visitCount: count() })
-                        .from(cafeVisits)
-                        .where(
-                            and(
-                                eq(cafeVisits.userId, user.id),
-                                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                                sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
-                            )
-                        )
+                    const userScore = 
+                        uniqueVisits * 3 +
+                        reviewCount * 5 +
+                        likesReceived * 1 +
+                        photoCount * 2 +
+                        verifiedCount * 2 +
+                        regionDiversity * 1
 
-                const userVisitResult = await userVisitCountQuery
-                const userVisitCount = userVisitResult[0]?.visitCount || 0
-
-                if (userVisitCount > 0) {
-                    // Count users with more visits
-                    const higherRanksQuery = region
-                        ? db
-                            .select({ count: count() })
-                            .from(
-                                db
-                                    .select({ userId: cafeVisits.userId, total: count() })
-                                    .from(cafeVisits)
-                                    .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-                                    .where(
-                                        and(
-                                            sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                                            sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
-                                            eq(cafes.region, region)
-                                        )
-                                    )
-                                    .groupBy(cafeVisits.userId)
-                                    .having(sql`count(*) > ${userVisitCount}`)
-                                    .as("higher")
-                            )
-                        : db
-                            .select({ count: count() })
-                            .from(
-                                db
-                                    .select({ userId: cafeVisits.userId, total: count() })
-                                    .from(cafeVisits)
-                                    .where(
-                                        and(
-                                            sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                                            sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
-                                        )
-                                    )
-                                    .groupBy(cafeVisits.userId)
-                                    .having(sql`count(*) > ${userVisitCount}`)
-                                    .as("higher")
-                            )
-
-                    const higherResult = await higherRanksQuery
-                    userRank = (higherResult[0]?.count || 0) + 1
+                    // Count users with higher scores
+                    const higherScores = scoredResults.filter((r) => r.score > userScore).length
+                    userRank = higherScores + 1
                 }
             }
         }
-
-        // Format selected month as YYYY-MM string
-        const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
 
         return {
             leaderboard,
@@ -1873,7 +1915,6 @@ export async function getMonthlyLeaderboard(
         }
     } catch (error) {
         console.error("Error getting monthly leaderboard:", error)
-        // Return current month on error
         const nowPH = getPHTime()
         const fallbackMonth = `${nowPH.getFullYear()}-${(nowPH.getMonth() + 1).toString().padStart(2, "0")}`
         return {
