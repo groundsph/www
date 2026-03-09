@@ -1,5 +1,5 @@
 export interface LeaderboardEntry {
-  userId: string
+  userId?: string
   visitCount: number
   [key: string]: unknown
 }

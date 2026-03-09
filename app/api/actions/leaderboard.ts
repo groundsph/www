@@ -17,9 +17,7 @@ async function computeCafeLeaderboardLive(
     region: string | null | undefined,
     limit: number
 ): Promise<CafeLeaderboardEntry[]> {
-    const { startDate: monthStartPH, endDate: monthEndPH } = getMonthDateRange(selectedYearMonth)
-    const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
-    const monthEndUTC = new Date(monthEndPH.getTime() - 8 * 60 * 60 * 1000)
+    const { startDate: monthStartUTC, endDate: monthEndUTC } = getMonthDateRange(selectedYearMonth)
 
     const baseQuery = db
         .select({
@@ -78,7 +76,6 @@ async function computeCafeLeaderboardLive(
             pageViews * 0.5
 
         return {
-            userId: r.cafeId,
             cafeId: r.cafeId,
             name: r.name,
             slug: r.slug,

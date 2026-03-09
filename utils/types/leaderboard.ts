@@ -21,13 +21,3 @@ export interface CafeLeaderboardEntry {
   reviewCount: number;
   avgRating: number | null;
 }
-
-export interface LeaderboardSnapshotRow {
-  yearMonth: string;
-  type: "user" | "cafe";
-  entityId: string;
-  rank: number;
-  score: number;
-  breakdown: Record<string, unknown> | null;
-  region: string | null;
-}
