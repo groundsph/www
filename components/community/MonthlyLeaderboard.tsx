@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Calendar } from "lucide-react"
+import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Calendar, Coffee } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { getMonthlyLeaderboard } from "@/app/api/actions/profile"
+import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
+import CafeMonthlyLeaderboard from "./CafeMonthlyLeaderboard"
 import { useUserLocation } from "@/hooks/useUserLocation"
 import { getLastNMonths, formatYearMonth } from "@/utils/date/leaderboard-months"
 import { groupByRank } from "./leaderboard-utils"
@@ -18,7 +20,10 @@ interface LeaderboardEntry {
     displayName: string
     avatarUrl: string | null
     visitCount: number
+    score: number
 }
+
+type LeaderboardMode = "users" | "cafes"
 
 interface MonthlyLeaderboardProps {
     className?: string
@@ -29,6 +34,7 @@ export default function MonthlyLeaderboard({
 }: MonthlyLeaderboardProps) {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
     const [userRank, setUserRank] = useState<number | null>(null)
+    const [mode, setMode] = useState<LeaderboardMode>("users")
     const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
     const [userPreferredRegion, setUserPreferredRegion] = useState<
         string | null
@@ -145,16 +151,23 @@ export default function MonthlyLeaderboard({
         }
     }, [selectedMonth])
 
-    // Fetch leaderboard when region or month changes
+    // Fetch leaderboard when region, month, or mode changes
     useEffect(() => {
         const fetchLeaderboard = async () => {
             if (!selectedMonth) return
 
             setIsLoading(true)
             try {
-                const result = await getMonthlyLeaderboard(selectedRegion, 20, selectedMonth)
-                setLeaderboard(result.leaderboard)
-                setUserRank(result.userRank)
+                if (mode === "users") {
+                    const result = await getMonthlyLeaderboard(selectedRegion, 20, selectedMonth)
+                    setLeaderboard(result.leaderboard)
+                    setUserRank(result.userRank)
+                } else {
+                    // Cafe leaderboard is handled by the CafeMonthlyLeaderboard component
+                    // We just clear user-specific state when switching to cafes
+                    setLeaderboard([])
+                    setUserRank(null)
+                }
             } catch (error) {
                 console.error("Failed to fetch leaderboard:", error)
             } finally {
@@ -162,7 +175,7 @@ export default function MonthlyLeaderboard({
             }
         }
         fetchLeaderboard()
-    }, [selectedRegion, selectedMonth])
+    }, [selectedRegion, selectedMonth, mode])
 
     const getRankIcon = (rank: number) => {
         switch (rank) {
@@ -190,8 +203,34 @@ export default function MonthlyLeaderboard({
                         Monthly Leaderboard
                     </h2>
                     <p className='text-text/60 mt-1'>
-                        {monthName} — Top cafe explorers
+                        {monthName} — {mode === "users" ? "Top cafe explorers" : "Most popular cafes"}
                     </p>
+                </div>
+
+                {/* Mode Toggle */}
+                <div className='flex items-center gap-1 bg-secondary/10 rounded-lg p-1'>
+                    <button
+                        onClick={() => setMode("users")}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                            mode === "users"
+                                ? "bg-primary text-white shadow-sm"
+                                : "text-text/70 hover:text-text"
+                        }`}
+                    >
+                        <Users className='w-4 h-4' />
+                        Top Scouts
+                    </button>
+                    <button
+                        onClick={() => setMode("cafes")}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                            mode === "cafes"
+                                ? "bg-primary text-white shadow-sm"
+                                : "text-text/70 hover:text-text"
+                        }`}
+                    >
+                        <Coffee className='w-4 h-4' />
+                        Top Cafes
+                    </button>
                 </div>
             </div>
 
@@ -321,8 +360,13 @@ export default function MonthlyLeaderboard({
                 </div>
             </div>
 
-            {/* Leaderboard Grid */}
-            {isLoading ? (
+            {/* Leaderboard Content */}
+            {mode === "cafes" ? (
+                <CafeMonthlyLeaderboard 
+                    region={selectedRegion} 
+                    yearMonth={selectedMonth} 
+                />
+            ) : isLoading ? (
                 <div className='flex items-center justify-center py-16'>
                     <div className='animate-spin w-10 h-10 border-3 border-primary border-t-transparent rounded-full' />
                 </div>
@@ -422,14 +466,17 @@ export default function MonthlyLeaderboard({
                                             </p>
                                         </div>
 
-                                        {/* Visit Count */}
+                                        {/* Score */}
                                         <div className='text-right'>
                                             <span className='text-xl font-bold text-primary'>
-                                                {entry.visitCount}
+                                                {entry.score}
                                             </span>
                                             <span className='text-sm text-text/50 ml-1'>
-                                                visits
+                                                points
                                             </span>
+                                            <p className='text-xs text-text/40'>
+                                                {entry.visitCount} visits
+                                            </p>
                                         </div>
                                     </Link>
                                 ))}
