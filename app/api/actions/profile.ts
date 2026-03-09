@@ -1679,10 +1679,115 @@ export async function getUserPreferredRegion(): Promise<string | null> {
  * @param limit - Number of results to return (default 20)
  * @param yearMonth - Optional YYYY-MM string to select a specific month
  */
+/**
+ * Internal helper: Compute user leaderboard live for any given month.
+ * Used by getMonthlyLeaderboard and for backfilling historical data.
+ */
+async function computeUserLeaderboardLive(
+    selectedYearMonth: { year: number; month: number },
+    region: string | null | undefined,
+    limit: number
+): Promise<Array<{
+    rank: number
+    userId: string
+    username: string
+    displayName: string
+    avatarUrl: string | null
+    visitCount: number
+    score: number
+}>> {
+    // Get date range for the selected month
+    const { startDate: monthStartPH, endDate: monthEndPH } = getMonthDateRange(selectedYearMonth)
+    const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
+    const monthEndUTC = new Date(monthEndPH.getTime() - 8 * 60 * 60 * 1000)
+
+    // Build composite score query
+    // Compute per-user stats: uniqueVisits, reviewCount, likesReceived, photoCount, verifiedCount, regionDiversity
+    const baseQuery = db
+        .select({
+            userId: cafeVisits.userId,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+            uniqueVisits: sql<number>`count(distinct ${cafeVisits.cafeId})`.as("uniqueVisits"),
+            reviewCount: sql<number>`count(distinct ${reviews.id}) filter (where ${reviews.status} = 'published')`.as("reviewCount"),
+            likesReceived: sql<number>`coalesce(sum(${reviews.likesCount}) filter (where ${reviews.status} = 'published'), 0)`.as("likesReceived"),
+            photoCount: sql<number>`coalesce(sum(array_length(${reviews.images}, 1)) filter (where ${reviews.status} = 'published'), 0)`.as("photoCount"),
+            verifiedCount: sql<number>`count(*) filter (where ${reviews.isVerifiedVisit} = true and ${reviews.status} = 'published')`.as("verifiedCount"),
+            regionDiversity: sql<number>`count(distinct ${cafes.region})`.as("regionDiversity"),
+        })
+        .from(cafeVisits)
+        .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
+        .leftJoin(reviews, and(
+            eq(reviews.userId, cafeVisits.userId),
+            eq(reviews.cafeId, cafeVisits.cafeId),
+            sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
+            sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
+        ))
+        .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+        .where(
+            and(
+                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+                sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
+                region ? eq(cafes.region, region) : undefined
+            )
+        )
+        .groupBy(cafeVisits.userId, profiles.id, profiles.username, profiles.displayName, profiles.avatarUrl)
+
+    const results = await baseQuery
+
+    // Calculate composite score and build leaderboard entries
+    const scoredResults = results.map((r) => {
+        const uniqueVisits = Number(r.uniqueVisits) || 0
+        const reviewCount = Number(r.reviewCount) || 0
+        const likesReceived = Number(r.likesReceived) || 0
+        const photoCount = Number(r.photoCount) || 0
+        const verifiedCount = Number(r.verifiedCount) || 0
+        const regionDiversity = Number(r.regionDiversity) || 0
+
+        const score =
+            uniqueVisits * 3 +
+            reviewCount * 5 +
+            likesReceived * 1 +
+            photoCount * 2 +
+            verifiedCount * 2 +
+            regionDiversity * 1
+
+        return {
+            userId: r.userId,
+            username: r.username,
+            displayName: r.displayName,
+            avatarUrl: r.avatarUrl,
+            visitCount: uniqueVisits,
+            score,
+        }
+    })
+
+    // Sort by score DESC, then username ASC for tie-breaking
+    scoredResults.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score
+        return a.username.localeCompare(b.username)
+    })
+
+    // Apply tie ranking (dense ranking: 1, 1, 2)
+    const rankedResults = applyTieRanking(scoredResults.slice(0, limit))
+
+    return rankedResults.map((r) => ({
+        rank: r.rank,
+        userId: r.userId as string,
+        username: r.username as string,
+        displayName: r.displayName as string,
+        avatarUrl: r.avatarUrl as string | null,
+        visitCount: r.visitCount as number,
+        score: r.score as number,
+    }))
+}
+
 export async function getMonthlyLeaderboard(
     region?: string | null,
     limit: number = 20,
-    yearMonth?: string | null
+    yearMonth?: string | null,
+    options?: { computeLive?: boolean }
 ): Promise<{
     leaderboard: {
         rank: number
@@ -1715,8 +1820,8 @@ export async function getMonthlyLeaderboard(
         const currentYearMonth = `${nowPH.getFullYear()}-${(nowPH.getMonth() + 1).toString().padStart(2, "0")}`
         const isCurrentMonth = selectedMonthStr === currentYearMonth
 
-        // For past months, read from snapshot
-        if (!isCurrentMonth) {
+        // For past months, read from snapshot unless computeLive is true (for backfill)
+        if (!isCurrentMonth && !options?.computeLive) {
             const snapshotResults = await db
                 .select({
                     rank: monthlyLeaderboardSnapshots.rank,
@@ -1739,7 +1844,7 @@ export async function getMonthlyLeaderboard(
                 .orderBy(asc(monthlyLeaderboardSnapshots.rank))
                 .limit(limit)
 
-            // If no snapshot exists for that month, return empty leaderboard
+            // If no snapshot exists for that month, return empty leaderboard (unless computing live)
             if (snapshotResults.length === 0) {
                 return {
                     leaderboard: [],
@@ -1791,177 +1896,15 @@ export async function getMonthlyLeaderboard(
             }
         }
 
-        // Get date range for the selected month
-        const { startDate: monthStartPH, endDate: monthEndPH } = getMonthDateRange(selectedYearMonth)
-        const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
-        const monthEndUTC = new Date(monthEndPH.getTime() - 8 * 60 * 60 * 1000)
+        // Compute live for current month or when computeLive option is set
+        const leaderboard = await computeUserLeaderboardLive(selectedYearMonth, region, limit)
 
-        // Build composite score query
-        // Compute per-user stats: uniqueVisits, reviewCount, likesReceived, photoCount, verifiedCount, regionDiversity
-        const baseQuery = db
-            .select({
-                userId: cafeVisits.userId,
-                username: profiles.username,
-                displayName: profiles.displayName,
-                avatarUrl: profiles.avatarUrl,
-                uniqueVisits: sql<number>`count(distinct ${cafeVisits.cafeId})`.as("uniqueVisits"),
-                reviewCount: sql<number>`count(distinct ${reviews.id}) filter (where ${reviews.status} = 'published')`.as("reviewCount"),
-                likesReceived: sql<number>`coalesce(sum(${reviews.likesCount}) filter (where ${reviews.status} = 'published'), 0)`.as("likesReceived"),
-                photoCount: sql<number>`coalesce(sum(array_length(${reviews.images}, 1)) filter (where ${reviews.status} = 'published'), 0)`.as("photoCount"),
-                verifiedCount: sql<number>`count(*) filter (where ${reviews.isVerifiedVisit} = true and ${reviews.status} = 'published')`.as("verifiedCount"),
-                regionDiversity: sql<number>`count(distinct ${cafes.region})`.as("regionDiversity"),
-            })
-            .from(cafeVisits)
-            .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
-            .leftJoin(reviews, and(
-                eq(reviews.userId, cafeVisits.userId),
-                eq(reviews.cafeId, cafeVisits.cafeId),
-                sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
-                sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
-            ))
-            .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-            .where(
-                and(
-                    sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
-                    region ? eq(cafes.region, region) : undefined
-                )
-            )
-            .groupBy(cafeVisits.userId, profiles.id, profiles.username, profiles.displayName, profiles.avatarUrl)
-
-        const results = await baseQuery
-
-        // Calculate composite score and build leaderboard entries
-        const scoredResults = results.map((r) => {
-            const uniqueVisits = Number(r.uniqueVisits) || 0
-            const reviewCount = Number(r.reviewCount) || 0
-            const likesReceived = Number(r.likesReceived) || 0
-            const photoCount = Number(r.photoCount) || 0
-            const verifiedCount = Number(r.verifiedCount) || 0
-            const regionDiversity = Number(r.regionDiversity) || 0
-
-            const score =
-                uniqueVisits * 3 +
-                reviewCount * 5 +
-                likesReceived * 1 +
-                photoCount * 2 +
-                verifiedCount * 2 +
-                regionDiversity * 1
-
-            return {
-                userId: r.userId,
-                username: r.username,
-                displayName: r.displayName,
-                avatarUrl: r.avatarUrl,
-                visitCount: uniqueVisits,
-                score,
-            }
-        })
-
-        // Sort by score DESC, then username ASC for tie-breaking
-        scoredResults.sort((a, b) => {
-            if (b.score !== a.score) return b.score - a.score
-            return a.username.localeCompare(b.username)
-        })
-
-        // Take top results
-        const topResults = scoredResults.slice(0, limit)
-
-        // Apply tie-aware ranking using score
-        const rankedResults = applyTieRanking(topResults, { scoreKey: "score" })
-
-        // Build leaderboard with ranks
-        const leaderboard = rankedResults.map((r) => ({
-            rank: r.rank,
-            userId: r.userId,
-            username: r.username,
-            displayName: r.displayName,
-            avatarUrl: r.avatarUrl,
-            visitCount: r.visitCount,
-            score: r.score,
-        }))
-
-        // Find current user's rank if logged in
+        // Find current user's rank if logged in (only for current month)
         let userRank: number | null = null
-        if (user) {
+        if (user && isCurrentMonth) {
             const userEntry = leaderboard.find((e) => e.userId === user.id)
             if (userEntry) {
                 userRank = userEntry.rank
-            } else {
-                // Calculate user's score and rank
-                const userStatsQuery = db
-                    .select({
-                        uniqueVisits: sql<number>`count(distinct ${cafeVisits.cafeId})`.as("uniqueVisits"),
-                        reviewCount: sql<number>`count(distinct ${reviews.id}) filter (where ${reviews.status} = 'published')`.as("reviewCount"),
-                        likesReceived: sql<number>`coalesce(sum(${reviews.likesCount}) filter (where ${reviews.status} = 'published'), 0)`.as("likesReceived"),
-                        photoCount: sql<number>`coalesce(sum(array_length(${reviews.images}, 1)) filter (where ${reviews.status} = 'published'), 0)`.as("photoCount"),
-                        verifiedCount: sql<number>`count(*) filter (where ${reviews.isVerifiedVisit} = true and ${reviews.status} = 'published')`.as("verifiedCount"),
-                        regionDiversity: sql<number>`count(distinct ${cafes.region})`.as("regionDiversity"),
-                    })
-                    .from(cafeVisits)
-                    .leftJoin(reviews, and(
-                        eq(reviews.userId, cafeVisits.userId),
-                        eq(reviews.cafeId, cafeVisits.cafeId),
-                        sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
-                        sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
-                    ))
-                    .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-                    .where(
-                        and(
-                            eq(cafeVisits.userId, user.id),
-                            sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                            sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
-                            region ? eq(cafes.region, region) : undefined
-                        )
-                    )
-
-                const userStats = await userStatsQuery
-                if (userStats.length > 0) {
-                    const stats = userStats[0]
-                    const userScore =
-                        (Number(stats.uniqueVisits) || 0) * 3 +
-                        (Number(stats.reviewCount) || 0) * 5 +
-                        (Number(stats.likesReceived) || 0) * 1 +
-                        (Number(stats.photoCount) || 0) * 2 +
-                        (Number(stats.verifiedCount) || 0) * 2 +
-                        (Number(stats.regionDiversity) || 0) * 1
-
-                    // Count users with higher scores
-                    const higherScoresQuery = db
-                        .select({ count: count() })
-                        .from(
-                            db
-                                .select({ userId: cafeVisits.userId })
-                                .from(cafeVisits)
-                                .leftJoin(reviews, and(
-                                    eq(reviews.userId, cafeVisits.userId),
-                                    eq(reviews.cafeId, cafeVisits.cafeId),
-                                    sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
-                                    sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
-                                ))
-                                .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-                                .where(
-                                    and(
-                                        sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                                        sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
-                                        region ? eq(cafes.region, region) : undefined
-                                    )
-                                )
-                                .groupBy(cafeVisits.userId)
-                                .having(sql`
-                                    (count(distinct ${cafeVisits.cafeId}) * 3 +
-                                     count(distinct ${reviews.id}) filter (where ${reviews.status} = 'published') * 5 +
-                                     coalesce(sum(${reviews.likesCount}) filter (where ${reviews.status} = 'published'), 0) * 1 +
-                                     coalesce(sum(array_length(${reviews.images}, 1)) filter (where ${reviews.status} = 'published'), 0) * 2 +
-                                     count(*) filter (where ${reviews.isVerifiedVisit} = true and ${reviews.status} = 'published') * 2 +
-                                     count(distinct ${cafes.region}) * 1) > ${userScore}
-                                `)
-                                .as("higher")
-                        )
-
-                    const higherResult = await higherScoresQuery
-                    userRank = (higherResult[0]?.count || 0) + 1
-                }
             }
         }
 

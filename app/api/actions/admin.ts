@@ -4127,7 +4127,7 @@ export async function backfillLeaderboardSnapshots(
 
         // Snapshot user leaderboards
         for (const region of regionsToSnapshot) {
-            const result = await getMonthlyLeaderboard(region, 100, yearMonth)
+            const result = await getMonthlyLeaderboard(region, 100, yearMonth, { computeLive: true })
 
             if (result.leaderboard.length === 0) {
                 continue
