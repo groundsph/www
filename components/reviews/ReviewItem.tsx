@@ -8,7 +8,6 @@ import {
     Star,
     Trash2,
     Edit2,
-    User,
     Flag,
 } from "lucide-react"
 import Image from "next/image"
@@ -23,6 +22,7 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/utils/cn"
 import MarkdownRender from "@/components/ui/MarkdownRender"
 import ImageLightbox from "@/components/modal/ImageLightbox"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 
 // Simple user type - only needs id for this component
 type SimpleUser = { id: string } | null
@@ -139,20 +139,12 @@ export default function ReviewItem({
                     href={`/profile/${username}`}
                     className='flex items-center gap-3'
                 >
-                    <div className='relative w-10 h-10 rounded-full overflow-hidden bg-text/5 border border-text/10 group-hover:border-primary/50 transition-colors'>
-                        {avatarUrl ? (
-                            <Image
-                                src={avatarUrl}
-                                alt={displayName}
-                                fill
-                                className='object-cover'
-                            />
-                        ) : (
-                            <div className='w-full h-full flex items-center justify-center'>
-                                <User className='w-5 h-5 text-text opacity-40' />
-                            </div>
-                        )}
-                    </div>
+                    <UserAvatar
+                        src={avatarUrl}
+                        alt={displayName}
+                        size={40}
+                        className="bg-text/5 border border-text/10 group-hover:border-primary/50 transition-colors"
+                    />
                     <div className='flex flex-col'>
                         <span className='font-bold text-sm text-text group-hover/link:text-primary transition-colors'>
                             {displayName}
@@ -291,23 +283,12 @@ export default function ReviewItem({
             {review.owner_response && (
                 <div className='mt-4 ml-4 p-4 bg-primary/5 border-l-2 border-primary rounded-r-lg'>
                     <div className='flex items-center gap-2 mb-2'>
-                        <div className='relative w-6 h-6 rounded-full overflow-hidden bg-text/10 border border-primary/20'>
-                            {review.owner_response.owner?.avatar_url ? (
-                                <Image
-                                    src={review.owner_response.owner.avatar_url}
-                                    alt={
-                                        review.owner_response.owner
-                                            .display_name || "Owner"
-                                    }
-                                    fill
-                                    className='object-cover'
-                                />
-                            ) : (
-                                <div className='w-full h-full flex items-center justify-center'>
-                                    <User className='w-3 h-3 text-primary opacity-60' />
-                                </div>
-                            )}
-                        </div>
+                        <UserAvatar
+                            src={review.owner_response.owner?.avatar_url}
+                            alt={review.owner_response.owner?.display_name || "Owner"}
+                            size={24}
+                            className="bg-text/10 border border-primary/20"
+                        />
                         <span className='text-sm font-semibold text-primary'>
                             {review.owner_response.owner?.display_name ||
                                 "Cafe Owner"}

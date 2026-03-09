@@ -1,7 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import { CoffeeIcon, StarIcon, UserIcon } from "lucide-react"
+import { CoffeeIcon, StarIcon } from "lucide-react"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { useInView } from "motion/react"
 import { useRef } from "react"
 import { motion } from "motion/react"
@@ -104,19 +105,12 @@ export default function RecentReviewsSection({
 
                         {/* Author */}
                         <div className='flex items-center gap-2 pt-2 border-t border-text/5'>
-                            {review.author.avatar_url ? (
-                                <Image
-                                    src={review.author.avatar_url}
-                                    alt={review.author.display_name}
-                                    width={24}
-                                    height={24}
-                                    className='w-6 h-6 rounded-full object-cover'
-                                />
-                            ) : (
-                                <div className='w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center'>
-                                    <UserIcon className='w-3 h-3 text-primary' />
-                                </div>
-                            )}
+                            <UserAvatar
+                                src={review.author.avatar_url}
+                                alt={review.author.display_name}
+                                size={24}
+                                className="rounded-full"
+                            />
                             <span className='text-xs text-text/60 truncate'>
                                 {review.author.display_name}
                             </span>

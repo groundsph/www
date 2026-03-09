@@ -44,6 +44,7 @@ import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ImageCropper from "@/components/ui/ImageCropper"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import {
     getUserCollections,
     getSavedCollections,
@@ -644,16 +645,11 @@ export default function Profile() {
                             }}
                             className={`w-28 h-28 rounded-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden border-4 border-background relative group ${isEditing ? "cursor-pointer" : ""}`}
                         >
-                            {profileData.avatar_url ? (
-                                <Image
-                                    src={profileData.avatar_url}
-                                    alt={profileData.display_name}
-                                    fill
-                                    className='object-cover'
-                                />
-                            ) : (
-                                <User className='w-12 h-12 text-text opacity-40' />
-                            )}
+                            <UserAvatar
+                                src={profileData.avatar_url}
+                                alt={profileData.display_name}
+                                size={112}
+                            />
                             {/* Upload overlay */}
                             {isEditing && (
                                 <div className='absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full'>

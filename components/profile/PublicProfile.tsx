@@ -29,6 +29,7 @@ import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
 import ContributionTimeline from "@/components/profile/ContributionTimeline"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import FollowButton from "@/components/social/FollowButton"
 import FollowCounts from "@/components/social/FollowCounts"
 import FollowListModal from "@/components/social/FollowListModal"
@@ -238,16 +239,11 @@ export default function PublicProfile({
                     {/* Avatar */}
                     <div className='relative'>
                         <div className='w-28 h-28 rounded-full bg-linear-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden border-4 border-background relative'>
-                            {profile.avatar_url ? (
-                                <Image
-                                    src={profile.avatar_url}
-                                    alt={profile.display_name}
-                                    fill
-                                    className='object-cover'
-                                />
-                            ) : (
-                                <User className='w-12 h-12 text-text opacity-40' />
-                            )}
+                            <UserAvatar
+                                src={profile.avatar_url}
+                                alt={profile.display_name}
+                                size={112}
+                            />
                         </div>
                         {profile.is_supporter && (
                             <div
