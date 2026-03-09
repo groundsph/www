@@ -11,6 +11,7 @@ import {
     user,
     monthlyLeaderboardSnapshots,
 } from "@/db/schema"
+import { PH_REGIONS } from "@/utils/ph-regions"
 import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
@@ -4028,26 +4029,6 @@ export async function backfillLeaderboardSnapshots(
         if (existingUserSnapshot.length > 0) {
             return { success: false, message: `Snapshots already exist for ${yearMonth}. Delete them first if you want to re-backfill.` }
         }
-
-        // Philippines regions (same as in cron)
-        const PH_REGIONS = [
-            "NCR - National Capital Region",
-            "Region I - Ilocos Region",
-            "Region II - Cagayan Valley",
-            "Region III - Central Luzon",
-            "Region IV-A - CALABARZON",
-            "Region IV-B - MIMAROPA",
-            "Region V - Bicol Region",
-            "Region VI - Western Visayas",
-            "Region VII - Central Visayas",
-            "Region VIII - Eastern Visayas",
-            "Region IX - Zamboanga Peninsula",
-            "Region X - Northern Mindanao",
-            "Region XI - Davao Region",
-            "Region XII - SOCCSKSARGEN",
-            "Region XIII - Caraga",
-            "BARMM - Bangsamoro",
-        ]
 
         const regionsToSnapshot = [null, ...PH_REGIONS]
         let totalUserSnapshots = 0

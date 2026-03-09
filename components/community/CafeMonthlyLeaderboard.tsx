@@ -6,6 +6,7 @@ import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Star, Info } from "lu
 import Image from "next/image"
 import Link from "next/link"
 import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
+import { PH_REGIONS } from "@/utils/ph-regions"
 
 import { groupByRank } from "./leaderboard-utils"
 import { CafeLeaderboardEntry } from "@/utils/types/leaderboard"
@@ -192,24 +193,7 @@ export default function CafeMonthlyLeaderboard({
     }, [showRegionDropdown])
 
     // Philippines regions for dropdown
-    const regions = [
-        "NCR - National Capital Region",
-        "Region I - Ilocos Region",
-        "Region II - Cagayan Valley",
-        "Region III - Central Luzon",
-        "Region IV-A - CALABARZON",
-        "Region IV-B - MIMAROPA",
-        "Region V - Bicol Region",
-        "Region VI - Western Visayas",
-        "Region VII - Central Visayas",
-        "Region VIII - Eastern Visayas",
-        "Region IX - Zamboanga Peninsula",
-        "Region X - Northern Mindanao",
-        "Region XI - Davao Region",
-        "Region XII - SOCCSKSARGEN",
-        "Region XIII - Caraga",
-        "BARMM - Bangsamoro",
-    ]
+    const regions = PH_REGIONS
 
     // Fetch leaderboard when region or month changes
     useEffect(() => {

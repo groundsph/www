@@ -5,6 +5,7 @@ import { db } from "@/db"
 import { monthlyLeaderboardSnapshots } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { getPHTime } from "@/utils/featured"
+import { PH_REGIONS } from "@/utils/ph-regions"
 
 /**
  * Cron Job: Snapshot Monthly Leaderboards
@@ -21,26 +22,6 @@ import { getPHTime } from "@/utils/featured"
  * curl -X GET https://your-domain.com/api/cron/leaderboard-snapshots \
  *   -H "Authorization: Bearer your-cron-secret"
  */
-
-// Philippines regions (same as in MonthlyLeaderboard.tsx)
-const PH_REGIONS = [
-    "NCR - National Capital Region",
-    "Region I - Ilocos Region",
-    "Region II - Cagayan Valley",
-    "Region III - Central Luzon",
-    "Region IV-A - CALABARZON",
-    "Region IV-B - MIMAROPA",
-    "Region V - Bicol Region",
-    "Region VI - Western Visayas",
-    "Region VII - Central Visayas",
-    "Region VIII - Eastern Visayas",
-    "Region IX - Zamboanga Peninsula",
-    "Region X - Northern Mindanao",
-    "Region XI - Davao Region",
-    "Region XII - SOCCSKSARGEN",
-    "Region XIII - Caraga",
-    "BARMM - Bangsamoro",
-]
 
 export async function GET(request: NextRequest) {
     try {

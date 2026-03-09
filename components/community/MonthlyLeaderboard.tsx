@@ -11,6 +11,7 @@ import { useUserLocation } from "@/hooks/useUserLocation"
 import { getLastNMonths, formatYearMonth } from "@/utils/date/leaderboard-months"
 import { groupByRank } from "./leaderboard-utils"
 import ExpandableRankCard from "./ExpandableRankCard"
+import { PH_REGIONS } from "@/utils/ph-regions"
 
 interface LeaderboardEntry {
     rank: number
@@ -75,24 +76,7 @@ export default function MonthlyLeaderboard({
     }, [showRegionDropdown, showMonthDropdown])
 
     // Philippines regions for dropdown (matching database format)
-    const regions = [
-        "NCR - National Capital Region",
-        "Region I - Ilocos Region",
-        "Region II - Cagayan Valley",
-        "Region III - Central Luzon",
-        "Region IV-A - CALABARZON",
-        "Region IV-B - MIMAROPA",
-        "Region V - Bicol Region",
-        "Region VI - Western Visayas",
-        "Region VII - Central Visayas",
-        "Region VIII - Eastern Visayas",
-        "Region IX - Zamboanga Peninsula",
-        "Region X - Northern Mindanao",
-        "Region XI - Davao Region",
-        "Region XII - SOCCSKSARGEN",
-        "Region XIII - Caraga",
-        "BARMM - Bangsamoro",
-    ]
+    const regions = PH_REGIONS
 
     // Mapping from geolocation region names to database region codes
     const regionMapping: Record<string, string> = {
@@ -133,7 +117,7 @@ export default function MonthlyLeaderboard({
             const mappedRegion =
                 regionMapping[location.region] || location.region
             // Only set if it's a valid region
-            if (regions.includes(mappedRegion)) {
+            if ((regions as readonly string[]).includes(mappedRegion)) {
                 setUserPreferredRegion(mappedRegion)
                 setSelectedRegion(mappedRegion)
             }
