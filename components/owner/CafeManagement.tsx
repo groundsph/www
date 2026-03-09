@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import {
@@ -1554,31 +1555,17 @@ export default function CafeManagement({
                                         {/* Review Header */}
                                         <div className='flex items-start justify-between gap-3'>
                                             <div className='flex items-center gap-3'>
-                                                <div className='w-10 h-10 rounded-full bg-text/10 overflow-hidden'>
-                                                    {review.author
-                                                        .avatar_url ? (
-                                                        <Image
-                                                            src={
-                                                                review.author
-                                                                    .avatar_url
-                                                            }
-                                                            alt={
-                                                                review.author
-                                                                    .display_name
-                                                            }
-                                                            width={40}
-                                                            height={40}
-                                                            className='object-cover'
-                                                        />
-                                                    ) : (
-                                                        <div className='w-full h-full flex items-center justify-center text-text/40'>
-                                                            {
-                                                                review.author
-                                                                    .display_name[0]
-                                                            }
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <UserAvatar
+                                                    src={
+                                                        review.author
+                                                            .avatar_url
+                                                    }
+                                                    alt={
+                                                        review.author
+                                                            .display_name
+                                                    }
+                                                    size={40}
+                                                />
                                                 <div>
                                                     <p className='font-medium'>
                                                         {

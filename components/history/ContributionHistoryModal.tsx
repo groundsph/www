@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import {
     X,
     History,
@@ -202,24 +203,17 @@ export default function ContributionHistoryModal({
                                                         href={`/profile/${log.author.username}`}
                                                         className='flex items-center gap-1.5 hover:text-accent transition-colors cursor-pointer hover:underline'
                                                     >
-                                                        {log.author
-                                                            .avatar_url ? (
-                                                            <Image
-                                                                src={
-                                                                    log.author
-                                                                        .avatar_url
-                                                                }
-                                                                alt={
-                                                                    log.author
-                                                                        .display_name
-                                                                }
-                                                                width={18}
-                                                                height={18}
-                                                                className='rounded-full'
-                                                            />
-                                                        ) : (
-                                                            <UserIcon className='w-4 h-4' />
-                                                        )}
+                                                        <UserAvatar
+                                                            src={
+                                                                log.author
+                                                                    .avatar_url
+                                                            }
+                                                            alt={
+                                                                log.author
+                                                                    .display_name
+                                                            }
+                                                            size={18}
+                                                        />
                                                         <span className='text-sm font-medium'>
                                                             {
                                                                 log.author

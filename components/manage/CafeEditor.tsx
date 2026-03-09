@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -838,19 +839,11 @@ export default function CafeEditor({
                         {cafe.contributor && (
                             <div className='bg-accent/10 border border-accent/20 rounded-xl p-4'>
                                 <div className='flex items-center gap-3'>
-                                    {cafe.contributor.avatar_url ? (
-                                        <Image
-                                            src={cafe.contributor.avatar_url}
-                                            alt={cafe.contributor.display_name}
-                                            width={40}
-                                            height={40}
-                                            className='rounded-full object-cover'
-                                        />
-                                    ) : (
-                                        <div className='w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center'>
-                                            <Users className='w-5 h-5 text-accent' />
-                                        </div>
-                                    )}
+                                    <UserAvatar
+                                        src={cafe.contributor.avatar_url}
+                                        alt={cafe.contributor.display_name}
+                                        size={40}
+                                    />
                                     <div>
                                         <p className='text-sm text-text/60'>
                                             Submitted by
@@ -894,19 +887,11 @@ export default function CafeEditor({
                                             className='flex items-center justify-between p-3 hover:bg-text/5 transition'
                                         >
                                             <div className='flex items-center gap-3'>
-                                                {user.avatar_url ? (
-                                                    <Image
-                                                        src={user.avatar_url}
-                                                        alt={user.display_name}
-                                                        width={32}
-                                                        height={32}
-                                                        className='rounded-full object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-8 h-8 rounded-full bg-text/10 flex items-center justify-center'>
-                                                        <Users className='w-4 h-4 text-text opacity-40' />
-                                                    </div>
-                                                )}
+                                            <UserAvatar
+                                                src={user.avatar_url}
+                                                alt={user.display_name}
+                                                size={32}
+                                            />
                                                 <div>
                                                     <p className='font-medium text-sm'>
                                                         {user.display_name}
@@ -945,19 +930,11 @@ export default function CafeEditor({
                                             className='flex items-center justify-between p-3'
                                         >
                                             <div className='flex items-center gap-3'>
-                                                {owner.avatar_url ? (
-                                                    <Image
-                                                        src={owner.avatar_url}
-                                                        alt={owner.display_name}
-                                                        width={40}
-                                                        height={40}
-                                                        className='rounded-full object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-10 h-10 rounded-full bg-text/10 flex items-center justify-center'>
-                                                        <Users className='w-5 h-5 text-text opacity-40' />
-                                                    </div>
-                                                )}
+                                            <UserAvatar
+                                                src={owner.avatar_url}
+                                                alt={owner.display_name}
+                                                size={40}
+                                            />
                                                 <div>
                                                     <p className='font-medium'>
                                                         {owner.display_name}

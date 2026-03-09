@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
 import {
     Check,
@@ -393,26 +394,12 @@ export default function CommunityManagement({
                                         {/* Main Row */}
                                         <div className='p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4'>
                                             {/* Author Avatar */}
-                                            <div className='relative w-12 h-12 shrink-0 rounded-full overflow-hidden bg-tertiary/30'>
-                                                {review.author?.avatar_url ? (
-                                                    <Image
-                                                        src={
-                                                            review.author
-                                                                .avatar_url
-                                                        }
-                                                        alt={
-                                                            review.author
-                                                                .display_name
-                                                        }
-                                                        fill
-                                                        className='object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-full h-full flex items-center justify-center text-text opacity-30'>
-                                                        <MessageSquare className='w-5 h-5' />
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <UserAvatar
+                                                src={review.author?.avatar_url}
+                                                alt={review.author?.display_name || "User"}
+                                                size={48}
+                                                className='shrink-0'
+                                            />
 
                                             {/* Review Info */}
                                             <div className='flex-1 min-w-0'>
@@ -821,21 +808,12 @@ export default function CommunityManagement({
                                         key={user.id}
                                         className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-tertiary/10 rounded-lg'
                                     >
-                                        <div className='relative w-10 h-10 rounded-full overflow-hidden bg-tertiary/30 shrink-0'>
-                                            {user.avatar_url ? (
-                                                <Image
-                                                    src={user.avatar_url}
-                                                    alt={user.display_name}
-                                                    fill
-                                                    className='object-cover'
-                                                />
-                                            ) : (
-                                                <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-lg font-semibold'>
-                                                    {user.display_name?.[0]?.toUpperCase() ||
-                                                        "?"}
-                                                </div>
-                                            )}
-                                        </div>
+                                        <UserAvatar
+                                            src={user.avatar_url}
+                                            alt={user.display_name}
+                                            size={40}
+                                            className='shrink-0'
+                                        />
                                         <div className='flex-1 min-w-0'>
                                             <div className='font-medium truncate'>
                                                 {user.display_name}
@@ -908,21 +886,12 @@ export default function CommunityManagement({
                                         className='flex flex-col gap-3 p-3 bg-background rounded-xl border border-tertiary/50'
                                     >
                                         <div className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3'>
-                                            <div className='relative w-10 h-10 rounded-full overflow-hidden bg-tertiary/30 shrink-0'>
-                                                {member.avatar_url ? (
-                                                    <Image
-                                                        src={member.avatar_url}
-                                                        alt={member.display_name}
-                                                        fill
-                                                        className='object-cover'
-                                                    />
-                                                ) : (
-                                                    <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-lg font-semibold'>
-                                                        {member.display_name?.[0]?.toUpperCase() ||
-                                                            "?"}
-                                                    </div>
-                                                )}
-                                            </div>
+                                        <UserAvatar
+                                            src={member.avatar_url}
+                                            alt={member.display_name}
+                                            size={40}
+                                            className='shrink-0'
+                                        />
                                             <div className='flex-1 min-w-0'>
                                                 <div className='font-medium truncate flex items-center gap-2'>
                                                     {member.display_name}

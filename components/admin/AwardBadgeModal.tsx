@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { motion, AnimatePresence } from "motion/react"
 import {
     Loader2,
@@ -377,24 +378,12 @@ export default function AwardBadgeModal({
                                                 key={user.id}
                                                 className='flex items-center gap-3 p-3 bg-text/5 border border-text/10 rounded-lg group'
                                             >
-                                                <div className='relative w-10 h-10 rounded-full overflow-hidden bg-text/10 shrink-0'>
-                                                    {user.avatar_url ? (
-                                                        <Image
-                                                            src={
-                                                                user.avatar_url
-                                                            }
-                                                            alt={
-                                                                user.display_name
-                                                            }
-                                                            fill
-                                                            className='object-cover'
-                                                        />
-                                                    ) : (
-                                                        <div className='w-full h-full flex items-center justify-center text-text/40 text-sm font-bold'>
-                                                            {user.display_name?.[0]?.toUpperCase()}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <UserAvatar
+                                                    src={user.avatar_url}
+                                                    alt={user.display_name}
+                                                    size={40}
+                                                    className='shrink-0'
+                                                />
 
                                                 <div className='flex-1 min-w-0'>
                                                     <div className='font-medium text-sm truncate'>
@@ -520,24 +509,12 @@ export default function AwardBadgeModal({
                                                     key={user.user_id}
                                                     className='flex items-center gap-3 p-3 bg-text/5 border border-text/10 rounded-lg group hover:border-red-500/20 transition-colors'
                                                 >
-                                                    <div className='relative w-10 h-10 rounded-full overflow-hidden bg-text/10 shrink-0'>
-                                                        {user.avatar_url ? (
-                                                            <Image
-                                                                src={
-                                                                    user.avatar_url
-                                                                }
-                                                                alt={
-                                                                    user.display_name
-                                                                }
-                                                                fill
-                                                                className='object-cover'
-                                                            />
-                                                        ) : (
-                                                            <div className='w-full h-full flex items-center justify-center text-text/40 text-sm font-bold'>
-                                                                {user.display_name?.[0]?.toUpperCase()}
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                    <UserAvatar
+                                                        src={user.avatar_url}
+                                                        alt={user.display_name}
+                                                        size={40}
+                                                        className='shrink-0'
+                                                    />
 
                                                     <div className='flex-1 min-w-0'>
                                                         <div className='font-medium text-sm truncate'>
