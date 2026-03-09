@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import {
     X,
@@ -12,7 +11,6 @@ import {
     CheckCircle,
     ImageIcon,
     Lightbulb,
-    UserIcon,
 } from "lucide-react"
 import {
     getCafeContributions,
