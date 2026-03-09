@@ -488,20 +488,127 @@ git commit -m "feat: add leaderboard toggle and show scores"
 **Files:**
 - Modify: `components/community/CommunityPage.tsx`
 
-**Step 1: Update leaderboard description**
+**Step 1: Update leaderboard hero copy**
 
-Replace hero text to mention Top Scouts + Top Cafes if needed.
+In `CommunityPage.tsx`, update the `leaderboard` entry of `heroContent` to mention both Top Scouts and Top Cafes:
+
+```ts
+leaderboard: {
+  tag: "Check-in Champions",
+  title: "Monthly Leaderboards",
+  description: "See which scouts explored the most cafes and which cafes earned the highest community scores this month.",
+  icon: Trophy,
+},
+```
 
 **Step 2: Commit**
 
 ```bash
 git add components/community/CommunityPage.tsx
-git commit -m "chore: update leaderboard hero copy"
+git commit -m "chore: update leaderboard hero copy for dual mode"
 ```
 
 ---
 
-## Task 10: Manual Verification
+## Task 10: Wire Landing Page Cafe Leaderboard Section
+
+**Context:** `components/landing/CafeLeaderboardSection.tsx` currently exists on the landing page (`app/page.tsx`) but renders entirely with hardcoded placeholder images and no real data. It needs to be connected to the `getCafeMonthlyLeaderboard` server action.
+
+**Files:**
+- Modify: `components/landing/CafeLeaderboardSection.tsx`
+- Modify: `app/page.tsx`
+
+**Step 1: Convert CafeLeaderboardSection to accept props**
+
+Change from `"use client"` to a Server Component. Pass top-3 cafe data in from `app/page.tsx` as props.
+
+```tsx
+interface LandingCafeEntry {
+  cafeId: string
+  name: string
+  slug: string
+  thumbnail: string
+  region: string
+  score: number
+  visitCount: number
+  avgRating: number | null
+}
+
+interface CafeLeaderboardSectionProps {
+  topCafes: LandingCafeEntry[]
+}
+
+export default function CafeLeaderboardSection({ topCafes }: CafeLeaderboardSectionProps) { ... }
+```
+
+**Step 2: Update landing layout using real data**
+
+Replace hardcoded `Image src` and dummy `<motion.a href="/">` elements with real cafe links and thumbnails from `topCafes`:
+
+- `topCafes[0]` → hero card (1st place): link to `/cafes/${slug}`, thumbnail from `topCafes[0].thumbnail`
+- `topCafes[1]` and `topCafes[2]` → side cards (2nd + 3rd): link to `/cafes/${slug}`, real thumbnail
+- Show cafe name, `avgRating` stars, and visit count on each card
+- If `topCafes.length < 3`, hide the missing slots gracefully (don't render placeholder images)
+- Keep the existing motion animation structure intact
+- Keep the `"use client"` directive only if needed for motion animations, otherwise make it a Server Component
+
+**Step 3: Fetch top cafes in `app/page.tsx`**
+
+Import `getCafeMonthlyLeaderboard` and add it to the `Promise.all` fetch block:
+
+```ts
+import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
+
+const [
+    featured,
+    recentlyAdded,
+    cafeCount,
+    upcomingEvents,
+    blogResult,
+    recentReviews,
+    cafeLeaderboardResult,
+] = await Promise.all([
+    getDailyFeatured() as Promise<CafeWithRatings | null>,
+    getAllCafes(1, 10, { exclude_hidden_gems: true }) as Promise<CafeWithRatings[]>,
+    getPublishedCafeCount(),
+    getUpcomingEvents(5),
+    getPublishedBlogPosts({ pageSize: 4 }),
+    getRecentReviews(6),
+    getCafeMonthlyLeaderboard(null, 3),
+])
+```
+
+Pass the result to the section:
+
+```tsx
+<CafeLeaderboardSection topCafes={cafeLeaderboardResult.leaderboard} />
+```
+
+**Step 4: Graceful empty state**
+
+If `topCafes.length === 0`, render a short placeholder message instead of the leaderboard layout:
+
+```tsx
+if (topCafes.length === 0) {
+  return (
+    <section id="cafe-leaderboard" className="w-full px-6 py-12 mb-8">
+      <h2 className="font-semibold font-serif text-2xl mb-4">Community Favorites</h2>
+      <p className="text-text/60">Check back next month to see top-ranked cafes!</p>
+    </section>
+  )
+}
+```
+
+**Step 5: Commit**
+
+```bash
+git add components/landing/CafeLeaderboardSection.tsx app/page.tsx
+git commit -m "feat: wire landing page cafe leaderboard to live data"
+```
+
+---
+
+## Task 11: Manual Verification
 
 **Step 1: Run unit tests**
 
@@ -509,7 +616,7 @@ Run: `bun test utils/__tests__/leaderboard-ranking.test.ts`
 
 Expected: PASS.
 
-**Step 2: Run lint (optional)**
+**Step 2: Run lint**
 
 Run: `bun lint`
 
@@ -520,10 +627,14 @@ Expected: PASS.
 Run: `bun dev`
 
 Verify:
-- Leaderboard tab loads
+- Landing page shows real top-3 cafes with their thumbnails, names, and ratings
+- Landing page links go to `/cafes/<slug>` for each ranked cafe
+- Landing page shows graceful empty state if no data exists yet for this month
+- Community leaderboard tab loads
 - Toggle switches between Top Scouts and Top Cafes
-- Region and month filters work for both
-- Score values appear correctly
+- Region and month filters work for both modes
+- Score values appear on user cards (points + visit count)
+- Past months read from snapshot table (verify by checking network/DB)
 
 ---
 
