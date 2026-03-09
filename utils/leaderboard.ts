@@ -10,10 +10,10 @@ export interface RankedLeaderboardEntry extends LeaderboardEntry {
 
 /**
  * Apply tie-aware ranking to sorted leaderboard entries.
- * Users with the same visit count receive the same rank.
+ * Users with the same score receive the same rank.
  * Uses dense ranking: next unique score gets next consecutive rank (1, 1, 2 pattern for ties).
- * 
- * @param entries - Array sorted by visitCount DESC, username ASC
+ *
+ * @param entries - Array sorted by score field DESC, username ASC
  * @returns Array with rank property added
  */
 export function applyTieRanking<T extends LeaderboardEntry>(
