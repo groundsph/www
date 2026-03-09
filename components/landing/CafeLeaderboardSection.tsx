@@ -1,6 +1,6 @@
 "use client"
 
-import { CrownIcon, Star } from "lucide-react"
+import { CrownIcon, Star, Trophy } from "lucide-react"
 import { motion } from "motion/react"
 import Image from "next/image"
 import Link from "next/link"
@@ -84,7 +84,15 @@ export default function CafeLeaderboardSection({
                         href={`/cafes/${firstPlace.slug}`}
                         className='block w-full h-full'
                     >
-                        <div className='absolute left-2 top-4 z-10 bg-background px-3 py-1 pl-12 rounded-full text-xs md:text-sm font-semibold shadow-md'>
+                        {/* Trophy icon */}
+                        <div className='absolute top-4 left-4 z-10'>
+                            <Trophy className='w-8 h-8 text-yellow-400' />
+                        </div>
+                        {/* Rank badge */}
+                        <div className='absolute top-4 right-4 z-10 bg-background/90 rounded-full px-3 py-1 text-sm font-semibold'>
+                            #1
+                        </div>
+                        <div className='absolute left-2 top-16 z-10 bg-background px-3 py-1 pl-12 rounded-full text-xs md:text-sm font-semibold shadow-md'>
                             <div className='w-10 h-10 p-2 absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm'>
                                 <CrownIcon className='w-full' />
                             </div>
@@ -100,14 +108,15 @@ export default function CafeLeaderboardSection({
                             <h3 className='text-white font-semibold text-lg'>
                                 {firstPlace.name}
                             </h3>
-                            <div className='flex items-center gap-3 text-white/80 text-sm'>
+                            <div className='flex items-center gap-3 text-white/80'>
+                                <span className='text-lg font-bold'>{firstPlace.score.toLocaleString()} pts</span>
                                 {firstPlace.avgRating && (
-                                    <span className='flex items-center gap-1'>
-                                        <Star className='w-4 h-4 fill-amber-400 text-amber-400' />
+                                    <span className='flex items-center gap-1 text-sm'>
+                                        <Star className='w-4 h-4 text-yellow-400 fill-yellow-400' />
                                         {firstPlace.avgRating.toFixed(1)}
                                     </span>
                                 )}
-                                <span>{firstPlace.visitCount} visits</span>
+                                <span className='text-xs bg-background/80 px-2 py-0.5 rounded-full'>{firstPlace.region}</span>
                             </div>
                         </div>
                     </Link>
@@ -142,6 +151,10 @@ export default function CafeLeaderboardSection({
                                 href={`/cafes/${secondPlace.slug}`}
                                 className='flex flex-row gap-3 w-full'
                             >
+                                {/* Rank badge */}
+                                <div className='absolute top-4 right-4 bg-background/90 rounded-full px-3 py-1 text-xs font-semibold z-10'>
+                                    #2
+                                </div>
                                 <div className='w-8 h-8 rounded-full absolute top-2 left-2 flex items-center justify-center z-10 bg-linear-to-br from-gray-400 to-gray-500 font-semibold text-white'>
                                     2
                                 </div>
@@ -157,19 +170,16 @@ export default function CafeLeaderboardSection({
                                     <h4 className='font-semibold text-text line-clamp-1'>
                                         {secondPlace.name}
                                     </h4>
-                                    <div className='flex items-center gap-2 text-sm text-text/60 mt-1'>
+                                    <div className='flex items-center gap-2 mt-1'>
+                                        <span className='text-base font-bold'>{secondPlace.score.toLocaleString()} pts</span>
                                         {secondPlace.avgRating && (
-                                            <span className='flex items-center gap-1'>
-                                                <Star className='w-3 h-3 fill-amber-400 text-amber-400' />
-                                                {secondPlace.avgRating.toFixed(
-                                                    1,
-                                                )}
+                                            <span className='flex items-center gap-1 text-sm text-text/60'>
+                                                <Star className='w-3 h-3 text-yellow-400 fill-yellow-400' />
+                                                {secondPlace.avgRating.toFixed(1)}
                                             </span>
                                         )}
-                                        <span>
-                                            {secondPlace.visitCount} visits
-                                        </span>
                                     </div>
+                                    <span className='text-xs bg-text/10 px-2 py-0.5 rounded-full w-fit mt-1'>{secondPlace.region}</span>
                                 </div>
                             </Link>
                         </motion.div>
@@ -202,6 +212,10 @@ export default function CafeLeaderboardSection({
                                 href={`/cafes/${thirdPlace.slug}`}
                                 className='flex flex-row gap-3 w-full'
                             >
+                                {/* Rank badge */}
+                                <div className='absolute top-4 right-4 bg-background/90 rounded-full px-3 py-1 text-xs font-semibold z-10'>
+                                    #3
+                                </div>
                                 <div className='w-8 h-8 rounded-full absolute top-2 left-2 flex items-center justify-center z-10 bg-linear-to-br from-amber-700 to-amber-800 font-semibold text-white'>
                                     3
                                 </div>
@@ -217,19 +231,16 @@ export default function CafeLeaderboardSection({
                                     <h4 className='font-semibold text-text line-clamp-1'>
                                         {thirdPlace.name}
                                     </h4>
-                                    <div className='flex items-center gap-2 text-sm text-text/60 mt-1'>
+                                    <div className='flex items-center gap-2 mt-1'>
+                                        <span className='text-base font-bold'>{thirdPlace.score.toLocaleString()} pts</span>
                                         {thirdPlace.avgRating && (
-                                            <span className='flex items-center gap-1'>
-                                                <Star className='w-3 h-3 fill-amber-400 text-amber-400' />
-                                                {thirdPlace.avgRating.toFixed(
-                                                    1,
-                                                )}
+                                            <span className='flex items-center gap-1 text-sm text-text/60'>
+                                                <Star className='w-3 h-3 text-yellow-400 fill-yellow-400' />
+                                                {thirdPlace.avgRating.toFixed(1)}
                                             </span>
                                         )}
-                                        <span>
-                                            {thirdPlace.visitCount} visits
-                                        </span>
                                     </div>
+                                    <span className='text-xs bg-text/10 px-2 py-0.5 rounded-full w-fit mt-1'>{thirdPlace.region}</span>
                                 </div>
                             </Link>
                         </motion.div>
