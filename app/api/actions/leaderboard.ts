@@ -191,18 +191,26 @@ async function computeCafeLeaderboardCore(
             return liveResult.slice(0, limit)
         }
 
-        const leaderboard: CafeLeaderboardEntry[] = snapshotResults.map((r) => ({
-            rank: r.rank,
-            cafeId: r.cafeId!,
-            name: r.name,
-            slug: r.slug,
-            thumbnail: r.thumbnail,
-            region: r.region,
-            score: Math.round(r.score),
-            visitCount: r.visitCount || 0,
-            reviewCount: r.reviewCount || 0,
-            avgRating: r.avgRating ?? null,
-        }))
+        // Deduplicate by cafeId (safety check for data integrity)
+        const seenCafeIds = new Set<string>()
+        const leaderboard: CafeLeaderboardEntry[] = []
+        
+        for (const r of snapshotResults) {
+            if (!r.cafeId || seenCafeIds.has(r.cafeId)) continue
+            seenCafeIds.add(r.cafeId)
+            leaderboard.push({
+                rank: r.rank,
+                cafeId: r.cafeId,
+                name: r.name,
+                slug: r.slug,
+                thumbnail: r.thumbnail,
+                region: r.region,
+                score: Math.round(r.score),
+                visitCount: r.visitCount || 0,
+                reviewCount: r.reviewCount || 0,
+                avgRating: r.avgRating ?? null,
+            })
+        }
 
         return leaderboard
     }

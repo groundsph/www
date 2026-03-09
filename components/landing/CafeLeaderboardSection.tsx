@@ -53,7 +53,7 @@ export default function CafeLeaderboardSection({
             id='cafe-leaderboard'
             className='w-full px-6 mb-8 space-y-2'
         >
-            <div className="flex items-center justify-between">
+            <div className='flex items-center justify-between'>
                 <motion.h2
                     initial={{ opacity: 0 }}
                     whileInView={{
@@ -65,12 +65,12 @@ export default function CafeLeaderboardSection({
                 >
                     Community Favorites
                 </motion.h2>
-                <Link 
-                    href="/community?tab=leaderboard" 
-                    className="text-sm font-medium flex items-center gap-1 text-primary hover:underline"
+                <Link
+                    href='/community?tab=leaderboard'
+                    className='text-sm font-medium flex items-center gap-1 text-primary hover:underline'
                 >
                     View Leaderboard
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className='w-4 h-4' />
                 </Link>
             </div>
             <div className='flex flex-col md:flex-row gap-4 w-full'>
@@ -93,14 +93,16 @@ export default function CafeLeaderboardSection({
                         href={`/cafes/${firstPlace.slug}`}
                         className='block w-full h-full'
                     >
-                        <div className='absolute left-2 top-16 z-10 bg-background px-3 py-1 pl-12 rounded-full text-xs md:text-sm font-semibold shadow-md'>
+                        <div className='absolute left-2 top-4 z-10 bg-background px-3 py-1 pl-12 rounded-full text-xs md:text-sm font-semibold shadow-md'>
                             <div className='w-10 h-10 p-2 absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm'>
                                 <CrownIcon className='w-full' />
                             </div>
                             Top Cafe of the Month
                         </div>
                         <Image
-                            src={getCafeThumbnailUrl(firstPlace.thumbnail || "placeholder")}
+                            src={getCafeThumbnailUrl(
+                                firstPlace.thumbnail || "placeholder",
+                            )}
                             alt={firstPlace.name}
                             fill
                             className='object-cover'
@@ -110,14 +112,18 @@ export default function CafeLeaderboardSection({
                                 {firstPlace.name}
                             </h3>
                             <div className='flex items-center gap-3 text-white/80'>
-                                <span className='text-lg font-bold'>{firstPlace.score.toLocaleString()} pts</span>
+                                <span className='text-lg font-bold'>
+                                    {firstPlace.score.toLocaleString()} pts
+                                </span>
                                 {firstPlace.avgRating && (
                                     <span className='flex items-center gap-1 text-sm'>
                                         <Star className='w-4 h-4 text-yellow-400 fill-yellow-400' />
                                         {firstPlace.avgRating.toFixed(1)}
                                     </span>
                                 )}
-                                <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full'>{firstPlace.region}</span>
+                                <span className='text-xs bg-background/10 px-2 py-1 rounded-md flex flex-row gap-2 items-center backdrop-blur-sm font-semibold text-white'>
+                                    {firstPlace.region}
+                                </span>
                             </div>
                         </div>
                     </Link>
@@ -154,7 +160,10 @@ export default function CafeLeaderboardSection({
                             >
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image
-                                        src={getCafeThumbnailUrl(secondPlace.thumbnail || "placeholder")}
+                                        src={getCafeThumbnailUrl(
+                                            secondPlace.thumbnail ||
+                                                "placeholder",
+                                        )}
                                         alt={secondPlace.name}
                                         fill
                                         className='object-cover'
@@ -165,15 +174,22 @@ export default function CafeLeaderboardSection({
                                         {secondPlace.name}
                                     </h4>
                                     <div className='flex items-center gap-2 mt-1'>
-                                        <span className='text-base font-bold'>{secondPlace.score.toLocaleString()} pts</span>
+                                        <span className='text-base font-bold'>
+                                            {secondPlace.score.toLocaleString()}{" "}
+                                            pts
+                                        </span>
                                         {secondPlace.avgRating && (
                                             <span className='flex items-center gap-1 text-sm text-text/60'>
                                                 <Star className='w-3 h-3 text-yellow-400 fill-yellow-400' />
-                                                {secondPlace.avgRating.toFixed(1)}
+                                                {secondPlace.avgRating.toFixed(
+                                                    1,
+                                                )}
                                             </span>
                                         )}
                                     </div>
-                                    <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full w-fit mt-1'>{secondPlace.region}</span>
+                                    <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full w-fit mt-1'>
+                                        {secondPlace.region}
+                                    </span>
                                 </div>
                             </Link>
                         </motion.div>
@@ -208,7 +224,10 @@ export default function CafeLeaderboardSection({
                             >
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image
-                                        src={getCafeThumbnailUrl(thirdPlace.thumbnail || "placeholder")}
+                                        src={getCafeThumbnailUrl(
+                                            thirdPlace.thumbnail ||
+                                                "placeholder",
+                                        )}
                                         alt={thirdPlace.name}
                                         fill
                                         className='object-cover'
@@ -219,15 +238,22 @@ export default function CafeLeaderboardSection({
                                         {thirdPlace.name}
                                     </h4>
                                     <div className='flex items-center gap-2 mt-1'>
-                                        <span className='text-base font-bold'>{thirdPlace.score.toLocaleString()} pts</span>
+                                        <span className='text-base font-bold'>
+                                            {thirdPlace.score.toLocaleString()}{" "}
+                                            pts
+                                        </span>
                                         {thirdPlace.avgRating && (
                                             <span className='flex items-center gap-1 text-sm text-text/60'>
                                                 <Star className='w-3 h-3 text-yellow-400 fill-yellow-400' />
-                                                {thirdPlace.avgRating.toFixed(1)}
+                                                {thirdPlace.avgRating.toFixed(
+                                                    1,
+                                                )}
                                             </span>
                                         )}
                                     </div>
-                                    <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full w-fit mt-1'>{thirdPlace.region}</span>
+                                    <span className='text-xs bg-text/5 px-2 py-0.5 rounded-full w-fit mt-1'>
+                                        {thirdPlace.region}
+                                    </span>
                                 </div>
                             </Link>
                         </motion.div>

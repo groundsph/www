@@ -121,9 +121,9 @@ function CafeRankCard({
                         className="overflow-hidden"
                     >
                         <div className="pt-3 space-y-2">
-                            {entries.slice(1).map((entry) => (
+                            {entries.slice(1).map((entry, idx) => (
                                 <div
-                                    key={entry.cafeId}
+                                    key={`${entry.cafeId}-expand-${idx}`}
                                     className="bg-white/10 rounded-xl p-3 backdrop-blur-sm"
                                 >
                                         <Link
@@ -280,9 +280,9 @@ export default function CafeMonthlyLeaderboard({
                                 </div>
                             </div>
                             <div className="divide-y divide-secondary/10">
-                                {leaderboard.slice(3).map((entry) => (
+                                {leaderboard.slice(3).map((entry, index) => (
                                     <Link
-                                        key={entry.cafeId}
+                                        key={`${entry.cafeId}-${index}`}
                                         href={`/cafes/${entry.slug}`}
                                         className="flex items-center gap-4 p-4 hover:bg-secondary/5 transition-colors group"
                                     >
