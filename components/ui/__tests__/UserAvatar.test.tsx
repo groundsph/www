@@ -1,8 +1,14 @@
 import { describe, it, expect, mock } from "bun:test"
 import { render, fireEvent } from "@testing-library/react"
 
+interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+    src: string
+    alt: string
+    onError?: () => void
+}
+
 mock.module("next/image", () => ({
-    default: ({ src, alt, onError, ...rest }: any) => (
+    default: ({ src, alt, onError, ...rest }: ImageProps) => (
         <img src={src} alt={alt} onError={onError} {...rest} />
     ),
 }))

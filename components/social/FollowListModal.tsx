@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { X, Loader2, User, Search } from "lucide-react"
-import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
 import FollowButton from "./FollowButton"

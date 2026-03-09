@@ -21,7 +21,6 @@ import {
 import { formatTimeTo12Hour, isOpenNow } from "@/utils/extras"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import RatingDistribution from "./RatingDistribution"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"

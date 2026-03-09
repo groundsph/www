@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Search, X } from "lucide-react"
-import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 
 interface UserResult {
