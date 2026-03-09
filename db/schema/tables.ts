@@ -693,3 +693,26 @@ export const siteSettings = pgTable("site_settings", {
     value: text("value").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 })
+
+// ============================================================================
+// LEADERBOARD TABLES
+// ============================================================================
+
+export const monthlyLeaderboardSnapshots = pgTable(
+    "monthly_leaderboard_snapshots",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        yearMonth: text("year_month").notNull(),       // "2026-02"
+        type: text("type").notNull(),                 // "user" | "cafe"
+        entityId: uuid("entity_id").notNull(),        // userId or cafeId
+        rank: integer("rank").notNull(),
+        score: real("score").notNull(),
+        breakdown: jsonb("breakdown"),               // { visitCount, reviewCount, ... }
+        region: text("region"),                      // null = global
+        snapshotAt: timestamp("snapshot_at", { withTimezone: true }).defaultNow(),
+    },
+    (t) => ({
+        uniqueEntry: uniqueIndex("mls_unique_entry_idx")
+            .on(t.yearMonth, t.type, t.entityId, t.region),
+    })
+)
