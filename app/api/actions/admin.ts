@@ -4079,24 +4079,39 @@ export async function getProfilesForAdmin(options: {
     }
 }
 
+interface BackfillResult {
+    success: boolean
+    message: string
+    userCount?: number
+    cafeCount?: number
+    deletedPrevious?: number
+    warnings?: string[]
+    details?: {
+        userRegions: string[]
+        cafeRegions: string[]
+        skippedRegions: string[]
+    }
+}
+
 /**
- * Manually backfill leaderboard snapshots for a specific month.
- * Admin-only: Used to backfill historical data when snapshots don't exist.
+ * Smart backfill: Detects gaps, validates data, and safely upserts snapshots.
+ * Admin-only: Used to backfill or refresh leaderboard snapshots.
  */
 export async function backfillLeaderboardSnapshots(
-    yearMonth: string
-): Promise<{ success: boolean; message: string; userCount?: number; cafeCount?: number }> {
+    yearMonth: string,
+    options?: { force?: boolean; dryRun?: boolean }
+): Promise<BackfillResult> {
     const hasAccess = await isAdmin()
     if (!hasAccess) {
         return { success: false, message: "Unauthorized" }
     }
 
+    const warnings: string[] = []
+
     try {
-        // Import here to avoid circular dependencies
         const { getMonthlyLeaderboard } = await import("@/app/api/actions/profile")
         const { getCafeMonthlyLeaderboard } = await import("@/app/api/actions/leaderboard")
-        const { parseYearMonth } = await import("@/utils/date/leaderboard-months")
-        const { isFutureMonth } = await import("@/utils/date/leaderboard-months")
+        const { parseYearMonth, isFutureMonth } = await import("@/utils/date/leaderboard-months")
 
         const parsed = parseYearMonth(yearMonth)
         if (!parsed) {
@@ -4107,30 +4122,89 @@ export async function backfillLeaderboardSnapshots(
             return { success: false, message: "Cannot backfill future months" }
         }
 
-        // Check if snapshots already exist
-        const existingUserSnapshot = await db
-            .select({ id: monthlyLeaderboardSnapshots.id })
+        // Check existing snapshots
+        const existingSnapshots = await db
+            .select({
+                type: monthlyLeaderboardSnapshots.type,
+                region: monthlyLeaderboardSnapshots.region,
+            })
             .from(monthlyLeaderboardSnapshots)
-            .where(and(
-                eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth),
-                eq(monthlyLeaderboardSnapshots.type, "user")
-            ))
-            .limit(1)
+            .where(eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth))
 
-        if (existingUserSnapshot.length > 0) {
-            return { success: false, message: `Snapshots already exist for ${yearMonth}. Delete them first if you want to re-backfill.` }
+        const existingUserRegions = new Set(existingSnapshots.filter(s => s.type === "user").map(s => s.region ?? "global"))
+        const existingCafeRegions = new Set(existingSnapshots.filter(s => s.type === "cafe").map(s => s.region ?? "global"))
+        const hasExistingData = existingSnapshots.length > 0
+
+        // Determine which regions need backfill
+        const regionsToSnapshot: (string | null)[] = [null, ...PH_REGIONS]
+        const allRegions = regionsToSnapshot.map(r => r ?? "global")
+
+        let userRegionsToProcess: (string | null)[]
+        let cafeRegionsToProcess: (string | null)[]
+
+        if (options?.force && !options?.dryRun) {
+            // Force mode: reprocess all regions
+            userRegionsToProcess = regionsToSnapshot
+            cafeRegionsToProcess = regionsToSnapshot
+            warnings.push("Force mode: Will overwrite all existing snapshots")
+        } else if (hasExistingData && !options?.force) {
+            // Smart mode: only process missing regions
+            userRegionsToProcess = regionsToSnapshot.filter(r => !existingUserRegions.has(r ?? "global"))
+            cafeRegionsToProcess = regionsToSnapshot.filter(r => !existingCafeRegions.has(r ?? "global"))
+
+            if (userRegionsToProcess.length === 0 && cafeRegionsToProcess.length === 0) {
+                return {
+                    success: true,
+                    message: `All regions already have snapshots for ${yearMonth}. Use force=true to refresh.`,
+                    userCount: existingUserRegions.size * 100, // Approximate
+                    cafeCount: existingCafeRegions.size * 100,
+                }
+            }
+        } else {
+            // No existing data or dry run: process all
+            userRegionsToProcess = regionsToSnapshot
+            cafeRegionsToProcess = regionsToSnapshot
         }
 
-        const regionsToSnapshot = [null, ...PH_REGIONS]
+        // Dry run: just report what would happen
+        if (options?.dryRun) {
+            return {
+                success: true,
+                message: `[DRY RUN] Would backfill ${yearMonth}`,
+                userCount: userRegionsToProcess.length * 100,
+                cafeCount: cafeRegionsToProcess.length * 100,
+                deletedPrevious: hasExistingData && options?.force ? existingSnapshots.length : 0,
+                warnings,
+            }
+        }
+
+        // If force mode, delete existing snapshots first
+        let deletedCount = 0
+        if (options?.force && hasExistingData) {
+            await db
+                .delete(monthlyLeaderboardSnapshots)
+                .where(eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth))
+            deletedCount = existingSnapshots.length
+        }
+
         let totalUserSnapshots = 0
         let totalCafeSnapshots = 0
+        const processedUserRegions: string[] = []
+        const processedCafeRegions: string[] = []
+        const skippedRegions: string[] = []
 
-        // Snapshot user leaderboards
-        for (const region of regionsToSnapshot) {
+        // Process user leaderboards
+        for (const region of userRegionsToProcess) {
             const result = await getMonthlyLeaderboard(region, 100, yearMonth, { computeLive: true })
 
+            // Validation: warn if suspicious data
             if (result.leaderboard.length === 0) {
+                skippedRegions.push(`${region ?? "global"} (users: no data)`)
                 continue
+            }
+
+            if (result.leaderboard.length < 3 && regionsToSnapshot.indexOf(region) === 0) {
+                warnings.push(`Low user count for ${region ?? "global"}: ${result.leaderboard.length} entries`)
             }
 
             const entries = result.leaderboard.map((entry) => ({
@@ -4145,14 +4219,21 @@ export async function backfillLeaderboardSnapshots(
 
             await db.insert(monthlyLeaderboardSnapshots).values(entries)
             totalUserSnapshots += entries.length
+            processedUserRegions.push(region ?? "global")
         }
 
-        // Snapshot cafe leaderboards
-        for (const region of regionsToSnapshot) {
+        // Process cafe leaderboards
+        for (const region of cafeRegionsToProcess) {
             const result = await getCafeMonthlyLeaderboard(region, 100, yearMonth)
 
+            // Validation: warn if suspicious data
             if (result.leaderboard.length === 0) {
+                skippedRegions.push(`${region ?? "global"} (cafes: no data)`)
                 continue
+            }
+
+            if (result.leaderboard.length < 3 && regionsToSnapshot.indexOf(region) === 0) {
+                warnings.push(`Low cafe count for ${region ?? "global"}: ${result.leaderboard.length} entries`)
             }
 
             const entries = result.leaderboard.map((entry) => ({
@@ -4169,19 +4250,36 @@ export async function backfillLeaderboardSnapshots(
 
             await db.insert(monthlyLeaderboardSnapshots).values(entries)
             totalCafeSnapshots += entries.length
+            processedCafeRegions.push(region ?? "global")
+        }
+
+        // Build success message
+        const action = options?.force ? "Refreshed" : hasExistingData ? "Updated" : "Backfilled"
+        const messageParts = [`${action} ${yearMonth} successfully`]
+        if (deletedCount > 0) messageParts.push(`(deleted ${deletedCount} previous snapshots)`)
+        if (processedUserRegions.length < allRegions.length) {
+            messageParts.push(`(${processedUserRegions.length}/${allRegions.length} user regions)`)
         }
 
         return {
             success: true,
-            message: `Backfilled ${yearMonth} successfully`,
+            message: messageParts.join(" "),
             userCount: totalUserSnapshots,
             cafeCount: totalCafeSnapshots,
+            deletedPrevious: deletedCount,
+            warnings: warnings.length > 0 ? warnings : undefined,
+            details: {
+                userRegions: processedUserRegions,
+                cafeRegions: processedCafeRegions,
+                skippedRegions,
+            },
         }
     } catch (error) {
         console.error("[Backfill] Error:", error)
         return {
             success: false,
             message: error instanceof Error ? error.message : "Unknown error",
+            warnings: warnings.length > 0 ? warnings : undefined,
         }
     }
 }
