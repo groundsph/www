@@ -7,6 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
 import { PH_REGIONS } from "@/utils/ph-regions"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 import { groupByRank } from "./leaderboard-utils"
 import { CafeLeaderboardEntry } from "@/utils/types/leaderboard"
@@ -71,19 +72,13 @@ function CafeRankCard({
                     className="flex items-center gap-4"
                 >
                     <div className="relative">
-                        {entries[0].thumbnail ? (
-                            <Image
-                                src={entries[0].thumbnail}
-                                alt={entries[0].name}
-                                width={56}
-                                height={56}
-                                className="w-14 h-14 rounded-xl object-cover border-2 border-white/50"
-                            />
-                        ) : (
-                            <div className="w-14 h-14 rounded-xl bg-white/30 flex items-center justify-center text-white font-bold text-xl border-2 border-white/50">
-                                {entries[0].name.charAt(0)}
-                            </div>
-                        )}
+                        <Image
+                            src={getCafeThumbnailUrl(entries[0].thumbnail)}
+                            alt={entries[0].name}
+                            width={56}
+                            height={56}
+                            className="w-14 h-14 rounded-xl object-cover border-2 border-white/50"
+                        />
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-white font-semibold text-lg truncate">
@@ -123,23 +118,17 @@ function CafeRankCard({
                                     key={entry.cafeId}
                                     className="bg-white/10 rounded-xl p-3 backdrop-blur-sm"
                                 >
-                                    <Link
-                                        href={`/cafes/${entry.slug}`}
-                                        className="flex items-center gap-3"
-                                    >
-                                        {entry.thumbnail ? (
+                                        <Link
+                                            href={`/cafes/${entry.slug}`}
+                                            className="flex items-center gap-3"
+                                        >
                                             <Image
-                                                src={entry.thumbnail}
+                                                src={getCafeThumbnailUrl(entry.thumbnail)}
                                                 alt={entry.name}
                                                 width={40}
                                                 height={40}
                                                 className="w-10 h-10 rounded-lg object-cover border border-white/30"
                                             />
-                                        ) : (
-                                            <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-white font-bold border border-white/30">
-                                                {entry.name.charAt(0)}
-                                            </div>
-                                        )}
                                         <div className="flex-1 min-w-0">
                                             <p className="text-white font-medium truncate">
                                                 {entry.name}
@@ -381,19 +370,13 @@ export default function CafeMonthlyLeaderboard({
 
                                         {/* Thumbnail */}
                                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-secondary/20 shrink-0">
-                                            {entry.thumbnail ? (
-                                                <Image
-                                                    src={entry.thumbnail}
-                                                    alt={entry.name}
-                                                    width={48}
-                                                    height={48}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-text/40 font-bold">
-                                                    {entry.name.charAt(0).toUpperCase()}
-                                                </div>
-                                            )}
+                                            <Image
+                                                src={getCafeThumbnailUrl(entry.thumbnail)}
+                                                alt={entry.name}
+                                                width={48}
+                                                height={48}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
 
                                         {/* Name and Region */}

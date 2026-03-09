@@ -4,6 +4,7 @@ import { CrownIcon, Star } from "lucide-react"
 import { motion } from "motion/react"
 import Image from "next/image"
 import Link from "next/link"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface LandingCafeEntry {
     cafeId: string
@@ -90,10 +91,7 @@ export default function CafeLeaderboardSection({
                             Top Cafe of the Month
                         </div>
                         <Image
-                            src={
-                                firstPlace.thumbnail ||
-                                "https://cdn.grounds.ph/cafes/placeholder.jpg"
-                            }
+                            src={getCafeThumbnailUrl(firstPlace.thumbnail || "placeholder")}
                             alt={firstPlace.name}
                             fill
                             className='object-cover'
@@ -149,10 +147,7 @@ export default function CafeLeaderboardSection({
                                 </div>
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image
-                                        src={
-                                            secondPlace.thumbnail ||
-                                            "https://cdn.grounds.ph/cafes/placeholder.jpg"
-                                        }
+                                        src={getCafeThumbnailUrl(secondPlace.thumbnail || "placeholder")}
                                         alt={secondPlace.name}
                                         fill
                                         className='object-cover'
@@ -212,10 +207,7 @@ export default function CafeLeaderboardSection({
                                 </div>
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image
-                                        src={
-                                            thirdPlace.thumbnail ||
-                                            "https://cdn.grounds.ph/cafes/placeholder.jpg"
-                                        }
+                                        src={getCafeThumbnailUrl(thirdPlace.thumbnail || "placeholder")}
                                         alt={thirdPlace.name}
                                         fill
                                         className='object-cover'
