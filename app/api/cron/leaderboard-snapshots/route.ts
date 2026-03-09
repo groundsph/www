@@ -130,6 +130,7 @@ export async function GET(request: NextRequest) {
                 score: entry.score,
                 visitCount: entry.visitCount,
                 reviewCount: entry.reviewCount,
+                avgRating: entry.avgRating ?? null,
                 region,
             }))
 

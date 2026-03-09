@@ -9,6 +9,7 @@ import {
     jsonb,
     uniqueIndex,
     customType,
+    doublePrecision,
 } from "drizzle-orm/pg-core"
 
 import * as enums from "./enums"
@@ -711,6 +712,7 @@ export const monthlyLeaderboardSnapshots = pgTable(
         score: integer("score").notNull(),
         visitCount: integer("visit_count").default(0),
         reviewCount: integer("review_count").default(0),
+        avgRating: doublePrecision("avg_rating"),
         likesReceived: integer("likes_received").default(0),
         photoCount: integer("photo_count").default(0),
         verifiedCount: integer("verified_count").default(0),

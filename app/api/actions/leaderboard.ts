@@ -152,6 +152,7 @@ async function computeCafeLeaderboardCore(
                 score: monthlyLeaderboardSnapshots.score,
                 visitCount: monthlyLeaderboardSnapshots.visitCount,
                 reviewCount: monthlyLeaderboardSnapshots.reviewCount,
+                avgRating: monthlyLeaderboardSnapshots.avgRating,
             })
             .from(monthlyLeaderboardSnapshots)
             .innerJoin(cafes, eq(monthlyLeaderboardSnapshots.cafeId, cafes.id))
@@ -203,7 +204,7 @@ async function computeCafeLeaderboardCore(
             score: Math.round(r.score),
             visitCount: r.visitCount || 0,
             reviewCount: r.reviewCount || 0,
-            avgRating: null, // Not stored in snapshot schema
+            avgRating: r.avgRating ?? null,
         }))
 
         return leaderboard

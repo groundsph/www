@@ -4072,6 +4072,7 @@ export async function backfillLeaderboardSnapshots(
                 score: entry.score,
                 visitCount: entry.visitCount,
                 reviewCount: entry.reviewCount,
+                avgRating: entry.avgRating ?? null,
                 region,
             }))
 
