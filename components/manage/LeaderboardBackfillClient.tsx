@@ -2,13 +2,21 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { getLeaderboardSnapshotStatus, backfillLeaderboardSnapshots, backfillAllMissingLeaderboardSnapshots, deleteLeaderboardSnapshots } from "@/app/api/actions/admin"
-import { RefreshCw, Loader2, Trophy, AlertCircle, CheckCircle2, Trash2, Play } from "lucide-react"
+import { RefreshCw, Loader2, Trophy, AlertCircle, CheckCircle2, Trash2, Play, RotateCcw, Info, X } from "lucide-react"
 
 interface MonthStatus {
     yearMonth: string
     userCount: number
     cafeCount: number
     hasMissing: boolean
+}
+
+interface BackfillResult {
+    success: boolean
+    message: string
+    userCount?: number
+    cafeCount?: number
+    warnings?: string[]
 }
 
 function getMonthsFromLaunch(): string[] {
@@ -32,6 +40,8 @@ export function LeaderboardBackfillClient() {
     const [loaded, setLoaded] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | "all" | null>(null)
+    const [forceMode, setForceMode] = useState(false)
+    const [result, setResult] = useState<BackfillResult | null>(null)
 
     const monthList = useMemo(() => getMonthsFromLaunch(), [])
 
@@ -55,15 +65,19 @@ export function LeaderboardBackfillClient() {
 
     const handleBackfillMonth = useCallback(async (yearMonth: string) => {
         setProcessing(yearMonth)
-        await backfillLeaderboardSnapshots(yearMonth)
+        setResult(null)
+        const res = await backfillLeaderboardSnapshots(yearMonth, { force: forceMode })
+        setResult(res)
         const updated = await fetchStatus()
         setMonths(updated)
         setProcessing(null)
-    }, [fetchStatus])
+    }, [fetchStatus, forceMode])
 
     const handleDeleteMonth = useCallback(async (yearMonth: string) => {
         setProcessing(yearMonth)
-        await deleteLeaderboardSnapshots(yearMonth)
+        setResult(null)
+        const res = await deleteLeaderboardSnapshots(yearMonth)
+        setResult(res)
         setDeleteTarget(null)
         const updated = await fetchStatus()
         setMonths(updated)
@@ -72,8 +86,10 @@ export function LeaderboardBackfillClient() {
 
     const handleBackfillAll = useCallback(async () => {
         setProcessing("all")
+        setResult(null)
         const missing = months.filter((m) => m.hasMissing).map((m) => m.yearMonth)
-        await backfillAllMissingLeaderboardSnapshots(missing)
+        const res = await backfillAllMissingLeaderboardSnapshots(missing)
+        setResult(res)
         const updated = await fetchStatus()
         setMonths(updated)
         setProcessing(null)
@@ -81,6 +97,7 @@ export function LeaderboardBackfillClient() {
 
     const refresh = useCallback(async () => {
         setLoaded(false)
+        setResult(null)
         const updated = await fetchStatus()
         setMonths(updated)
         setLoaded(true)
@@ -99,6 +116,46 @@ export function LeaderboardBackfillClient() {
 
     return (
         <div className="space-y-6">
+            {/* Result notification */}
+            {result && (
+                <div className={`rounded-xl p-4 border ${result.success ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                    <div className="flex items-start gap-3">
+                        {result.success ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                        ) : (
+                            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                        )}
+                        <div className="flex-1">
+                            <p className={`font-medium ${result.success ? 'text-green-700' : 'text-red-700'}`}>
+                                {result.message}
+                            </p>
+                            {result.warnings && result.warnings.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                    {result.warnings.map((warning, i) => (
+                                        <p key={i} className="text-sm text-amber-600 flex items-center gap-1">
+                                            <Info className="w-3.5 h-3.5" />
+                                            {warning}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+                            {(result.userCount !== undefined || result.cafeCount !== undefined) && (
+                                <p className="text-sm text-text/60 mt-2">
+                                    {result.userCount !== undefined && `${result.userCount} user rows `}
+                                    {result.cafeCount !== undefined && `${result.cafeCount} cafe rows`}
+                                </p>
+                            )}
+                        </div>
+                        <button 
+                            onClick={() => setResult(null)}
+                            className="p-1 hover:bg-text/10 rounded-lg transition"
+                        >
+                            <X className="w-4 h-4 text-text/40" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
                 <div className="bg-background shadow-sm rounded-xl p-4 border border-tertiary/50">
@@ -125,9 +182,24 @@ export function LeaderboardBackfillClient() {
             </div>
 
             {/* Header with actions */}
-            <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-text">Leaderboard Snapshots</h2>
-                <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 className="text-lg font-semibold text-text">Leaderboard Snapshots</h2>
+                    <p className="text-sm text-text/60 mt-0.5">
+                        {forceMode ? "Force mode: Will overwrite existing data" : "Smart mode: Only fills missing regions"}
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 px-3 py-2 bg-tertiary/20 rounded-lg cursor-pointer hover:bg-tertiary/30 transition">
+                        <input
+                            type="checkbox"
+                            checked={forceMode}
+                            onChange={(e) => setForceMode(e.target.checked)}
+                            className="w-4 h-4 rounded border-tertiary/50"
+                        />
+                        <span className="text-sm font-medium">Force refresh</span>
+                        <RotateCcw className={`w-4 h-4 ${forceMode ? 'text-primary' : 'text-text/40'}`} />
+                    </label>
                     <button
                         onClick={refresh}
                         disabled={processing !== null}
@@ -138,7 +210,7 @@ export function LeaderboardBackfillClient() {
                     </button>
                     <button
                         onClick={handleBackfillAll}
-                        disabled={processing !== null || missingCount === 0}
+                        disabled={processing !== null || (!forceMode && missingCount === 0)}
                         className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
                     >
                         {processing === "all" ? (
@@ -149,7 +221,7 @@ export function LeaderboardBackfillClient() {
                         ) : (
                             <>
                                 <Play className="w-4 h-4" />
-                                Generate All Missing
+                                {forceMode ? "Refresh All" : "Fill Missing"}
                             </>
                         )}
                     </button>
@@ -189,14 +261,21 @@ export function LeaderboardBackfillClient() {
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        {m.hasMissing && (
+                                        {(m.hasMissing || forceMode) && (
                                             <button
                                                 onClick={() => handleBackfillMonth(m.yearMonth)}
                                                 disabled={processing !== null}
-                                                className="px-3 py-1.5 bg-tertiary/30 hover:bg-tertiary rounded-lg text-sm font-medium transition disabled:opacity-50"
+                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50 ${
+                                                    forceMode && !m.hasMissing
+                                                        ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                                                        : 'bg-tertiary/30 hover:bg-tertiary'
+                                                }`}
+                                                title={forceMode && !m.hasMissing ? "Force refresh this month" : "Generate missing data"}
                                             >
                                                 {processing === m.yearMonth ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : forceMode && !m.hasMissing ? (
+                                                    <RotateCcw className="w-4 h-4" />
                                                 ) : (
                                                     "Generate"
                                                 )}
