@@ -73,4 +73,14 @@ describe("applyTieRanking", () => {
     const result = applyTieRanking(input)
     expect(result.map((r) => r.rank)).toEqual([1, 2])
   })
+
+  it("ranks by score when provided", () => {
+    const input = [
+      { userId: "a", score: 20 },
+      { userId: "b", score: 10 },
+      { userId: "c", score: 10 },
+    ]
+    const result = applyTieRanking(input, { scoreKey: "score" })
+    expect(result.map((r) => r.rank)).toEqual([1, 2, 2])
+  })
 })
