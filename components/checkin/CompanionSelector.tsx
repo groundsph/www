@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Search, X, User } from "lucide-react"
+import { Search, X } from "lucide-react"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 
 interface UserResult {
     id: string
@@ -94,19 +95,11 @@ export default function CompanionSelector({
                             key={companion.id}
                             className='flex items-center gap-2 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm'
                         >
-                            {companion.avatarUrl ? (
-                                <Image
-                                    src={companion.avatarUrl}
-                                    alt={companion.displayName}
-                                    width={20}
-                                    height={20}
-                                    className='w-5 h-5 rounded-full object-cover'
-                                />
-                            ) : (
-                                <div className='w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center'>
-                                    <User className='w-3 h-3' />
-                                </div>
-                            )}
+                            <UserAvatar
+                                src={companion.avatarUrl}
+                                alt={companion.displayName}
+                                size={20}
+                            />
                             <span className='font-medium'>
                                 {companion.displayName}
                             </span>
@@ -155,20 +148,12 @@ export default function CompanionSelector({
                                     onClick={() => handleSelect(user)}
                                     className='w-full flex items-center gap-3 px-3 py-2.5 hover:bg-text/5 transition-colors text-left'
                                 >
-                                    {user.avatarUrl ? (
-                                        <Image
-                                            src={user.avatarUrl}
-                                            alt={user.displayName}
-                                            width={32}
-                                            height={32}
-                                            className='w-8 h-8 rounded-full object-cover'
-                                        />
-                                    ) : (
-                                        <div className='w-8 h-8 rounded-full bg-text/10 flex items-center justify-center'>
-                                            <User className='w-4 h-4 text-text opacity-40' />
-                                        </div>
-                                    )}
-                                    <div className='flex-1 min-w-0'>
+                                <UserAvatar
+                                    src={user.avatarUrl}
+                                    alt={user.displayName}
+                                    size={32}
+                                />
+                                <div className='flex-1 min-w-0'>
                                         <p className='font-medium text-sm truncate'>
                                             {user.displayName}
                                         </p>

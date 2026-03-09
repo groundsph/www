@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
 import { Heart, Eye, Coffee, Layers, Bookmark } from "lucide-react"
 
@@ -83,12 +84,10 @@ export default function CollectionCard({
                 {showAuthor && author && (
                     <div className='flex items-center gap-2 mt-1'>
                         {author.avatarUrl ? (
-                            <Image
+                            <UserAvatar
                                 src={author.avatarUrl}
                                 alt={author.displayName}
-                                width={20}
-                                height={20}
-                                className='rounded-full'
+                                size={20}
                             />
                         ) : (
                             <div className='w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center'>

@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { ArrowRightIcon, Coffee } from "lucide-react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { useInView } from "motion/react"
@@ -132,12 +133,11 @@ function LandingFeedView({ groupedCheckIns, ref, isInView }: LandingFeedViewProp
                                         style={{ zIndex: 3 - i }}
                                     >
                                         {visitor.avatarUrl ? (
-                                            <Image
+                                            <UserAvatar
                                                 src={visitor.avatarUrl}
                                                 alt={visitor.displayName}
-                                                width={32}
-                                                height={32}
-                                                className='w-7 h-7 rounded-full object-cover border-2 border-background'
+                                                size={28}
+                                                className='border-2 border-background'
                                             />
                                         ) : (
                                             <div className='w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center border-2 border-background'>
@@ -263,12 +263,10 @@ function FullFeedView({ checkIns, ref, isInView }: FullFeedViewProps) {
                                 title={checkIn.displayName}
                             >
                                 {checkIn.avatarUrl ? (
-                                    <Image
+                                    <UserAvatar
                                         src={checkIn.avatarUrl}
                                         alt={checkIn.displayName}
-                                        width={40}
-                                        height={40}
-                                        className='w-6 h-6 rounded-full object-cover'
+                                        size={24}
                                     />
                                 ) : (
                                     <div className='w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center'>
@@ -343,12 +341,10 @@ function FullFeedView({ checkIns, ref, isInView }: FullFeedViewProps) {
                                     title={checkIn.companions[0].displayName}
                                 >
                                     {checkIn.companions[0].avatarUrl ? (
-                                        <Image
+                                        <UserAvatar
                                             src={checkIn.companions[0].avatarUrl}
                                             alt={checkIn.companions[0].displayName}
-                                            width={24}
-                                            height={24}
-                                            className='w-6 h-6 rounded-full object-cover'
+                                            size={24}
                                         />
                                     ) : (
                                         <div className='w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary'>

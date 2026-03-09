@@ -2,6 +2,7 @@
 
 import { useHaptics } from "@/hooks/useHaptics"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
 import { motion } from "motion/react"
 import {
@@ -9,7 +10,6 @@ import {
     Coffee,
     Eye,
     Calendar,
-    User,
     MapPin,
     Star,
     Pencil,
@@ -159,19 +159,11 @@ export default function CrawlView({ crawl }: CrawlViewProps) {
                                 href={`/profile/${crawl.author.username}`}
                                 className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                             >
-                                {crawl.author.avatarUrl ? (
-                                    <Image
-                                        src={crawl.author.avatarUrl}
-                                        alt={crawl.author.displayName}
-                                        width={44}
-                                        height={44}
-                                        className="rounded-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
-                                        <User className="w-5 h-5 text-primary" />
-                                    </div>
-                                )}
+                                <UserAvatar
+                                    src={crawl.author.avatarUrl}
+                                    alt={crawl.author.displayName}
+                                    size={44}
+                                />
                                 <div>
                                     <p className="font-medium text-text">
                                         {crawl.author.displayName}

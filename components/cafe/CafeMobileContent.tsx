@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import {
     StarIcon,
     WifiIcon,
@@ -500,19 +501,12 @@ export function DetailsTabContent({
                                     href={`/profile/${visitor.username}`}
                                     className='group flex items-center gap-1.5 bg-secondary/30 hover:bg-secondary/50 rounded-full pr-2 transition-colors'
                                 >
-                                    {visitor.avatarUrl ? (
-                                        <Image
-                                            src={visitor.avatarUrl}
-                                            alt={visitor.displayName}
-                                            width={28}
-                                            height={28}
-                                            className='w-7 h-7 rounded-full object-cover'
-                                        />
-                                    ) : (
-                                        <div className='w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center'>
-                                            <UserIcon className='w-4 h-4 text-primary' />
-                                        </div>
-                                    )}
+                                    <UserAvatar
+                                        src={visitor.avatarUrl}
+                                        alt={visitor.displayName}
+                                        size={28}
+                                        className='shrink-0'
+                                    />
                                     <span className='text-xs font-medium text-text group-hover:text-primary transition-colors truncate max-w-[60px]'>
                                         {visitor.displayName}
                                     </span>
