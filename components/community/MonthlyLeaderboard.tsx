@@ -6,7 +6,6 @@ import { Trophy, MapPin, Users, ChevronDown, Medal, Crown, Calendar, Coffee } fr
 import Image from "next/image"
 import Link from "next/link"
 import { getMonthlyLeaderboard } from "@/app/api/actions/profile"
-import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
 import CafeMonthlyLeaderboard from "./CafeMonthlyLeaderboard"
 import { useUserLocation } from "@/hooks/useUserLocation"
 import { getLastNMonths, formatYearMonth } from "@/utils/date/leaderboard-months"

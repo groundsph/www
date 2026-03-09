@@ -2,10 +2,118 @@
 
 import { db } from "@/db"
 import { cafes, cafeVisits, reviews, cafePageViews, monthlyLeaderboardSnapshots } from "@/db/schema"
-import { eq, and, count, sql, desc, avg, sum } from "drizzle-orm"
+import { eq, and, sql } from "drizzle-orm"
 import { applyTieRanking } from "@/utils/leaderboard"
 import { parseYearMonth, isFutureMonth, getMonthDateRange } from "@/utils/date/leaderboard-months"
+import { getPHTime } from "@/utils/featured"
 import { CafeLeaderboardEntry } from "@/utils/types/leaderboard"
+
+/**
+ * Internal helper: compute cafe leaderboard live for any given month.
+ * Used by getCafeMonthlyLeaderboard for the current month and for on-demand backfills.
+ */
+async function computeCafeLeaderboardLive(
+    selectedYearMonth: { year: number; month: number },
+    region: string | null | undefined,
+    limit: number
+): Promise<CafeLeaderboardEntry[]> {
+    const { startDate: monthStartPH, endDate: monthEndPH } = getMonthDateRange(selectedYearMonth)
+    const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
+    const monthEndUTC = new Date(monthEndPH.getTime() - 8 * 60 * 60 * 1000)
+
+    const baseQuery = db
+        .select({
+            cafeId: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            region: cafes.region,
+            visitCount: sql<number>`count(${cafeVisits.id})`.as("visitCount"),
+            uniqueVisitors: sql<number>`count(distinct ${cafeVisits.userId})`.as("uniqueVisitors"),
+            reviewCount: sql<number>`count(distinct case when ${reviews.status} = 'published' then ${reviews.id} end)`.as("reviewCount"),
+            avgRating: sql<number | null>`avg(case when ${reviews.status} = 'published' then ${reviews.rating} end)`.as("avgRating"),
+            likesCount: sql<number>`coalesce(sum(${reviews.likesCount}), 0)`.as("likesCount"),
+            pageViews: sql<number>`count(distinct ${cafePageViews.visitorId})`.as("pageViews"),
+        })
+        .from(cafes)
+        .leftJoin(cafeVisits, and(
+            eq(cafeVisits.cafeId, cafes.id),
+            sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
+            sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
+        ))
+        .leftJoin(reviews, and(
+            eq(reviews.cafeId, cafes.id),
+            sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
+            sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
+        ))
+        .leftJoin(cafePageViews, and(
+            eq(cafePageViews.cafeId, cafes.id),
+            sql`${cafePageViews.viewedAt} >= ${monthStartUTC.toISOString()}`,
+            sql`${cafePageViews.viewedAt} < ${monthEndUTC.toISOString()}`
+        ))
+        .where(
+            and(
+                eq(cafes.isPublished, true),
+                region ? eq(cafes.region, region) : undefined
+            )
+        )
+
+    const results = await baseQuery
+        .groupBy(cafes.id, cafes.name, cafes.slug, cafes.thumbnail, cafes.region)
+
+    const scoredResults = results.map((r) => {
+        const visitCount = Number(r.visitCount) || 0
+        const uniqueVisitors = Number(r.uniqueVisitors) || 0
+        const reviewCount = Number(r.reviewCount) || 0
+        const avgRating = r.avgRating ? Number(r.avgRating) : null
+        const likesCount = Number(r.likesCount) || 0
+        const pageViews = Number(r.pageViews) || 0
+
+        const score =
+            visitCount * 3 +
+            uniqueVisitors * 2 +
+            reviewCount * 5 +
+            (avgRating ?? 0) * 10 +
+            likesCount * 1 +
+            pageViews * 0.5
+
+        return {
+            userId: r.cafeId,
+            cafeId: r.cafeId,
+            name: r.name,
+            slug: r.slug,
+            thumbnail: r.thumbnail,
+            region: r.region,
+            score,
+            visitCount,
+            reviewCount,
+            avgRating,
+        }
+    })
+
+    scoredResults.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score
+        return a.name.localeCompare(b.name)
+    })
+
+    const rankedResults = applyTieRanking(
+        scoredResults.slice(0, limit),
+        { scoreKey: "score" }
+    )
+
+    return rankedResults.map((r) => ({
+        rank: r.rank,
+        cafeId: r.cafeId as string,
+        name: r.name as string,
+        slug: r.slug as string,
+        thumbnail: r.thumbnail as string,
+        region: r.region as string,
+        score: Math.round(r.score as number),
+        visitCount: r.visitCount as number,
+        reviewCount: r.reviewCount as number,
+        avgRating: r.avgRating as number | null,
+    }))
+}
 
 /**
  * Get monthly cafe leaderboard with live aggregation for current month
@@ -26,12 +134,12 @@ export async function getCafeMonthlyLeaderboard(
     region: string | null
 }> {
     try {
-        // Parse and validate yearMonth, default to current month
+        // Parse and validate yearMonth, default to current month (in PH time)
         let selectedYearMonth = parseYearMonth(yearMonth || "")
-        const now = new Date()
+        const nowPH = getPHTime()
         const currentMonth = {
-            year: now.getFullYear(),
-            month: now.getMonth() + 1, // 1-12
+            year: nowPH.getFullYear(),
+            month: nowPH.getMonth() + 1, // 1-12
         }
 
         if (!selectedYearMonth || isFutureMonth(selectedYearMonth)) {
@@ -41,7 +149,7 @@ export async function getCafeMonthlyLeaderboard(
         const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
         const isCurrentMonth = selectedYearMonth.year === currentMonth.year && selectedYearMonth.month === currentMonth.month
 
-        // For past months, read from snapshot
+        // For past months, read from snapshot (backfill on-demand if missing)
         if (!isCurrentMonth) {
             const snapshotResults = await db
                 .select({
@@ -65,6 +173,41 @@ export async function getCafeMonthlyLeaderboard(
                 )
                 .orderBy(monthlyLeaderboardSnapshots.rank)
                 .limit(limit)
+
+            // If no snapshot exists, compute live and backfill
+            if (snapshotResults.length === 0) {
+                console.log(`[Leaderboard] No snapshot for ${selectedMonth} (cafe, region=${region ?? "global"}), backfilling...`)
+                const liveResult = await computeCafeLeaderboardLive(selectedYearMonth, region, 100)
+
+                if (liveResult.length > 0) {
+                    const entries = liveResult.map((entry) => ({
+                        yearMonth: selectedMonth,
+                        type: "cafe" as const,
+                        entityId: entry.cafeId,
+                        rank: entry.rank,
+                        score: entry.score,
+                        breakdown: {
+                            visitCount: entry.visitCount,
+                            reviewCount: entry.reviewCount,
+                            avgRating: entry.avgRating,
+                        },
+                        region: region ?? null,
+                    }))
+
+                    try {
+                        await db.insert(monthlyLeaderboardSnapshots).values(entries)
+                        console.log(`[Leaderboard] Backfilled ${entries.length} cafe entries for ${selectedMonth}`)
+                    } catch (err) {
+                        console.error("[Leaderboard] Backfill insert failed:", err)
+                    }
+                }
+
+                return {
+                    leaderboard: liveResult.slice(0, limit),
+                    selectedMonth,
+                    region: region || null,
+                }
+            }
 
             const leaderboard: CafeLeaderboardEntry[] = snapshotResults.map((r) => {
                 const breakdown = (r.breakdown as {
@@ -97,105 +240,7 @@ export async function getCafeMonthlyLeaderboard(
         }
 
         // For current month, calculate composite score live
-        const { startDate, endDate } = getMonthDateRange(selectedYearMonth)
-
-        // Build query with composite score calculation
-        const baseQuery = db
-            .select({
-                cafeId: cafes.id,
-                name: cafes.name,
-                slug: cafes.slug,
-                thumbnail: cafes.thumbnail,
-                region: cafes.region,
-                visitCount: sql<number>`count(${cafeVisits.id})`.as("visitCount"),
-                uniqueVisitors: sql<number>`count(distinct ${cafeVisits.userId})`.as("uniqueVisitors"),
-                reviewCount: sql<number>`count(distinct case when ${reviews.status} = 'published' then ${reviews.id} end)`.as("reviewCount"),
-                avgRating: sql<number | null>`avg(case when ${reviews.status} = 'published' then ${reviews.rating} end)`.as("avgRating"),
-                likesCount: sql<number>`coalesce(sum(${reviews.likesCount}), 0)`.as("likesCount"),
-                pageViews: sql<number>`count(distinct ${cafePageViews.visitorId})`.as("pageViews"),
-            })
-            .from(cafes)
-            .leftJoin(cafeVisits, and(
-                eq(cafeVisits.cafeId, cafes.id),
-                sql`${cafeVisits.visitedAt} >= ${startDate.toISOString()}`,
-                sql`${cafeVisits.visitedAt} < ${endDate.toISOString()}`
-            ))
-            .leftJoin(reviews, and(
-                eq(reviews.cafeId, cafes.id),
-                sql`${reviews.createdAt} >= ${startDate.toISOString()}`,
-                sql`${reviews.createdAt} < ${endDate.toISOString()}`
-            ))
-            .leftJoin(cafePageViews, and(
-                eq(cafePageViews.cafeId, cafes.id),
-                sql`${cafePageViews.viewedAt} >= ${startDate.toISOString()}`,
-                sql`${cafePageViews.viewedAt} < ${endDate.toISOString()}`
-            ))
-            .where(
-                and(
-                    eq(cafes.isPublished, true),
-                    region ? eq(cafes.region, region) : undefined
-                )
-            )
-
-        const results = await baseQuery
-            .groupBy(cafes.id, cafes.name, cafes.slug, cafes.thumbnail, cafes.region)
-
-        // Calculate composite scores
-        const scoredResults = results.map((r) => {
-            const visitCount = Number(r.visitCount) || 0
-            const uniqueVisitors = Number(r.uniqueVisitors) || 0
-            const reviewCount = Number(r.reviewCount) || 0
-            const avgRating = r.avgRating ? Number(r.avgRating) : null
-            const likesCount = Number(r.likesCount) || 0
-            const pageViews = Number(r.pageViews) || 0
-
-            const score =
-                visitCount * 3 +
-                uniqueVisitors * 2 +
-                reviewCount * 5 +
-                (avgRating ?? 0) * 10 +
-                likesCount * 1 +
-                pageViews * 0.5
-
-            return {
-                userId: r.cafeId, // Required by LeaderboardEntry interface
-                cafeId: r.cafeId,
-                name: r.name,
-                slug: r.slug,
-                thumbnail: r.thumbnail,
-                region: r.region,
-                score,
-                visitCount,
-                reviewCount,
-                avgRating,
-            }
-        })
-
-        // Sort by score DESC, then name ASC for tie-breaking
-        scoredResults.sort((a, b) => {
-            if (b.score !== a.score) return b.score - a.score
-            return a.name.localeCompare(b.name)
-        })
-
-        // Apply tie-aware ranking with scoreKey
-        const rankedResults = applyTieRanking(
-            scoredResults.slice(0, limit),
-            { scoreKey: "score" }
-        )
-
-        // Build leaderboard
-        const leaderboard: CafeLeaderboardEntry[] = rankedResults.map((r) => ({
-            rank: r.rank,
-            cafeId: r.cafeId as string,
-            name: r.name as string,
-            slug: r.slug as string,
-            thumbnail: r.thumbnail as string,
-            region: r.region as string,
-            score: Math.round(r.score as number),
-            visitCount: r.visitCount as number,
-            reviewCount: r.reviewCount as number,
-            avgRating: r.avgRating as number | null,
-        }))
+        const leaderboard = await computeCafeLeaderboardLive(selectedYearMonth, region, limit)
 
         return {
             leaderboard,

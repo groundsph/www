@@ -1,3 +1,5 @@
+"use client"
+
 import { CrownIcon, Star } from "lucide-react"
 import { motion } from "motion/react"
 import Image from "next/image"
