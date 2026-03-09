@@ -116,6 +116,104 @@ async function computeCafeLeaderboardLive(
 }
 
 /**
+ * Internal helper: get leaderboard entries without nationwide rank lookup.
+ * Used by getCafeMonthlyLeaderboard to compute both regional and nationwide rankings.
+ */
+async function computeCafeLeaderboardCore(
+    region: string | null,
+    limit: number,
+    yearMonth: string | null
+): Promise<CafeLeaderboardEntry[]> {
+    // Parse and validate yearMonth, default to current month (in PH time)
+    let selectedYearMonth = parseYearMonth(yearMonth || "")
+    const nowPH = getPHTime()
+    const currentMonth = {
+        year: nowPH.getFullYear(),
+        month: nowPH.getMonth() + 1, // 1-12
+    }
+
+    if (!selectedYearMonth || isFutureMonth(selectedYearMonth)) {
+        selectedYearMonth = currentMonth
+    }
+
+    const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
+    const isCurrentMonth = selectedYearMonth.year === currentMonth.year && selectedYearMonth.month === currentMonth.month
+
+    // For past months, read from snapshot (backfill on-demand if missing)
+    if (!isCurrentMonth) {
+        const snapshotResults = await db
+            .select({
+                rank: monthlyLeaderboardSnapshots.rank,
+                cafeId: monthlyLeaderboardSnapshots.cafeId,
+                name: cafes.name,
+                slug: cafes.slug,
+                thumbnail: cafes.thumbnail,
+                region: cafes.region,
+                score: monthlyLeaderboardSnapshots.score,
+                visitCount: monthlyLeaderboardSnapshots.visitCount,
+                reviewCount: monthlyLeaderboardSnapshots.reviewCount,
+            })
+            .from(monthlyLeaderboardSnapshots)
+            .innerJoin(cafes, eq(monthlyLeaderboardSnapshots.cafeId, cafes.id))
+            .where(
+                and(
+                    eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
+                    eq(monthlyLeaderboardSnapshots.type, "cafe"),
+                    region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
+                )
+            )
+            .orderBy(monthlyLeaderboardSnapshots.rank)
+            .limit(limit)
+
+        // If no snapshot exists, compute live and backfill
+        if (snapshotResults.length === 0) {
+            console.log(`[Leaderboard] No snapshot for ${selectedMonth} (cafe, region=${region ?? "global"}), backfilling...`)
+            const liveResult = await computeCafeLeaderboardLive(selectedYearMonth, region, 100)
+
+            if (liveResult.length > 0) {
+                const entries = liveResult.map((entry) => ({
+                    yearMonth: selectedMonth,
+                    type: "cafe" as const,
+                    cafeId: entry.cafeId,
+                    rank: entry.rank,
+                    score: entry.score,
+                    visitCount: entry.visitCount,
+                    reviewCount: entry.reviewCount,
+                    region: region ?? null,
+                }))
+
+                try {
+                    await db.insert(monthlyLeaderboardSnapshots).values(entries)
+                    console.log(`[Leaderboard] Backfilled ${entries.length} cafe entries for ${selectedMonth}`)
+                } catch (err) {
+                    console.error("[Leaderboard] Backfill insert failed:", err)
+                }
+            }
+
+            return liveResult.slice(0, limit)
+        }
+
+        const leaderboard: CafeLeaderboardEntry[] = snapshotResults.map((r) => ({
+            rank: r.rank,
+            cafeId: r.cafeId!,
+            name: r.name,
+            slug: r.slug,
+            thumbnail: r.thumbnail,
+            region: r.region,
+            score: Math.round(r.score),
+            visitCount: r.visitCount || 0,
+            reviewCount: r.reviewCount || 0,
+            avgRating: null, // Not stored in snapshot schema
+        }))
+
+        return leaderboard
+    }
+
+    // For current month, calculate composite score live
+    return await computeCafeLeaderboardLive(selectedYearMonth, region, limit)
+}
+
+/**
  * Get monthly cafe leaderboard with live aggregation for current month
  * or snapshot data for past months.
  *
@@ -134,7 +232,7 @@ export async function getCafeMonthlyLeaderboard(
     region: string | null
 }> {
     try {
-        // Parse and validate yearMonth, default to current month (in PH time)
+        // Parse and validate yearMonth to get selectedMonth
         let selectedYearMonth = parseYearMonth(yearMonth || "")
         const nowPH = getPHTime()
         const currentMonth = {
@@ -147,91 +245,24 @@ export async function getCafeMonthlyLeaderboard(
         }
 
         const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
-        const isCurrentMonth = selectedYearMonth.year === currentMonth.year && selectedYearMonth.month === currentMonth.month
 
-        // For past months, read from snapshot (backfill on-demand if missing)
-        if (!isCurrentMonth) {
-            const snapshotResults = await db
-                .select({
-                    rank: monthlyLeaderboardSnapshots.rank,
-                    cafeId: monthlyLeaderboardSnapshots.cafeId,
-                    name: cafes.name,
-                    slug: cafes.slug,
-                    thumbnail: cafes.thumbnail,
-                    region: cafes.region,
-                    score: monthlyLeaderboardSnapshots.score,
-                    visitCount: monthlyLeaderboardSnapshots.visitCount,
-                    reviewCount: monthlyLeaderboardSnapshots.reviewCount,
-                })
-                .from(monthlyLeaderboardSnapshots)
-                .innerJoin(cafes, eq(monthlyLeaderboardSnapshots.cafeId, cafes.id))
-                .where(
-                    and(
-                        eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
-                        eq(monthlyLeaderboardSnapshots.type, "cafe"),
-                        region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
-                    )
-                )
-                .orderBy(monthlyLeaderboardSnapshots.rank)
-                .limit(limit)
+        // Get regional leaderboard
+        const leaderboard = await computeCafeLeaderboardCore(region || null, limit, yearMonth || null)
 
-            // If no snapshot exists, compute live and backfill
-            if (snapshotResults.length === 0) {
-                console.log(`[Leaderboard] No snapshot for ${selectedMonth} (cafe, region=${region ?? "global"}), backfilling...`)
-                const liveResult = await computeCafeLeaderboardLive(selectedYearMonth, region, 100)
-
-                if (liveResult.length > 0) {
-                    const entries = liveResult.map((entry) => ({
-                        yearMonth: selectedMonth,
-                        type: "cafe" as const,
-                        cafeId: entry.cafeId,
-                        rank: entry.rank,
-                        score: entry.score,
-                        visitCount: entry.visitCount,
-                        reviewCount: entry.reviewCount,
-                        region: region ?? null,
-                    }))
-
-                    try {
-                        await db.insert(monthlyLeaderboardSnapshots).values(entries)
-                        console.log(`[Leaderboard] Backfilled ${entries.length} cafe entries for ${selectedMonth}`)
-                    } catch (err) {
-                        console.error("[Leaderboard] Backfill insert failed:", err)
-                    }
-                }
-
-                return {
-                    leaderboard: liveResult.slice(0, limit),
-                    selectedMonth,
-                    region: region || null,
-                }
-            }
-
-            const leaderboard: CafeLeaderboardEntry[] = snapshotResults.map((r) => ({
-                rank: r.rank,
-                cafeId: r.cafeId!,
-                name: r.name,
-                slug: r.slug,
-                thumbnail: r.thumbnail,
-                region: r.region,
-                score: Math.round(r.score),
-                visitCount: r.visitCount || 0,
-                reviewCount: r.reviewCount || 0,
-                avgRating: null, // Not stored in snapshot schema
-            }))
-
-            return {
-                leaderboard,
-                selectedMonth,
-                region: region || null,
-            }
+        // If viewing a regional leaderboard, also fetch nationwide rankings
+        const nationwideRankMap = new Map<string, number>()
+        if (region) {
+            const nationwideLeaderboard = await computeCafeLeaderboardCore(null, 100, yearMonth || null)
+            nationwideLeaderboard.forEach((entry) => {
+                nationwideRankMap.set(entry.cafeId, entry.rank)
+            })
         }
 
-        // For current month, calculate composite score live
-        const leaderboard = await computeCafeLeaderboardLive(selectedYearMonth, region, limit)
-
         return {
-            leaderboard,
+            leaderboard: leaderboard.map((entry) => ({
+                ...entry,
+                nationwideRank: region ? (nationwideRankMap.get(entry.cafeId) ?? null) : null,
+            })),
             selectedMonth,
             region: region || null,
         }

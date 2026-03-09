@@ -21,11 +21,13 @@ function CafeRankCard({
     entries,
     rankColor,
     rankIcon,
+    currentRegion,
 }: {
     rank: number
     entries: CafeLeaderboardEntry[]
     rankColor: string
     rankIcon: React.ReactNode
+    currentRegion: string | null
 }) {
     const [isExpanded, setIsExpanded] = useState(false)
     const hasMultiple = entries.length > 1
@@ -83,9 +85,16 @@ function CafeRankCard({
                         <p className="text-white font-semibold text-lg truncate">
                             {entries[0].name}
                         </p>
-                        <p className="text-white/70 text-sm truncate">
-                            {entries[0].region}
-                        </p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-white/70 text-sm truncate">
+                                {entries[0].region}
+                            </p>
+                            {entries[0].nationwideRank && currentRegion && (
+                                <span className="text-xs text-white/60">
+                                    #{entries[0].nationwideRank} nationwide
+                                </span>
+                            )}
+                        </div>
                         {entries[0].avgRating && (
                             <div className="flex items-center gap-1 mt-1">
                                 <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -132,9 +141,16 @@ function CafeRankCard({
                                             <p className="text-white font-medium truncate">
                                                 {entry.name}
                                             </p>
-                                            <p className="text-white/60 text-sm truncate">
-                                                {entry.region}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-white/60 text-sm truncate">
+                                                    {entry.region}
+                                                </p>
+                                                {entry.nationwideRank && currentRegion && (
+                                                    <span className="text-xs text-white/40">
+                                                        #{entry.nationwideRank} nationwide
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-white font-bold">{entry.score}</p>
@@ -231,13 +247,14 @@ export default function CafeMonthlyLeaderboard({
                                     const entries = grouped[rank]
 
                                     return (
-                                        <CafeRankCard
-                                            key={rank}
-                                            rank={rank}
-                                            entries={entries}
-                                            rankColor={getRankCardColor(rank)}
-                                            rankIcon={getRankIcon(rank)}
-                                        />
+                                    <CafeRankCard
+                                        key={rank}
+                                        rank={rank}
+                                        entries={entries}
+                                        rankColor={getRankCardColor(rank)}
+                                        rankIcon={getRankIcon(rank)}
+                                        currentRegion={region}
+                                    />
                                     )
                                 })}
                             </div>
@@ -290,9 +307,16 @@ export default function CafeMonthlyLeaderboard({
                                             <p className="font-medium text-text truncate group-hover:text-primary transition-colors">
                                                 {entry.name}
                                             </p>
-                                            <p className="text-xs text-text/50 truncate">
-                                                {entry.region}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-xs text-text/50 truncate">
+                                                    {entry.region}
+                                                </p>
+                                                {entry.nationwideRank && region && (
+                                                    <span className="text-xs text-text/40">
+                                                        #{entry.nationwideRank} nationwide
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Stats */}

@@ -10,6 +10,7 @@ export interface UserLeaderboardEntry {
 
 export interface CafeLeaderboardEntry {
   rank: number;
+  nationwideRank?: number | null;
   cafeId: string;
   name: string;
   slug: string;
