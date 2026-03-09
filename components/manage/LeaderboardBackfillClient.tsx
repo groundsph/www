@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { getLeaderboardSnapshotStatus, backfillLeaderboardSnapshots, backfillAllMissingLeaderboardSnapshots, deleteLeaderboardSnapshots } from "@/app/api/actions/admin"
-import { RefreshCw, Loader2, Trophy, AlertCircle, CheckCircle2, Trash2 } from "lucide-react"
+import { RefreshCw, Loader2, Trophy, AlertCircle, CheckCircle2, Trash2, Play } from "lucide-react"
 
 interface MonthStatus {
     yearMonth: string
@@ -125,7 +125,7 @@ export function LeaderboardBackfillClient() {
                     <button
                         onClick={refresh}
                         disabled={processing !== null}
-                        className="flex items-center gap-2 px-4 py-2 bg-tertiary/30 hover:bg-tertiary rounded-lg transition text-sm font-medium disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-tertiary/30 hover:bg-tertiary/50 rounded-xl transition-all text-sm font-medium disabled:opacity-40"
                     >
                         <RefreshCw className={`w-4 h-4 ${processing !== null ? "animate-spin" : ""}`} />
                         Refresh
@@ -133,7 +133,7 @@ export function LeaderboardBackfillClient() {
                     <button
                         onClick={handleBackfillAll}
                         disabled={processing !== null || missingCount === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg transition text-sm font-medium disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm hover:shadow-md transition-all text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
                     >
                         {processing === "all" ? (
                             <>
@@ -141,7 +141,10 @@ export function LeaderboardBackfillClient() {
                                 Processing...
                             </>
                         ) : (
-                            "Generate All Missing"
+                            <>
+                                <Play className="w-4 h-4" />
+                                Generate All Missing
+                            </>
                         )}
                     </button>
                 </div>
