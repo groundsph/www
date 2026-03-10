@@ -8,7 +8,6 @@ import {
     Marker,
     Popup,
     useMap,
-    useMapEvents,
 } from "react-leaflet"
 import { DivIcon, point } from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -37,38 +36,29 @@ import {
 } from "lucide-react"
 
 import MarkerClusterGroup from "react-leaflet-cluster"
-import { trackMapUsage } from "@/utils/badges/badge-logic"
 import { getCafeThumbnailUrl } from "@/utils/extras"
-import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
 
 interface CafeMapProps {
     cafes: CafeWithRatings[]
-    onBoundsChange?: (bounds: {
-        swLat: number
-        swLng: number
-        neLat: number
-        neLng: number
-    }) => void
 }
 
-// Component to handle location updates and center on user
 function LocationMarker() {
     const [position, setPosition] = useState<[number, number] | null>(null)
     const map = useMap()
+    const hasUserInteracted = useRef(false)
 
-    // Blue dot icon for user location
     const userIcon = useMemo(
         () =>
             new DivIcon({
                 className: "user-location-marker",
                 html: `<div style="
-            width: 16px;
-            height: 16px;
-            background: #4285F4;
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        "></div>`,
+                    width: 16px;
+                    height: 16px;
+                    background: #4285F4;
+                    border: 3px solid white;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                "></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8],
             }),
@@ -76,57 +66,42 @@ function LocationMarker() {
     )
 
     useEffect(() => {
-        map.locate({ setView: true, maxZoom: 14 })
+        // Listen for any user-initiated pan/zoom before location resolves
+        const onMoveStart = () => { hasUserInteracted.current = true }
+        map.on("movestart", onMoveStart)
+
+        // Locate without forcing view — we handle centering manually
+        map.locate({ setView: false, maxZoom: 14 })
 
         map.on("locationfound", (e) => {
             haptics?.trigger("success")
             setPosition([e.latlng.lat, e.latlng.lng])
+            // Only fly to location if the user has not already moved the map
+            if (!hasUserInteracted.current) {
+                map.flyTo([e.latlng.lat, e.latlng.lng], 14)
+            }
         })
 
         map.on("locationerror", () => {
             haptics?.trigger("error")
-            // Silently fall back to default center if location denied
             console.log("Location access denied, using default center")
         })
+
+        return () => {
+            map.off("movestart", onMoveStart)
+            map.off("locationfound")
+            map.off("locationerror")
+        }
     }, [map])
 
     return position ? (
-        <Marker
-            position={position}
-            icon={userIcon}
-        >
+        <Marker position={position} icon={userIcon}>
             <Popup>You are here</Popup>
         </Marker>
     ) : null
 }
 
-// Component to handle map bounds changes for lazy loading
-function BoundsHandler({
-    onBoundsChange,
-    onMapUsed,
-}: {
-    onBoundsChange?: CafeMapProps["onBoundsChange"]
-    onMapUsed?: () => void
-}) {
-    const map = useMapEvents({
-        moveend: () => {
-            if (onBoundsChange) {
-                const bounds = map.getBounds()
-                onBoundsChange({
-                    swLat: bounds.getSouthWest().lat,
-                    swLng: bounds.getSouthWest().lng,
-                    neLat: bounds.getNorthEast().lat,
-                    neLng: bounds.getNorthEast().lng,
-                })
-            }
-            // Track map usage for Eye Spy badge
-            onMapUsed?.()
-        },
-    })
-    return null
-}
-
-export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
+export default function CafeMap({ cafes }: CafeMapProps) {
     // Custom marker icon matching site theme (regular cafes)
     const createCafeIcon = useCallback(
         () =>
@@ -228,31 +203,10 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
     // Default center (Philippines)
     const defaultCenter: [number, number] = [12.8797, 121.774]
 
-    // Force re-render on mount to avoid map initialization issues
-    const [mapKey, setMapKey] = useState("map-init")
 
-    // Track map usage for Eye Spy badge (only once per session)
-    const hasTrackedMapUsage = useRef(false)
-    const { showBadgeNotification } = useBadgeNotification()
-
-    const handleMapUsed = useCallback(async () => {
-        if (!hasTrackedMapUsage.current) {
-            hasTrackedMapUsage.current = true
-            const result = await trackMapUsage()
-            if (result.awarded && result.badgeName) {
-                showBadgeNotification(result.badgeName)
-            }
-        }
-    }, [showBadgeNotification])
-
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: Force re-render on mount to avoid map initialization issues
-        setMapKey(`map-${Date.now()}`)
-    }, [])
 
     return (
         <MapContainer
-            key={mapKey}
             center={defaultCenter}
             zoom={6}
             scrollWheelZoom={true}
@@ -266,10 +220,6 @@ export default function CafeMap({ cafes, onBoundsChange }: CafeMapProps) {
                 url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
             />
             <LocationMarker />
-            <BoundsHandler
-                onBoundsChange={onBoundsChange}
-                onMapUsed={handleMapUsed}
-            />
             <MarkerClusterGroup
                 chunkedLoading
                 maxClusterRadius={60}
