@@ -1029,3 +1029,82 @@ export async function getCafesBySlugs(slugs: string[]) {
 
     return results.map(c => mapCafeToSnakeCase(c))
 }
+
+/**
+ * Get all published cafes (non-hidden gems), including chains.
+ * Used for client-side filtering on the map page.
+ */
+export async function getAllPublishedCafes(): Promise<CafeWithRatings[]> {
+    const results = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            gallery: cafes.gallery,
+            description: cafes.description,
+            addressDisplay: cafes.addressDisplay,
+            area: cafes.area,
+            cityMunicipality: cafes.cityMunicipality,
+            province: cafes.province,
+            region: cafes.region,
+            lat: cafes.lat,
+            lng: cafes.lng,
+            priceLevel: cafes.priceLevel,
+            coffeeStyle: cafes.coffeeStyle,
+            membershipTier: cafes.membershipTier,
+            roaster: cafes.roaster,
+            brewMethods: cafes.brewMethods,
+            specialty: cafes.specialty,
+            milkOptions: cafes.milkOptions,
+            tags: cafes.tags,
+            operatingHours: cafes.operatingHours,
+            socials: cafes.socials,
+            phone: cafes.phone,
+            email: cafes.email,
+            websiteUrl: cafes.websiteUrl,
+            paymentMethods: cafes.paymentMethods,
+            hasWifi: cafes.hasWifi,
+            hasSmoking: cafes.hasSmoking,
+            hasSockets: cafes.hasSockets,
+            hasAircon: cafes.hasAircon,
+            hasParking: cafes.hasParking,
+            hasOutdoorSeating: cafes.hasOutdoorSeating,
+            hasIndoorSeating: cafes.hasIndoorSeating,
+            hasRestroom: cafes.hasRestroom,
+            hasBidet: cafes.hasBidet,
+            hasNonDairy: cafes.hasNonDairy,
+            hasDecaf: cafes.hasDecaf,
+            isPetFriendly: cafes.isPetFriendly,
+            isWorkFriendly: cafes.isWorkFriendly,
+            servesFood: cafes.servesFood,
+            isActive: cafes.isActive,
+            isPublished: cafes.isPublished,
+            isVerified: cafes.isVerified,
+            isClaimed: cafes.isClaimed,
+            isHiddenGem: cafes.isHiddenGem,
+            findingHint: cafes.findingHint,
+            isChain: cafes.isChain,
+            isHalalCertified: cafes.isHalalCertified,
+            strawType: cafes.strawType,
+            strawTypeOther: cafes.strawTypeOther,
+            ownerIds: cafes.ownerIds,
+            contributorId: cafes.contributorId,
+            featuredUntil: cafes.featuredUntil,
+            createdAt: cafes.createdAt,
+            updatedAt: cafes.updatedAt,
+            averageRating: cafeRatingStats.averageRating,
+            totalReviews: cafeRatingStats.totalReviews,
+        })
+        .from(cafes)
+        .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
+        .where(
+            and(
+                eq(cafes.isPublished, true),
+                eq(cafes.isHiddenGem, false),
+            )
+        )
+        .orderBy(desc(cafes.membershipTier), desc(cafes.createdAt))
+
+    return results.map(c => mapCafeToSnakeCase(c)) as CafeWithRatings[]
+}

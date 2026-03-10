@@ -1,23 +1,15 @@
-import { getAllCafes } from "@/app/api/actions/cafe"
+// app/map/page.tsx
+import { getAllPublishedCafes } from "@/app/api/actions/cafe"
 import CafeMapWrapper from "@/components/map/CafeMapWrapper"
 import { CafeWithRatings } from "@/utils/types/extra"
-import { Metadata } from "next"
 
 export const dynamic = "force-dynamic"
 
-export const metadata: Metadata = {
-    title: "Map",
-    description: "Explore the best cafes in Cebu on an interactive map.",
-}
-
 export default async function MapPage() {
-    const cafes = (await getAllCafes(1, 100)) as CafeWithRatings[]
-
+    const cafes = await getAllPublishedCafes() as CafeWithRatings[]
     return (
         <main className='w-full p-6 h-[calc(100svh-3rem)] flex flex-col'>
-            <div className='flex-1 w-full relative'>
-                <CafeMapWrapper cafes={cafes} />
-            </div>
+            <CafeMapWrapper cafes={cafes} />
         </main>
     )
 }
