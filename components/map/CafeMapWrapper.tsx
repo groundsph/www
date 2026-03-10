@@ -2,6 +2,7 @@
 
 import { useHaptics } from "@/hooks/useHaptics"
 import { CafeWithRatings } from "@/utils/types/extra"
+import { filterCafes } from "@/utils/map/client-filter"
 import dynamic from "next/dynamic"
 import { useState, useMemo } from "react"
 import { Store, Clock12 } from "lucide-react"
@@ -30,27 +31,10 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
     const todayKey = useMemo(() => getPHDayKey(), [])
 
     // Apply all active filters purely in memory — no network calls
-    const filteredCafes = useMemo(() => {
-        return cafes.filter((cafe) => {
-            // Chain filter: exclude chains unless toggled on
-            if (!includeChains && cafe.is_chain === true) return false
-
-            // 24/7 filter: check operating_hours for today's entry with is_24_hours === true
-            if (is24_7) {
-                const hours = cafe.operating_hours
-                if (!Array.isArray(hours)) return false
-                const todayEntry = hours.find(
-                    (h: { day: string; is_24_hours?: boolean }) => h.day === todayKey
-                )
-                if (!todayEntry?.is_24_hours) return false
-            }
-
-            // Halal filter
-            if (isHalalCertified && !cafe.is_halal_certified) return false
-
-            return true
-        })
-    }, [cafes, includeChains, is24_7, isHalalCertified, todayKey])
+    const filteredCafes = useMemo(
+        () => filterCafes(cafes, { includeChains, is24_7, isHalalCertified, todayKey }),
+        [cafes, includeChains, is24_7, isHalalCertified, todayKey]
+    )
 
     const toggleChains = () => {
         trigger("selection")
