@@ -3,9 +3,9 @@
 import { useHaptics } from "@/hooks/useHaptics"
 import { CafeWithRatings } from "@/utils/types/extra"
 import dynamic from "next/dynamic"
-import { useState, useCallback, useRef } from "react"
-import { getCafesInBounds, MapBounds } from "@/app/api/actions/map"
+import { useState, useMemo } from "react"
 import { Store, Clock12 } from "lucide-react"
+import { getPHDayKey } from "@/utils/time"
 
 const CafeMap = dynamic(() => import("@/components/map/CafeMap"), {
     ssr: false,
@@ -20,116 +20,56 @@ interface CafeMapWrapperProps {
     cafes: CafeWithRatings[]
 }
 
-export default function CafeMapWrapper({
-    cafes: initialCafes,
-}: CafeMapWrapperProps) {
+export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
     const { trigger } = useHaptics()
-    const [cafes, setCafes] = useState<CafeWithRatings[]>(initialCafes)
-    const [isLoading, setIsLoading] = useState(false)
     const [includeChains, setIncludeChains] = useState(false)
     const [is24_7, setIs24_7] = useState(false)
     const [isHalalCertified, setIsHalalCertified] = useState(false)
-    const lastBoundsRef = useRef<MapBounds | null>(null)
 
-    const handleBoundsChange = useCallback(
-        async (bounds: MapBounds) => {
-            lastBoundsRef.current = bounds
-            setIsLoading(true)
-            try {
-                const newCafes = await getCafesInBounds({
-                    ...bounds,
-                    includeChains,
-                    is_24_7: is24_7,
-                    isHalalCertified,
-                })
-                setCafes(newCafes)
-            } catch (error) {
-                console.error("Failed to fetch cafes in bounds:", error)
-            } finally {
-                setIsLoading(false)
+    // Derive the current PH day once per render (filters are applied client-side)
+    const todayKey = useMemo(() => getPHDayKey(), [])
+
+    // Apply all active filters purely in memory — no network calls
+    const filteredCafes = useMemo(() => {
+        return cafes.filter((cafe) => {
+            // Chain filter: exclude chains unless toggled on
+            if (!includeChains && cafe.is_chain === true) return false
+
+            // 24/7 filter: check operating_hours for today's entry with is_24_hours === true
+            if (is24_7) {
+                const hours = cafe.operating_hours
+                if (!Array.isArray(hours)) return false
+                const todayEntry = hours.find(
+                    (h: { day: string; is_24_hours?: boolean }) => h.day === todayKey
+                )
+                if (!todayEntry?.is_24_hours) return false
             }
-        },
-        [includeChains, is24_7, isHalalCertified]
-    )
 
-    // Toggle chain visibility and refetch
-    const toggleChains = useCallback(async () => {
+            // Halal filter
+            if (isHalalCertified && !cafe.is_halal_certified) return false
+
+            return true
+        })
+    }, [cafes, includeChains, is24_7, isHalalCertified, todayKey])
+
+    const toggleChains = () => {
         trigger("selection")
-        const newIncludeChains = !includeChains
-        setIncludeChains(newIncludeChains)
+        setIncludeChains((prev) => !prev)
+    }
 
-        if (lastBoundsRef.current) {
-            setIsLoading(true)
-            try {
-                const newCafes = await getCafesInBounds({
-                    ...lastBoundsRef.current,
-                    includeChains: newIncludeChains,
-                    is_24_7: is24_7,
-                    isHalalCertified,
-                })
-                setCafes(newCafes)
-            } catch (error) {
-                console.error("Failed to fetch cafes in bounds:", error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-    }, [includeChains, is24_7, isHalalCertified, trigger])
-
-    // Toggle 24/7 filter and refetch
-    const toggle24_7 = useCallback(async () => {
+    const toggle24_7 = () => {
         trigger("selection")
-        const newIs24_7 = !is24_7
-        setIs24_7(newIs24_7)
+        setIs24_7((prev) => !prev)
+    }
 
-        if (lastBoundsRef.current) {
-            setIsLoading(true)
-            try {
-                const newCafes = await getCafesInBounds({
-                    ...lastBoundsRef.current,
-                    includeChains,
-                    is_24_7: newIs24_7,
-                    isHalalCertified,
-                })
-                setCafes(newCafes)
-            } catch (error) {
-                console.error("Failed to fetch cafes in bounds:", error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-    }, [is24_7, includeChains, isHalalCertified, trigger])
-
-    // Toggle Halal Certified filter and refetch
-    const toggleHalalCertified = useCallback(async () => {
+    const toggleHalalCertified = () => {
         trigger("selection")
-        const newIsHalalCertified = !isHalalCertified
-        setIsHalalCertified(newIsHalalCertified)
-
-        if (lastBoundsRef.current) {
-            setIsLoading(true)
-            try {
-                const newCafes = await getCafesInBounds({
-                    ...lastBoundsRef.current,
-                    includeChains,
-                    is_24_7: is24_7,
-                    isHalalCertified: newIsHalalCertified,
-                })
-                setCafes(newCafes)
-            } catch (error) {
-                console.error("Failed to fetch cafes in bounds:", error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-    }, [isHalalCertified, includeChains, is24_7, trigger])
+        setIsHalalCertified((prev) => !prev)
+    }
 
     return (
         <div className='relative w-full h-full'>
-            <CafeMap
-                cafes={cafes}
-                onBoundsChange={handleBoundsChange}
-            />
+            <CafeMap cafes={filteredCafes} />
 
             {/* Filter Buttons */}
             <div className='absolute top-4 right-4 z-50 flex flex-col gap-2'>
@@ -142,9 +82,7 @@ export default function CafeMapWrapper({
                     }`}
                 >
                     <Clock12 className='w-4 h-4' />
-                    <span className='hidden sm:inline'>
-                        24 Hours
-                    </span>
+                    <span className='hidden sm:inline'>24 Hours</span>
                 </button>
                 <button
                     onClick={toggleHalalCertified}
@@ -154,9 +92,7 @@ export default function CafeMapWrapper({
                             : "bg-background text-text/80 hover:bg-text/5"
                     }`}
                 >
-                    <span className='hidden sm:inline'>
-                        Halal Certified
-                    </span>
+                    <span className='hidden sm:inline'>Halal Certified</span>
                 </button>
                 <button
                     onClick={toggleChains}
@@ -172,14 +108,6 @@ export default function CafeMapWrapper({
                     </span>
                 </button>
             </div>
-
-            {isLoading && (
-                <div className='absolute top-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg z-50'>
-                    <p className='text-text/70 text-sm font-serif'>
-                        Loading cafes...
-                    </p>
-                </div>
-            )}
         </div>
     )
 }
