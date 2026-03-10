@@ -9,6 +9,7 @@ interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 
 mock.module("next/image", () => ({
     default: ({ src, alt, onError, ...rest }: ImageProps) => (
+        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={alt} onError={onError} {...rest} />
     ),
 }))
