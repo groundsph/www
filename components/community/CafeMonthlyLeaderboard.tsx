@@ -242,7 +242,7 @@ export default function CafeMonthlyLeaderboard({
                         }
 
                         return (
-                            <div className="grid gap-4 mb-8" style={{ gridTemplateColumns: `repeat(${topRanks.length}, minmax(0, 1fr))` }}>
+                            <div className="md:grid flex flex-col gap-4 mb-8" style={{ gridTemplateColumns: `repeat(${topRanks.length}, minmax(0, 1fr))` }}>
                                 {topRanks.map((rank) => {
                                     const entries = grouped[rank]
 

@@ -180,7 +180,7 @@ export default function MonthlyLeaderboard({
     return (
         <div className={`${className}`}>
             {/* Header */}
-            <div className='flex items-center justify-between mb-6'>
+            <div className='flex flex-col md:flex-row md:items-center gap-2 justify-between mb-6'>
                 <div>
                     <h2 className='text-2xl font-serif font-bold text-text'>
                         Monthly Leaderboard
@@ -191,7 +191,7 @@ export default function MonthlyLeaderboard({
                 </div>
 
                     {/* Mode Toggle */}
-                <div className='flex items-center gap-1 bg-secondary/10 rounded-lg p-1'>
+                <div className='flex items-center gap-1 bg-secondary/10 rounded-lg p-1 w-max'>
                     <button
                         onClick={() => setMode("users")}
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
@@ -387,7 +387,7 @@ export default function MonthlyLeaderboard({
                         }
 
                         return (
-                            <div className='grid gap-4 mb-8' style={{ gridTemplateColumns: `repeat(${topRanks.length}, minmax(0, 1fr))` }}>
+                            <div className='md:grid flex flex-col gap-4 mb-8' style={{ gridTemplateColumns: `repeat(${topRanks.length}, minmax(0, 1fr))` }}>
                                 {topRanks.map((rank) => {
                                     const entries = grouped[rank]
 
