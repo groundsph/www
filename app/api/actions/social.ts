@@ -733,3 +733,70 @@ export async function searchUsers(
         return { users: [], error: `Error searching users: ${error}` }
     }
 }
+
+/**
+ * Get follow relationship status between two users
+ */
+export async function getFollowRelationship(
+    targetUserId: string
+): Promise<{
+    isFollowing: boolean
+    isFollower: boolean
+    hasPendingRequest: boolean
+    isPrivate: boolean
+}> {
+    const user = await getCurrentUser()
+    
+    // Default return for unauthenticated users
+    const defaultResult = {
+        isFollowing: false,
+        isFollower: false,
+        hasPendingRequest: false,
+        isPrivate: false,
+    }
+
+    if (!user) return defaultResult
+
+    // Can't check relationship with yourself
+    if (user.id === targetUserId) {
+        return { ...defaultResult, isPrivate: false }
+    }
+
+    try {
+        // Get target user's privacy status
+        const targetProfile = await db
+            .select({ isPrivate: profiles.isPrivate })
+            .from(profiles)
+            .where(eq(profiles.id, targetUserId))
+            .limit(1)
+
+        const isPrivate = targetProfile[0]?.isPrivate ?? false
+
+        // Check all relationships in parallel
+        const [followingResult, followerResult, requestResult] = await Promise.all([
+            db.select({ id: userFollows.id }).from(userFollows)
+                .where(and(eq(userFollows.followerId, user.id), eq(userFollows.followingId, targetUserId)))
+                .limit(1),
+            db.select({ id: userFollows.id }).from(userFollows)
+                .where(and(eq(userFollows.followerId, targetUserId), eq(userFollows.followingId, user.id)))
+                .limit(1),
+            db.select({ id: followRequests.id }).from(followRequests)
+                .where(and(
+                    eq(followRequests.requesterId, user.id),
+                    eq(followRequests.targetId, targetUserId),
+                    eq(followRequests.status, "pending")
+                ))
+                .limit(1),
+        ])
+
+        return {
+            isFollowing: followingResult.length > 0,
+            isFollower: followerResult.length > 0,
+            hasPendingRequest: requestResult.length > 0,
+            isPrivate,
+        }
+    } catch (error) {
+        console.error("Error getting follow relationship:", error)
+        return defaultResult
+    }
+}

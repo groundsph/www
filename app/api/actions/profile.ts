@@ -2,7 +2,7 @@
 
 import { getPHTime, getPHTodayStart } from "@/utils/featured"
 import { db } from "@/db"
-import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits, collections, monthlyLeaderboardSnapshots } from "@/db/schema"
+import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits, collections, monthlyLeaderboardSnapshots, userFollows } from "@/db/schema"
 import { eq, and, ne, desc, inArray, arrayContains, count, sql, asc } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
@@ -1976,5 +1976,63 @@ export async function getMonthlyLeaderboard(
             region: region || null,
             selectedMonth: fallbackMonth,
         }
+    }
+}
+
+/**
+ * Check if a viewer can view a user's full profile content
+ */
+export async function canViewProfile(
+    profileUserId: string,
+    viewerId?: string
+): Promise<{ canView: boolean; isPrivate: boolean }> {
+    try {
+        // Get profile privacy status
+        const profile = await db
+            .select({ isPrivate: profiles.isPrivate })
+            .from(profiles)
+            .where(eq(profiles.id, profileUserId))
+            .limit(1)
+
+        if (!profile.length) {
+            return { canView: false, isPrivate: false }
+        }
+
+        const isPrivate = profile[0].isPrivate ?? false
+
+        // Public profiles are viewable by everyone
+        if (!isPrivate) {
+            return { canView: true, isPrivate: false }
+        }
+
+        // Private profiles: check if viewer is the owner or a follower
+        if (!viewerId) {
+            return { canView: false, isPrivate: true }
+        }
+
+        // Owner can always view their own profile
+        if (viewerId === profileUserId) {
+            return { canView: true, isPrivate: true }
+        }
+
+        // Check if viewer follows the profile owner
+        const followResult = await db
+            .select({ id: userFollows.id })
+            .from(userFollows)
+            .where(
+                and(
+                    eq(userFollows.followerId, viewerId),
+                    eq(userFollows.followingId, profileUserId)
+                )
+            )
+            .limit(1)
+
+        return {
+            canView: followResult.length > 0,
+            isPrivate: true,
+        }
+    } catch (error) {
+        console.error("Error checking profile access:", error)
+        return { canView: false, isPrivate: false }
     }
 }
