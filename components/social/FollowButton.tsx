@@ -2,24 +2,31 @@
 
 import { useHaptics } from "@/hooks/useHaptics"
 import { useState, useCallback, useEffect } from "react"
-import { UserPlus, UserMinus, Loader2 } from "lucide-react"
+import { UserPlus, UserMinus, Loader2, Lock, Check } from "lucide-react"
 
 interface FollowButtonProps {
     targetUserId: string
     initialIsFollowing?: boolean
+    initialHasPendingRequest?: boolean
+    isPrivate?: boolean
     size?: "sm" | "md" | "lg"
     className?: string
     onFollowChange?: (isFollowing: boolean) => void
+    onRequestSent?: () => void
 }
 
 export default function FollowButton({
     targetUserId,
     initialIsFollowing = false,
+    initialHasPendingRequest = false,
+    isPrivate = false,
     size = "md",
     className = "",
     onFollowChange,
+    onRequestSent,
 }: FollowButtonProps) {
     const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
+    const [hasPendingRequest, setHasPendingRequest] = useState(initialHasPendingRequest)
     const [isLoading, setIsLoading] = useState(false)
     const [isHovering, setIsHovering] = useState(false)
     const { trigger } = useHaptics()
@@ -28,6 +35,10 @@ export default function FollowButton({
     useEffect(() => {
         setIsFollowing(initialIsFollowing)
     }, [initialIsFollowing])
+
+    useEffect(() => {
+        setHasPendingRequest(initialHasPendingRequest)
+    }, [initialHasPendingRequest])
 
     const handleClick = useCallback(async () => {
         trigger(isFollowing ? "soft" : "medium")
@@ -45,8 +56,13 @@ export default function FollowButton({
                 const { followUser } = await import("@/app/api/actions/social")
                 const result = await followUser(targetUserId)
                 if (result.success) {
-                    setIsFollowing(true)
-                    onFollowChange?.(true)
+                    if (result.requiresApproval) {
+                        setHasPendingRequest(true)
+                        onRequestSent?.()
+                    } else {
+                        setIsFollowing(true)
+                        onFollowChange?.(true)
+                    }
                 }
             }
         } catch (error) {
@@ -54,7 +70,7 @@ export default function FollowButton({
         } finally {
             setIsLoading(false)
         }
-    }, [isFollowing, targetUserId, onFollowChange, trigger])
+    }, [isFollowing, targetUserId, onFollowChange, onRequestSent, trigger])
 
     // Size variants
     const sizeClasses = {
@@ -71,6 +87,9 @@ export default function FollowButton({
 
     // Button styles based on state
     const getButtonStyles = () => {
+        if (hasPendingRequest) {
+            return "bg-amber-500/10 text-amber-600 border-amber-500/30 cursor-default"
+        }
         if (isFollowing) {
             if (isHovering) {
                 // Hovering on "Following" shows "Unfollow" style
@@ -82,6 +101,9 @@ export default function FollowButton({
     }
 
     const getLabel = () => {
+        if (hasPendingRequest) {
+            return "Requested"
+        }
         if (isFollowing) {
             return isHovering ? "Unfollow" : "Following"
         }
@@ -92,10 +114,16 @@ export default function FollowButton({
         if (isLoading) {
             return <Loader2 className={`${iconSizes[size]} animate-spin`} />
         }
+        if (hasPendingRequest) {
+            return <Check className={iconSizes[size]} />
+        }
         if (isFollowing && isHovering) {
             return <UserMinus className={iconSizes[size]} />
         }
         if (!isFollowing) {
+            if (isPrivate) {
+                return <Lock className={iconSizes[size]} />
+            }
             return <UserPlus className={iconSizes[size]} />
         }
         return null
@@ -106,7 +134,7 @@ export default function FollowButton({
             onClick={handleClick}
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
-            disabled={isLoading}
+            disabled={isLoading || hasPendingRequest}
             className={`inline-flex items-center justify-center font-semibold rounded-full border transition-all duration-200 ${sizeClasses[size]} ${getButtonStyles()} disabled:opacity-60 disabled:cursor-not-allowed ${className}`}
         >
             {getIcon()}
