@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { profiles, userFollows, cafeVisits, cafes } from "@/db/schema"
+import { profiles, userFollows, cafeVisits, cafes, followRequests } from "@/db/schema"
 import { getCurrentUser } from "@/lib/auth"
 import { and, eq, desc, inArray, ilike, or, count, ne } from "drizzle-orm"
 
@@ -11,21 +11,24 @@ import { and, eq, desc, inArray, ilike, or, count, ne } from "drizzle-orm"
 // ============================================================================
 
 /**
- * Follow a user
+ * Follow a user (or send request if private)
  */
-export async function followUser(targetUserId: string): Promise<{ success: boolean; error?: string }> {
+export async function followUser(targetUserId: string): Promise<{
+    success: boolean
+    requiresApproval?: boolean
+    error?: string
+}> {
     const user = await getCurrentUser()
     if (!user) return { success: false, error: "Unauthorized" }
 
-    // Cannot follow yourself
     if (user.id === targetUserId) {
         return { success: false, error: "Cannot follow yourself" }
     }
 
     try {
-        // Check if target user exists
+        // Check if target user exists and get privacy status
         const targetUser = await db
-            .select({ id: profiles.id })
+            .select({ id: profiles.id, isPrivate: profiles.isPrivate })
             .from(profiles)
             .where(eq(profiles.id, targetUserId))
             .limit(1)
@@ -33,6 +36,8 @@ export async function followUser(targetUserId: string): Promise<{ success: boole
         if (!targetUser.length) {
             return { success: false, error: "User not found" }
         }
+
+        const isPrivate = targetUser[0].isPrivate ?? false
 
         // Check if already following
         const existingFollow = await db
@@ -50,13 +55,48 @@ export async function followUser(targetUserId: string): Promise<{ success: boole
             return { success: false, error: "Already following this user" }
         }
 
-        // Create follow relationship
-        await db.insert(userFollows).values({
-            followerId: user.id,
-            followingId: targetUserId,
-        })
+        // Check for existing request
+        const existingRequest = await db
+            .select({ id: followRequests.id, status: followRequests.status })
+            .from(followRequests)
+            .where(
+                and(
+                    eq(followRequests.requesterId, user.id),
+                    eq(followRequests.targetId, targetUserId)
+                )
+            )
+            .limit(1)
 
-        return { success: true }
+        if (existingRequest.length > 0) {
+            if (existingRequest[0].status === "pending") {
+                return { success: false, error: "Follow request already pending" }
+            }
+            if (existingRequest[0].status === "declined") {
+                // Re-send after decline - update status to pending
+                await db
+                    .update(followRequests)
+                    .set({ status: "pending", updatedAt: new Date() })
+                    .where(eq(followRequests.id, existingRequest[0].id))
+                return { success: true, requiresApproval: true }
+            }
+        }
+
+        if (isPrivate) {
+            // Create follow request
+            await db.insert(followRequests).values({
+                requesterId: user.id,
+                targetId: targetUserId,
+                status: "pending",
+            })
+            return { success: true, requiresApproval: true }
+        } else {
+            // Direct follow
+            await db.insert(userFollows).values({
+                followerId: user.id,
+                followingId: targetUserId,
+            })
+            return { success: true, requiresApproval: false }
+        }
     } catch (error) {
         console.error("Error following user:", error)
         return { success: false, error: "Failed to follow user" }
@@ -88,28 +128,223 @@ export async function unfollowUser(targetUserId: string): Promise<{ success: boo
 }
 
 /**
- * Check if current user follows a specific user
+ * Get pending follow requests for current user
  */
-export async function isFollowing(targetUserId: string): Promise<boolean> {
+export async function getPendingFollowRequests(): Promise<{
+    requests: {
+        id: string
+        requester: { id: string; username: string; displayName: string; avatarUrl: string | null }
+        createdAt: string
+    }[]
+    error?: string
+}> {
+    const user = await getCurrentUser()
+    if (!user) return { requests: [], error: "Unauthorized" }
+
+    try {
+        const requests = await db
+            .select({
+                id: followRequests.id,
+                requesterId: followRequests.requesterId,
+                createdAt: followRequests.createdAt,
+                requesterUsername: profiles.username,
+                requesterDisplayName: profiles.displayName,
+                requesterAvatarUrl: profiles.avatarUrl,
+            })
+            .from(followRequests)
+            .innerJoin(profiles, eq(followRequests.requesterId, profiles.id))
+            .where(
+                and(
+                    eq(followRequests.targetId, user.id),
+                    eq(followRequests.status, "pending")
+                )
+            )
+            .orderBy(desc(followRequests.createdAt))
+
+        return {
+            requests: requests.map((r) => ({
+                id: r.id,
+                requester: {
+                    id: r.requesterId,
+                    username: r.requesterUsername,
+                    displayName: r.requesterDisplayName,
+                    avatarUrl: r.requesterAvatarUrl,
+                },
+                createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
+            })),
+        }
+    } catch (error) {
+        console.error("Error getting follow requests:", error)
+        return { requests: [], error: "Failed to get follow requests" }
+    }
+}
+
+/**
+ * Get count of pending follow requests
+ */
+export async function getPendingFollowRequestCount(): Promise<{ count: number }> {
+    const user = await getCurrentUser()
+    if (!user) return { count: 0 }
+
+    try {
+        const result = await db
+            .select({ count: count() })
+            .from(followRequests)
+            .where(
+                and(
+                    eq(followRequests.targetId, user.id),
+                    eq(followRequests.status, "pending")
+                )
+            )
+
+        return { count: result[0]?.count ?? 0 }
+    } catch (error) {
+        console.error("Error getting follow request count:", error)
+        return { count: 0 }
+    }
+}
+
+/**
+ * Accept a follow request
+ */
+export async function acceptFollowRequest(requestId: string): Promise<{ success: boolean; error?: string }> {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: "Unauthorized" }
+
+    try {
+        // Get the request
+        const request = await db
+            .select()
+            .from(followRequests)
+            .where(
+                and(
+                    eq(followRequests.id, requestId),
+                    eq(followRequests.targetId, user.id),
+                    eq(followRequests.status, "pending")
+                )
+            )
+            .limit(1)
+
+        if (!request.length) {
+            return { success: false, error: "Request not found" }
+        }
+
+        const requesterId = request[0].requesterId
+
+        // Create follow relationship and update request status atomically
+        await Promise.all([
+            db.insert(userFollows).values({
+                followerId: requesterId,
+                followingId: user.id,
+            }),
+            db
+                .update(followRequests)
+                .set({ status: "accepted", updatedAt: new Date() })
+                .where(eq(followRequests.id, requestId)),
+        ])
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error accepting follow request:", error)
+        return { success: false, error: "Failed to accept request" }
+    }
+}
+
+/**
+ * Decline a follow request
+ */
+export async function declineFollowRequest(requestId: string): Promise<{ success: boolean; error?: string }> {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: "Unauthorized" }
+
+    try {
+        await db
+            .update(followRequests)
+            .set({ status: "declined", updatedAt: new Date() })
+            .where(
+                and(
+                    eq(followRequests.id, requestId),
+                    eq(followRequests.targetId, user.id),
+                    eq(followRequests.status, "pending")
+                )
+            )
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error declining follow request:", error)
+        return { success: false, error: "Failed to decline request" }
+    }
+}
+
+/**
+ * Check if current user has a pending follow request to target user
+ */
+export async function hasPendingFollowRequest(targetUserId: string): Promise<boolean> {
     const user = await getCurrentUser()
     if (!user) return false
 
     try {
         const result = await db
-            .select({ id: userFollows.id })
-            .from(userFollows)
+            .select({ id: followRequests.id })
+            .from(followRequests)
             .where(
                 and(
-                    eq(userFollows.followerId, user.id),
-                    eq(userFollows.followingId, targetUserId)
+                    eq(followRequests.requesterId, user.id),
+                    eq(followRequests.targetId, targetUserId),
+                    eq(followRequests.status, "pending")
                 )
             )
             .limit(1)
 
         return result.length > 0
     } catch (error) {
-        console.error("Error checking follow status:", error)
+        console.error("Error checking follow request status:", error)
         return false
+    }
+}
+
+/**
+ * Check if current user follows a specific user and if there's a pending request
+ */
+export async function isFollowing(targetUserId: string): Promise<{
+    isFollowing: boolean
+    hasPendingRequest: boolean
+}> {
+    const user = await getCurrentUser()
+    if (!user) return { isFollowing: false, hasPendingRequest: false }
+
+    try {
+        const [followResult, requestResult] = await Promise.all([
+            db
+                .select({ id: userFollows.id })
+                .from(userFollows)
+                .where(
+                    and(
+                        eq(userFollows.followerId, user.id),
+                        eq(userFollows.followingId, targetUserId)
+                    )
+                )
+                .limit(1),
+            db
+                .select({ id: followRequests.id })
+                .from(followRequests)
+                .where(
+                    and(
+                        eq(followRequests.requesterId, user.id),
+                        eq(followRequests.targetId, targetUserId),
+                        eq(followRequests.status, "pending")
+                    )
+                )
+                .limit(1),
+        ])
+
+        return {
+            isFollowing: followResult.length > 0,
+            hasPendingRequest: requestResult.length > 0,
+        }
+    } catch (error) {
+        console.error("Error checking follow status:", error)
+        return { isFollowing: false, hasPendingRequest: false }
     }
 }
 
