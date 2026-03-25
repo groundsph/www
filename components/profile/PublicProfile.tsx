@@ -11,6 +11,7 @@ import {
     Coffee,
     Compass,
     Layers,
+    Lock,
     MapPin,
     Medal,
     MessageSquare,
@@ -118,12 +119,23 @@ const item = {
     transition: { duration: 0.5 },
 }
 
+interface FollowRelationship {
+    isFollowing: boolean
+    isFollower: boolean
+    hasPendingRequest: boolean
+    isPrivate: boolean
+}
+
 interface PublicProfileProps {
     profile: ProfileWithBadges
+    followRelationship?: FollowRelationship
+    isOwnProfile?: boolean
 }
 
 export default function PublicProfile({
     profile,
+    followRelationship,
+    isOwnProfile = false,
 }: PublicProfileProps) {
     const { user } = useAuth()
     // States
@@ -187,26 +199,35 @@ export default function PublicProfile({
         fetchData()
     }, [profile, user])
 
-    // Check if current user follows this profile
+    // Use server-provided follow relationship or fetch if needed
     useEffect(() => {
-        const checkFollowStatus = async () => {
-            if (!user || user.id === profile.id) return
-            try {
-                const { isFollowing } = await import("@/app/api/actions/social")
-                const following = await isFollowing(profile.id)
-                setIsFollowingUser(following)
-            } catch (error) {
-                console.error("Error checking follow status:", error)
+        if (followRelationship) {
+            setIsFollowingUser(followRelationship.isFollowing)
+        } else if (user && user.id !== profile.id) {
+            // Fallback: fetch on client if not provided by server
+            const checkFollowStatus = async () => {
+                try {
+                    const { isFollowing: checkIsFollowing } = await import("@/app/api/actions/social")
+                    const result = await checkIsFollowing(profile.id)
+                    setIsFollowingUser(result.isFollowing)
+                } catch (error) {
+                    console.error("Error checking follow status:", error)
+                }
             }
+            checkFollowStatus()
         }
-        checkFollowStatus()
-    }, [user, profile.id])
+    }, [user, profile.id, followRelationship])
 
     const stats = profile.stats
     const earnedBadgeIds = new Set(profile.badges.map((b) => b.badge_id))
     const RankIcon = stats?.scout_rank
         ? rankConfig[stats.scout_rank].icon
         : User
+
+    // Determine if profile view should be restricted
+    // Profile is private AND viewer is not the owner AND viewer is not following
+    const isProfilePrivate = followRelationship?.isPrivate ?? (profile as unknown as { isPrivate?: boolean }).isPrivate ?? false
+    const isRestricted = isProfilePrivate && !isOwnProfile && !isFollowingUser
 
     if (loading) {
         return (
@@ -261,126 +282,160 @@ export default function PublicProfile({
                             <h1 className='text-2xl md:text-3xl font-bold font-serif'>
                                 {profile.display_name}
                             </h1>
-                            <button
-                                onClick={async () => {
-                                    const profileUrl = `${window.location.origin}/profile/${profile.username}`
-                                    if (navigator.share) {
-                                        try {
-                                            await navigator.share({
-                                                title: `${profile.display_name}'s Coffee Profile`,
-                                                text: `Check out ${profile.display_name}'s coffee journey!`,
-                                                url: profileUrl,
-                                            })
-                                        } catch {
-                                            // User cancelled or error
+                            {!isRestricted && (
+                                <button
+                                    onClick={async () => {
+                                        const profileUrl = `${window.location.origin}/profile/${profile.username}`
+                                        if (navigator.share) {
+                                            try {
+                                                await navigator.share({
+                                                    title: `${profile.display_name}'s Coffee Profile`,
+                                                    text: `Check out ${profile.display_name}'s coffee journey!`,
+                                                    url: profileUrl,
+                                                })
+                                            } catch {
+                                                // User cancelled or error
+                                            }
+                                        } else {
+                                            await navigator.clipboard.writeText(
+                                                profileUrl
+                                            )
+                                            alert(
+                                                "Profile link copied to clipboard!"
+                                            )
                                         }
-                                    } else {
-                                        await navigator.clipboard.writeText(
-                                            profileUrl
-                                        )
-                                        alert(
-                                            "Profile link copied to clipboard!"
-                                        )
-                                    }
-                                }}
-                                className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
-                                title='Share Profile'
-                            >
-                                <Share2 className='w-4 h-4' />
-                            </button>
+                                    }}
+                                    className='p-1.5 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
+                                    title='Share Profile'
+                                >
+                                    <Share2 className='w-4 h-4' />
+                                </button>
+                            )}
                         </div>
 
                         <p className='text-text/60 font-medium'>
                             @{profile.username}
                         </p>
 
-                        {/* Bio */}
-                        <p className='text-text/80 mt-2 text-center md:text-left max-w-md'>
-                            {profile.bio || "No bio yet"}
-                        </p>
-
-                        {/* Member Info */}
-                        <div className='flex flex-row flex-wrap gap-3 mt-3 text-sm text-text/60'>
-                            {profile.is_supporter && profile.support_since && (
-                                <span className='flex items-center gap-1 text-amber-600 font-medium'>
-                                    <Sparkles className='w-3.5 h-3.5' />
-                                    Supporter since{" "}
-                                    {new Date(
-                                        profile.support_since
-                                    ).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        year: "numeric",
-                                    })}
-                                </span>
-                            )}
-                            {profile.created_at && (
-                                <span>
-                                    Member since{" "}
-                                    {new Date(
-                                        profile.created_at
-                                    ).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        year: "numeric",
-                                    })}
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Follow Counts */}
-                        <div className='mt-3'>
-                            <FollowCounts
-                                userId={profile.id}
-                                username={profile.username}
-                                followersCount={followersCount}
-                                followingCount={followingCount}
-                                onCountsChange={(followers, following) => {
-                                    setFollowersCount(followers)
-                                    setFollowingCount(following)
-                                }}
-                                onFollowersClick={() => {
-                                    setFollowModalType("followers")
-                                    setIsFollowModalOpen(true)
-                                }}
-                                onFollowingClick={() => {
-                                    setFollowModalType("following")
-                                    setIsFollowModalOpen(true)
-                                }}
-                            />
-                        </div>
-
-                        {/* Follow Button (only show if viewing another user's profile) */}
-                        {user && user.id !== profile.id && (
-                            <div className='mt-3'>
-                                <FollowButton
-                                    targetUserId={profile.id}
-                                    initialIsFollowing={isFollowingUser}
-                                    size='md'
-                                    onFollowChange={(following) => {
-                                        setIsFollowingUser(following)
-                                        setFollowersCount((prev) =>
-                                            following ? prev + 1 : prev - 1
-                                        )
-                                    }}
-                                />
+                        {/* Show limited info for restricted view */}
+                        {isRestricted ? (
+                            <div className='flex flex-col items-center md:items-start gap-4 mt-4'>
+                                <div className='flex items-center gap-2 text-text/60'>
+                                    <Lock className='w-4 h-4' />
+                                    <span>This profile is private</span>
+                                </div>
+                                {/* Follow Button for private profiles */}
+                                {!isOwnProfile && (
+                                    <div>
+                                        <FollowButton
+                                            targetUserId={profile.id}
+                                            initialIsFollowing={isFollowingUser}
+                                            initialHasPendingRequest={followRelationship?.hasPendingRequest}
+                                            isPrivate={true}
+                                            size='md'
+                                            onFollowChange={(following) => {
+                                                setIsFollowingUser(following)
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </div>
+                        ) : (
+                            <>
+                                {/* Bio */}
+                                <p className='text-text/80 mt-2 text-center md:text-left max-w-md'>
+                                    {profile.bio || "No bio yet"}
+                                </p>
+
+                                {/* Member Info */}
+                                <div className='flex flex-row flex-wrap gap-3 mt-3 text-sm text-text/60'>
+                                    {profile.is_supporter && profile.support_since && (
+                                        <span className='flex items-center gap-1 text-amber-600 font-medium'>
+                                            <Sparkles className='w-3.5 h-3.5' />
+                                            Supporter since{" "}
+                                            {new Date(
+                                                profile.support_since
+                                            ).toLocaleDateString("en-US", {
+                                                month: "short",
+                                                year: "numeric",
+                                            })}
+                                        </span>
+                                    )}
+                                    {profile.created_at && (
+                                        <span>
+                                            Member since{" "}
+                                            {new Date(
+                                                profile.created_at
+                                            ).toLocaleDateString("en-US", {
+                                                month: "short",
+                                                year: "numeric",
+                                            })}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Follow Counts */}
+                                <div className='mt-3'>
+                                    <FollowCounts
+                                        userId={profile.id}
+                                        username={profile.username}
+                                        followersCount={followersCount}
+                                        followingCount={followingCount}
+                                        onCountsChange={(followers, following) => {
+                                            setFollowersCount(followers)
+                                            setFollowingCount(following)
+                                        }}
+                                        onFollowersClick={() => {
+                                            setFollowModalType("followers")
+                                            setIsFollowModalOpen(true)
+                                        }}
+                                        onFollowingClick={() => {
+                                            setFollowModalType("following")
+                                            setIsFollowModalOpen(true)
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Follow Button (only show if viewing another user's profile) */}
+                                {user && user.id !== profile.id && (
+                                    <div className='mt-3'>
+                                        <FollowButton
+                                            targetUserId={profile.id}
+                                            initialIsFollowing={isFollowingUser}
+                                            initialHasPendingRequest={followRelationship?.hasPendingRequest}
+                                            isPrivate={followRelationship?.isPrivate}
+                                            size='md'
+                                            onFollowChange={(following) => {
+                                                setIsFollowingUser(following)
+                                                setFollowersCount((prev) =>
+                                                    following ? prev + 1 : prev - 1
+                                                )
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </motion.section>
 
-                {/* Badges Collection - Passport Style */}
-                <motion.section variants={item} className='mt-10'>
-                    <div className='flex items-center gap-2 mb-4'>
-                        <Medal className='w-5 h-5' />
-                        <h2 className='text-xl font-semibold font-serif'>
-                            Badge Collection
-                        </h2>
-                        <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
-                            {profile.badges.length}/{allBadges.length}
-                        </span>
-                    </div>
+                {/* Content Sections - Hidden for restricted view */}
+                {!isRestricted && (
+                    <>
+                        {/* Badges Collection - Passport Style */}
+                        <motion.section variants={item} className='mt-10'>
+                            <div className='flex items-center gap-2 mb-4'>
+                                <Medal className='w-5 h-5' />
+                                <h2 className='text-xl font-semibold font-serif'>
+                                    Badge Collection
+                                </h2>
+                                <span className='ml-auto bg-primary/15 text-primary text-sm font-bold px-2.5 py-1 rounded-full'>
+                                    {profile.badges.length}/{allBadges.length}
+                                </span>
+                            </div>
 
-                    {/* Showcase Container */}
-                    <div className='bg-text/5 border border-text/10 rounded-xl min-h-max relative p-6'>
+                            {/* Showcase Container */}
+                            <div className='bg-text/5 border border-text/10 rounded-xl min-h-max relative p-6'>
                         {/* Background Texture */}
                         <div
                             className='absolute inset-0 opacity-[0.03] pointer-events-none rounded-xl'
@@ -911,6 +966,8 @@ export default function PublicProfile({
                         </div>
                     )}
                 </motion.section>
+                    </>
+                )}
             </motion.div>
 
             <FollowListModal

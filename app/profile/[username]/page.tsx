@@ -1,6 +1,8 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getProfileByUsername } from "@/app/api/actions/profile"
+import { getFollowRelationship } from "@/app/api/actions/social"
+import { getCurrentUser } from "@/lib/auth"
 import PublicProfile from "@/components/profile/PublicProfile"
 import { buildPageMetadata } from "@/utils/seo/metadata"
 
@@ -36,5 +38,25 @@ export default async function PublicProfilePage({ params }: Props) {
         notFound()
     }
 
-    return <PublicProfile profile={profile} />
+    // Get current viewer
+    const currentUser = await getCurrentUser()
+
+    // Get follow relationship if viewing another user's profile
+    const isOwnProfile = currentUser?.id === profile.id
+    const followRelationship = !isOwnProfile
+        ? await getFollowRelationship(profile.id)
+        : {
+              isFollowing: false,
+              isFollower: false,
+              hasPendingRequest: false,
+              isPrivate: (profile as unknown as { isPrivate?: boolean }).isPrivate ?? false,
+          }
+
+    return (
+        <PublicProfile
+            profile={profile}
+            followRelationship={followRelationship}
+            isOwnProfile={isOwnProfile}
+        />
+    )
 }
