@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "bun:test"
+import { describe, it } from "bun:test"
 
 describe("Follow Request Flow", () => {
     describe("Private Profile Follow", () => {
