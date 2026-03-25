@@ -29,6 +29,7 @@ import {
     setPassword as setUserPassword,
     type LinkedAccount,
 } from "@/app/api/actions/auth"
+import PrivacySettings from "./PrivacySettings"
 
 interface Session {
     id: string
@@ -43,7 +44,7 @@ interface Session {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Passkey type from better-auth
 type Passkey = Record<string, any>
 
-type TabType = "password" | "sessions" | "passkeys" | "connected-accounts"
+type TabType = "password" | "sessions" | "passkeys" | "connected-accounts" | "privacy"
 
 export default function Settings() {
     const { addNotification } = useNotification()
@@ -420,6 +421,12 @@ export default function Settings() {
             label: "Connected Accounts",
             icon: Link2,
             description: "Manage social logins",
+        },
+        {
+            id: "privacy" as TabType,
+            label: "Privacy",
+            icon: Eye,
+            description: "Control profile visibility",
         },
     ]
 
@@ -1114,6 +1121,25 @@ export default function Settings() {
                                             </div>
                                         </div>
                                     )}
+                                </motion.div>
+                            )}
+
+                            {/* Privacy Tab */}
+                            {activeTab === "privacy" && (
+                                <motion.div
+                                    key='privacy'
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className='bg-text/5 border border-text/10 rounded-xl p-6'
+                                >
+                                    <h2 className='text-xl font-semibold mb-2'>
+                                        Privacy Settings
+                                    </h2>
+                                    <p className='text-text/60 mb-6'>
+                                        Control who can see your profile and activity
+                                    </p>
+                                    <PrivacySettings initialIsPrivate={false} />
                                 </motion.div>
                             )}
                         </AnimatePresence>
