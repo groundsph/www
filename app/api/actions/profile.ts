@@ -217,6 +217,8 @@ export async function getFullProfileData(userId: string): Promise<FullProfileDat
             stats: profile.stats as ProfileStats | null,
             created_at: profile.createdAt?.toISOString() ?? null,
             updated_at: profile.updatedAt?.toISOString() ?? null,
+            is_private: profile.isPrivate ?? false,
+            moderator_regions: profile.moderatorRegions ?? null,
             badges: badgesResult.map((b) => ({
                 id: b.id,
                 user_id: b.userId,
@@ -545,6 +547,8 @@ export async function getProfileWithBadges(userId: string): Promise<ProfileWithB
         stats: profile.stats as ProfileStats | null,
         created_at: profile.createdAt?.toISOString() ?? null,
         updated_at: profile.updatedAt?.toISOString() ?? null,
+        is_private: profile.isPrivate ?? false,
+        moderator_regions: profile.moderatorRegions ?? null,
         badges: badgesResult.map((b) => ({
             id: b.id,
             user_id: b.userId,
@@ -617,6 +621,52 @@ export async function updateProfile(
     } catch (error) {
         console.error("Error updating profile:", error)
         return { success: false, error: "Failed to update profile" }
+    }
+}
+
+/**
+ * Update user's privacy settings
+ */
+export async function updatePrivacySettings(
+    isPrivate: boolean
+): Promise<{ success: boolean; error?: string }> {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: "Unauthorized" }
+
+    try {
+        await db
+            .update(profiles)
+            .set({
+                isPrivate: isPrivate,
+                updatedAt: new Date(),
+            })
+            .where(eq(profiles.id, user.id))
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error updating privacy settings:", error)
+        return { success: false, error: "Failed to update privacy settings" }
+    }
+}
+
+/**
+ * Get user's privacy settings
+ */
+export async function getPrivacySettings(): Promise<{ isPrivate: boolean }> {
+    const user = await getCurrentUser()
+    if (!user) return { isPrivate: false }
+
+    try {
+        const result = await db
+            .select({ isPrivate: profiles.isPrivate })
+            .from(profiles)
+            .where(eq(profiles.id, user.id))
+            .limit(1)
+
+        return { isPrivate: result[0]?.isPrivate ?? false }
+    } catch (error) {
+        console.error("Error getting privacy settings:", error)
+        return { isPrivate: false }
     }
 }
 
@@ -705,6 +755,8 @@ export async function getProfileByUsername(username: string): Promise<ProfileWit
         stats: profile.stats as ProfileStats | null,
         created_at: profile.createdAt?.toISOString() ?? null,
         updated_at: profile.updatedAt?.toISOString() ?? null,
+        is_private: profile.isPrivate ?? false,
+        moderator_regions: profile.moderatorRegions ?? null,
         badges: badgesResult.map((b) => ({
             id: b.id,
             user_id: b.userId,
