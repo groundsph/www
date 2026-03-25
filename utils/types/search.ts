@@ -10,6 +10,7 @@ export interface SearchResult {
   imageUrl?: string
   priority: number
   keywords?: string[]
+  isPrivate?: boolean
 }
 
 export interface QuickAction {

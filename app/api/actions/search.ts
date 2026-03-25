@@ -32,6 +32,7 @@ export async function searchCafesAndUsers(
           username: profiles.username,
           displayName: profiles.displayName,
           avatarUrl: profiles.avatarUrl,
+          isPrivate: profiles.isPrivate,
         }).from(profiles).where(
           or(ilike(profiles.username, searchTerm), ilike(profiles.displayName, searchTerm))
         ).limit(MAX_RESULTS / 2)
@@ -56,6 +57,7 @@ export async function searchCafesAndUsers(
       href: `/profile/${user.username}`,
       imageUrl: user.avatarUrl || undefined,
       priority: 70,
+      isPrivate: user.isPrivate ?? undefined,
     })),
   ]
 }

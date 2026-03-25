@@ -3,7 +3,7 @@
 import { motion } from "motion/react"
 import { SearchResult } from "@/utils/types/search"
 import { getResultIcon } from "./search-utils"
-import { FileText, Coffee, User, Zap, CornerDownRight, MapIcon, Layers, Calendar, Sparkles } from "lucide-react"
+import { FileText, Coffee, User, Zap, CornerDownRight, MapIcon, Layers, Calendar, Sparkles, Lock } from "lucide-react"
 import { cn } from "@/utils/cn"
 import Image from "next/image"
 
@@ -110,13 +110,23 @@ export function SearchResults({ results, selectedIndex, onSelect, query }: Searc
                 >
                   <ResultIcon result={result} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text truncate">
-                      {highlightMatch(result.title, query)}
-                    </p>
-                    {result.subtitle && (
-                      <p className="text-xs text-text/60 truncate">
-                        {highlightMatch(result.subtitle, query)}
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-text truncate">
+                        {highlightMatch(result.title, query)}
                       </p>
+                      {result.type === 'user' && result.isPrivate && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-text/10 text-text/60 rounded">
+                          <Lock className="w-2.5 h-2.5" />
+                          Private
+                        </span>
+                      )}
+                    </div>
+                    {result.subtitle && result.type === 'user' && result.isPrivate ? null : (
+                      result.subtitle && (
+                        <p className="text-xs text-text/60 truncate">
+                          {highlightMatch(result.subtitle, query)}
+                        </p>
+                      )
                     )}
                   </div>
                   {isSelected && <CornerDownRight className="w-4 h-4 text-text opacity-40" />}
