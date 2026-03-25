@@ -16,6 +16,7 @@ import { useEffect, useState } from "react"
 import { SearchModal, SearchTrigger } from "@/components/search"
 import { useSearchKeyboard } from "@/utils/hooks/useSearchKeyboard"
 import { useHaptics } from "@/hooks/useHaptics"
+import FollowRequestsDropdown from "@/components/social/FollowRequestsDropdown"
 
 export default function Navbar() {
     // Context
@@ -315,6 +316,7 @@ export default function Navbar() {
 
             {/* Desktop Auth */}
             <div className='hidden md:flex flex-row items-center gap-4'>
+                {user && <FollowRequestsDropdown />}
                 <Auth />
             </div>
 
