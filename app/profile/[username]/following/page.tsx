@@ -43,7 +43,8 @@ export default async function FollowingPage({
     if (currentUser) {
         for (const user of following) {
             if (user.id !== currentUser.id) {
-                followingStatus[user.id] = await checkIsFollowing(user.id)
+                const result = await checkIsFollowing(user.id)
+                followingStatus[user.id] = result.isFollowing
             }
         }
     }

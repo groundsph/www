@@ -96,7 +96,8 @@ export default function FollowListModal({
                 const statuses: Record<string, boolean> = {}
                 await Promise.all(
                     result.users.map(async (u) => {
-                        statuses[u.id] = await isFollowing(u.id)
+                        const followResult = await isFollowing(u.id)
+                        statuses[u.id] = followResult.isFollowing
                     })
                 )
                 setCurrentUserFollowing((prev) => ({ ...prev, ...statuses }))
@@ -143,7 +144,8 @@ export default function FollowListModal({
                 const statuses: Record<string, boolean> = {}
                 await Promise.all(
                     newUsers.map(async (u) => {
-                        statuses[u.id] = await isFollowing(u.id)
+                        const followResult = await isFollowing(u.id)
+                        statuses[u.id] = followResult.isFollowing
                     })
                 )
 
