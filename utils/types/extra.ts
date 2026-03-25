@@ -148,6 +148,7 @@ export interface VisitHistoryItem {
 export type ProfileWithBadges = Tables<'profiles'> & {
     stats: ProfileStats | null;
     passport: ProfilePassport | null;
+    is_private: boolean;
     badges: (Tables<'user_badges'> & {
         badge: Tables<'badge_definitions'>;
     })[];

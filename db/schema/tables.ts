@@ -42,6 +42,7 @@ export const profiles = pgTable("profiles", {
     supporterExpiresAt: timestamp("supporter_expires_at", { withTimezone: true }),
     totalContribution: real("total_contribution").default(0),
     profileCompleted: boolean("profile_completed").default(false),
+    isPrivate: boolean("is_private").default(false),
     passport: jsonb("passport"),
     stats: jsonb("stats"),
     moderatorRegions: text("moderator_regions").array(),
