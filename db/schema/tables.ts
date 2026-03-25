@@ -8,6 +8,7 @@ import {
     integer,
     jsonb,
     uniqueIndex,
+    index,
     customType,
     doublePrecision,
 } from "drizzle-orm/pg-core"
@@ -683,6 +684,25 @@ export const userFollows = pgTable("user_follows", {
 }, (t) => ({
     // Prevent duplicate follows
     uniqueFollowIdx: uniqueIndex("user_follows_follower_following_unique").on(t.followerId, t.followingId),
+}))
+
+// Follow requests for private profiles
+export const followRequests = pgTable("follow_requests", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    requesterId: uuid("requester_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    targetId: uuid("target_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"), // pending, accepted, declined
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (t) => ({
+    // Prevent duplicate requests
+    uniqueRequestIdx: uniqueIndex("follow_requests_requester_target_unique").on(t.requesterId, t.targetId),
+    // Index for querying pending requests for a user
+    targetStatusIdx: index("follow_requests_target_status_idx").on(t.targetId, t.status),
 }))
 
 // ============================================================================
