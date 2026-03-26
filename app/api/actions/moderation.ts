@@ -132,8 +132,8 @@ export async function rejectBlogPost(
         return { success: false, error: "Not authorized" }
     }
 
-    if (!reason.trim()) {
-        return { success: false, error: "Rejection reason is required" }
+    if (!reason || reason.trim().length < 5) {
+        return { success: false, error: "Rejection reason must be at least 5 characters" }
     }
 
     const user = await getCurrentUser()
