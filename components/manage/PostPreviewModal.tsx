@@ -91,6 +91,7 @@ export default function PostPreviewModal({
                     {/* Cover Image */}
                     {post.coverImage && (
                         <div className="mb-6">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- External cover image URL */}
                             <img
                                 src={post.coverImage}
                                 alt={post.title}
@@ -107,6 +108,7 @@ export default function PostPreviewModal({
                     {/* Author Info */}
                     <div className="flex items-center gap-3 mb-6 p-3 bg-tertiary/10 rounded-xl">
                         {post.author.avatarUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element -- External avatar URL */
                             <img
                                 src={post.author.avatarUrl}
                                 alt={post.author.displayName}

@@ -223,6 +223,7 @@ export default function ModerationQueue({
                                 {/* Author Avatar */}
                                 <div className="shrink-0">
                                     {post.author.avatarUrl ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element -- External avatar URL */
                                         <img
                                             src={post.author.avatarUrl}
                                             alt={post.author.displayName}
