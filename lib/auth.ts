@@ -4,11 +4,15 @@ import { db } from "@/db"
 import { headers } from "next/headers"
 import { admin, apiKey, lastLoginMethod } from "better-auth/plugins"
 import { passkey } from "@better-auth/passkey"
+import * as authSchema from "@/db/schema/auth"
 import bcrypt from "bcrypt"
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
         provider: "pg",
+        schema: {
+            apikey: authSchema.apikey,
+        },
     }),
     advanced: {
         database: {
