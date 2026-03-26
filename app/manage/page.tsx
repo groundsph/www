@@ -13,7 +13,9 @@ import {
     Settings,
     ArrowRight,
     BarChart3,
+    ShieldCheck,
 } from "lucide-react"
+import { getPendingCommunityPosts } from "@/app/api/actions/moderation"
 
 export default async function ManageOverviewPage() {
     // The layout already handles access control, but we need the role
@@ -33,6 +35,10 @@ export default async function ManageOverviewPage() {
     })
     const pendingCount = pendingResult.total
 
+    // Fetch pending community posts count
+    const pendingPostsResult = await getPendingCommunityPosts(1, 1)
+    const pendingCommunityPosts = pendingPostsResult.total
+
     const categories = [
         {
             name: "Cafes",
@@ -42,6 +48,14 @@ export default async function ManageOverviewPage() {
             icon: <Store className='w-6 h-6' />,
             color: "bg-amber-500/10 text-amber-700",
             badge: pendingCount > 0 ? pendingCount : undefined,
+        },
+        {
+            name: "Moderation",
+            description: "Review and moderate community-submitted blog posts.",
+            href: "/manage/moderation",
+            icon: <ShieldCheck className='w-6 h-6' />,
+            color: "bg-red-500/10 text-red-700",
+            badge: pendingCommunityPosts > 0 ? pendingCommunityPosts : undefined,
         },
         {
             name: "Community",
