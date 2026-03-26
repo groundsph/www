@@ -48,21 +48,33 @@ export async function listApiKeys(): Promise<ApiKeyActionResult> {
     }
 
     try {
-        const keys = await auth.api.listApiKeys({
+        const result = await auth.api.listApiKeys({
             headers: await headers(),
         })
+
+        const keyList = Array.isArray(result) ? result : (result as { apiKeys: unknown[] }).apiKeys || []
 
         return {
             success: true,
             data: {
-                keys: keys.map((k) => ({
-                    id: k.id,
-                    name: k.name,
-                    prefix: k.prefix ?? "",
-                    start: k.start ?? null,
-                    createdAt: k.createdAt,
-                    expiresAt: k.expiresAt,
-                })),
+                keys: keyList.map((k) => {
+                    const key = k as {
+                        id: string
+                        name: string | null
+                        start: string | null
+                        prefix: string | null
+                        createdAt: Date
+                        expiresAt: Date | null
+                    }
+                    return {
+                        id: key.id,
+                        name: key.name,
+                        prefix: key.prefix ?? "",
+                        start: key.start ?? null,
+                        createdAt: key.createdAt,
+                        expiresAt: key.expiresAt,
+                    }
+                }),
             },
         }
     } catch (error) {
