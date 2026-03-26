@@ -185,7 +185,9 @@ describe("API Key Actions", () => {
             mockUserRole = "admin"
             mockListApiKeysError = new Error("Database error")
 
+            const consoleSpy = mock(console.error, () => {})
             const result = await listApiKeys()
+            consoleSpy.mockRestore()
 
             expect(result.success).toBe(false)
             expect(result.error).toBe("Failed to list API keys")
@@ -284,7 +286,9 @@ describe("API Key Actions", () => {
             mockListApiKeysReturn = []
             mockCreateApiKeyError = new Error("Creation failed")
 
+            const consoleSpy = mock(console.error, () => {})
             const result = await createApiKey("Test")
+            consoleSpy.mockRestore()
 
             expect(result.success).toBe(false)
             expect(result.error).toBe("Failed to create API key")
@@ -339,7 +343,9 @@ describe("API Key Actions", () => {
             mockUserRole = "admin"
             mockDeleteApiKeyError = new Error("Deletion failed")
 
+            const consoleSpy = mock(console.error, () => {})
             const result = await deleteApiKey("key-123")
+            consoleSpy.mockRestore()
 
             expect(result.success).toBe(false)
             expect(result.error).toBe("Failed to delete API key")
