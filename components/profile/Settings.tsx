@@ -9,6 +9,7 @@ import {
     EyeOff,
     Fingerprint,
     Key,
+    KeyRound,
     Laptop,
     Loader2,
     LogOut,
@@ -19,6 +20,7 @@ import {
     Trash2,
     Link2,
     Check,
+    Copy,
 } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -29,6 +31,13 @@ import {
     setPassword as setUserPassword,
     type LinkedAccount,
 } from "@/app/api/actions/auth"
+import {
+    listApiKeys,
+    createApiKey,
+    deleteApiKey,
+    type ApiKeyInfo,
+} from "@/app/api/actions/api-keys"
+import { getUserRole } from "@/app/api/actions/admin"
 import PrivacySettings from "./PrivacySettings"
 
 interface Session {
@@ -44,7 +53,7 @@ interface Session {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Passkey type from better-auth
 type Passkey = Record<string, any>
 
-type TabType = "password" | "sessions" | "passkeys" | "connected-accounts" | "privacy"
+type TabType = "password" | "sessions" | "passkeys" | "connected-accounts" | "privacy" | "api-keys"
 
 export default function Settings() {
     const { addNotification } = useNotification()
@@ -55,7 +64,7 @@ export default function Settings() {
         const tab = searchParams.get("tab")
         if (
             tab &&
-            ["password", "sessions", "passkeys", "connected-accounts"].includes(
+            ["password", "sessions", "passkeys", "connected-accounts", "api-keys"].includes(
                 tab
             )
         ) {
@@ -89,6 +98,18 @@ export default function Settings() {
     const [hasPasswordSet, setHasPasswordSet] = useState(true)
     const [loadingLinkedAccounts, setLoadingLinkedAccounts] = useState(true)
     const [isLinking, setIsLinking] = useState<string | null>(null)
+
+    // User role state (for API keys visibility)
+    const [userRole, setUserRole] = useState<string | null>(null)
+
+    // API Keys state
+    const [apiKeys, setApiKeys] = useState<ApiKeyInfo[]>([])
+    const [loadingApiKeys, setLoadingApiKeys] = useState(true)
+    const [creatingKey, setCreatingKey] = useState(false)
+    const [deletingKey, setDeletingKey] = useState<string | null>(null)
+    const [newKeyName, setNewKeyName] = useState("")
+    const [newKeyExpiration, setNewKeyExpiration] = useState<string>("")
+    const [createdKey, setCreatedKey] = useState<string | null>(null)
 
     // Fetch sessions
     useEffect(() => {
@@ -142,6 +163,34 @@ export default function Settings() {
         }
         fetchData()
     }, [])
+
+    // Fetch user role
+    useEffect(() => {
+        const fetchRole = async () => {
+            const result = await getUserRole()
+            setUserRole(result)
+        }
+        fetchRole()
+    }, [])
+
+    // Fetch API keys when tab is active
+    useEffect(() => {
+        const fetchApiKeys = async () => {
+            if (activeTab !== "api-keys") return
+            setLoadingApiKeys(true)
+            try {
+                const result = await listApiKeys()
+                if (result.success && result.data?.keys) {
+                    setApiKeys(result.data.keys)
+                }
+            } catch (error) {
+                console.error("Error fetching API keys:", error)
+            } finally {
+                setLoadingApiKeys(false)
+            }
+        }
+        fetchApiKeys()
+    }, [activeTab])
 
     // Handle password change
     const handleChangePassword = async () => {
@@ -306,6 +355,69 @@ export default function Settings() {
         }
     }
 
+    // Handle create API key
+    const handleCreateApiKey = async () => {
+        if (apiKeys.length >= 3) {
+            addNotification("Maximum of 3 API keys allowed", "error")
+            return
+        }
+
+        setCreatingKey(true)
+        try {
+            const expiresAt = newKeyExpiration
+                ? new Date(newKeyExpiration)
+                : undefined
+            const result = await createApiKey(
+                newKeyName || undefined,
+                expiresAt
+            )
+
+            if (result.success && result.data?.key) {
+                setCreatedKey(result.data.key)
+                setNewKeyName("")
+                setNewKeyExpiration("")
+                addNotification("API key created successfully", "success")
+                // Refresh the list
+                const refreshed = await listApiKeys()
+                if (refreshed.success && refreshed.data?.keys) {
+                    setApiKeys(refreshed.data.keys)
+                }
+            } else {
+                addNotification(result.error || "Failed to create API key", "error")
+            }
+        } catch (error) {
+            console.error("Error creating API key:", error)
+            addNotification("Failed to create API key", "error")
+        } finally {
+            setCreatingKey(false)
+        }
+    }
+
+    // Handle delete API key
+    const handleDeleteApiKey = async (keyId: string) => {
+        setDeletingKey(keyId)
+        try {
+            const result = await deleteApiKey(keyId)
+            if (result.success) {
+                setApiKeys((prev) => prev.filter((k) => k.id !== keyId))
+                addNotification("API key deleted successfully", "success")
+            } else {
+                addNotification(result.error || "Failed to delete API key", "error")
+            }
+        } catch (error) {
+            console.error("Error deleting API key:", error)
+            addNotification("Failed to delete API key", "error")
+        } finally {
+            setDeletingKey(null)
+        }
+    }
+
+    // Copy key to clipboard
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text)
+        addNotification("API key copied to clipboard", "success")
+    }
+
     const handleLinkSocial = async (
         provider: "google" | "facebook" | "discord"
     ) => {
@@ -428,6 +540,14 @@ export default function Settings() {
             icon: Eye,
             description: "Control profile visibility",
         },
+        ...(userRole === "admin" || userRole === "moderator"
+            ? [{
+                id: "api-keys" as TabType,
+                label: "API Keys",
+                icon: KeyRound,
+                description: "Manage API access keys",
+            }]
+            : []),
     ]
 
     return (
@@ -1140,6 +1260,159 @@ export default function Settings() {
                                         Control who can see your profile and activity
                                     </p>
                                     <PrivacySettings initialIsPrivate={false} />
+                                </motion.div>
+                            )}
+
+                            {/* API Keys Tab */}
+                            {activeTab === "api-keys" && (
+                                <motion.div
+                                    key='api-keys'
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className='bg-text/5 border border-text/10 rounded-xl p-6'
+                                >
+                                    <h2 className='text-xl font-semibold mb-2'>
+                                        API Keys
+                                    </h2>
+                                    <p className='text-text/60 mb-6'>
+                                        Manage API access keys for external integrations
+                                    </p>
+
+                                    {/* New Key Form */}
+                                    {apiKeys.length < 3 && (
+                                        <div className='mb-6 p-4 bg-background border border-text/10 rounded-lg'>
+                                            <h3 className='font-medium mb-3'>
+                                                Create new API key
+                                            </h3>
+                                            <div className='space-y-3'>
+                                                <div className='flex gap-3'>
+                                                    <input
+                                                        type='text'
+                                                        value={newKeyName}
+                                                        onChange={(e) =>
+                                                            setNewKeyName(e.target.value)
+                                                        }
+                                                        className='flex-1 px-4 py-2 bg-text/5 border border-text/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
+                                                        placeholder='Key name (optional)'
+                                                    />
+                                                </div>
+                                                <div className='flex gap-3'>
+                                                    <input
+                                                        type='date'
+                                                        value={newKeyExpiration}
+                                                        onChange={(e) =>
+                                                            setNewKeyExpiration(e.target.value)
+                                                        }
+                                                        className='flex-1 px-4 py-2 bg-text/5 border border-text/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
+                                                        placeholder='Expiration date (optional)'
+                                                    />
+                                                    <button
+                                                        onClick={handleCreateApiKey}
+                                                        disabled={creatingKey}
+                                                        className='px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2'
+                                                    >
+                                                        {creatingKey ? (
+                                                            <Loader2 className='w-4 h-4 animate-spin' />
+                                                        ) : (
+                                                            <Plus className='w-4 h-4' />
+                                                        )}
+                                                        Create
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Key limit indicator */}
+                                    <div className='mb-4 text-sm text-text/60'>
+                                        {apiKeys.length}/3 keys used
+                                    </div>
+
+                                    {/* Show newly created key */}
+                                    {createdKey && (
+                                        <div className='mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg'>
+                                            <h3 className='font-medium mb-2 text-green-700'>
+                                                New API Key Created
+                                            </h3>
+                                            <p className='text-sm text-green-600 mb-3'>
+                                                Copy this key now. You won&apos;t be able to see it again.
+                                            </p>
+                                            <div className='flex items-center gap-2 p-3 bg-background rounded-lg border border-green-500/20'>
+                                                <code className='flex-1 text-sm font-mono break-all'>
+                                                    {createdKey}
+                                                </code>
+                                                <button
+                                                    onClick={() => {
+                                                        copyToClipboard(createdKey)
+                                                        setCreatedKey(null)
+                                                    }}
+                                                    className='p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors'
+                                                    title='Copy and close'
+                                                >
+                                                    <Copy className='w-4 h-4' />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* API Keys List */}
+                                    {loadingApiKeys ? (
+                                        <div className='flex items-center justify-center py-12'>
+                                            <Loader2 className='w-6 h-6 animate-spin text-text opacity-40' />
+                                        </div>
+                                    ) : apiKeys.length === 0 ? (
+                                        <div className='text-center py-8'>
+                                            <KeyRound className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
+                                            <p className='text-text/60'>
+                                                No API keys yet
+                                            </p>
+                                            <p className='text-sm text-text/40 mt-1'>
+                                                Create an API key to access the API
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className='space-y-3'>
+                                            {apiKeys.map((key) => (
+                                                <div
+                                                    key={key.id}
+                                                    className='flex items-center gap-4 p-4 bg-background border border-text/10 rounded-lg'
+                                                >
+                                                    <div className='p-2 bg-primary/10 rounded-lg'>
+                                                        <KeyRound className='w-5 h-5 text-primary' />
+                                                    </div>
+                                                    <div className='flex-1 min-w-0'>
+                                                        <p className='font-medium'>
+                                                            {key.name || "Unnamed Key"}
+                                                        </p>
+                                                        <p className='text-sm text-text/60'>
+                                                            <code className='font-mono'>{key.prefix}...</code>
+                                                            {" "}• Created {formatDate(key.createdAt)}
+                                                            {key.expiresAt && (
+                                                                <>
+                                                                    {" "}• Expires {formatDate(key.expiresAt)}
+                                                                </>
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDeleteApiKey(key.id)
+                                                        }
+                                                        disabled={deletingKey === key.id}
+                                                        className='p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50'
+                                                        title='Delete API key'
+                                                    >
+                                                        {deletingKey === key.id ? (
+                                                            <Loader2 className='w-4 h-4 animate-spin' />
+                                                        ) : (
+                                                            <Trash2 className='w-4 h-4' />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </motion.div>
                             )}
                         </AnimatePresence>
