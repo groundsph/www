@@ -1386,7 +1386,7 @@ export default function Settings() {
                                                             {key.name || "Unnamed Key"}
                                                         </p>
                                                         <p className='text-sm text-text/60'>
-                                                            <code className='font-mono'>{key.prefix}...</code>
+                                                            <code className='font-mono'>{key.start || key.prefix}...</code>
                                                             {" "}• Created {formatDate(key.createdAt)}
                                                             {key.expiresAt && (
                                                                 <>

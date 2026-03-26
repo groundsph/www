@@ -12,6 +12,7 @@ export interface ApiKeyInfo {
     id: string
     name: string | null
     prefix: string
+    start: string | null
     createdAt: Date
     expiresAt: Date | null
 }
@@ -58,6 +59,7 @@ export async function listApiKeys(): Promise<ApiKeyActionResult> {
                     id: k.id,
                     name: k.name,
                     prefix: k.prefix ?? "",
+                    start: k.start ?? null,
                     createdAt: k.createdAt,
                     expiresAt: k.expiresAt,
                 })),
