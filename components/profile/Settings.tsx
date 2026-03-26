@@ -1336,23 +1336,23 @@ export default function Settings() {
                                                 New API Key Created
                                             </h3>
                                             <p className='text-sm text-green-600 mb-3'>
-                                                Copy this key now. You won&apos;t be able to see it again.
+                                                Copy this key now. You won&apos;t be able to see it again after leaving this page.
                                             </p>
                                             <div className='flex items-center gap-2 p-3 bg-background rounded-lg border border-green-500/20'>
                                                 <code className='flex-1 text-sm font-mono break-all'>
                                                     {createdKey}
                                                 </code>
                                                 <button
-                                                    onClick={() => {
-                                                        copyToClipboard(createdKey)
-                                                        setCreatedKey(null)
-                                                    }}
+                                                    onClick={() => copyToClipboard(createdKey)}
                                                     className='p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors'
-                                                    title='Copy and close'
+                                                    title='Copy to clipboard'
                                                 >
                                                     <Copy className='w-4 h-4' />
                                                 </button>
                                             </div>
+                                            <p className='text-xs text-green-600/70 mt-2'>
+                                                Key prefix: <code className='font-mono'>{createdKey.slice(0, 8)}...</code> (use this to identify the key later)
+                                            </p>
                                         </div>
                                     )}
 
