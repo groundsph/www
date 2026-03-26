@@ -64,6 +64,13 @@
       "when": 1774458977124,
       "tag": "0008_mighty_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774509897386,
+      "tag": "0009_colorful_champions",
+      "breakpoints": true
     }
   ]
 }

@@ -8,9 +8,10 @@
         "start": "next start",
         "lint": "eslint",
         "merge": "git checkout prod && git merge dev && git push origin prod && git checkout dev",
-        "db-push": "drizzle-kit push",
-        "db-migrate": "drizzle-kit migrate",
-        "db-studio": "drizzle-kit studio",
+        "db:generate": "drizzle-kit generate",
+        "db:push": "drizzle-kit push",
+        "db:migrate": "drizzle-kit migrate",
+        "db:studio": "drizzle-kit studio",
         "llm:models": "bun run scripts/list-llm-models.ts"
     },
     "dependencies": {
