@@ -36,6 +36,7 @@ import {
     Gem,
     Cigarette,
     Store,
+    X,
 } from "lucide-react"
 
 import { cn } from "@/utils/cn"
@@ -48,6 +49,13 @@ import {
     getCitiesForProvince,
     COFFEE_STYLES,
 } from "@/utils/data/philippines"
+import {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    submitMallCafeVerification,
+    searchBranchCafes,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type MallCafeVerification,
+} from "@/app/api/actions/mall-cafe"
 import {
     uploadCafeImageWithProgress,
     uploadOwnershipProofWithProgress,
@@ -149,6 +157,15 @@ export default function CafeSubmissionForm({
 
     // Ownership proof files for owner verification
     const [ownershipProofFiles, setOwnershipProofFiles] = useState<File[]>([])
+
+    // Mall cafe submission state
+    const [isMallCafe, setIsMallCafe] = useState(false)
+    const [mallVerificationType, setMallVerificationType] = useState<"owner" | "contributor" | null>(null)
+    const [mallProofFiles, setMallProofFiles] = useState<File[]>([])
+    const [linkedBranchQuery, setLinkedBranchQuery] = useState("")
+    const [linkedBranchResults, setLinkedBranchResults] = useState<{ id: string; name: string; slug: string; addressDisplay: string | null }[]>([])
+    const [selectedLinkedBranch, setSelectedLinkedBranch] = useState<{ id: string; name: string; slug: string } | null>(null)
+    const [isSearchingBranches, setIsSearchingBranches] = useState(false)
 
     // Google Maps URL Parsing State
     const [googleMapsUrl, setGoogleMapsUrl] = useState("")
@@ -1061,16 +1078,66 @@ export default function CafeSubmissionForm({
                                         )}
                                     </AnimatePresence>
 
-                                    {preSearchQuery.trim().length >= 3 &&
-                                        preSearchResults.length === 0 &&
-                                        !isSearching && (
-                                            <p className='mt-3 text-sm text-green-700 flex items-center gap-2'>
-                                                <Check className='w-4 h-4' />
-                                                No existing cafes found with
-                                                that name. You&apos;re good to
-                                                go!
+                                {preSearchQuery.trim().length >= 3 &&
+                                    preSearchResults.length === 0 &&
+                                    !isSearching && (
+                                        <p className='mt-3 text-sm text-green-700 flex items-center gap-2'>
+                                            <Check className='w-4 h-4' />
+                                            No existing cafes found with
+                                            that name. You&apos;re good to
+                                            go!
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Mall Cafe Guidelines */}
+                                <div className='p-5 bg-purple-50/50 border border-purple-200/60 rounded-xl'>
+                                    <div className='flex items-start gap-3 mb-4'>
+                                        <div className='p-2 bg-purple-100/80 rounded-full text-purple-700'>
+                                            <Store className='w-5 h-5' />
+                                        </div>
+                                        <div>
+                                            <h4 className='font-semibold text-lg'>
+                                                Submitting a Mall Cafe?
+                                            </h4>
+                                            <p className='text-text/60 text-sm'>
+                                                Special requirements apply for cafes inside shopping malls
                                             </p>
-                                        )}
+                                        </div>
+                                    </div>
+
+                                    <div className='space-y-3'>
+                                        <div className='flex items-start gap-3'>
+                                            <Check className='w-5 h-5 text-purple-600 shrink-0 mt-0.5' />
+                                            <div className='text-sm'>
+                                                <strong>Mall cafes need verification</strong> — We require proof that the cafe is legitimately operating within the mall
+                                            </div>
+                                        </div>
+                                        <div className='flex items-start gap-3'>
+                                            <Store className='w-5 h-5 text-purple-600 shrink-0 mt-0.5' />
+                                            <div className='text-sm'>
+                                                <strong>Owner workflow:</strong> Upload business permits, lease agreements, or DTI/SEC registration
+                                            </div>
+                                        </div>
+                                        <div className='flex items-start gap-3'>
+                                            <Link className='w-5 h-5 text-purple-600 shrink-0 mt-0.5' />
+                                            <div className='text-sm'>
+                                                <strong>Contributor workflow:</strong> Link to an existing verified branch of the same cafe chain
+                                            </div>
+                                        </div>
+                                        <div className='flex items-start gap-3'>
+                                            <AlertCircle className='w-5 h-5 text-orange-500 shrink-0 mt-0.5' />
+                                            <div className='text-sm'>
+                                                <strong>Kiosks and stalls don&apos;t qualify</strong> — Must be a proper sit-down cafe with dedicated seating
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className='mt-4 p-3 bg-purple-100/50 rounded-lg'>
+                                        <p className='text-sm text-purple-800'>
+                                            You&apos;ll be able to specify if this is a mall cafe and your relationship to it in the submission form.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1091,6 +1158,271 @@ export default function CafeSubmissionForm({
                                         Tell us about the cafe
                                     </p>
                                 </motion.div>
+
+                                {/* Mall Cafe Checkbox */}
+                                <motion.div variants={itemVariants} className='p-4 bg-purple-50 border border-purple-200 rounded-xl'>
+                                    <label className='flex items-start gap-3 cursor-pointer'>
+                                        <input
+                                            type='checkbox'
+                                            checked={isMallCafe}
+                                            onChange={(e) => {
+                                                setIsMallCafe(e.target.checked)
+                                                if (!e.target.checked) {
+                                                    setMallVerificationType(null)
+                                                    setMallProofFiles([])
+                                                    setSelectedLinkedBranch(null)
+                                                }
+                                            }}
+                                            className='w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 mt-0.5'
+                                        />
+                                        <div className='flex-1'>
+                                            <span className='font-medium text-purple-800 flex items-center gap-2'>
+                                                <Store className='w-4 h-4' />
+                                                This is a mall cafe
+                                            </span>
+                                            <p className='text-sm text-purple-700 mt-1'>
+                                                Check this if the cafe is located inside a shopping mall. 
+                                                You&apos;ll need to provide verification based on your relationship to the cafe.
+                                            </p>
+                                        </div>
+                                    </label>
+                                </motion.div>
+
+                                {/* Mall Cafe Verification Type Selection */}
+                                {isMallCafe && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        variants={itemVariants}
+                                        className='space-y-4'
+                                    >
+                                        <h4 className='font-medium text-sm text-text/70'>
+                                            What is your relationship to this cafe?
+                                        </h4>
+                                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                                            <button
+                                                type='button'
+                                                onClick={() => setMallVerificationType('owner')}
+                                                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                                    mallVerificationType === 'owner'
+                                                        ? 'border-purple-500 bg-purple-50'
+                                                        : 'border-text/10 hover:border-purple-300'
+                                                }`}
+                                            >
+                                                <div className='flex items-center gap-2 mb-2'>
+                                                    <BadgeCheck className={`w-5 h-5 ${
+                                                        mallVerificationType === 'owner' ? 'text-purple-600' : 'text-text/40'
+                                                    }`} />
+                                                    <span className='font-medium'>I am the Owner/Manager</span>
+                                                </div>
+                                                <p className='text-xs text-text/60'>
+                                                    You&apos;ll upload business permits, lease agreements, or other proof of ownership
+                                                </p>
+                                            </button>
+                                            <button
+                                                type='button'
+                                                onClick={() => setMallVerificationType('contributor')}
+                                                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                                    mallVerificationType === 'contributor'
+                                                        ? 'border-purple-500 bg-purple-50'
+                                                        : 'border-text/10 hover:border-purple-300'
+                                                }`}
+                                            >
+                                                <div className='flex items-center gap-2 mb-2'>
+                                                    <ExternalLink className={`w-5 h-5 ${
+                                                        mallVerificationType === 'contributor' ? 'text-purple-600' : 'text-text/40'
+                                                    }`} />
+                                                    <span className='font-medium'>I&apos;m a Contributor</span>
+                                                </div>
+                                                <p className='text-xs text-text/60'>
+                                                    You&apos;ll link this mall location to an existing verified branch
+                                                </p>
+                                            </button>
+                                        </div>
+
+                                        {/* Owner: Document Upload */}
+                                        {mallVerificationType === 'owner' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className='p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3'
+                                            >
+                                                <h4 className='font-medium text-amber-800 flex items-center gap-2'>
+                                                    <Upload className='w-4 h-4' />
+                                                    Upload Proof Documents
+                                                </h4>
+                                                <p className='text-sm text-amber-700'>
+                                                    Please upload at least one document to verify your mall cafe:
+                                                    Business permits, DTI/SEC registration, lease agreements, 
+                                                    or official mall tenant documents.
+                                                </p>
+                                                
+                                                <div className='border-2 border-dashed border-amber-300 rounded-xl p-4 text-center hover:border-amber-500 transition-colors'>
+                                                    <input
+                                                        type='file'
+                                                        id='mall-proof-upload'
+                                                        accept='image/jpeg,image/png,image/webp,application/pdf'
+                                                        multiple
+                                                        className='hidden'
+                                                        onChange={(e) => {
+                                                            const files = Array.from(e.target.files || [])
+                                                            if (files.length > 0) {
+                                                                setMallProofFiles((prev) => [...prev, ...files])
+                                                            }
+                                                            e.target.value = ''
+                                                        }}
+                                                    />
+                                                    <label htmlFor='mall-proof-upload' className='cursor-pointer'>
+                                                        <Upload className='w-8 h-8 mx-auto text-amber-600 mb-2' />
+                                                        <p className='text-sm font-medium text-amber-800'>
+                                                            Click to upload proof documents
+                                                        </p>
+                                                        <p className='text-xs text-amber-600 mt-1'>
+                                                            JPEG, PNG, WebP, or PDF (max 10MB each)
+                                                        </p>
+                                                    </label>
+                                                </div>
+
+                                                {/* Uploaded Files List */}
+                                                {mallProofFiles.length > 0 && (
+                                                    <div className='space-y-2'>
+                                                        <p className='text-xs font-medium text-amber-800'>
+                                                            Uploaded Documents ({mallProofFiles.length})
+                                                        </p>
+                                                        {mallProofFiles.map((file, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                className='flex items-center gap-3 bg-white rounded-lg p-2'
+                                                            >
+                                                                <FileText className='w-4 h-4 text-amber-600 shrink-0' />
+                                                                <span className='text-sm text-text/80 flex-1 truncate'>
+                                                                    {file.name}
+                                                                </span>
+                                                                <span className='text-xs text-text/50'>
+                                                                    {(file.size / 1024).toFixed(0)} KB
+                                                                </span>
+                                                                <button
+                                                                    type='button'
+                                                                    onClick={() => {
+                                                                        setMallProofFiles((prev) =>
+                                                                            prev.filter((_, i) => i !== idx)
+                                                                        )
+                                                                    }}
+                                                                    className='p-1 hover:bg-red-100 rounded transition-colors'
+                                                                >
+                                                                    <Trash2 className='w-4 h-4 text-red-500' />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        )}
+
+                                        {/* Contributor: Branch Selector */}
+                                        {mallVerificationType === 'contributor' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className='p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-3'
+                                            >
+                                                <h4 className='font-medium text-blue-800 flex items-center gap-2'>
+                                                    <Link className='w-4 h-4' />
+                                                    Link to Existing Branch
+                                                </h4>
+                                                <p className='text-sm text-blue-700'>
+                                                    Search for and select an existing verified branch of this cafe chain.
+                                                    This helps us verify the mall location is part of a legitimate business.
+                                                </p>
+
+                                                {selectedLinkedBranch ? (
+                                                    <div className='p-3 bg-white border border-blue-200 rounded-lg'>
+                                                        <div className='flex items-center justify-between'>
+                                                            <div>
+                                                                <p className='font-medium text-text'>
+                                                                    {selectedLinkedBranch.name}
+                                                                </p>
+                                                                <p className='text-xs text-text/60'>
+                                                                    Linked branch selected
+                                                                </p>
+                                                            </div>
+                                                            <button
+                                                                type='button'
+                                                                onClick={() => setSelectedLinkedBranch(null)}
+                                                                className='p-1 hover:bg-red-100 rounded transition-colors'
+                                                            >
+                                                                <X className='w-4 h-4 text-red-500' />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className='relative'>
+                                                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                                            <input
+                                                                type='text'
+                                                                value={linkedBranchQuery}
+                                                                onChange={(e) => {
+                                                                    setLinkedBranchQuery(e.target.value)
+                                                                    if (e.target.value.trim().length >= 2) {
+                                                                        setIsSearchingBranches(true)
+                                                                        // Debounced search
+                                                                        setTimeout(async () => {
+                                                                            const result = await searchBranchCafes(e.target.value.trim())
+                                                                            if (result.success && result.cafes) {
+                                                                                setLinkedBranchResults(result.cafes)
+                                                                            }
+                                                                            setIsSearchingBranches(false)
+                                                                        }, 300)
+                                                                    } else {
+                                                                        setLinkedBranchResults([])
+                                                                    }
+                                                                }}
+                                                                placeholder='Search for an existing branch...'
+                                                                className='w-full pl-10 pr-4 py-2.5 border border-blue-200 rounded-lg bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm'
+                                                            />
+                                                            {isSearchingBranches && (
+                                                                <Loader2 className='absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin' />
+                                                            )}
+                                                        </div>
+
+                                                        {/* Search Results */}
+                                                        {linkedBranchResults.length > 0 && (
+                                                            <div className='space-y-2 max-h-48 overflow-y-auto'>
+                                                                {linkedBranchResults.map((cafe) => (
+                                                                    <button
+                                                                        key={cafe.id}
+                                                                        type='button'
+                                                                        onClick={() => {
+                                                                            setSelectedLinkedBranch({
+                                                                                id: cafe.id,
+                                                                                name: cafe.name,
+                                                                                slug: cafe.slug,
+                                                                            })
+                                                                            setLinkedBranchResults([])
+                                                                            setLinkedBranchQuery('')
+                                                                        }}
+                                                                        className='w-full p-3 bg-white border border-blue-100 rounded-lg hover:border-blue-300 transition-colors text-left'
+                                                                    >
+                                                                        <p className='font-medium text-sm text-text'>
+                                                                            {cafe.name}
+                                                                        </p>
+                                                                        {cafe.addressDisplay && (
+                                                                            <p className='text-xs text-text/60'>
+                                                                                {cafe.addressDisplay}
+                                                                            </p>
+                                                                        )}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </motion.div>
+                                        )}
+                                    </motion.div>
+                                )}
 
                                 <motion.div className='space-y-4' variants={containerVariants}>
                                     <motion.div variants={itemVariants}>

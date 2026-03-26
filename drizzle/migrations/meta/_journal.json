@@ -71,6 +71,13 @@
       "when": 1774509897386,
       "tag": "0009_colorful_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774529804925,
+      "tag": "0010_fine_power_pack",
+      "breakpoints": true
     }
   ]
 }

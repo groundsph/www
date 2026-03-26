@@ -36,6 +36,7 @@ import {
     MilkOff,
     Coffee,
     RotateCcw,
+    BadgeCheck,
 } from "lucide-react"
 import {
     approveCafe,
@@ -46,6 +47,9 @@ import {
     getManualSubscriptions,
     type CafeFilterOptions,
 } from "@/app/api/actions/admin"
+import ActionConfirmationModal from "@/components/ui/ActionConfirmationModal"
+import { useActionConfirmation } from "@/hooks/useActionConfirmation"
+import { type SensitiveAction } from "@/lib/action-confirmation"
 import {
     approveSuggestion,
     rejectSuggestion,
@@ -58,6 +62,13 @@ import {
     getPendingClaims,
     getOwnershipProofSignedUrl,
 } from "@/app/api/actions/claim"
+import {
+    getPendingMallVerifications,
+    approveMallCafeVerification,
+    rejectMallCafeVerification,
+    getMallVerificationProofUrl,
+    type MallCafeVerification,
+} from "@/app/api/actions/mall-cafe"
 import { EditSuggestion } from "@/utils/types/suggestions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -91,6 +102,7 @@ type TabType =
     | "claims"
     | "subscriptions"
     | "featured"
+    | "mall-verifications"
 
 export default function CafesManagement({
     initialPendingCafes,
@@ -125,13 +137,20 @@ export default function CafesManagement({
 
     const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [claims, setClaims] = useState<CafeClaim[]>(initialClaims)
+    const [mallVerifications, setMallVerifications] = useState<MallCafeVerification[]>([])
+
+    // Action confirmation hook
+    const { requestConfirmation, isModalOpen, pendingAction, closeModal, handleConfirmed } = useActionConfirmation()
     const [subscriptions, setSubscriptions] = useState(manualSubscriptions)
     const [featuredSchedules] = useState(initialFeaturedSchedules)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
         null
     )
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [expandedClaim, setExpandedClaim] = useState<string | null>(null)
+    const [expandedMallVerification, setExpandedMallVerification] = useState<string | null>(null)
+    const [mallAdminNotes, setMallAdminNotes] = useState<Record<string, string>>({})
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
 
@@ -251,6 +270,11 @@ export default function CafesManagement({
                 const data = await getManualSubscriptions()
                 setSubscriptions(data)
                 setRefreshKey((prev) => prev + 1)
+            } else if (activeTab === "mall-verifications") {
+                const result = await getPendingMallVerifications()
+                if (result.success && result.verifications) {
+                    setMallVerifications(result.verifications)
+                }
             }
         } catch (error) {
             console.error("Failed to refresh:", error)
@@ -380,14 +404,8 @@ export default function CafesManagement({
         setProcessing(null)
     }
 
-    const handleDeleteCafe = async (cafeId: string, cafeName: string) => {
-        if (
-            !confirm(
-                `Are you sure you want to PERMANENTLY DELETE "${cafeName}"? This action cannot be undone and will remove all associated reviews, visits, and other data.`
-            )
-        ) {
-            return
-        }
+    const executeDeleteCafe = async (cafeId: string, // eslint-disable-next-line @typescript-eslint/no-unused-vars
+cafeName: string) => {
         setProcessing(cafeId)
         const result = await deleteCafe(cafeId)
         if (result.success) {
@@ -398,6 +416,17 @@ export default function CafesManagement({
             alert(result.error || "Failed to delete cafe")
         }
         setProcessing(null)
+    }
+
+    const handleDeleteCafe = async (cafeId: string, cafeName: string) => {
+        const confirmed = await requestConfirmation(
+            "cafe:delete" as SensitiveAction,
+            "Delete Cafe",
+            `You are about to permanently delete "${cafeName}". This action cannot be undone and will remove all associated reviews, visits, and other data.`
+        )
+        if (confirmed) {
+            await executeDeleteCafe(cafeId, cafeName)
+        }
     }
 
     const handleApproveSuggestion = async (suggestionId: string) => {
@@ -425,6 +454,7 @@ export default function CafesManagement({
         setProcessing(null)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleApproveClaim = async (claimId: string) => {
         setProcessing(claimId)
         const result = await approveClaim(claimId)
@@ -436,6 +466,7 @@ export default function CafesManagement({
         setProcessing(null)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleRejectClaim = async (claimId: string) => {
         if (!confirm("Are you sure you want to reject this ownership claim?")) {
             return
@@ -446,6 +477,49 @@ export default function CafesManagement({
             setClaims((prev) => prev.filter((c) => c.id !== claimId))
         } else {
             alert(result.error || "Failed to reject claim")
+        }
+        setProcessing(null)
+    }
+
+    const handleApproveMallVerification = async (verificationId: string) => {
+        setProcessing(verificationId)
+        const notes = mallAdminNotes[verificationId]
+        const result = await approveMallCafeVerification(verificationId, notes)
+        if (result.success) {
+            setMallVerifications((prev) => prev.filter((v) => v.id !== verificationId))
+            // Clear the notes for this verification
+            setMallAdminNotes((prev) => {
+                const newNotes = { ...prev }
+                delete newNotes[verificationId]
+                return newNotes
+            })
+        } else {
+            alert(result.error || "Failed to approve verification")
+        }
+        setProcessing(null)
+    }
+
+    const handleRejectMallVerification = async (verificationId: string) => {
+        const notes = mallAdminNotes[verificationId]
+        if (!notes?.trim()) {
+            alert("Please provide admin notes explaining why this verification is being rejected.")
+            return
+        }
+        if (!confirm("Are you sure you want to reject this mall cafe verification?")) {
+            return
+        }
+        setProcessing(verificationId)
+        const result = await rejectMallCafeVerification(verificationId, notes)
+        if (result.success) {
+            setMallVerifications((prev) => prev.filter((v) => v.id !== verificationId))
+            // Clear the notes for this verification
+            setMallAdminNotes((prev) => {
+                const newNotes = { ...prev }
+                delete newNotes[verificationId]
+                return newNotes
+            })
+        } else {
+            alert(result.error || "Failed to reject verification")
         }
         setProcessing(null)
     }
@@ -571,6 +645,19 @@ export default function CafesManagement({
                 >
                     <Star className='w-4 h-4' />
                     Featured
+                </button>
+                <button
+                    onClick={() => setActiveTab("mall-verifications")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                        activeTab === "mall-verifications"
+                            ? "bg-primary text-white"
+                            : mallVerifications.length > 0
+                              ? "bg-purple-500/20 text-purple-700 hover:bg-purple-500/30"
+                              : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
+                    }`}
+                >
+                    <Store className='w-4 h-4' />
+                    Mall Verifications ({mallVerifications.length})
                 </button>
             </div>
 
@@ -1393,54 +1480,84 @@ export default function CafesManagement({
                 </>
             )}
 
-            {/* Claims Tab */}
-            {activeTab === "claims" && (
+            {/* Mall Verifications Tab */}
+            {activeTab === "mall-verifications" && (
                 <>
-                    {claims.length === 0 ? (
+                    {mallVerifications.length === 0 ? (
                         <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
                             <Store className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
                             <h3 className='text-lg font-semibold'>
-                                No pending claims
+                                No pending mall verifications
                             </h3>
                             <p className='text-text/60 text-sm mt-1'>
-                                Ownership claims will appear here for review.
+                                Mall cafe verification requests will appear here for review.
                             </p>
                         </div>
                     ) : (
                         <div className='space-y-3'>
-                            {claims.map((claim) => {
-                                const isExpanded = expandedClaim === claim.id
+                            {mallVerifications.map((verification) => {
+                                const isExpanded = expandedMallVerification === verification.id
+                                const isProcessingThis = processing === verification.id
 
                                 return (
                                     <div
-                                        key={claim.id}
+                                        key={verification.id}
                                         className='bg-background shadow-sm border border-tertiary/50 rounded-xl overflow-hidden hover:shadow-md transition-shadow'
                                     >
                                         {/* Header */}
                                         <div
                                             className='p-3 sm:p-4 cursor-pointer hover:bg-tertiary/10 transition flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4'
                                             onClick={() =>
-                                                setExpandedClaim(
-                                                    isExpanded ? null : claim.id
+                                                setExpandedMallVerification(
+                                                    isExpanded ? null : verification.id
                                                 )
                                             }
                                         >
+                                            {/* Cafe Thumbnail */}
+                                            <div className='relative w-16 h-16 shrink-0 rounded-lg overflow-hidden'>
+                                                {verification.cafe?.thumbnail ? (
+                                                    <Image
+                                                        src={getCafeThumbnailUrl(verification.cafe.thumbnail)}
+                                                        alt={verification.cafe.name}
+                                                        fill
+                                                        className='object-cover'
+                                                    />
+                                                ) : (
+                                                    <div className='w-full h-full bg-tertiary/30 flex items-center justify-center'>
+                                                        <Store className='w-6 h-6 text-text opacity-30' />
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <div className='flex-1 min-w-0'>
-                                                <h3 className='font-semibold truncate'>
-                                                    {claim.cafe?.name ||
-                                                        "Unknown Cafe"}
-                                                </h3>
-                                                <p className='text-sm text-text/60'>
-                                                    Claimed by{" "}
-                                                    {claim.user?.display_name ||
-                                                        claim.user?.username ||
-                                                        "Unknown"}
+                                                <div className='flex items-center gap-2 flex-wrap'>
+                                                    <h3 className='font-semibold truncate'>
+                                                        {verification.cafe?.name || "Unknown Cafe"}
+                                                    </h3>
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
+                                                        verification.verificationType === 'owner'
+                                                            ? 'bg-amber-100 text-amber-700'
+                                                            : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                        {verification.verificationType === 'owner' ? (
+                                                            <><BadgeCheck className='w-3 h-3' /> Owner</>
+                                                        ) : (
+                                                            <><ExternalLink className='w-3 h-3' /> Contributor</>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <p className='text-sm text-text/60 truncate'>
+                                                    <MapPin className='inline w-3 h-3 mr-1' />
+                                                    {verification.cafe?.cityMunicipality},{" "}
+                                                    {verification.cafe?.province}
                                                 </p>
                                                 <p className='text-xs text-text/40'>
-                                                    {claim.created_at &&
-                                                        new Date(
-                                                            claim.created_at
-                                                        ).toLocaleDateString()}
+                                                    Submitted by{" "}
+                                                    {verification.submittedByUser?.displayName ||
+                                                        verification.submittedByUser?.username ||
+                                                        "Unknown"}{" "}
+                                                    •{" "}
+                                                    {new Date(verification.createdAt).toLocaleDateString()}
                                                 </p>
                                             </div>
 
@@ -1448,13 +1565,9 @@ export default function CafesManagement({
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation()
-                                                        handleApproveClaim(
-                                                            claim.id
-                                                        )
+                                                        handleApproveMallVerification(verification.id)
                                                     }}
-                                                    disabled={
-                                                        processing === claim.id
-                                                    }
+                                                    disabled={isProcessingThis}
                                                     className='p-2 bg-green-500/20 text-green-600 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
                                                     title='Approve'
                                                 >
@@ -1463,13 +1576,9 @@ export default function CafesManagement({
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation()
-                                                        handleRejectClaim(
-                                                            claim.id
-                                                        )
+                                                        handleRejectMallVerification(verification.id)
                                                     }}
-                                                    disabled={
-                                                        processing === claim.id
-                                                    }
+                                                    disabled={isProcessingThis}
                                                     className='p-2 bg-red-500/20 text-red-600 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
                                                     title='Reject'
                                                 >
@@ -1486,8 +1595,28 @@ export default function CafesManagement({
                                         {/* Expanded Details */}
                                         {isExpanded && (
                                             <div className='border-t border-tertiary/50 p-4 space-y-4 bg-tertiary/10'>
-                                                {/* Proof Documents */}
-                                                {claim.proof_document_url && (
+                                                {/* Verification Type Details */}
+                                                <div>
+                                                    <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
+                                                        Verification Type
+                                                    </h4>
+                                                    <p className='text-sm text-text/80'>
+                                                        {verification.verificationType === 'owner' ? (
+                                                            <span className='flex items-center gap-2'>
+                                                                <BadgeCheck className='w-4 h-4 text-amber-600' />
+                                                                Owner/Manager submission with proof documents
+                                                            </span>
+                                                        ) : (
+                                                            <span className='flex items-center gap-2'>
+                                                                <ExternalLink className='w-4 h-4 text-blue-600' />
+                                                                Contributor submission linked to existing branch
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
+
+                                                {/* Proof Documents for Owners */}
+                                                {verification.verificationType === 'owner' && verification.proofDocumentUrl && (
                                                     <div>
                                                         <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
                                                             Proof Document
@@ -1495,49 +1624,81 @@ export default function CafesManagement({
                                                         <div className='flex gap-2 flex-wrap'>
                                                             <button
                                                                 onClick={async () => {
-                                                                    const result =
-                                                                        await getOwnershipProofSignedUrl(
-                                                                            claim.proof_document_url!
-                                                                        )
-                                                                    if (
-                                                                        result.success &&
-                                                                        result.url
-                                                                    ) {
-                                                                        window.open(
-                                                                            result.url,
-                                                                            "_blank"
-                                                                        )
+                                                                    const result = await getMallVerificationProofUrl(verification.proofDocumentUrl!)
+                                                                    if (result.success && result.url) {
+                                                                        window.open(result.url, "_blank")
                                                                     } else {
-                                                                        alert(
-                                                                            "Failed to load proof document"
-                                                                        )
+                                                                        alert("Failed to load proof document")
                                                                     }
                                                                 }}
                                                                 className='px-3 py-1.5 bg-background text-sm text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition inline-flex items-center gap-1 cursor-pointer'
                                                             >
-                                                                View Document
+                                                                <FileText className='w-4 h-4' />
+                                                                View Proof Document
                                                                 <ExternalLink className='w-3 h-3' />
                                                             </button>
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                {/* Proof Text */}
-                                                {claim.proof_text && (
+                                                {/* Linked Branch for Contributors */}
+                                                {verification.verificationType === 'contributor' && verification.linkedBranchId && (
+                                                    <div>
+                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
+                                                            Linked Branch
+                                                        </h4>
+                                                        <div className='p-3 bg-background rounded-lg border border-tertiary/50'>
+                                                            <p className='text-sm font-medium'>
+                                                                Branch ID: {verification.linkedBranchId}
+                                                            </p>
+                                                            <p className='text-xs text-text/60 mt-1'>
+                                                                This mall location is linked to an existing verified branch
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Notes */}
+                                                {verification.notes && (
                                                     <div>
                                                         <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                            Claim Details
+                                                            Submission Notes
                                                         </h4>
                                                         <p className='text-sm text-text/80 bg-background p-2 rounded-lg'>
-                                                            {claim.proof_text}
+                                                            {verification.notes}
                                                         </p>
                                                     </div>
                                                 )}
 
+                                                {/* Admin Notes Input */}
+                                                <div>
+                                                    <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
+                                                        Admin Notes
+                                                        {verification.status === 'pending' && (
+                                                            <span className='text-red-500 ml-1'>*</span>
+                                                        )}
+                                                    </h4>
+                                                    <textarea
+                                                        value={mallAdminNotes[verification.id] || ''}
+                                                        onChange={(e) => {
+                                                            setMallAdminNotes(prev => ({
+                                                                ...prev,
+                                                                [verification.id]: e.target.value
+                                                            }))
+                                                        }}
+                                                        placeholder={verification.verificationType === 'owner' 
+                                                            ? 'Add notes about the verification (optional for approval, required for rejection)...'
+                                                            : 'Add notes about the verification (required for rejection)...'
+                                                        }
+                                                        rows={3}
+                                                        className='w-full px-3 py-2 bg-background border border-tertiary/50 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none'
+                                                    />
+                                                </div>
+
                                                 {/* Link to cafe */}
-                                                {claim.cafe?.slug && (
+                                                {verification.cafe?.slug && (
                                                     <Link
-                                                        href={`/cafes/${claim.cafe.slug}`}
+                                                        href={`/cafes/${verification.cafe.slug}`}
                                                         className='text-sm text-primary hover:underline inline-flex items-center gap-1'
                                                     >
                                                         View cafe page{" "}
@@ -1566,6 +1727,19 @@ export default function CafesManagement({
             />
 
             {/* Reject Cafe Modal */}
+            {/* Action Confirmation Modal */}
+            {pendingAction && (
+                <ActionConfirmationModal
+                    isOpen={isModalOpen}
+                    onClose={closeModal}
+                    action={pendingAction.action}
+                    actionName={pendingAction.actionName}
+                    description={pendingAction.description}
+                    onConfirmed={handleConfirmed}
+                    onCancel={pendingAction.onCancel}
+                />
+            )}
+
             <RejectCafeModal
                 isOpen={rejectModalOpen}
                 onClose={() => {

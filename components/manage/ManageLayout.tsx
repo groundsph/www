@@ -10,6 +10,7 @@ import {
     LayoutDashboard,
     BarChart3,
     ShieldCheck,
+    Activity,
 } from "lucide-react"
 
 interface NavItem {
@@ -55,6 +56,12 @@ const navItems: NavItem[] = [
         name: "Users",
         href: "/manage/users",
         icon: <Users className='w-5 h-5' />,
+        adminOnly: true,
+    },
+    {
+        name: "Logs",
+        href: "/manage/logs",
+        icon: <Activity className='w-5 h-5' />,
         adminOnly: true,
     },
     {

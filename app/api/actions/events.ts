@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { events, cafes, profiles, cafeSubscriptions, user } from "@/db/schema"
 import { eq, and, gte, lt, lte, desc, asc, count, inArray, or, ilike, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
+import { logSystemAction } from "./system-logs"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
 
 // Event input type for create/update operations
@@ -825,6 +826,16 @@ export async function approveCommunityEvent(eventId: string): Promise<EventActio
         await sendEventApprovedEmail(submitterEmail, existingEvent.title, submitterName)
     }
 
+    // Log the event approval
+    await logSystemAction(
+        "approve",
+        "event",
+        eventId,
+        { status: "pending" },
+        { status: "published" },
+        { reason: "Community event approved by admin", title: existingEvent.title }
+    )
+
     const fullEvent = await getEvent(eventId)
     return {
         success: true,
@@ -879,6 +890,16 @@ export async function rejectCommunityEvent(eventId: string, reason?: string): Pr
 
     // Delete the rejected event
     await db.delete(events).where(eq(events.id, eventId))
+
+    // Log the event rejection
+    await logSystemAction(
+        "reject",
+        "event",
+        eventId,
+        { status: "pending", title: eventTitle },
+        { status: "rejected" },
+        { reason: reason || "Community event rejected by admin", title: eventTitle }
+    )
 
     return {
         success: true,

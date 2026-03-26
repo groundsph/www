@@ -153,6 +153,8 @@ export const cafes = pgTable(
         contributorId: uuid("contributor_id").references(() => profiles.id, { onDelete: "set null" }),
         featuredUntil: timestamp("featured_until", { withTimezone: true }),
         searchVector: tsvector("search_vector"),
+        isMallCafe: boolean("is_mall_cafe").default(false),
+        mallVerificationStatus: enums.mallVerificationStatusEnum("mall_verification_status").default("pending"),
         createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
     },
@@ -762,3 +764,56 @@ export const monthlyLeaderboardSnapshots = pgTable(
         typeYearMonthIdx: uniqueIndex("mls_type_year_month_idx").on(t.type, t.yearMonth, t.region, t.userId, t.cafeId),
     })
 )
+
+// ============================================================================
+// SYSTEM LOGS TABLE
+// ============================================================================
+
+export const systemLogs = pgTable("system_logs", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "set null" }),
+    action: text("action").notNull(), // "create", "update", "delete", "approve", "reject", "role_change"
+    entityType: text("entity_type").notNull(), // "cafe", "blog", "event", "user", "featured", etc.
+    entityId: uuid("entity_id").notNull(),
+    beforeValue: jsonb("before_value"), // State before change (null for create)
+    afterValue: jsonb("after_value"), // State after change (null for delete)
+    userAgent: text("user_agent"),
+    metadata: jsonb("metadata"), // Additional context (IP optional, reason, etc.)
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    userIdIdx: index("system_logs_user_id_idx").on(table.userId),
+    entityTypeIdx: index("system_logs_entity_type_idx").on(table.entityType),
+    createdAtIdx: index("system_logs_created_at_idx").on(table.createdAt),
+}))
+
+// ============================================================================
+// MALL CAFE VERIFICATIONS TABLE
+// ============================================================================
+
+export const mallCafeVerifications = pgTable("mall_cafe_verifications", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cafeId: uuid("cafe_id")
+        .notNull()
+        .references(() => cafes.id, { onDelete: "cascade" }),
+    submittedBy: uuid("submitted_by")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    verificationType: text("verification_type").notNull(), // "owner", "contributor"
+    proofDocumentUrl: text("proof_document_url"),
+    contractStartDate: timestamp("contract_start_date", { withTimezone: true }),
+    contractEndDate: timestamp("contract_end_date", { withTimezone: true }),
+    linkedBranchId: uuid("linked_branch_id").references(() => cafes.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    status: enums.mallVerificationStatusEnum("status").default("pending"),
+    reviewedBy: uuid("reviewed_by").references(() => profiles.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    adminNotes: text("admin_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    cafeIdIdx: index("mall_cafe_verifications_cafe_id_idx").on(table.cafeId),
+    statusIdx: index("mall_cafe_verifications_status_idx").on(table.status),
+    submittedByIdx: index("mall_cafe_verifications_submitted_by_idx").on(table.submittedBy),
+}))

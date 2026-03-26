@@ -18,6 +18,7 @@ import { canSubmitBlogPost } from "@/utils/blog/community-posting"
 import { checkBlogPost } from "@/utils/ai/openai-compatible"
 import { revalidatePath } from "next/cache"
 import { createNotification } from "./user-notifications"
+import { logSystemAction } from "./system-logs"
 
 // ============================================
 // Helper Functions
@@ -736,6 +737,16 @@ export async function approveBlogPost(postId: string): Promise<BlogActionResult>
     revalidatePath("/blog")
     revalidatePath("/admin/blog")
     revalidatePath(`/blog/${existing[0].slug}`)
+
+    // Log the blog approval
+    await logSystemAction(
+        "approve",
+        "blog",
+        postId,
+        { status: existing[0].status },
+        { status: "published" },
+        { reason: "Blog post approved by admin", title: existing[0].title }
+    )
 
     return { success: true }
 }

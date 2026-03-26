@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { checkSubscriptions } from "./check-subscriptions/logic"
 import { updateHiddenGems } from "./hidden-gems/logic"
 import { runLeaderboardSnapshots } from "./leaderboard-snapshots/logic"
+import { cleanupSystemLogs } from "./system-logs-cleanup/logic"
 
 /**
  * Unified Daily Cron Job
@@ -13,6 +14,7 @@ import { runLeaderboardSnapshots } from "./leaderboard-snapshots/logic"
  * 1. Check expired subscriptions (cafe and supporter)
  * 2. Evaluate hidden gem cafes
  * 3. Snapshot monthly leaderboards
+ * 4. Clean up old system logs (based on retention_days setting)
  *
  * Security: Requires CRON_SECRET to be passed in Authorization header
  *
@@ -80,6 +82,17 @@ export async function GET(req: NextRequest) {
         console.error("[Daily Cron] leaderboard-snapshots failed:", errorMessage)
         results.leaderboard = { error: errorMessage }
         errors.push(`leaderboard: ${errorMessage}`)
+    }
+
+    try {
+        console.log("[Daily Cron] Running system-logs-cleanup...")
+        results.logCleanup = await cleanupSystemLogs()
+        console.log("[Daily Cron] system-logs-cleanup completed")
+    } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : String(e)
+        console.error("[Daily Cron] system-logs-cleanup failed:", errorMessage)
+        results.logCleanup = { error: errorMessage }
+        errors.push(`logCleanup: ${errorMessage}`)
     }
 
     console.log("[Daily Cron] All jobs completed", {

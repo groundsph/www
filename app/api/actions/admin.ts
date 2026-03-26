@@ -19,6 +19,7 @@ import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedE
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
+import { logSystemAction } from "./system-logs"
 import { getModeratorRegionsForCurrentUser, normalizeRegions } from "@/utils/moderation/region-access"
 
 type ScoutRank = 'novice' | 'scout' | 'explorer' | 'expert' | 'vanguard' | 'legend'
@@ -549,6 +550,16 @@ export async function approveCafe(cafeId: string): Promise<AdminActionResult> {
         }
     }
 
+    // Log the cafe approval
+    await logSystemAction(
+        "approve",
+        "cafe",
+        cafeId,
+        { isPublished: false, status: "pending" },
+        { isPublished: true, status: "approved" },
+        { reason: "Cafe approved by admin", cafeName: cafe.name }
+    )
+
     return { success: true }
 }
 
@@ -659,6 +670,16 @@ export async function rejectCafe(cafeId: string, reason?: string): Promise<Admin
             console.error("Error sending cafe rejection email:", emailError)
         }
     }
+
+    // Log the cafe rejection
+    await logSystemAction(
+        "reject",
+        "cafe",
+        cafeId,
+        { isPublished: wasPublished ?? false, status: "pending" },
+        { status: "rejected" },
+        { reason: reason || "Cafe rejected by admin", cafeName, contributorId }
+    )
 
     return { success: true }
 }
@@ -2148,6 +2169,15 @@ export async function moderateReview(
         return { success: false, error: "Unauthorized - review is outside your region scope" }
     }
 
+    // Get current status before update
+    const currentReviewResult = await db
+        .select({ status: reviews.status })
+        .from(reviews)
+        .where(eq(reviews.id, reviewId))
+        .limit(1)
+
+    const oldStatus = currentReviewResult[0]?.status
+
     try {
         await db.update(reviews)
             .set({ status: newStatus, updatedAt: new Date() })
@@ -2165,6 +2195,17 @@ export async function moderateReview(
                 eq(reviewInteractions.interactionType, 'report')
             ))
     }
+
+    // Log the moderation action
+    const actionType = newStatus === 'published' ? 'approve' : newStatus === 'hidden' ? 'reject' : 'update'
+    await logSystemAction(
+        actionType,
+        "review",
+        reviewId,
+        { status: oldStatus },
+        { status: newStatus },
+        { reason: `Review ${newStatus} by moderator` }
+    )
 
     return { success: true }
 }
@@ -2208,6 +2249,21 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
         return { success: false, error: "Unauthorized - review is outside your region scope" }
     }
 
+    // Get review details before deletion for logging
+    const reviewDetailsResult = await db
+        .select({
+            rating: reviews.rating,
+            comment: reviews.comment,
+            status: reviews.status,
+            userId: reviews.userId,
+            cafeId: reviews.cafeId,
+        })
+        .from(reviews)
+        .where(eq(reviews.id, reviewId))
+        .limit(1)
+
+    const reviewDetails = reviewDetailsResult[0]
+
     // Delete review images from storage
     if (review?.images && review.images.length > 0) {
         await deleteReviewImagesAction(review.images)
@@ -2225,6 +2281,22 @@ export async function deleteReviewAsAdmin(reviewId: string): Promise<AdminAction
         console.error("Error deleting review:", error)
         return { success: false, error: "Failed to delete review" }
     }
+
+    // Log the deletion
+    await logSystemAction(
+        "delete",
+        "review",
+        reviewId,
+        reviewDetails ? {
+            rating: reviewDetails.rating,
+            comment: reviewDetails.comment,
+            status: reviewDetails.status,
+            userId: reviewDetails.userId,
+            cafeId: reviewDetails.cafeId,
+        } : null,
+        null,
+        { reason: "Review deleted by admin" }
+    )
 
     return { success: true }
 }
@@ -3384,6 +3456,16 @@ export async function approveVerification(requestId: string): Promise<AdminActio
         })
     }
 
+    // Log the verification approval
+    await logSystemAction(
+        "approve",
+        "verification",
+        requestId,
+        { status: "pending" },
+        { status: "approved", cafeId: request.cafeId, userId: request.userId },
+        { reason: "Owner verification approved by admin" }
+    )
+
     return { success: true }
 }
 
@@ -3419,6 +3501,15 @@ export async function rejectVerification(requestId: string, reason: string): Pro
         return { success: false, error: "Request has already been processed" }
     }
 
+    // Get request details before update for logging
+    const requestDetailsResult = await db
+        .select({ cafeId: ownerVerificationRequests.cafeId, userId: ownerVerificationRequests.userId })
+        .from(ownerVerificationRequests)
+        .where(eq(ownerVerificationRequests.id, requestId))
+        .limit(1)
+
+    const requestDetails = requestDetailsResult[0]
+
     try {
         await db.update(ownerVerificationRequests)
             .set({
@@ -3432,6 +3523,16 @@ export async function rejectVerification(requestId: string, reason: string): Pro
         console.error("Error rejecting verification:", error)
         return { success: false, error: "Failed to reject verification" }
     }
+
+    // Log the verification rejection
+    await logSystemAction(
+        "reject",
+        "verification",
+        requestId,
+        { status: "pending" },
+        { status: "rejected", reason },
+        { reason: reason || "Owner verification rejected by admin", cafeId: requestDetails?.cafeId, userId: requestDetails?.userId }
+    )
 
     return { success: true }
 }
@@ -3569,6 +3670,13 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole): P
         updates.moderatorRegions = null
     }
 
+    // Get old role before update
+    const [oldProfile] = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, targetUserId))
+        .limit(1)
+
     try {
         await db.update(profiles)
             .set(updates)
@@ -3577,6 +3685,16 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole): P
         console.error("Error updating user role:", error)
         return { success: false, error: "Failed to update user role" }
     }
+
+    // Log the action
+    await logSystemAction(
+        "role_change",
+        "user",
+        targetUserId,
+        { role: oldProfile?.role },
+        { role: newRole },
+        { previousRole: oldProfile?.role, newRole }
+    )
 
     return { success: true }
 }
@@ -3920,6 +4038,19 @@ export async function deleteUserAsAdmin(userId: string): Promise<AdminActionResu
         return { success: false, error: "Unauthorized: Admin access required" }
     }
 
+    // Get user profile info before deletion for logging
+    const targetProfileResult = await db
+        .select({
+            username: profiles.username,
+            displayName: profiles.displayName,
+            role: profiles.role,
+        })
+        .from(profiles)
+        .where(eq(profiles.id, userId))
+        .limit(1)
+
+    const targetProfile = targetProfileResult[0]
+
     try {
         // Use Better Auth Admin API
         // We need to use the api.removeUser method exposed by the admin plugin
@@ -3930,12 +4061,26 @@ export async function deleteUserAsAdmin(userId: string): Promise<AdminActionResu
             // Empty headers as this is a server-side call
             headers: new Headers()
         })
-
-        return { success: true }
     } catch (error) {
         console.error("Error deleting user:", error)
         return { success: false, error: "Failed to delete user" }
     }
+
+    // Log the user deletion
+    await logSystemAction(
+        "delete",
+        "user",
+        userId,
+        targetProfile ? {
+            username: targetProfile.username,
+            displayName: targetProfile.displayName,
+            role: targetProfile.role,
+        } : null,
+        null,
+        { reason: "User deleted by admin" }
+    )
+
+    return { success: true }
 }
 
 // ============================================

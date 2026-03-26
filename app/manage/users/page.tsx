@@ -26,6 +26,9 @@ import {
     ArrowDown,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import ActionConfirmationModal from "@/components/ui/ActionConfirmationModal"
+import { useActionConfirmation } from "@/hooks/useActionConfirmation"
+import { type SensitiveAction } from "@/lib/action-confirmation"
 
 export default function UsersManagePage() {
     const { addNotification } = useNotification()
@@ -43,6 +46,9 @@ export default function UsersManagePage() {
         useState<ProfileSortDirection>("desc")
     const limit = 20
     const router = useRouter()
+
+    // Action confirmation hook
+    const { requestConfirmation, isModalOpen, pendingAction, closeModal, handleConfirmed } = useActionConfirmation()
 
     // Debounce search input
     useEffect(() => {
@@ -103,15 +109,7 @@ export default function UsersManagePage() {
         )
     }
 
-    const handleDelete = async (userId: string, userName: string) => {
-        if (
-            !confirm(
-                `Are you sure you want to delete user "${userName}"? This action cannot be undone.`,
-            )
-        ) {
-            return
-        }
-
+    const executeDelete = async (userId: string, userName: string) => {
         setDeletingId(userId)
         try {
             const result = await deleteUserAsAdmin(userId)
@@ -130,6 +128,17 @@ export default function UsersManagePage() {
             addNotification(`Failed to delete user: ${message}`, "error")
         } finally {
             setDeletingId(null)
+        }
+    }
+
+    const handleDelete = async (userId: string, userName: string) => {
+        const confirmed = await requestConfirmation(
+            "user:delete" as SensitiveAction,
+            "Delete User",
+            `You are about to permanently delete user "${userName}". This action cannot be undone and will remove all user data, including reviews, contributions, and profile information.`
+        )
+        if (confirmed) {
+            await executeDelete(userId, userName)
         }
     }
 
@@ -415,6 +424,19 @@ export default function UsersManagePage() {
                     </div>
                 )}
             </div>
+
+            {/* Action Confirmation Modal */}
+            {pendingAction && (
+                <ActionConfirmationModal
+                    isOpen={isModalOpen}
+                    onClose={closeModal}
+                    action={pendingAction.action}
+                    actionName={pendingAction.actionName}
+                    description={pendingAction.description}
+                    onConfirmed={handleConfirmed}
+                    onCancel={pendingAction.onCancel}
+                />
+            )}
         </div>
     )
 }

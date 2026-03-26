@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
@@ -22,6 +22,11 @@ import {
     PenTool,
     Calendar,
     MapPin,
+    History,
+    Filter,
+    LayoutGrid,
+    List,
+    FileText,
 } from "lucide-react"
 import {
     moderateReview,
@@ -37,10 +42,17 @@ import {
     approveCommunityEvent,
     rejectCommunityEvent,
 } from "@/app/api/actions/events"
+import {
+    getSystemLogs,
+    type SystemLog,
+} from "@/app/api/actions/system-logs"
 import { EventWithCafe } from "@/utils/types/extra"
 import { format } from "date-fns"
 import { PHILIPPINES_LOCATIONS } from "@/utils/data/philippines"
 import { updateModeratorRegions } from "@/app/api/actions/admin"
+import ActionConfirmationModal from "@/components/ui/ActionConfirmationModal"
+import { useActionConfirmation } from "@/hooks/useActionConfirmation"
+import { type SensitiveAction } from "@/lib/action-confirmation"
 
 interface CommunityManagementProps {
     userRole: "admin" | "moderator"
@@ -49,6 +61,58 @@ interface CommunityManagementProps {
 }
 
 type TabType = "reviews" | "events" | "team"
+type RoleType = "all" | "admin" | "moderator" | "writer" | "user"
+type ViewMode = "list" | "grid"
+
+// Permissions matrix definition
+interface Permission {
+    name: string
+    user: boolean
+    writer: boolean
+    moderator: boolean
+    admin: boolean
+}
+
+const PERMISSIONS: Permission[] = [
+    { name: "View cafes", user: true, writer: true, moderator: true, admin: true },
+    { name: "Submit reviews", user: true, writer: true, moderator: true, admin: true },
+    { name: "Create blog posts", user: false, writer: true, moderator: true, admin: true },
+    { name: "Edit own content", user: false, writer: true, moderator: true, admin: true },
+    { name: "Moderate reviews", user: false, writer: false, moderator: true, admin: true },
+    { name: "Manage events", user: false, writer: false, moderator: true, admin: true },
+    { name: "Assign regions", user: false, writer: false, moderator: true, admin: true },
+    { name: "Manage users", user: false, writer: false, moderator: false, admin: true },
+    { name: "Change roles", user: false, writer: false, moderator: false, admin: true },
+    { name: "View system logs", user: false, writer: false, moderator: false, admin: true },
+    { name: "Delete any content", user: false, writer: false, moderator: false, admin: true },
+]
+
+const ACTION_COLORS: Record<string, string> = {
+    create: "text-green-600 bg-green-500/20",
+    update: "text-blue-600 bg-blue-500/20",
+    delete: "text-red-600 bg-red-500/20",
+    approve: "text-emerald-600 bg-emerald-500/20",
+    reject: "text-orange-600 bg-orange-500/20",
+    role_change: "text-purple-600 bg-purple-500/20",
+}
+
+const ACTION_LABELS: Record<string, string> = {
+    create: "Created",
+    update: "Updated",
+    delete: "Deleted",
+    approve: "Approved",
+    reject: "Rejected",
+    role_change: "Role Changed",
+}
+
+const ENTITY_ICONS: Record<string, string> = {
+    cafe: "☕",
+    blog: "📝",
+    event: "📅",
+    user: "👤",
+    featured: "⭐",
+    review: "💬",
+}
 
 export default function CommunityManagement({
     reportedReviews: initialReported,
@@ -58,6 +122,9 @@ export default function CommunityManagement({
     const [reportedReviews, setReportedReviews] = useState(initialReported)
     const [expandedReview, setExpandedReview] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
+
+    // Action confirmation hook
+    const { requestConfirmation, isModalOpen, pendingAction, closeModal, handleConfirmed } = useActionConfirmation()
 
     // Team management state
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -69,7 +136,74 @@ export default function CommunityManagement({
     const [selectedRegions, setSelectedRegions] = useState<string[]>([])
     const [savingRegions, setSavingRegions] = useState(false)
 
+    // Task 15, 16, 17: New team view state
+    const [roleFilter, setRoleFilter] = useState<RoleType>("all")
+    const [teamViewSearch, setTeamViewSearch] = useState("")
+    const [viewMode, setViewMode] = useState<ViewMode>("list")
+    const [groupByRole, setGroupByRole] = useState(false)
+    const [showPermissionsMatrix, setShowPermissionsMatrix] = useState(false)
+
+    // Activity log modal state
+    const [activityLogModalOpen, setActivityLogModalOpen] = useState(false)
+    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+    const [selectedMemberName, setSelectedMemberName] = useState<string>("")
+    const [activityLogs, setActivityLogs] = useState<SystemLog[]>([])
+    const [activityLogsLoading, setActivityLogsLoading] = useState(false)
+    const [activityLogsPage, setActivityLogsPage] = useState(1)
+    const [activityLogsTotal, setActivityLogsTotal] = useState(0)
+
     const regionOptions = PHILIPPINES_LOCATIONS.regions.map((r) => r.name)
+
+    // Filter and group team members
+    const filteredMembers = teamMembers.filter((member) => {
+        const matchesRole = roleFilter === "all" || member.role === roleFilter
+        const matchesSearch =
+            teamViewSearch === "" ||
+            member.display_name?.toLowerCase().includes(teamViewSearch.toLowerCase()) ||
+            member.username?.toLowerCase().includes(teamViewSearch.toLowerCase())
+        return matchesRole && matchesSearch
+    })
+
+    const groupedMembers = groupByRole
+        ? {
+              admin: filteredMembers.filter((m) => m.role === "admin"),
+              moderator: filteredMembers.filter((m) => m.role === "moderator"),
+              writer: filteredMembers.filter((m) => m.role === "writer"),
+          }
+        : null
+
+    // Activity log handlers
+    const handleViewActivityLog = useCallback(async (member: TeamMember) => {
+        setSelectedMemberId(member.id)
+        setSelectedMemberName(member.display_name || member.username || "Unknown")
+        setActivityLogModalOpen(true)
+        setActivityLogsLoading(true)
+        setActivityLogsPage(1)
+
+        const result = await getSystemLogs({ userId: member.id }, 1, 50)
+        setActivityLogs(result.logs)
+        setActivityLogsTotal(result.total)
+        setActivityLogsLoading(false)
+    }, [])
+
+    const loadMoreActivityLogs = useCallback(async () => {
+        if (!selectedMemberId) return
+        setActivityLogsLoading(true)
+        const nextPage = activityLogsPage + 1
+        const result = await getSystemLogs({ userId: selectedMemberId }, nextPage, 50)
+        setActivityLogs((prev) => [...prev, ...result.logs])
+        setActivityLogsPage(nextPage)
+        setActivityLogsLoading(false)
+    }, [selectedMemberId, activityLogsPage])
+
+    const handleCloseActivityLog = () => {
+        setActivityLogModalOpen(false)
+        setSelectedMemberId(null)
+        setSelectedMemberName("")
+        setActivityLogs([])
+        setActivityLogsPage(1)
+        setActivityLogsTotal(0)
+    }
 
     // Pending events state
     const [pendingEvents, setPendingEvents] = useState<EventWithCafe[]>([])
@@ -105,14 +239,7 @@ export default function CommunityManagement({
         setProcessing(null)
     }
 
-    const handleDeleteReview = async (reviewId: string) => {
-        if (
-            !confirm(
-                "Are you sure you want to permanently delete this review? This cannot be undone."
-            )
-        ) {
-            return
-        }
+    const executeDeleteReview = async (reviewId: string) => {
         setProcessing(reviewId)
         const result = await deleteReviewAsAdmin(reviewId)
         if (result.success) {
@@ -121,6 +248,17 @@ export default function CommunityManagement({
             alert(result.error || "Failed to delete review")
         }
         setProcessing(null)
+    }
+
+    const handleDeleteReview = async (reviewId: string) => {
+        const confirmed = await requestConfirmation(
+            "review:delete" as SensitiveAction,
+            "Delete Review",
+            "This will permanently delete the review and all associated images. This action cannot be undone."
+        )
+        if (confirmed) {
+            await executeDeleteReview(reviewId)
+        }
     }
 
     // Team management handlers
@@ -146,7 +284,7 @@ export default function CommunityManagement({
         setTeamSearchLoading(false)
     }
 
-    const handlePromoteUser = async (
+    const executePromoteUser = async (
         userId: string,
         role: "writer" | "moderator" | "admin"
     ) => {
@@ -161,12 +299,27 @@ export default function CommunityManagement({
         setTeamLoading(false)
     }
 
-    const handleDemoteUser = async (userId: string) => {
-        if (
-            !confirm("Are you sure you want to remove this user from the team?")
-        ) {
-            return
+    const handlePromoteUser = async (
+        userId: string,
+        role: "writer" | "moderator" | "admin"
+    ) => {
+        // Admin role changes require confirmation
+        if (role === "admin") {
+            const confirmed = await requestConfirmation(
+                "user:role-change" as SensitiveAction,
+                `Promote to ${role}`,
+                `You are about to grant admin privileges to a user. This is a sensitive action that requires verification.`
+            )
+            if (confirmed) {
+                await executePromoteUser(userId, role)
+            }
+        } else {
+            // Writer and moderator don't require confirmation
+            await executePromoteUser(userId, role)
         }
+    }
+
+    const executeDemoteUser = async (userId: string) => {
         setTeamLoading(true)
         const result = await updateUserRole(userId, "user")
         if (result.success) {
@@ -175,6 +328,26 @@ export default function CommunityManagement({
             alert(result.error || "Failed to demote user")
         }
         setTeamLoading(false)
+    }
+
+    const handleDemoteUser = async (userId: string, currentRole?: string) => {
+        // Demoting admins requires confirmation
+        if (currentRole === "admin") {
+            const confirmed = await requestConfirmation(
+                "user:role-change" as SensitiveAction,
+                "Remove Admin",
+                "You are about to remove admin privileges from a user. This is a sensitive action that requires verification."
+            )
+            if (confirmed) {
+                await executeDemoteUser(userId)
+            }
+        } else {
+            // Demoting writers/moderators from search results doesn't require confirmation
+            const confirmed = window.confirm("Are you sure you want to remove this user from the team?")
+            if (confirmed) {
+                await executeDemoteUser(userId)
+            }
+        }
     }
 
     // Region management handlers
@@ -865,39 +1038,300 @@ export default function CommunityManagement({
                         )}
                     </div>
 
-                    {/* Current Team Members */}
+                    {/* Current Team Members - Enhanced with filtering */}
                     <div>
-                        <h3 className='font-semibold mb-3'>Current Team</h3>
+                        {/* Header with filters */}
+                        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4'>
+                            <h3 className='font-semibold'>Current Team ({filteredMembers.length})</h3>
+                            <div className='flex flex-wrap items-center gap-2'>
+                                {/* Search */}
+                                <div className='relative'>
+                                    <Search className='absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text/40' />
+                                    <input
+                                        type='text'
+                                        value={teamViewSearch}
+                                        onChange={(e) => setTeamViewSearch(e.target.value)}
+                                        placeholder='Search team...'
+                                        className='pl-7 pr-3 py-1.5 bg-tertiary/20 border border-tertiary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-40'
+                                    />
+                                </div>
+
+                                {/* Role filter */}
+                                <select
+                                    value={roleFilter}
+                                    onChange={(e) => setRoleFilter(e.target.value as RoleType)}
+                                    className='px-3 py-1.5 bg-tertiary/20 border border-tertiary/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50'
+                                >
+                                    <option value='all'>All Roles</option>
+                                    <option value='admin'>Admin</option>
+                                    <option value='moderator'>Moderator</option>
+                                    <option value='writer'>Writer</option>
+                                </select>
+
+                                {/* View mode toggle */}
+                                <div className='flex items-center bg-tertiary/20 rounded-lg p-0.5'>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        className={`p-1.5 rounded-md transition ${viewMode === 'list' ? 'bg-background shadow-sm' : 'hover:bg-tertiary/30'}`}
+                                        title='List view'
+                                    >
+                                        <List className='w-4 h-4' />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('grid')}
+                                        className={`p-1.5 rounded-md transition ${viewMode === 'grid' ? 'bg-background shadow-sm' : 'hover:bg-tertiary/30'}`}
+                                        title='Grid view'
+                                    >
+                                        <LayoutGrid className='w-4 h-4' />
+                                    </button>
+                                </div>
+
+                                {/* Group by role toggle */}
+                                <button
+                                    onClick={() => setGroupByRole(!groupByRole)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition ${groupByRole ? 'bg-primary/20 text-primary' : 'bg-tertiary/20 hover:bg-tertiary/30'}`}
+                                >
+                                    <Filter className='w-3.5 h-3.5' />
+                                    Group by Role
+                                </button>
+
+                                {/* Permissions matrix toggle */}
+                                <button
+                                    onClick={() => setShowPermissionsMatrix(!showPermissionsMatrix)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition ${showPermissionsMatrix ? 'bg-primary/20 text-primary' : 'bg-tertiary/20 hover:bg-tertiary/30'}`}
+                                >
+                                    <Shield className='w-3.5 h-3.5' />
+                                    Permissions
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Permissions Matrix */}
+                        {showPermissionsMatrix && (
+                            <div className='bg-background rounded-xl border border-tertiary/50 p-4 mb-4 overflow-x-auto'>
+                                <h4 className='font-semibold mb-3 text-sm'>Role Permissions Matrix</h4>
+                                <table className='w-full text-sm'>
+                                    <thead>
+                                        <tr className='border-b border-tertiary/50'>
+                                            <th className='text-left py-2 px-2 font-medium text-text/60'>Permission</th>
+                                            <th className='text-center py-2 px-2 font-medium text-text/60'>User</th>
+                                            <th className='text-center py-2 px-2 font-medium text-text/60'>Writer</th>
+                                            <th className='text-center py-2 px-2 font-medium text-text/60'>Moderator</th>
+                                            <th className='text-center py-2 px-2 font-medium text-amber-600'>Admin</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {PERMISSIONS.map((perm) => (
+                                            <tr key={perm.name} className='border-b border-tertiary/30 last:border-0'>
+                                                <td className='py-2 px-2'>{perm.name}</td>
+                                                <td className='text-center py-2 px-2'>
+                                                    {perm.user ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                </td>
+                                                <td className='text-center py-2 px-2'>
+                                                    {perm.writer ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                </td>
+                                                <td className='text-center py-2 px-2'>
+                                                    {perm.moderator ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                </td>
+                                                <td className='text-center py-2 px-2'>
+                                                    {perm.admin ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Team Members List */}
                         {teamLoading && teamMembers.length === 0 ? (
                             <div className='flex items-center justify-center py-8'>
                                 <Loader2 className='w-6 h-6 animate-spin text-text opacity-40' />
                             </div>
-                        ) : teamMembers.length === 0 ? (
+                        ) : filteredMembers.length === 0 ? (
                             <div className='text-center py-8 bg-background rounded-xl border border-tertiary/50'>
                                 <Users className='w-10 h-10 mx-auto text-text opacity-30 mb-2' />
-                                <p className='text-text/60'>No team members</p>
+                                <p className='text-text/60'>No team members found</p>
+                            </div>
+                        ) : groupByRole && groupedMembers ? (
+                            // Grouped view
+                            <div className='space-y-4'>
+                                {(['admin', 'moderator', 'writer'] as const).map((role) => (
+                                    groupedMembers[role].length > 0 && (
+                                        <div key={role}>
+                                            <h4 className='text-sm font-medium text-text/60 mb-2 capitalize flex items-center gap-2'>
+                                                {role === 'admin' && <ShieldCheck className='w-4 h-4 text-amber-500' />}
+                                                {role === 'moderator' && <Shield className='w-4 h-4 text-blue-500' />}
+                                                {role === 'writer' && <PenTool className='w-4 h-4 text-green-500' />}
+                                                {role}s ({groupedMembers[role].length})
+                                            </h4>
+                                            <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-2'}>
+                                                {groupedMembers[role].map((member) => (
+                                                    <div
+                                                        key={member.id}
+                                                        className={`bg-background rounded-xl border border-tertiary/50 ${viewMode === 'grid' ? 'p-4' : 'p-3'}`}
+                                                    >
+                                                        {/* Member Header */}
+                                                        <div className={`flex ${viewMode === 'grid' ? 'flex-col items-center text-center' : 'flex-col sm:flex-row sm:items-center'} gap-3`}>
+                                                            <UserAvatar
+                                                                src={member.avatar_url}
+                                                                alt={member.display_name}
+                                                                size={viewMode === 'grid' ? 56 : 40}
+                                                                className='shrink-0'
+                                                            />
+                                                            <div className='flex-1 min-w-0'>
+                                                                <div className={`font-medium truncate flex ${viewMode === 'grid' ? 'justify-center' : ''} items-center gap-2`}>
+                                                                    {member.display_name}
+                                                                    {member.role === "admin" ? (
+                                                                        <ShieldCheck className='w-4 h-4 text-amber-500' />
+                                                                    ) : member.role === "moderator" ? (
+                                                                        <Shield className='w-4 h-4 text-blue-500' />
+                                                                    ) : (
+                                                                        <PenTool className='w-4 h-4 text-green-500' />
+                                                                    )}
+                                                                </div>
+                                                                <div className='text-sm text-text/60 truncate'>
+                                                                    @{member.username}
+                                                                </div>
+                                                                {member.created_at && (
+                                                                    <div className='text-xs text-text/40 mt-1'>
+                                                                        Joined {format(new Date(member.created_at), 'MMM yyyy')}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className={`flex items-center gap-2 ${viewMode === 'grid' ? 'flex-wrap justify-center' : 'self-end sm:self-center'}`}>
+                                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                                    member.role === "admin"
+                                                                        ? "bg-amber-500/20 text-amber-600"
+                                                                        : member.role === "moderator"
+                                                                            ? "bg-blue-500/20 text-blue-600"
+                                                                            : "bg-green-500/20 text-green-600"
+                                                                }`}>
+                                                                    {member.role === "admin" ? "Admin" : member.role === "moderator" ? "Moderator" : "Writer"}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleViewActivityLog(member)}
+                                                                    disabled={teamLoading}
+                                                                    className='p-1.5 text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50'
+                                                                    title='View activity log'
+                                                                >
+                                                                    <History className='w-4 h-4' />
+                                                                </button>
+                                                                {member.role === "moderator" && (
+                                                                    <button
+                                                                        onClick={() => handleEditRegions(member)}
+                                                                        disabled={teamLoading}
+                                                                        className='p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition disabled:opacity-50'
+                                                                        title='Edit regions'
+                                                                    >
+                                                                        <MapPin className='w-4 h-4' />
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleDemoteUser(member.id, member.role || undefined)}
+                                                                    disabled={teamLoading}
+                                                                    className='p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50'
+                                                                    title='Remove from team'
+                                                                >
+                                                                    <X className='w-4 h-4' />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Region display for moderators */}
+                                                        {member.role === "moderator" && (
+                                                            <div className={`text-sm ${viewMode === 'grid' ? 'text-center mt-3' : 'mt-2'}`}>
+                                                                <span className='text-text/60'>Regions: </span>
+                                                                <span className='text-text/80'>
+                                                                    {!member.moderator_regions || member.moderator_regions.length === 0
+                                                                        ? "All regions"
+                                                                        : member.moderator_regions.join(", ")}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Region editor */}
+                                                        {editingRegionsFor === member.id && (
+                                                            <div className='border-t border-tertiary/50 pt-3 mt-3'>
+                                                                <h4 className='text-sm font-medium mb-2'>Assign Regions</h4>
+                                                                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto mb-3'>
+                                                                    {regionOptions.map((region) => (
+                                                                        <label
+                                                                            key={region}
+                                                                            className='flex items-center gap-2 p-2 bg-tertiary/10 rounded-lg cursor-pointer hover:bg-tertiary/20 transition'
+                                                                        >
+                                                                            <input
+                                                                                type='checkbox'
+                                                                                checked={selectedRegions.includes(region)}
+                                                                                onChange={() => handleToggleRegion(region)}
+                                                                                className='w-4 h-4 rounded border-text/20 text-primary focus:ring-primary'
+                                                                            />
+                                                                            <span className='text-sm'>{region}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                                <div className='flex items-center gap-2'>
+                                                                    <button
+                                                                        onClick={() => handleSaveRegions(member.id)}
+                                                                        disabled={savingRegions}
+                                                                        className='px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition text-sm disabled:opacity-50 flex items-center gap-1.5'
+                                                                    >
+                                                                        {savingRegions ? (
+                                                                            <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                                                                        ) : (
+                                                                            <Check className='w-3.5 h-3.5' />
+                                                                        )}
+                                                                        Save
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={handleClearRegions}
+                                                                        disabled={savingRegions}
+                                                                        className='px-3 py-1.5 bg-tertiary/30 text-text/70 rounded-lg hover:bg-tertiary/50 transition text-sm disabled:opacity-50'
+                                                                    >
+                                                                        Clear
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={handleCancelEditRegions}
+                                                                        disabled={savingRegions}
+                                                                        className='px-3 py-1.5 text-text/60 hover:text-text transition text-sm disabled:opacity-50'
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </div>
+                                                                <p className='text-xs text-text/40 mt-2'>
+                                                                    Selecting no regions allows access to all regions.
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                ))}
                             </div>
                         ) : (
-                            <div className='space-y-2'>
-                                {teamMembers.map((member) => (
+                            // Flat view
+                            <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-2'}>
+                                {filteredMembers.map((member) => (
                                     <div
                                         key={member.id}
-                                        className='flex flex-col gap-3 p-3 bg-background rounded-xl border border-tertiary/50'
+                                        className={`bg-background rounded-xl border border-tertiary/50 ${viewMode === 'grid' ? 'p-4' : 'p-3'}`}
                                     >
-                                        <div className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3'>
-                                        <UserAvatar
-                                            src={member.avatar_url}
-                                            alt={member.display_name}
-                                            size={40}
-                                            className='shrink-0'
-                                        />
+                                        {/* Member Header */}
+                                        <div className={`flex ${viewMode === 'grid' ? 'flex-col items-center text-center' : 'flex-col sm:flex-row sm:items-center'} gap-3`}>
+                                            <UserAvatar
+                                                src={member.avatar_url}
+                                                alt={member.display_name}
+                                                size={viewMode === 'grid' ? 56 : 40}
+                                                className='shrink-0'
+                                            />
                                             <div className='flex-1 min-w-0'>
-                                                <div className='font-medium truncate flex items-center gap-2'>
+                                                <div className={`font-medium truncate flex ${viewMode === 'grid' ? 'justify-center' : ''} items-center gap-2`}>
                                                     {member.display_name}
                                                     {member.role === "admin" ? (
                                                         <ShieldCheck className='w-4 h-4 text-amber-500' />
-                                                    ) : member.role ===
-                                                      "moderator" ? (
+                                                    ) : member.role === "moderator" ? (
                                                         <Shield className='w-4 h-4 text-blue-500' />
                                                     ) : (
                                                         <PenTool className='w-4 h-4 text-green-500' />
@@ -906,30 +1340,33 @@ export default function CommunityManagement({
                                                 <div className='text-sm text-text/60 truncate'>
                                                     @{member.username}
                                                 </div>
+                                                {member.created_at && (
+                                                    <div className='text-xs text-text/40 mt-1'>
+                                                        Joined {format(new Date(member.created_at), 'MMM yyyy')}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className='flex items-center gap-2 self-end sm:self-center'>
-                                                <span
-                                                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                        member.role === "admin"
-                                                            ? "bg-amber-500/20 text-amber-600"
-                                                            : member.role ===
-                                                                "moderator"
-                                                              ? "bg-blue-500/20 text-blue-600"
-                                                              : "bg-green-500/20 text-green-600"
-                                                    }`}
-                                                >
-                                                    {member.role === "admin"
-                                                        ? "Admin"
-                                                        : member.role ===
-                                                            "moderator"
-                                                          ? "Moderator"
-                                                          : "Writer"}
+                                            <div className={`flex items-center gap-2 ${viewMode === 'grid' ? 'flex-wrap justify-center' : 'self-end sm:self-center'}`}>
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                    member.role === "admin"
+                                                        ? "bg-amber-500/20 text-amber-600"
+                                                        : member.role === "moderator"
+                                                            ? "bg-blue-500/20 text-blue-600"
+                                                            : "bg-green-500/20 text-green-600"
+                                                }`}>
+                                                    {member.role === "admin" ? "Admin" : member.role === "moderator" ? "Moderator" : "Writer"}
                                                 </span>
+                                                <button
+                                                    onClick={() => handleViewActivityLog(member)}
+                                                    disabled={teamLoading}
+                                                    className='p-1.5 text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50'
+                                                    title='View activity log'
+                                                >
+                                                    <History className='w-4 h-4' />
+                                                </button>
                                                 {member.role === "moderator" && (
                                                     <button
-                                                        onClick={() =>
-                                                            handleEditRegions(member)
-                                                        }
+                                                        onClick={() => handleEditRegions(member)}
                                                         disabled={teamLoading}
                                                         className='p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-lg transition disabled:opacity-50'
                                                         title='Edit regions'
@@ -938,9 +1375,7 @@ export default function CommunityManagement({
                                                     </button>
                                                 )}
                                                 <button
-                                                    onClick={() =>
-                                                        handleDemoteUser(member.id)
-                                                    }
+                                                    onClick={() => handleDemoteUser(member.id, member.role || undefined)}
                                                     disabled={teamLoading}
                                                     className='p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50'
                                                     title='Remove from team'
@@ -952,7 +1387,7 @@ export default function CommunityManagement({
 
                                         {/* Region display for moderators */}
                                         {member.role === "moderator" && (
-                                            <div className='text-sm'>
+                                            <div className={`text-sm ${viewMode === 'grid' ? 'text-center mt-3' : 'mt-2'}`}>
                                                 <span className='text-text/60'>Regions: </span>
                                                 <span className='text-text/80'>
                                                     {!member.moderator_regions || member.moderator_regions.length === 0
@@ -964,7 +1399,7 @@ export default function CommunityManagement({
 
                                         {/* Region editor */}
                                         {editingRegionsFor === member.id && (
-                                            <div className='border-t border-tertiary/50 pt-3 mt-1'>
+                                            <div className='border-t border-tertiary/50 pt-3 mt-3'>
                                                 <h4 className='text-sm font-medium mb-2'>Assign Regions</h4>
                                                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto mb-3'>
                                                     {regionOptions.map((region) => (
@@ -993,7 +1428,7 @@ export default function CommunityManagement({
                                                         ) : (
                                                             <Check className='w-3.5 h-3.5' />
                                                         )}
-                                                        Save Regions
+                                                        Save
                                                     </button>
                                                     <button
                                                         onClick={handleClearRegions}
@@ -1021,6 +1456,102 @@ export default function CommunityManagement({
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Activity Log Modal */}
+            {activityLogModalOpen && (
+                <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
+                    <div className='bg-background rounded-2xl w-full max-w-3xl max-h-[80vh] flex flex-col'>
+                        {/* Modal Header */}
+                        <div className='flex items-center justify-between p-4 border-b border-tertiary/50'>
+                            <div className='flex items-center gap-3'>
+                                <History className='w-5 h-5 text-primary' />
+                                <div>
+                                    <h3 className='font-semibold'>Activity Log</h3>
+                                    <p className='text-sm text-text/60'>@{selectedMemberName}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleCloseActivityLog}
+                                className='p-2 hover:bg-tertiary/30 rounded-lg transition'
+                            >
+                                <X className='w-5 h-5' />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className='flex-1 overflow-y-auto p-4'>
+                            {activityLogsLoading && activityLogs.length === 0 ? (
+                                <div className='flex items-center justify-center py-12'>
+                                    <Loader2 className='w-8 h-8 animate-spin text-text opacity-40' />
+                                </div>
+                            ) : activityLogs.length === 0 ? (
+                                <div className='text-center py-12'>
+                                    <FileText className='w-12 h-12 mx-auto text-text/30 mb-3' />
+                                    <p className='text-text/60'>No activity found</p>
+                                </div>
+                            ) : (
+                                <div className='space-y-3'>
+                                    {activityLogs.map((log) => {
+                                        const actionColor = ACTION_COLORS[log.action] || 'text-gray-600 bg-gray-500/20'
+                                        const actionLabel = ACTION_LABELS[log.action] || log.action
+                                        const entityIcon = ENTITY_ICONS[log.entityType] || '📄'
+
+                                        return (
+                                            <div key={log.id} className='bg-tertiary/10 rounded-lg p-3'>
+                                                <div className='flex items-center gap-2 flex-wrap mb-1'>
+                                                    <span className='text-lg'>{entityIcon}</span>
+                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${actionColor}`}>
+                                                        {actionLabel}
+                                                    </span>
+                                                    <span className='text-sm text-text/60 capitalize'>{log.entityType}</span>
+                                                </div>
+                                                <div className='text-xs text-text/40'>
+                                                    {log.createdAt && format(new Date(log.createdAt), 'PPp')}
+                                                </div>
+                                                {(Boolean(log.beforeValue) || Boolean(log.afterValue)) && (
+                                                    <div className='mt-2 text-xs text-text/60'>
+                                                        {log.beforeValue ? (
+                                                            <span className='line-through opacity-50'>{JSON.stringify(log.beforeValue).slice(0, 50)}</span>
+                                                        ) : null}
+                                                        {log.beforeValue && log.afterValue ? <span className='mx-1'>→</span> : null}
+                                                        {log.afterValue ? (
+                                                            <span>{JSON.stringify(log.afterValue).slice(0, 50)}</span>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Load More */}
+                            {activityLogs.length < activityLogsTotal && (
+                                <button
+                                    onClick={loadMoreActivityLogs}
+                                    disabled={activityLogsLoading}
+                                    className='w-full mt-4 py-2 bg-tertiary/30 hover:bg-tertiary/50 rounded-lg text-sm transition disabled:opacity-50'
+                                >
+                                    {activityLogsLoading ? 'Loading...' : `Load more (${activityLogs.length} of ${activityLogsTotal})`}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Action Confirmation Modal */}
+            {pendingAction && (
+                <ActionConfirmationModal
+                    isOpen={isModalOpen}
+                    onClose={closeModal}
+                    action={pendingAction.action}
+                    actionName={pendingAction.actionName}
+                    description={pendingAction.description}
+                    onConfirmed={handleConfirmed}
+                    onCancel={pendingAction.onCancel}
+                />
             )}
         </div>
     )

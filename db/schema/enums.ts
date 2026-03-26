@@ -104,3 +104,10 @@ export const crawlStatusEnum = pgEnum("crawl_status", [
     "published",
     "archived",
 ])
+
+// Mall Cafe Verification
+export const mallVerificationStatusEnum = pgEnum("mall_verification_status", [
+    "pending",
+    "verified",
+    "rejected",
+])
