@@ -387,6 +387,21 @@ export const blogReports = pgTable("blog_reports", {
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
 
+export const notifications = pgTable("notifications", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+        .notNull()
+        .references(() => profiles.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // "blog_approved", "blog_rejected", etc.
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    data: jsonb("data"), // Additional context (postId, reason, etc.)
+    read: boolean("read").default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => ({
+    userIdIdx: index("notifications_userId_idx").on(table.userId),
+}))
+
 // ============================================================================
 // EVENT TABLE
 // ============================================================================

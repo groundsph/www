@@ -5,6 +5,7 @@ import { blogPosts, profiles } from "@/db/schema"
 import { eq, and, desc, count, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
+import { createNotification } from "./user-notifications"
 
 export interface PendingBlogPost {
     id: string
@@ -143,7 +144,7 @@ export async function rejectBlogPost(
 
     try {
         const existing = await db
-            .select({ id: blogPosts.id, slug: blogPosts.slug })
+            .select({ id: blogPosts.id, slug: blogPosts.slug, authorId: blogPosts.authorId, title: blogPosts.title })
             .from(blogPosts)
             .where(eq(blogPosts.id, postId))
             .limit(1)
@@ -162,6 +163,19 @@ export async function rejectBlogPost(
                 updatedAt: new Date(),
             })
             .where(eq(blogPosts.id, postId))
+
+        // Create notification for the author
+        await createNotification({
+            userId: existing[0].authorId,
+            type: "blog_rejected",
+            title: "Blog Post Rejected",
+            message: `Your blog post "${existing[0].title}" has been rejected. Reason: ${reason}`,
+            data: {
+                postId: existing[0].id,
+                slug: existing[0].slug,
+                reason: reason,
+            },
+        })
 
         revalidatePath("/admin/moderation")
         revalidatePath("/blog")

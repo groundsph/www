@@ -17,6 +17,7 @@ import { resolveBlogStatus } from "@/utils/blog/moderation"
 import { canSubmitBlogPost } from "@/utils/blog/community-posting"
 import { checkBlogPost } from "@/utils/ai/openai-compatible"
 import { revalidatePath } from "next/cache"
+import { createNotification } from "./user-notifications"
 
 // ============================================
 // Helper Functions
@@ -503,19 +504,22 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
         userRole = profileResult[0]?.role ?? null
     }
 
-    // Use canSubmitBlogPost to check submission eligibility
-    const submissionCheck = canSubmitBlogPost({
-        role: userRole as "user" | "writer" | "admin" | "moderator" | null,
-        category: input.category,
-        hasCafeOwnership: isOwner,
-    })
+    // Admins and moderators can always submit without cafe ownership
+    if (!isAdminMod) {
+        // Use canSubmitBlogPost to check submission eligibility for non-admin users
+        const submissionCheck = canSubmitBlogPost({
+            role: userRole as "user" | "writer" | "admin" | "moderator" | null,
+            category: input.category,
+            hasCafeOwnership: isOwner,
+        })
 
-    // If not allowed, return error
-    if (!submissionCheck.allowed) {
-        if (userRole === "user") {
-            return { success: false, error: "Regular users can only submit community posts" }
+        // If not allowed, return error
+        if (!submissionCheck.allowed) {
+            if (userRole === "user") {
+                return { success: false, error: "Regular users can only submit community posts" }
+            }
+            return { success: false, error: "You must link posts to a cafe you own" }
         }
-        return { success: false, error: "You must link posts to a cafe you own" }
     }
 
     // For users, force category to "community" and status to "pending"
@@ -702,7 +706,7 @@ export async function approveBlogPost(postId: string): Promise<BlogActionResult>
         return { success: false, error: "Not authorized" }
     }
 
-    const existing = await db.select({ status: blogPosts.status, slug: blogPosts.slug })
+    const existing = await db.select({ status: blogPosts.status, slug: blogPosts.slug, authorId: blogPosts.authorId, title: blogPosts.title })
         .from(blogPosts).where(eq(blogPosts.id, postId)).limit(1)
 
     if (!existing[0]) return { success: false, error: "Post not found" }
@@ -716,6 +720,18 @@ export async function approveBlogPost(postId: string): Promise<BlogActionResult>
             updatedAt: new Date(),
         })
         .where(eq(blogPosts.id, postId))
+
+    // Create notification for the author
+    await createNotification({
+        userId: existing[0].authorId,
+        type: "blog_approved",
+        title: "Blog Post Approved",
+        message: `Your blog post "${existing[0].title}" has been approved and published!`,
+        data: {
+            postId: postId,
+            slug: existing[0].slug,
+        },
+    })
 
     revalidatePath("/blog")
     revalidatePath("/admin/blog")
