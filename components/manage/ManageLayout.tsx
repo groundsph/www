@@ -9,6 +9,7 @@ import {
     Settings,
     LayoutDashboard,
     BarChart3,
+    ShieldCheck,
 } from "lucide-react"
 
 interface NavItem {
@@ -33,6 +34,11 @@ const navItems: NavItem[] = [
         name: "Community",
         href: "/manage/community",
         icon: <Users className='w-5 h-5' />,
+    },
+    {
+        name: "Moderation",
+        href: "/manage/moderation",
+        icon: <ShieldCheck className='w-5 h-5' />,
     },
     {
         name: "Content",
