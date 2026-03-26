@@ -25,6 +25,7 @@ export const blogStatusEnum = pgEnum("blog_status", [
     "pending",
     "draft",
     "published",
+    "rejected",
     "archived",
 ])
 
