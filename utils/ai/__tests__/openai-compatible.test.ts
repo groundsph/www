@@ -154,7 +154,7 @@ describe("generateExcerpt", () => {
         )
         global.fetch = mockFetch
 
-        const excerpt = await generateExcerpt("gpt-4", "This is blog content.")
+        const excerpt = await generateExcerpt("This is blog content.", "gpt-4")
 
         expect(excerpt).toBe("This is a test excerpt.")
         expect(mockFetch).toHaveBeenCalledTimes(1)
@@ -166,7 +166,7 @@ describe("generateExcerpt", () => {
         process.env.OPENAI_COMPATIBLE_BASE_URL = ""
         process.env.OPENAI_COMPATIBLE_API_KEY = ""
 
-        expect(generateExcerpt("gpt-4", "content")).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
+        expect(generateExcerpt("content")).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
     })
 
     it("throws error when API returns non-ok response", async () => {
@@ -179,7 +179,7 @@ describe("generateExcerpt", () => {
         )
         global.fetch = mockFetch
 
-        expect(generateExcerpt("gpt-4", "content")).rejects.toThrow("Failed to generate excerpt: 429 Rate Limited")
+        expect(generateExcerpt("content")).rejects.toThrow("Failed to generate excerpt: 429 Rate Limited")
     })
 
     it("throws error when no excerpt is generated", async () => {
@@ -193,7 +193,7 @@ describe("generateExcerpt", () => {
         )
         global.fetch = mockFetch
 
-        expect(generateExcerpt("gpt-4", "content")).rejects.toThrow("No excerpt generated")
+        expect(generateExcerpt("content")).rejects.toThrow("No excerpt generated")
     })
 
     it("throws error when choices are missing", async () => {
@@ -205,7 +205,7 @@ describe("generateExcerpt", () => {
         )
         global.fetch = mockFetch
 
-        expect(generateExcerpt("gpt-4", "content")).rejects.toThrow("No excerpt generated")
+        expect(generateExcerpt("content")).rejects.toThrow("No excerpt generated")
     })
 })
 
@@ -321,5 +321,43 @@ describe("checkBlogPost", () => {
         global.fetch = mockFetch
 
         expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Invalid AI response format")
+    })
+})
+
+describe("getExcerptModel", () => {
+    let originalEnv: { [key: string]: string | undefined }
+
+    beforeEach(() => {
+        originalEnv = {
+            OPENAI_COMPATIBLE_EXCERPT_MODEL: process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL,
+        }
+    })
+
+    afterEach(() => {
+        Object.assign(process.env, originalEnv)
+    })
+
+    it("returns configured model from environment", async () => {
+        process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL = "gpt-4-turbo"
+
+        const { getExcerptModel } = await import("@/utils/ai/openai-compatible")
+
+        expect(getExcerptModel()).toBe("gpt-4-turbo")
+    })
+
+    it("returns default model when env var is not set", async () => {
+        delete process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL
+
+        const { getExcerptModel } = await import("@/utils/ai/openai-compatible")
+
+        expect(getExcerptModel()).toBe("gpt-4o-mini")
+    })
+
+    it("returns configured model when set to custom model", async () => {
+        process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL = "custom-model-v2"
+
+        const { getExcerptModel } = await import("@/utils/ai/openai-compatible")
+
+        expect(getExcerptModel()).toBe("custom-model-v2")
     })
 })

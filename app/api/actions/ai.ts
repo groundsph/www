@@ -11,13 +11,11 @@ interface ActionResponse {
 export async function listModelsAction(): Promise<{
     success: boolean;
     models?: string[];
-    defaultModel?: string;
     error?: string;
 }> {
     try {
         const models = await listModels();
-        const defaultModel = process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL;
-        return { success: true, models, defaultModel };
+        return { success: true, models };
     } catch (error) {
         console.error("List models action error:", error);
         return {
@@ -28,8 +26,7 @@ export async function listModelsAction(): Promise<{
 }
 
 export async function generateExcerptAction(
-    content: string,
-    model: string
+    content: string
 ): Promise<ActionResponse> {
     try {
         if (!content || content.length < 50) {
@@ -39,14 +36,8 @@ export async function generateExcerptAction(
             };
         }
 
-        if (!model) {
-            return {
-                success: false,
-                error: "No model selected. Please select a model.",
-            };
-        }
-
-        const excerpt = await generateExcerpt(model, content);
+        const model = process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL ?? "gpt-4o-mini";
+        const excerpt = await generateExcerpt(content, model);
 
         return { success: true, excerpt };
     } catch (error) {

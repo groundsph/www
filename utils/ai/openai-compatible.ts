@@ -56,13 +56,15 @@ export async function listModels(): Promise<string[]> {
 }
 
 export async function generateExcerpt(
-    model: string,
     content: string,
+    model?: string,
 ): Promise<string> {
     const { baseUrl, apiKey } = getConfig()
     if (!baseUrl || !apiKey) {
         throw new Error("Missing OPENAI_COMPATIBLE_BASE_URL or OPENAI_COMPATIBLE_API_KEY")
     }
+
+    const effectiveModel = model ?? getExcerptModel()
 
     const normalizedUrl = normalizeBaseUrl(baseUrl)
     const response = await fetch(`${normalizedUrl}/v1/chat/completions`, {
@@ -72,7 +74,7 @@ export async function generateExcerpt(
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            model,
+            model: effectiveModel,
             messages: [
                 {
                     role: "system",
@@ -202,9 +204,14 @@ export interface ChatCompletionOptions {
 }
 
 const DEFAULT_CHAT_MODEL = "gpt-4o-mini"
+const DEFAULT_EXCERPT_MODEL = "gpt-4o-mini"
 
 function getChatModel(): string {
     return process.env.OPENAI_COMPATIBLE_MODEL ?? DEFAULT_CHAT_MODEL
+}
+
+export function getExcerptModel(): string {
+    return process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL ?? DEFAULT_EXCERPT_MODEL
 }
 
 /**
