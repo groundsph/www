@@ -957,8 +957,8 @@ export default function CafeSubmissionForm({
                                     {/* Disclaimer */}
                                     <div className='mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20'>
                                         <p className='text-sm text-text/70'>
-                                            <strong>Mall cafes included:</strong>{" "}
-                                            Cafes located inside shopping malls are welcome, but require additional verification. Owners should upload business permits or lease agreements. Contributors can link to an existing verified branch of the same cafe chain.
+                                            <strong>Note on mall locations:</strong>{" "}
+                                            Proper sit-down cafes inside malls are welcome. Only kiosk-style setups (walking path counters without dedicated seating) require additional verification and proof of legitimate operation.
                                         </p>
                                     </div>
                                 </div>
