@@ -193,6 +193,21 @@ export default function ChatWindow({
         )
     }
 
+    const isCafeRelatedMessage = (text: string): boolean => {
+        const query = text.toLowerCase()
+        const cafeKeywords = [
+            "cafe", "cafes", "coffee", "coffee shop", "espresso", "latte",
+            "brew", "roast", "barista", "near me", "nearby", "closest",
+            "recommend", "rated", "review", "menu", "price", "hours",
+            "wifi", "socket", "aircon", "pet friendly", "work friendly",
+            "outdoor", "food", "crawl", "route", "trail", "itinerary",
+            "manila", "cebu", "davao", "quezon", "makati", "bgc", "bonifacio",
+            "compare", "versus", "vs", "between", "best", "top", "good",
+            "where", "find", "search", "list", "show", "grounds"
+        ]
+        return cafeKeywords.some(kw => query.includes(kw))
+    }
+
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }, [])
@@ -286,11 +301,14 @@ export default function ChatWindow({
         }
 
         try {
-            const locationHint = location.lat && location.lng
-                ? `\n\nUser location: ${location.lat}, ${location.lng}. Use get_nearby_cafes.`
-                : locationSummary
-                    ? `\n\nUser location context: ${locationSummary}.`
-                    : ""
+            const shouldIncludeLocation = isCafeRelatedMessage(userMessage.content) && (location.lat || locationSummary)
+            const locationHint = shouldIncludeLocation
+                ? location.lat && location.lng
+                    ? `\n\nUser location: ${location.lat}, ${location.lng}.`
+                    : locationSummary
+                        ? `\n\nUser location context: ${locationSummary}.`
+                        : ""
+                : ""
 
             const cafes: ChatCafeCard[] = []
             let cardContext: ChatCardContext | undefined
@@ -375,11 +393,14 @@ export default function ChatWindow({
 
         void (async () => {
             try {
-                const locationHint = location.lat && location.lng
-                    ? `\n\nUser location: ${location.lat}, ${location.lng}. Use get_nearby_cafes.`
-                    : locationSummary
-                        ? `\n\nUser location context: ${locationSummary}.`
-                        : ""
+                const shouldIncludeLocation = isCafeRelatedMessage(pendingMessage.content) && (location.lat || locationSummary)
+                const locationHint = shouldIncludeLocation
+                    ? location.lat && location.lng
+                        ? `\n\nUser location: ${location.lat}, ${location.lng}.`
+                        : locationSummary
+                            ? `\n\nUser location context: ${locationSummary}.`
+                            : ""
+                    : ""
 
                 const cafes: ChatCafeCard[] = []
                 let cardContext: ChatCardContext | undefined
