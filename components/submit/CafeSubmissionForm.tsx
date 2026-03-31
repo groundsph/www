@@ -953,6 +953,14 @@ export default function CafeSubmissionForm({
                                             </span>
                                         </motion.li>
                                     </motion.ul>
+
+                                    {/* Disclaimer */}
+                                    <div className='mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20'>
+                                        <p className='text-sm text-text/70'>
+                                            <strong>Mall cafes included:</strong>{" "}
+                                            Cafes located inside shopping malls are welcome, but require additional verification. Owners should upload business permits or lease agreements. Contributors can link to an existing verified branch of the same cafe chain.
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Search for existing cafe */}
@@ -1088,56 +1096,6 @@ export default function CafeSubmissionForm({
                                             go!
                                         </p>
                                     )}
-                                </div>
-
-                                {/* Mall Cafe Guidelines */}
-                                <div className='p-5 bg-purple-50/50 border border-purple-200/60 rounded-xl'>
-                                    <div className='flex items-start gap-3 mb-4'>
-                                        <div className='p-2 bg-purple-100/80 rounded-full text-purple-700'>
-                                            <Store className='w-5 h-5' />
-                                        </div>
-                                        <div>
-                                            <h4 className='font-semibold text-lg'>
-                                                Submitting a Mall Cafe?
-                                            </h4>
-                                            <p className='text-text/60 text-sm'>
-                                                Special requirements apply for cafes inside shopping malls
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className='space-y-3'>
-                                        <div className='flex items-start gap-3'>
-                                            <Check className='w-5 h-5 text-purple-600 shrink-0 mt-0.5' />
-                                            <div className='text-sm'>
-                                                <strong>Mall cafes need verification</strong> — We require proof that the cafe is legitimately operating within the mall
-                                            </div>
-                                        </div>
-                                        <div className='flex items-start gap-3'>
-                                            <Store className='w-5 h-5 text-purple-600 shrink-0 mt-0.5' />
-                                            <div className='text-sm'>
-                                                <strong>Owner workflow:</strong> Upload business permits, lease agreements, or DTI/SEC registration
-                                            </div>
-                                        </div>
-                                        <div className='flex items-start gap-3'>
-                                            <Link className='w-5 h-5 text-purple-600 shrink-0 mt-0.5' />
-                                            <div className='text-sm'>
-                                                <strong>Contributor workflow:</strong> Link to an existing verified branch of the same cafe chain
-                                            </div>
-                                        </div>
-                                        <div className='flex items-start gap-3'>
-                                            <AlertCircle className='w-5 h-5 text-orange-500 shrink-0 mt-0.5' />
-                                            <div className='text-sm'>
-                                                <strong>Kiosks and stalls don&apos;t qualify</strong> — Must be a proper sit-down cafe with dedicated seating
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className='mt-4 p-3 bg-purple-100/50 rounded-lg'>
-                                        <p className='text-sm text-purple-800'>
-                                            You&apos;ll be able to specify if this is a mall cafe and your relationship to it in the submission form.
-                                        </p>
-                                    </div>
                                 </div>
                             </div>
                         )}

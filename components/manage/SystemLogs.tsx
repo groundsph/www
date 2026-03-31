@@ -288,7 +288,7 @@ export default function SystemLogs() {
                         </div>
                     ) : logs.length === 0 ? (
                         <div className="text-center py-16 bg-background rounded-xl border border-tertiary/50">
-                            <FileText className="w-12 h-12 mx-auto text-text/30 mb-4" />
+                            <FileText className="w-12 h-12 mx-auto opacity-30 mb-4" />
                             <p className="text-text/60">No logs found</p>
                         </div>
                     ) : (
