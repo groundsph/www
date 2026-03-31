@@ -9,12 +9,12 @@ import {
     Loader2,
     ImageIcon,
     Trash2,
-    RefreshCw,
+    
     Sparkles,
 } from "lucide-react"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { createCommunityBlogPost } from "@/app/api/actions/blog"
-import { generateExcerptAction, listModelsAction } from "@/app/api/actions/ai"
+import { generateExcerptAction } from "@/app/api/actions/ai"
 import { uploadBlogImageAction } from "@/utils/storage/actions"
 import { compressBlogCover } from "@/utils/image-processing"
 import { estimateReadingTime } from "@/utils/types/blog"
@@ -27,8 +27,6 @@ import { useAuth } from "../layout/AuthProvider"
 const MAX_CONTENT_FOR_EXCERPT = 6000
 const MIN_CONTENT_FOR_EXCERPT = 50
 const AI_COOLDOWN_MS = 20000 // 20 seconds
-const MODEL_RETRY_DELAYS = [500, 1000, 2000] // 0.5s, 1s, 2s
-const MAX_MODEL_RETRIES = 3
 
 // ============================================================================
 // Component
@@ -38,7 +36,6 @@ export default function CommunityBlogEditor() {
     const router = useRouter()
     const { addNotification } = useNotification()
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const { isAdmin } = useAuth()
 
     // Form state
@@ -52,89 +49,11 @@ export default function CommunityBlogEditor() {
     const [isUploading, setIsUploading] = useState(false)
     const [isGeneratingExcerpt, setIsGeneratingExcerpt] = useState(false)
 
-    // AI model state
-    const [availableModels, setAvailableModels] = useState<string[]>([])
-    const [selectedModel, setSelectedModel] = useState<string>("")
-    const [isLoadingModels, setIsLoadingModels] = useState(true)
-    const [modelLoadError, setModelLoadError] = useState<string | null>(null)
-
     // Cooldown state
     const [lastGenerateTime, setLastGenerateTime] = useState<number | null>(
         null,
     )
     const [cooldownRemaining, setCooldownRemaining] = useState(0)
-
-    // ============================================================================
-    // Model Loading with Retry
-    // ============================================================================
-
-    const loadModels = useCallback(
-        async (retryAttempt = 0) => {
-            setIsLoadingModels(true)
-            setModelLoadError(null)
-
-            try {
-                const result = await listModelsAction()
-
-                if (
-                    result.success &&
-                    result.models &&
-                    result.models.length > 0
-                ) {
-                    setAvailableModels(result.models)
-                    setModelLoadError(null)
-
-                    // Set default model
-                    const defaultModel = result.defaultModel
-                    if (defaultModel && result.models.includes(defaultModel)) {
-                        setSelectedModel(defaultModel)
-                    } else {
-                        setSelectedModel(result.models[0])
-                    }
-                } else if (result.error) {
-                    throw new Error(result.error)
-                } else {
-                    throw new Error("No models available")
-                }
-            } catch (error) {
-                const errorMessage =
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to load AI models"
-
-                // Retry logic
-                if (retryAttempt < MAX_MODEL_RETRIES) {
-                    const delay = MODEL_RETRY_DELAYS[retryAttempt] || 2000
-
-                    retryTimeoutRef.current = setTimeout(() => {
-                        loadModels(retryAttempt + 1)
-                    }, delay)
-                } else {
-                    // All retries exhausted
-                    setModelLoadError(errorMessage)
-                    setAvailableModels([])
-                    setSelectedModel("")
-                    addNotification(errorMessage, "error", {
-                        title: "AI Models Unavailable",
-                    })
-                }
-            } finally {
-                setIsLoadingModels(false)
-            }
-        },
-        [addNotification],
-    )
-
-    // Initial load
-    useEffect(() => {
-        loadModels()
-
-        return () => {
-            if (retryTimeoutRef.current) {
-                clearTimeout(retryTimeoutRef.current)
-            }
-        }
-    }, [loadModels])
 
     // ============================================================================
     // Cooldown Timer
@@ -262,14 +181,6 @@ export default function CommunityBlogEditor() {
             return
         }
 
-        // Guard: model selected check
-        if (!selectedModel) {
-            addNotification("Please select an AI model first.", "error", {
-                title: "No Model Selected",
-            })
-            return
-        }
-
         // Guard: cooldown check
         if (
             lastGenerateTime &&
@@ -300,10 +211,7 @@ export default function CommunityBlogEditor() {
         setIsGeneratingExcerpt(true)
 
         try {
-            const result = await generateExcerptAction(
-                contentToUse,
-                selectedModel,
-            )
+            const result = await generateExcerptAction(contentToUse)
 
             if (result.success && result.excerpt) {
                 setExcerpt(result.excerpt)
@@ -405,10 +313,9 @@ export default function CommunityBlogEditor() {
     const canGenerateExcerpt = useMemo(
         () =>
             content.length >= MIN_CONTENT_FOR_EXCERPT &&
-            !!selectedModel &&
             cooldownRemaining === 0 &&
             !isGeneratingExcerpt,
-        [content.length, selectedModel, cooldownRemaining, isGeneratingExcerpt],
+        [content.length, cooldownRemaining, isGeneratingExcerpt],
     )
 
     const readingTime = useMemo(() => estimateReadingTime(content), [content])
@@ -566,84 +473,7 @@ export default function CommunityBlogEditor() {
 
                         {/* AI Generation */}
                         {isAdmin && (
-                            <div className='flex items-center gap-3 mt-3 flex-wrap'>
-                                {/* Model Selector */}
-                                <div className='relative max-w-full'>
-                                    <select
-                                        value={selectedModel}
-                                        onChange={(e) =>
-                                            setSelectedModel(e.target.value)
-                                        }
-                                        disabled={
-                                            isLoadingModels ||
-                                            availableModels.length === 0 ||
-                                            isGeneratingExcerpt
-                                        }
-                                        className='pl-3 pr-8 py-2 rounded-lg border border-text/15 bg-background text-sm font-medium focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer hover:bg-text/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed appearance-none text-wrap max-w-full'
-                                    >
-                                        {isLoadingModels ? (
-                                            <option value=''>
-                                                Loading models...
-                                            </option>
-                                        ) : modelLoadError ? (
-                                            <option value=''>
-                                                Models unavailable
-                                            </option>
-                                        ) : availableModels.length === 0 ? (
-                                            <option value=''>
-                                                No models available
-                                            </option>
-                                        ) : (
-                                            availableModels.map((model) => (
-                                                <option
-                                                    key={model}
-                                                    value={model}
-                                                >
-                                                    {model}
-                                                </option>
-                                            ))
-                                        )}
-                                    </select>
-                                    <div className='absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-text/40'>
-                                        <svg
-                                            width='12'
-                                            height='12'
-                                            viewBox='0 0 12 12'
-                                            fill='none'
-                                            xmlns='http://www.w3.org/2000/svg'
-                                        >
-                                            <path
-                                                d='M2.5 4.5L6 8L9.5 4.5'
-                                                stroke='currentColor'
-                                                strokeWidth='1.5'
-                                                strokeLinecap='round'
-                                                strokeLinejoin='round'
-                                            />
-                                        </svg>
-                                    </div>
-                                </div>
-
-                                {/* Retry Button (shown on error) */}
-                                <AnimatePresence>
-                                    {modelLoadError && (
-                                        <motion.button
-                                            type='button'
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            onClick={() => loadModels()}
-                                            disabled={isLoadingModels}
-                                            className='flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary hover:text-primary/80 disabled:opacity-50 transition-colors'
-                                        >
-                                            <RefreshCw
-                                                className={`w-4 h-4 ${isLoadingModels ? "animate-spin" : ""}`}
-                                            />
-                                            Retry
-                                        </motion.button>
-                                    )}
-                                </AnimatePresence>
-
-                                {/* Generate Button */}
+                            <div className='flex items-center gap-3 mt-3'>
                                 <button
                                     type='button'
                                     onClick={handleGenerateExcerpt}
@@ -652,9 +482,7 @@ export default function CommunityBlogEditor() {
                                     title={
                                         content.length < MIN_CONTENT_FOR_EXCERPT
                                             ? `Need at least ${MIN_CONTENT_FOR_EXCERPT} characters`
-                                            : !selectedModel
-                                              ? "Select a model first"
-                                              : cooldownRemaining > 0
+                                            : cooldownRemaining > 0
                                                 ? `Wait ${cooldownRemaining}s`
                                                 : "Generate excerpt with AI"
                                     }
