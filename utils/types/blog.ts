@@ -105,12 +105,33 @@ export const BLOG_STATUSES: {
     ]
 
 // Helper to generate slug from title
-export function generateSlug(title: string): string {
-    return title
+export function generateSlug(title: string, date?: string | true): string {
+    const today = date === true
+        ? new Date().toISOString().split("T")[0]
+        : date
+
+    if (!title.trim()) {
+        return date === true ? new Date().toISOString().split("T")[0] : ""
+    }
+
+    const baseSlug = title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "")
-        .substring(0, 100)
+
+    if (!today) {
+        // No date - return original behavior (truncated to 100)
+        return baseSlug.substring(0, 100)
+    }
+
+    // With date: truncate title portion to leave room for "-YYYY-MM-DD" (11 chars)
+    const dateSuffix = `-${today}`
+    const maxTitleLength = 100 - dateSuffix.length
+
+    // Ensure we don't end with a hyphen before the date
+    let titlePortion = baseSlug.substring(0, maxTitleLength).replace(/-+$/, "")
+
+    return titlePortion + dateSuffix
 }
 
 // Helper to estimate reading time
