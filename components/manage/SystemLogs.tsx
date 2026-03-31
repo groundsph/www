@@ -353,7 +353,7 @@ export default function SystemLogs() {
                                                         <div>
                                                             <h4 className="text-xs font-medium text-text/40 uppercase mb-2">Before</h4>
                                                             <pre className="text-xs bg-background p-3 rounded-lg overflow-auto max-h-48">
-                                                                {String(JSON.stringify(log.beforeValue, null, 2))}
+                                                                {JSON.stringify(log.beforeValue as Record<string, unknown>, null, 2)}
                                                             </pre>
                                                         </div>
                                                     )}
@@ -361,7 +361,7 @@ export default function SystemLogs() {
                                                         <div>
                                                             <h4 className="text-xs font-medium text-text/40 uppercase mb-2">After</h4>
                                                             <pre className="text-xs bg-background p-3 rounded-lg overflow-auto max-h-48">
-                                                                {String(JSON.stringify(log.afterValue, null, 2))}
+                                                                {JSON.stringify(log.afterValue as Record<string, unknown>, null, 2)}
                                                             </pre>
                                                         </div>
                                                     )}

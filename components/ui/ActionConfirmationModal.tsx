@@ -17,6 +17,8 @@ import { authClient } from "@/lib/auth-client"
 import {
     verifyActionConfirmation,
     getUserConfirmationStatus,
+} from "@/app/api/actions/action-confirmation"
+import {
     type ConfirmationMethod,
     type UserConfirmationStatus,
     getActionDisplayName,

@@ -17,10 +17,10 @@ export interface SystemLog {
     action: string
     entityType: string
     entityId: string
-    beforeValue: unknown
-    afterValue: unknown
+    beforeValue: Record<string, unknown> | null
+    afterValue: Record<string, unknown> | null
     userAgent: string | null
-    metadata: unknown
+    metadata: Record<string, unknown> | null
     createdAt: Date | null
 }
 
@@ -144,7 +144,7 @@ export async function getSystemLogs(
     const total = countResult[0]?.count ?? 0
 
     // Get logs with user info
-    const logs = await db
+    const logsResult = await db
         .select({
             id: systemLogs.id,
             userId: systemLogs.userId,
@@ -168,6 +168,14 @@ export async function getSystemLogs(
         .orderBy(desc(systemLogs.createdAt))
         .limit(pageSize)
         .offset((page - 1) * pageSize)
+
+    // Cast jsonb fields to the correct type
+    const logs: SystemLog[] = logsResult.map(log => ({
+        ...log,
+        beforeValue: log.beforeValue as Record<string, unknown> | null,
+        afterValue: log.afterValue as Record<string, unknown> | null,
+        metadata: log.metadata as Record<string, unknown> | null,
+    }))
 
     return { logs, total }
 }
