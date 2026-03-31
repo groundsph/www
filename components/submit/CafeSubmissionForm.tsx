@@ -953,14 +953,6 @@ export default function CafeSubmissionForm({
                                             </span>
                                         </motion.li>
                                     </motion.ul>
-
-                                    {/* Disclaimer */}
-                                    <div className='mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20'>
-                                        <p className='text-sm text-text/70'>
-                                            <strong>Note on mall locations:</strong>{" "}
-                                            Proper sit-down cafes inside malls are welcome. Only kiosk-style setups (walking path counters without dedicated seating) require additional verification and proof of legitimate operation.
-                                        </p>
-                                    </div>
                                 </div>
 
                                 {/* Search for existing cafe */}
