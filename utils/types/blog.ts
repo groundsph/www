@@ -129,7 +129,7 @@ export function generateSlug(title: string, date?: string | true): string {
     const maxTitleLength = 100 - dateSuffix.length
 
     // Ensure we don't end with a hyphen before the date
-    let titlePortion = baseSlug.substring(0, maxTitleLength).replace(/-+$/, "")
+    const titlePortion = baseSlug.substring(0, maxTitleLength).replace(/-+$/, "")
 
     return titlePortion + dateSuffix
 }
