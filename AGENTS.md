@@ -19,13 +19,15 @@ Follow project rules first; if something conflicts, ask a human.
   Example: `bun test utils/data/__tests__/location-matcher.test.ts`.
 
 ### Database
-- `bun db-push` - Push schema changes (dev).
-- `bun db-migrate` - Run migrations (prod).
-- `bun db-studio` - Open Drizzle Studio.
+- `bun db:generate` - Generate migration files.
+- `bun db:push` - Push schema changes (dev).
+- `bun db:migrate` - Run migrations (prod).
+- `bun db:studio` - Open Drizzle Studio.
 
 ### Command Notes
 - Scripts live in `package.json`; use `bun <script>` or `bun run <script>`.
 - No Prettier config detected; keep existing formatting style.
+- Tests run with JSDOM (browser env) preloaded via `bunfig.toml` → `test-setup.ts`.
 
 ## Code Style Guidelines
 

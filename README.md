@@ -11,29 +11,6 @@ Community-driven platform for discovering, reviewing, and supporting cafes acros
 - Blog editor with AI-assisted excerpting and moderation checks
 - Admin/Moderator tools for content and community management
 
-## Versioning
-
-This project uses a custom versioning scheme: `YEAR.FEATURE_NUM.FIXES` (e.g., `2026.11.0`).
-
-## Table of Contents
-
-- [Tech Stack](#tech-stack)
-- [Versioning](#versioning)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Database](#database)
-- [Storage](#storage)
-- [Auth](#auth)
-- [AI](#ai)
-- [Webhooks and Cron Jobs](#webhooks-and-cron-jobs)
-- [Testing](#testing)
-- [Available Scripts](#available-scripts)
-- [Project Structure](#project-structure)
-- [Architecture Overview](#architecture-overview)
-- [Deployment Notes](#deployment-notes)
-- [Troubleshooting](#troubleshooting)
-
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
@@ -48,50 +25,202 @@ This project uses a custom versioning scheme: `YEAR.FEATURE_NUM.FIXES` (e.g., `2
 - **AI**: OpenAI-compatible API
 - **Package Manager**: Bun
 
-## Prerequisites
-
-- Bun (https://bun.sh)
-- PostgreSQL 15+
-- Node.js 20+ (required by Next.js tooling)
-- OpenAI-compatible API account (optional, for AI features)
-
 ## Getting Started
 
-### 1) Clone and install
+### Prerequisites
+
+- [Bun](https://bun.sh)
+- PostgreSQL 15+
+- Node.js 20+ (required by Next.js tooling)
+
+### Quick Start
 
 ```bash
+# 1. Clone and install
 git clone https://github.com/AdrianBonpin/grounds-website.git
 cd grounds-website
 bun install
-```
 
-### 2) Configure environment
-
-Copy the example file and update values:
-
-```bash
+# 2. Configure environment
 cp .env.example .env.local
-```
+# Edit .env.local with your values (see Environment Variables below)
 
-See [Environment Variables](#environment-variables) for details.
-
-### 3) Set up the database
-
-This project uses Drizzle with a PostgreSQL database. Run:
-
-```bash
+# 3. Push database schema
 bun db-push
-```
 
-### 4) Start the dev server
-
-```bash
+# 4. Start the dev server
 bun dev
 ```
 
-The app will be available at `https://localhost:3000`.
+The app runs at `https://localhost:3000`. The dev server uses HTTPS via `next dev --experimental-https` — accept the self-signed certificate warning in your browser.
 
-The dev server runs with HTTPS via `next dev --experimental-https`. If your browser warns about a self-signed certificate, you will need to accept it for local development.
+### First-Time Setup Checklist
+
+- [ ] `.env.local` has all **Required** variables filled in
+- [ ] PostgreSQL is running and `DATABASE_URL` is correct
+- [ ] `bun db-push` completed without errors
+- [ ] Dev server starts and you can load the homepage
+- [ ] You can sign up / log in via Google or Discord OAuth
+
+If any step fails, check [Troubleshooting](#troubleshooting) below.
+
+## Project Structure
+
+```
+grounds-website/
+├── app/                        Next.js App Router — pages, layouts, routes
+│   ├── api/                    API routes and server-only logic
+│   │   ├── actions/            Server actions (cafe, blog, auth, etc.)
+│   │   ├── auth/               Better Auth catch-all route
+│   │   ├── chat/               AI chat endpoint
+│   │   ├── cron/               Scheduled job endpoints
+│   │   ├── storage/            File upload endpoints
+│   │   └── webhooks/           Ko-fi, HelixPay webhooks
+│   ├── cafes/                  Cafe detail pages
+│   ├── blog/                   Blog listing and detail pages
+│   ├── community/              Community pages
+│   ├── manage/                 Admin/Moderator dashboard
+│   ├── map/                    Map exploration page
+│   ├── owner/                  Cafe owner dashboard
+│   ├── profile/                User profile pages
+│   ├── submit/                 Cafe submission flow
+│   └── writer/                 Blog writer/editor
+├── components/                 React components, organized by domain
+│   ├── admin/                  Admin-specific UI
+│   ├── auth/                   Login, signup, auth guards
+│   ├── blog/                   Blog rendering and editor components
+│   ├── cafe/                   Cafe cards, details, filters
+│   ├── cafe-editor/            Cafe profile editing UI
+│   ├── chat/                   AI chat widget
+│   ├── collections/            User collections
+│   ├── events/                 Event components
+│   ├── landing/                Landing/homepage sections
+│   ├── layout/                 Navbar, footer, sidebar, shell
+│   ├── manage/                 Admin dashboard components
+│   ├── map/                    Map markers, popups, controls
+│   ├── modal/                  Reusable modal/dialog system
+│   ├── owner/                  Owner dashboard components
+│   ├── profile/                User profile components
+│   ├── reviews/                Review forms and display
+│   ├── search/                 Search UI and logic
+│   ├── submit/                 Submission form components
+│   └── ui/                     Generic UI primitives (buttons, inputs, etc.)
+├── db/                         Drizzle ORM
+│   └── schema/                 Database table schemas
+├── drizzle/
+│   └── migrations/             Generated SQL migrations
+├── emails/                     React Email templates
+├── hooks/                      Custom React hooks
+├── lib/                        Config and setup (auth, db client, etc.)
+├── public/                     Static assets
+├── scripts/                    CLI scripts (e.g., LLM model listing)
+├── utils/                      Shared utilities
+│   ├── ai/                     AI/LLM helpers
+│   ├── blog/                   Blog-related utilities
+│   ├── data/                   Data fetching and transformation
+│   ├── map/                    Map/geo utilities
+│   ├── storage/                R2 upload helpers
+│   ├── types/                  Shared TypeScript types
+│   └── validation/             Zod schemas and validators
+├── assets/                     Logos, stamps, design assets
+├── docs/                       Project documentation
+├── AGENTS.md                   Guide for coding agents
+└── README.md                   You are here
+```
+
+### Key Conventions
+
+- **Server actions** live in `app/api/actions/` — not in components or pages.
+- **Reusable components** go in `components/<domain>/` — never inside `app/`.
+- **Shared types** go in `utils/types/`.
+- **Custom hooks** go in `hooks/`.
+- **Client components** must have `"use client"` at the top.
+- **Server actions** must have `"use server"` at the top.
+
+See [AGENTS.md](AGENTS.md) for the full coding style guide.
+
+## Architecture Overview
+
+### Request Flow
+
+```
+Browser → Next.js App Router (page/route)
+  → Server Component (default) or Client Component ("use client")
+    → Server Action ("use server") for mutations
+      → Drizzle ORM → PostgreSQL
+      → RevalidatePath() → fresh data on next render
+```
+
+### Auth Flow
+
+Better Auth handles authentication with Drizzle-backed sessions in Postgres.
+
+- Routes mounted at `app/api/auth/[...all]/route.ts`
+- Supports email/password, Google OAuth, Discord OAuth, and passkeys
+- Use `getCurrentUser()` from `@/lib/auth` in server actions to check auth
+
+### File Upload Flow
+
+```
+Client (react-dropzone) → presigned URL request
+  → API route generates R2 presigned URL
+    → Client uploads directly to Cloudflare R2
+      → Public URL via R2_PUBLIC_URL CDN
+```
+
+Uploads are organized by domain prefix: `cafes/`, `reviews/`, `avatars/`, `events/`, `blogs/`.
+
+### AI Features
+
+AI features use an OpenAI-compatible API and are optional. Set `OPENAI_COMPATIBLE_BASE_URL` and `OPENAI_COMPATIBLE_API_KEY` to enable:
+
+- Blog excerpt generation
+- Blog content moderation checks
+- AI chat assistant for cafe discovery
+
+Disable the chat widget with `CHAT_ENABLED=false` or via `/manage/system/settings`.
+
+## Development Workflow
+
+### Branch Strategy
+
+```
+dev (active development)
+  └── feature/<name> (feature branches, optional)
+prod (production, deployed)
+```
+
+- All work happens on `dev`.
+- Use feature branches for larger changes (`feature/ai-chat-rate-limit`).
+- Merge `dev` → `prod` for releases using `bun merge`.
+
+### Commit Conventions
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+
+Examples:
+  feat: add cafe bookmarking
+  feat(community-blog): remove model selector
+  fix: resolve build errors
+  chore: delete deprecated cron routes
+  docs: clarify mall cafe guidelines
+  style: fix lint errors
+```
+
+**Types**: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`
+
+**Scopes** (optional): `cafe`, `blog`, `community-blog`, `auth`, `map`, `owner`, `manage`, `nav`, `ai`, etc. Use the domain or feature area.
+
+### Merging to Production
+
+```bash
+bun merge
+```
+
+This runs: `git checkout prod && git merge dev && git push origin prod && git checkout dev`.
 
 ## Environment Variables
 
@@ -133,7 +262,7 @@ Environment values live in `.env.local`. The example template is `.env.example`.
 | `OPENAI_COMPATIBLE_EXCERPT_MODEL` | Model used for blog excerpts |
 | `OPENAI_COMPATIBLE_MODEL` | Model used for AI chat (default: gpt-4o-mini) |
 | `BLOG_CHECK_MODEL` | Model used for blog moderation checks |
-| `CHAT_ENABLED` | Set to "false" to disable AI chat (optional) |
+| `CHAT_ENABLED` | Set to "false" to disable AI chat |
 | `DISCORD_WEBHOOK_URL` | Discord webhook for notifications |
 | `KOFI_WEBHOOK_VERIFICATION_TOKEN` | Ko-fi webhook verification token |
 | `HELIX_API_KEY` | HelixPay API key |
@@ -142,54 +271,38 @@ Environment values live in `.env.local`. The example template is `.env.example`.
 | `HELIX_PREMIUM_PRODUCT_ID` | HelixPay product ID for Premium tier |
 | `HIDDEN_GEM_VISITOR_THRESHOLD` | Threshold for hidden gem evaluation |
 
-## Database
+## Scripts
 
-- Connection is configured via `DATABASE_URL`.
-- Schema lives in `db/schema` and migrations in `drizzle/migrations`.
-- Use `bun db-push` for schema sync in development.
-- Use `bun db-migrate` for production migrations.
+| Command | Description |
+| --- | --- |
+| `bun dev` | Start dev server (HTTPS) |
+| `bun build` | Production build |
+| `bun start` | Start production server |
+| `bun lint` | Run ESLint |
+| `bun test` | Run tests (Bun test runner) |
+| `bun db-push` | Push schema changes to database |
+| `bun db-migrate` | Run database migrations |
+| `bun db-studio` | Open Drizzle Studio |
+| `bun merge` | Merge `dev` branch into `prod` |
+| `bun run llm:models` | List available AI models |
 
-## Storage
-
-Storage is handled via Cloudflare R2 (S3-compatible). Credentials are required:
-
-- `R2_ACCOUNT_ID`
-- `R2_ACCESS_KEY_ID`
-- `R2_SECRET_ACCESS_KEY`
-- `R2_BUCKET_NAME`
-- `R2_PUBLIC_URL`
-
-Uploads are organized under bucket prefixes (cafes, reviews, avatars, events, blogs, etc.).
-
-## Auth
-
-Authentication uses Better Auth with:
-
-- Email/password
-- Google OAuth
-- Discord OAuth
-- Passkey support
-
-The Better Auth routes are mounted at `app/api/auth/[...all]/route.ts`.
-
-## AI
-
-AI features use an OpenAI-compatible API and are optional. To enable model listing, excerpt generation, and chat:
-
-- `OPENAI_COMPATIBLE_BASE_URL`
-- `OPENAI_COMPATIBLE_API_KEY`
-
-You can list available models with:
+## Testing and Linting
 
 ```bash
-bun run llm:models
+bun test              # Run all tests
+bun test <file-path>  # Run a single test file
+bun lint              # Run ESLint
 ```
 
-### AI Chat
+Tests live in `__tests__/` directories next to their source files.
 
-The platform includes an AI chat assistant that helps users discover cafes and answers questions about locations, amenities, and reviews.
+## Database
 
-**Chat Availability:** Set `CHAT_ENABLED=false` to disable the chat widget, or toggle it at `/manage/system/settings` (Settings tab). See [docs/ai.md](docs/ai.md) for configuration details and rate limiting.
+- Schema lives in `db/schema/`.
+- Migrations in `drizzle/migrations/`.
+- Use `bun db-push` for schema sync in development.
+- Use `bun db-migrate` for production migrations.
+- Open `bun db-studio` to browse data with Drizzle Studio.
 
 ## Webhooks and Cron Jobs
 
@@ -208,66 +321,26 @@ The platform includes an AI chat assistant that helps users discover cafes and a
 - `GET /api/cron/check-subscriptions`
 - `GET /api/cron/hidden-gems`
 
-Example:
-
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" https://localhost:3000/api/cron/hidden-gems
 ```
 
-## Testing
-
-```bash
-bun test
-bun lint
-```
-
-## Available Scripts
-
-| Command | Description |
-| --- | --- |
-| `bun dev` | Start dev server (HTTPS) |
-| `bun build` | Production build |
-| `bun start` | Start production server |
-| `bun lint` | Run ESLint |
-| `bun db-push` | Push schema changes to database |
-| `bun db-migrate` | Run database migrations |
-| `bun db-studio` | Open Drizzle Studio |
-| `bun llm:models` | List available AI models |
-
-## Project Structure
-
-```
-app/                    Next.js App Router pages and routes
-components/             Reusable UI components
-db/                     Drizzle schema and database client
-drizzle/                Migrations
-emails/                 React Email templates
-hooks/                  Custom hooks
-lib/                    Auth/config utilities
-public/                 Static assets
-scripts/                CLI scripts
-utils/                  Shared utilities
-```
-
-## Architecture Overview
-
-- App Router routes live in `app/` and server actions in `app/api/actions`.
-- Auth is powered by Better Auth with Drizzle-backed sessions in Postgres.
-- Media uploads go through Cloudflare R2 using bucket prefixes per domain (cafes, reviews, avatars, etc.).
-- Blog tooling uses an OpenAI-compatible API for excerpts and moderation checks.
-
-## Deployment Notes
+## Deployment
 
 - Ensure all required environment variables are set in the hosting provider.
 - Use `bun build` followed by `bun start` for production.
 - Set `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_APP_URL` to the production domain.
 - Protect cron endpoints with a strong `CRON_SECRET` and call them from your scheduler.
 
+## Versioning
+
+This project uses a custom versioning scheme: `YEAR.FEATURE_NUM.FIXES` (e.g., `2026.13.0`).
+
 ## Troubleshooting
 
 ### Database connection issues
 
-Check `DATABASE_URL` and ensure PostgreSQL is running. Example:
+Check `DATABASE_URL` and ensure PostgreSQL is running:
 
 ```bash
 psql "postgresql://user:password@localhost:5432/grounds"
@@ -275,7 +348,7 @@ psql "postgresql://user:password@localhost:5432/grounds"
 
 ### AI model list fails
 
-Ensure `OPENAI_COMPATIBLE_BASE_URL` and `OPENAI_COMPATIBLE_API_KEY` are set, then run:
+Ensure `OPENAI_COMPATIBLE_BASE_URL` and `OPENAI_COMPATIBLE_API_KEY` are set:
 
 ```bash
 bun run llm:models
@@ -284,3 +357,7 @@ bun run llm:models
 ### Cron endpoints return 401
 
 Verify the `Authorization` header matches `CRON_SECRET`.
+
+### HTTPS certificate warnings
+
+The dev server uses self-signed certificates. Accept the browser warning or add the cert to your system trust store. Certificates live in `certificates/`.
