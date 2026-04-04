@@ -5,7 +5,7 @@ import { useEditor, EditorContent } from "@tiptap/react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
 import {
-    X, Eye, Save, Send, Loader2, ImageIcon, Trash2,
+    X, Save, Send, Loader2, ImageIcon, Trash2,
     Images, MapPin, Route, Sparkles,
 } from "lucide-react"
 import { getEditorExtensions } from "./editor/extensions"
@@ -27,7 +27,6 @@ import { createBlogPost, updateBlogPost, createCommunityBlogPost } from "@/app/a
 import { uploadBlogImageAction } from "@/utils/storage/actions"
 import { compressBlogCover } from "@/utils/image-processing"
 import { generateExcerptAction } from "@/app/api/actions/ai"
-import MarkdownRender from "@/components/ui/MarkdownRender"
 import { useNotification } from "@/components/layout/NotificationProvider"
 
 const MAX_CONTENT_FOR_EXCERPT = 6000
@@ -68,7 +67,6 @@ export default function RichBlogEditor({
     const [taggedCafeIds, setTaggedCafeIds] = useState<string[]>(post?.tagged_cafe_ids || [])
     const [linkedCrawlId, setLinkedCrawlId] = useState<string | null>(post?.crawl_id || null)
 
-    const [showPreview, setShowPreview] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isUploadingGallery, setIsUploadingGallery] = useState(false)
@@ -126,7 +124,7 @@ export default function RichBlogEditor({
         coverImage,
         category,
         tags,
-        enabled: !showPreview,
+        enabled: true,
     })
 
     useEffect(() => {
@@ -370,16 +368,6 @@ export default function RichBlogEditor({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowPreview(!showPreview)}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                            showPreview
-                                ? "bg-primary text-white shadow-md shadow-primary/20"
-                                : "bg-text/5 text-text hover:bg-text/10"
-                        }`}
-                    >
-                        <Eye className="w-4 h-4" /> Preview
-                    </button>
                     {onCancel && (
                         <button
                             onClick={onCancel}
@@ -635,16 +623,10 @@ export default function RichBlogEditor({
                                     input.click()
                                 }}
                             />
-                            {showPreview ? (
-                                <div className="prose prose-stone max-w-none p-6 min-h-[400px] overflow-auto">
-                                    <MarkdownRender content={currentContent} />
-                                </div>
-                            ) : (
-                                <EditorContent
-                                    editor={editor}
-                                    className="min-h-[400px]"
-                                />
-                            )}
+                            <EditorContent
+                                editor={editor}
+                                className="min-h-[400px]"
+                            />
                         </div>
                         <p className="text-xs text-text/50 flex items-center gap-1.5 justify-end mt-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary/40" />

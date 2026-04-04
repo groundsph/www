@@ -19,6 +19,7 @@ export function getEditorExtensions(placeholder?: string) {
     return [
         StarterKit.configure({
             codeBlock: false,
+            link: false,
         }),
         Link.configure({
             openOnClick: false,
