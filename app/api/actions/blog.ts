@@ -258,6 +258,73 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
     return mapBlogPost(post, authorResult[0], cafeResult[0])
 }
 
+/**
+ * Auto-save a blog post as draft.
+ * Creates a new draft or updates an existing one.
+ * Does NOT run LLM moderation. Does NOT change status.
+ */
+export async function autoSaveDraft(input: {
+    postId?: string
+    title: string
+    content: string
+    excerpt?: string
+    coverImage?: string | null
+    category: BlogCategory
+    tags?: string[]
+}): Promise<{ success: boolean; postId?: string; error?: string }> {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return { success: false, error: "Not authenticated" }
+
+        if (input.postId) {
+            const existing = await db
+                .select({ id: blogPosts.id, authorId: blogPosts.authorId, status: blogPosts.status })
+                .from(blogPosts)
+                .where(eq(blogPosts.id, input.postId))
+                .limit(1)
+
+            if (existing.length === 0) return { success: false, error: "Post not found" }
+            if (existing[0].authorId !== user.id) return { success: false, error: "Not authorized" }
+
+            await db
+                .update(blogPosts)
+                .set({
+                    title: input.title,
+                    content: input.content,
+                    excerpt: input.excerpt || null,
+                    coverImage: input.coverImage || null,
+                    category: input.category,
+                    tags: input.tags || [],
+                    updatedAt: new Date(),
+                })
+                .where(eq(blogPosts.id, input.postId))
+
+            return { success: true, postId: input.postId }
+        }
+
+        const slug = generateSlug(input.title)
+        const [newPost] = await db
+            .insert(blogPosts)
+            .values({
+                authorId: user.id,
+                title: input.title,
+                slug,
+                content: input.content,
+                excerpt: input.excerpt || null,
+                coverImage: input.coverImage || null,
+                category: input.category,
+                status: "draft",
+                tags: input.tags || [],
+            })
+            .returning({ id: blogPosts.id })
+
+        return { success: true, postId: newPost.id }
+    } catch (error) {
+        console.error("autoSaveDraft error:", error)
+        return { success: false, error: "Failed to auto-save" }
+    }
+}
+
 export async function getFeaturedPosts(limit: number = 5): Promise<BlogPost[]> {
     const postsResult = await db.select({
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
