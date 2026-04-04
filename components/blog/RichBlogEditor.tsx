@@ -85,6 +85,7 @@ export default function RichBlogEditor({
     const editor = useEditor({
         extensions: getEditorExtensions("Start writing... Type / for commands"),
         content: post?.content || "",
+        immediatelyRender: false,
         editorProps: {
             attributes: { class: "prose prose-stone max-w-none min-h-[400px] p-6 outline-none" },
             handleDrop: (view, event, _slice, moved) => {
