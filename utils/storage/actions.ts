@@ -494,11 +494,6 @@ export async function uploadBlogImageAction(formData: FormData): Promise<UploadR
         return { success: false, error: "Not authenticated" }
     }
 
-    const isAdmin = await isUserAdmin(user.id)
-    if (!isAdmin) {
-        return { success: false, error: "Admin access required" }
-    }
-
     const file = formData.get("image") as File | null
     if (!file) {
         return { success: false, error: "No file provided" }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import type { RichBlogEditorProps, AutoSaveState, SaveStatus } from "../types"
+import type { AutoSaveState, SaveStatus } from "../types"
 
 describe("editor types", () => {
     it("SaveStatus includes all expected values", () => {

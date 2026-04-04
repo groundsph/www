@@ -64,7 +64,7 @@ import {
 } from "@/app/api/actions/owner"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
-import BlogEditor from "@/components/blog/BlogEditor"
+import RichBlogEditor from "@/components/blog/RichBlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"
 import MenuItemModal from "@/components/cafe-editor/MenuItemModal"
 import { EventWithCafe } from "@/utils/types/extra"
@@ -2587,9 +2587,10 @@ export default function CafeManagement({
 
                         {/* Scrollable content */}
                         <div className='max-h-[90vh] overflow-y-auto'>
-                            <BlogEditor
+                            <RichBlogEditor
                                 cafeId={cafe.id}
                                 cafeName={cafe.name}
+                                mode="full"
                                 onSuccess={handleBlogSuccess}
                                 onCancel={() => setShowBlogEditor(false)}
                                 allowedCategories={[

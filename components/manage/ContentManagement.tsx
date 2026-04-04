@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 import { BlogPost } from "@/utils/types/blog"
 import { EventWithCafe } from "@/utils/types/extra"
-import BlogEditor from "@/components/blog/BlogEditor"
+import RichBlogEditor from "@/components/blog/RichBlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"
 import BlogReportsPanel from "./BlogReportsPanel"
 import ApprovePostModal from "@/components/admin/ApprovePostModal"
@@ -331,8 +331,9 @@ export default function ContentManagement({
                     <div className='relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-text/10 animate-in zoom-in-95 fade-in duration-200'>
                         {/* Scrollable content */}
                         <div className='max-h-[90vh] overflow-y-auto'>
-                            <BlogEditor
+                            <RichBlogEditor
                                 post={editingBlogPost ?? undefined}
+                                mode="full"
                                 onSuccess={handleBlogSuccess}
                                 onCancel={closeBlogEditor}
                             />
