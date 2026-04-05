@@ -17,6 +17,12 @@ const dmSans = DM_Sans({
     adjustFontFallback: true,
 })
 
+export const viewport = {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+}
+
 export const metadata: Metadata = {
     metadataBase: new URL("https://grounds.ph"),
     title: {
@@ -49,6 +55,11 @@ export const metadata: Metadata = {
         email: false,
         address: false,
         telephone: false,
+    },
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "Grounds",
     },
     openGraph: {
         type: "website",
