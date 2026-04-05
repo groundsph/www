@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 export default async function MapPage() {
     const cafes = await getAllPublishedCafes() as CafeWithRatings[]
     return (
-        <main className='w-full p-6 h-[calc(100svh-3rem)] flex flex-col'>
+        <main className='w-full p-2 sm:p-4 md:p-6 h-[calc(100svh-3rem)] flex flex-col overflow-hidden'>
             <CafeMapWrapper cafes={cafes} />
         </main>
     )

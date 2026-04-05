@@ -58,7 +58,7 @@ export function ChatWidget({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className='fixed bottom-4 right-4 z-50 flex flex-col items-end'
+                    className='fixed bottom-4 right-4 z-[var(--z-chat)] flex flex-col items-end'
                 >
                     <AnimatePresence mode='wait'>
                         {isOpen && (

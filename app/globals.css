@@ -14,6 +14,14 @@
     /* Animations */
     --animate-shimmer: shimmer 1.5s infinite;
 
+    /* Z-Index Scale */
+    --z-map: 10;
+    --z-map-marker: 20;
+    --z-navbar: 40;
+    --z-overlay: 50;
+    --z-chat: 55;
+    --z-progress: 9999;
+
     /* Fonts */
     --font-sans: var(--font-dm-sans);
     /* --font-serif: var(--font-playfair-display); */

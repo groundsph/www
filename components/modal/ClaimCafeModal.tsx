@@ -133,7 +133,7 @@ export default function ClaimCafeModal({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={handleClose}
-                        className='fixed inset-0 bg-black/60 backdrop-blur-sm z-50'
+                        className='fixed inset-0 bg-black/60 backdrop-blur-sm z-[var(--z-overlay)]'
                     />
 
                     {/* Modal */}
@@ -141,7 +141,7 @@ export default function ClaimCafeModal({
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className='fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full bg-background rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[90vh]'
+                        className='fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full bg-background rounded-2xl shadow-2xl z-[var(--z-overlay)] overflow-hidden flex flex-col max-h-[90vh]'
                     >
                         {/* Header */}
                         <div className='flex items-center justify-between p-4 border-b border-text/10'>

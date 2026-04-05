@@ -56,9 +56,10 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
             <CafeMap cafes={filteredCafes} />
 
             {/* Filter Buttons */}
-            <div className='absolute top-4 right-4 z-50 flex flex-col gap-2'>
+            <div className='absolute top-4 right-4 z-[var(--z-overlay)] flex flex-col gap-2'>
                 <button
                     onClick={toggle24_7}
+                    title="24 Hours"
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
                         is24_7
                             ? "bg-text text-background"
@@ -70,6 +71,7 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
                 </button>
                 <button
                     onClick={toggleHalalCertified}
+                    title="Halal Certified"
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
                         isHalalCertified
                             ? "bg-green-500 text-white"
@@ -80,6 +82,7 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
                 </button>
                 <button
                     onClick={toggleChains}
+                    title="Show Chains"
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
                         includeChains
                             ? "bg-orange-500 text-white"

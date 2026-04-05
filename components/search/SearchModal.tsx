@@ -91,14 +91,14 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-text/20 z-50 backdrop-blur-sm"
+            className="fixed inset-0 bg-text/20 z-[var(--z-overlay)] backdrop-blur-sm"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed left-1/2 top-[20%] -translate-x-1/2 w-full max-w-xl z-50 px-4"
+            className="fixed left-1/2 top-[20%] -translate-x-1/2 w-full max-w-xl z-[var(--z-overlay)] px-4"
           >
             <div className="bg-background rounded-2xl shadow-2xl border border-text/10 overflow-hidden">
               <div className="border-b border-text/10">

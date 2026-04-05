@@ -554,7 +554,7 @@ export default function CafesPageClient() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className='fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-secondary/10 backdrop-blur-sm border border-secondary/20 text-secondary px-4 py-2.5 rounded-lg shadow-lg text-sm'
+                        className='fixed top-4 left-1/2 -translate-x-1/2 z-[var(--z-overlay)] flex items-center gap-3 bg-secondary/10 backdrop-blur-sm border border-secondary/20 text-secondary px-4 py-2.5 rounded-lg shadow-lg text-sm'
                     >
                         <Clock12 size={16} />
                         <span className='font-medium'>Resuming from where you left off</span>
