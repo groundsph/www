@@ -84,7 +84,6 @@ export default async function Home() {
                 type='application/ld+json'
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <PWAInstallInline />
             <LandingHero featured={featured} />
 
             {/* Stories & Events Section - Side by Side */}
@@ -109,6 +108,7 @@ export default async function Home() {
 
             {/* Supporters Section */}
             {/* <SupportersSection /> */}
+            <PWAInstallInline />
         </>
     )
 }
