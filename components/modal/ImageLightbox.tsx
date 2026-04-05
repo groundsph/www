@@ -84,7 +84,7 @@ export default function ImageLightbox({
 
     return (
         <div
-            className='fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center'
+            className='fixed inset-0 z-50 flex items-center justify-center'
             role='dialog'
             aria-modal='true'
             aria-label='Image lightbox'

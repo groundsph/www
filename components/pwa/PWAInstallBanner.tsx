@@ -16,7 +16,7 @@ export function PWAInstallBanner() {
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: 100, opacity: 0 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className='fixed bottom-0 left-0 right-0 z-[var(--z-overlay)] bg-primary text-white px-4 py-3 flex items-center gap-3'
+                    className='fixed bottom-0 left-0 right-0 z-50 bg-primary text-white px-4 py-3 flex items-center gap-3'
                     style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
                 >
                     <Download className='h-5 w-5 shrink-0' />

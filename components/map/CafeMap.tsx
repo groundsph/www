@@ -212,7 +212,7 @@ export default function CafeMap({ cafes }: CafeMapProps) {
             scrollWheelZoom={true}
             dragging={true}
             touchZoom={true}
-            className='h-full w-full z-[var(--z-map)]'
+            className='h-full w-full z-10'
             style={{ minHeight: "500px" }}
         >
             <TileLayer

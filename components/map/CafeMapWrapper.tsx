@@ -56,7 +56,7 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
             <CafeMap cafes={filteredCafes} />
 
             {/* Filter Buttons */}
-            <div className='absolute top-4 right-4 z-[var(--z-overlay)] flex flex-col gap-2'>
+            <div className='absolute top-4 right-4 z-50 flex flex-col gap-2'>
                 <button
                     onClick={toggle24_7}
                     title="24 Hours"

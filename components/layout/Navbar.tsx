@@ -68,13 +68,13 @@ export default function Navbar() {
     }
 
     return (
-        <nav className='w-full bg-background text-text px-4 py-2 flex items-center justify-between z-[var(--z-navbar)] relative'>
+        <nav className='w-full bg-background text-text px-4 py-2 flex items-center justify-between z-40 relative'>
             <AnimatePresence>
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className='z-[var(--z-navbar)] relative flex flex-row gap-6 items-center'
+                    className='z-40 relative flex flex-row gap-6 items-center'
                 >
                     <Link
                         href='/'
@@ -321,7 +321,7 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Search + Toggle */}
-            <div className='md:hidden z-[var(--z-navbar)] flex items-center gap-2'>
+            <div className='md:hidden z-40 flex items-center gap-2'>
                 <SearchTrigger
                     variant='mobile'
                     onClick={() => {
@@ -376,7 +376,7 @@ export default function Navbar() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className='md:hidden absolute inset-0 bg-background pt-4 pb-10 px-6 flex flex-col h-max top-full left-0 right-0 z-[var(--z-navbar)]'
+                        className='md:hidden absolute inset-0 bg-background pt-4 pb-10 px-6 flex flex-col h-max top-full left-0 right-0 z-40'
                         onClick={(e) => e.stopPropagation()}
                     >
                         <ul className='flex flex-col gap-4'>
