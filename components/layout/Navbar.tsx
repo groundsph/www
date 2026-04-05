@@ -335,7 +335,7 @@ export default function Navbar() {
                         transition={{
                             delay: 0.1 + (routes.length + 0.5) * 0.1,
                         }}
-                        className='flex items-center justify-center w-10 h-10 rounded-xl'
+                        className='flex items-center justify-center w-10 h-10 rounded-xl bg-text/5 active:bg-text/10 text-text/70 active:text-text transition-colors'
                     >
                         <FollowRequestsDropdown isMobile />
                     </motion.div>

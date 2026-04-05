@@ -163,9 +163,7 @@ export default function FollowRequestsDropdown({
                 className={`${
                     isMobile
                         ? `relative flex items-center justify-center w-full py-3 text-lg font-medium transition-colors ${
-                              isOpen
-                                  ? "text-text bg-text/10"
-                                  : "text-text/80 active:bg-text/5"
+                              isOpen ? "text-text" : "text-text/80"
                           }`
                         : `relative p-2 rounded-md transition-colors ${
                               isOpen
