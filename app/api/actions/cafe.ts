@@ -615,6 +615,10 @@ export async function getAllCafes(
                 return fallbackResults.filter(cafe => isCafe24hForDay(cafe.operatingHours, currentDay)).map(c => mapCafeToSnakeCase(c))
             }
 
+            if (filters.isHalalCertified) {
+                return fallbackResults.filter(cafe => cafe.isHalalCertified === true).map(c => mapCafeToSnakeCase(c))
+            }
+
             return fallbackResults.map(c => mapCafeToSnakeCase(c))
         }
 
@@ -670,6 +674,7 @@ export async function getAllCafes(
             is_hidden_gem: row.is_hidden_gem as boolean | null,
             finding_hint: row.finding_hint as string | null,
             is_chain: row.is_chain as boolean | null,
+            is_halal_certified: row.is_halal_certified as boolean | null,
             created_at: row.created_at as string | null,
             updated_at: row.updated_at as string | null,
             average_rating: null,
