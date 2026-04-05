@@ -561,6 +561,11 @@ export async function getAllCafes(
             rows = rows.filter(row => isCafe24hForDay(row.operating_hours, currentDay))
         }
 
+        // Filter for Halal certified cafes
+        if (filters.isHalalCertified) {
+            rows = rows.filter(row => row.is_halal_certified === true)
+        }
+
         // If full-text search returns no results, fallback to ILIKE search on name
         if (rows.length === 0) {
             const ilikeTerm = `%${filters.search}%`
