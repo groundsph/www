@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { ChatWidget } from "@/components/chat/ChatWidget"
 import Footer from "./Footer"
 import Navbar from "./Navbar"
-import { PWAInstallBanner } from "@/components/pwa"
+
 import { setChatContext } from "@/utils/chat-context"
 
 interface LayoutWrapperProps {
@@ -75,7 +75,6 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
             {children}
             {!hideFooter && <Footer />}
             {!hideChat && <ChatWidget isEnabled={isChatEnabled} />}
-            <PWAInstallBanner />
         </>
     )
 }

@@ -225,13 +225,13 @@ export default function FollowRequestsDropdown({
                                     {requests.map((request) => (
                                         <li
                                             key={request.id}
-                                            className='px-4 py-3 hover:bg-text/[0.02] transition-colors'
+                                            className='px-4 py-3 hover:bg-text/20 transition-colors'
                                         >
                                             <div className='flex items-start gap-3'>
                                                 {/* Avatar */}
                                                 <Link
                                                     href={`/u/${request.requester.username}`}
-                                                    className='flex-shrink-0'
+                                                    className='shrink-0'
                                                     onClick={() =>
                                                         setIsOpen(false)
                                                     }
@@ -346,7 +346,7 @@ export default function FollowRequestsDropdown({
 
                         {/* Footer */}
                         {requests.length > 0 && (
-                            <div className='px-4 py-2 border-t border-text/10 bg-text/[0.02]'>
+                            <div className='px-4 py-2 border-t border-text/10 bg-text/20'>
                                 <p className='text-[10px] text-text/40 text-center'>
                                     {requests.length} pending request
                                     {requests.length !== 1 ? "s" : ""}

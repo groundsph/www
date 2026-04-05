@@ -15,6 +15,7 @@ import RecentReviewsSection from "@/components/recent/RecentReviewsSection"
 import ActivityFeedWrapper from "@/components/feed/ActivityFeedWrapper"
 import { CafeWithRatings } from "@/utils/types/extra"
 import CafeLeaderboardSection from "@/components/landing/CafeLeaderboardSection"
+import { PWAInstallInline } from "@/components/pwa"
 
 // Dynamic rendering for Dokploy build compatibility
 export const dynamic = "force-dynamic"
@@ -83,6 +84,7 @@ export default async function Home() {
                 type='application/ld+json'
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
+            <PWAInstallInline />
             <LandingHero featured={featured} />
 
             {/* Stories & Events Section - Side by Side */}
