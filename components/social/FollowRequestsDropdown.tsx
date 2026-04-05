@@ -165,7 +165,7 @@ export default function FollowRequestsDropdown({
                         ? `relative flex items-center justify-center w-full py-3 text-lg font-medium transition-colors ${
                               isOpen
                                   ? "text-text bg-text/10"
-                                  : "text-text/80 hover:text-text hover:bg-text/5"
+                                  : "text-text/80 active:bg-text/5"
                           }`
                         : `relative p-2 rounded-md transition-colors ${
                               isOpen
