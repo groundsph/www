@@ -82,7 +82,7 @@ export default function Navbar() {
                         draggable={false}
                         title='Go to Home'
                     >
-                        Grounds<span className="text-secondary">.ph</span>
+                        Grounds<span className='text-secondary'>.ph</span>
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -190,10 +190,16 @@ export default function Navbar() {
                                                             <li
                                                                 key={child.href}
                                                             >
-                                            <Link
-                                                onClick={() => hapticTrigger("light")}
-                                                href={child.href}
-                                                className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                                                                <Link
+                                                                    onClick={() =>
+                                                                        hapticTrigger(
+                                                                            "light",
+                                                                        )
+                                                                    }
+                                                                    href={
+                                                                        child.href
+                                                                    }
+                                                                    className={`block px-4 py-2 text-sm font-medium transition-colors ${
                                                                         curPath ===
                                                                         child.href
                                                                             ? "text-text bg-text/5"
@@ -322,6 +328,18 @@ export default function Navbar() {
 
             {/* Mobile Search + Toggle */}
             <div className='md:hidden z-40 flex items-center gap-2'>
+                {user && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{
+                            delay: 0.1 + (routes.length + 0.5) * 0.1,
+                        }}
+                        className='flex items-center justify-center w-10 h-10 rounded-xl bg-text/5 hover:bg-text/10 text-text/70 hover:text-text transition-colors'
+                    >
+                        <FollowRequestsDropdown isMobile />
+                    </motion.div>
+                )}
                 <SearchTrigger
                     variant='mobile'
                     onClick={() => {
@@ -444,10 +462,16 @@ export default function Navbar() {
                                                                         child.href
                                                                     }
                                                                 >
-                                    <Link
-                                        onClick={() => hapticTrigger("light")}
-                                        href={child.href}
-                                        className={`text-xl font-medium ${
+                                                                    <Link
+                                                                        onClick={() =>
+                                                                            hapticTrigger(
+                                                                                "light",
+                                                                            )
+                                                                        }
+                                                                        href={
+                                                                            child.href
+                                                                        }
+                                                                        className={`text-xl font-medium ${
                                                                             curPath ===
                                                                             child.href
                                                                                 ? "text-text"
@@ -498,17 +522,6 @@ export default function Navbar() {
                                     >
                                         profile
                                     </Link>
-                                </motion.li>
-                            )}
-                            {user && (
-                                <motion.li
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{
-                                        delay: 0.1 + (routes.length + 0.5) * 0.1,
-                                    }}
-                                >
-                                    <FollowRequestsDropdown />
                                 </motion.li>
                             )}
                             {isAdmin && (

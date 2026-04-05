@@ -2,12 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import {
-    BellIcon,
-    CheckIcon,
-    XIcon,
-    Loader2,
-} from "lucide-react"
+import { BellIcon, CheckIcon, XIcon, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useHaptics } from "@/hooks/useHaptics"
 import { UserAvatar } from "@/components/ui/UserAvatar"
@@ -25,10 +20,12 @@ interface FollowRequest {
 
 interface FollowRequestsDropdownProps {
     className?: string
+    isMobile?: boolean
 }
 
 export default function FollowRequestsDropdown({
     className = "",
+    isMobile = false,
 }: FollowRequestsDropdownProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [requests, setRequests] = useState<FollowRequest[]>([])
@@ -61,9 +58,8 @@ export default function FollowRequestsDropdown({
     const fetchRequests = useCallback(async () => {
         setIsRefreshing(true)
         try {
-            const { getPendingFollowRequests } = await import(
-                "@/app/api/actions/social"
-            )
+            const { getPendingFollowRequests } =
+                await import("@/app/api/actions/social")
             const result = await getPendingFollowRequests()
             if (result.requests) {
                 setRequests(result.requests)
@@ -96,9 +92,8 @@ export default function FollowRequestsDropdown({
         hapticTrigger("medium")
         setProcessingIds((prev) => new Set(prev).add(requestId))
         try {
-            const { acceptFollowRequest } = await import(
-                "@/app/api/actions/social"
-            )
+            const { acceptFollowRequest } =
+                await import("@/app/api/actions/social")
             const result = await acceptFollowRequest(requestId)
             if (result.success) {
                 setRequests((prev) => prev.filter((r) => r.id !== requestId))
@@ -118,9 +113,8 @@ export default function FollowRequestsDropdown({
         hapticTrigger("soft")
         setProcessingIds((prev) => new Set(prev).add(requestId))
         try {
-            const { declineFollowRequest } = await import(
-                "@/app/api/actions/social"
-            )
+            const { declineFollowRequest } =
+                await import("@/app/api/actions/social")
             const result = await declineFollowRequest(requestId)
             if (result.success) {
                 setRequests((prev) => prev.filter((r) => r.id !== requestId))
@@ -159,22 +153,33 @@ export default function FollowRequestsDropdown({
     const hasPendingRequests = pendingCount > 0
 
     return (
-        <div ref={dropdownRef} className={`relative ${className}`}>
+        <div
+            ref={dropdownRef}
+            className={`relative ${className}`}
+        >
             {/* Bell Button */}
             <button
                 onClick={handleToggle}
-                className={`relative p-2 rounded-md transition-colors ${
-                    isOpen
-                        ? "bg-text/10 text-text"
-                        : "text-text/60 hover:text-text hover:bg-text/5"
+                className={`${
+                    isMobile
+                        ? `relative flex items-center justify-center w-full py-3 text-lg font-medium transition-colors ${
+                              isOpen
+                                  ? "text-text bg-text/10"
+                                  : "text-text/80 hover:text-text hover:bg-text/5"
+                          }`
+                        : `relative p-2 rounded-md transition-colors ${
+                              isOpen
+                                  ? "bg-text/10 text-text"
+                                  : "text-text/60 hover:text-text hover:bg-text/5"
+                          }`
                 }`}
-                aria-label="Follow requests"
+                aria-label='Follow requests'
                 aria-expanded={isOpen}
-                aria-haspopup="true"
+                aria-haspopup='true'
             >
-                <BellIcon size={20} />
+                <BellIcon size={isMobile ? 24 : 20} />
                 {hasPendingRequests && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full">
+                    <span className={`absolute min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full ${isMobile ? 'top-2 right-auto ml-6' : '-top-0.5 -right-0.5'}`}>
                         {pendingCount > 99 ? "99+" : pendingCount}
                     </span>
                 )}
@@ -184,111 +189,121 @@ export default function FollowRequestsDropdown({
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        initial={{ opacity: 0, y: isMobile ? 0 : -10, scale: isMobile ? 1 : 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        exit={{ opacity: 0, y: isMobile ? 0 : -10, scale: isMobile ? 1 : 0.95 }}
                         transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="absolute top-full right-0 mt-2 w-80 bg-background border border-text/10 rounded-lg shadow-lg overflow-hidden z-50"
+                        className={`${isMobile 
+                            ? 'fixed inset-x-0 top-16 mx-4 mt-2 bg-background border border-text/10 rounded-lg shadow-lg overflow-hidden z-50 max-h-[calc(100vh-6rem)]' 
+                            : 'absolute top-full right-0 mt-2 w-80 bg-background border border-text/10 rounded-lg shadow-lg overflow-hidden z-50'}`}
                     >
                         {/* Header */}
-                        <div className="px-4 py-3 border-b border-text/10 flex items-center justify-between">
-                            <h3 className="font-semibold text-sm">
+                        <div className='px-4 py-3 border-b border-text/10 flex items-center justify-between'>
+                            <h3 className='font-semibold text-sm'>
                                 Follow Requests
                             </h3>
                             {isRefreshing && (
                                 <Loader2
                                     size={14}
-                                    className="animate-spin text-text/40"
+                                    className='animate-spin text-text/40'
                                 />
                             )}
                         </div>
 
                         {/* Content */}
-                        <div className="max-h-96 overflow-y-auto">
+                        <div className='max-h-96 overflow-y-auto'>
                             {requests.length === 0 ? (
-                                <div className="px-4 py-8 text-center">
+                                <div className='px-4 py-8 text-center'>
                                     <BellIcon
                                         size={32}
-                                        className="mx-auto text-text/20 mb-2"
+                                        className='mx-auto text-text/20 mb-2'
                                     />
-                                    <p className="text-sm text-text/60">
+                                    <p className='text-sm text-text/60'>
                                         No pending requests
                                     </p>
                                 </div>
                             ) : (
-                                <ul className="divide-y divide-text/5">
+                                <ul className='divide-y divide-text/5'>
                                     {requests.map((request) => (
                                         <li
                                             key={request.id}
-                                            className="px-4 py-3 hover:bg-text/[0.02] transition-colors"
+                                            className='px-4 py-3 hover:bg-text/[0.02] transition-colors'
                                         >
-                                            <div className="flex items-start gap-3">
+                                            <div className='flex items-start gap-3'>
                                                 {/* Avatar */}
                                                 <Link
                                                     href={`/u/${request.requester.username}`}
-                                                    className="flex-shrink-0"
+                                                    className='flex-shrink-0'
                                                     onClick={() =>
                                                         setIsOpen(false)
                                                     }
                                                 >
                                                     <UserAvatar
-                                                        src={request.requester.avatarUrl}
-                                                        alt={request.requester.displayName}
+                                                        src={
+                                                            request.requester
+                                                                .avatarUrl
+                                                        }
+                                                        alt={
+                                                            request.requester
+                                                                .displayName
+                                                        }
                                                         size={40}
-                                                        className="border border-text/10"
+                                                        className='border border-text/10'
                                                     />
                                                 </Link>
 
                                                 {/* Request Info */}
-                                                <div className="flex-1 min-w-0">
+                                                <div className='flex-1 min-w-0'>
                                                     <Link
                                                         href={`/u/${request.requester.username}`}
-                                                        className="block hover:underline"
+                                                        className='block hover:underline'
                                                         onClick={() =>
                                                             setIsOpen(false)
                                                         }
                                                     >
-                                                        <p className="font-medium text-sm truncate">
+                                                        <p className='font-medium text-sm truncate'>
                                                             {
-                                                                request.requester
+                                                                request
+                                                                    .requester
                                                                     .displayName
                                                             }
                                                         </p>
-                                                        <p className="text-xs text-text/50 truncate">
+                                                        <p className='text-xs text-text/50 truncate'>
                                                             @
                                                             {
-                                                                request.requester
+                                                                request
+                                                                    .requester
                                                                     .username
                                                             }
                                                         </p>
                                                     </Link>
-                                                    <p className="text-[10px] text-text/40 mt-0.5">
+                                                    <p className='text-[10px] text-text/40 mt-0.5'>
                                                         {formatTimeAgo(
-                                                            request.createdAt
+                                                            request.createdAt,
                                                         )}
                                                     </p>
                                                 </div>
 
                                                 {/* Actions */}
-                                                <div className="flex items-center gap-1.5">
+                                                <div className='flex items-center gap-1.5'>
                                                     <button
                                                         onClick={() =>
                                                             handleAccept(
-                                                                request.id
+                                                                request.id,
                                                             )
                                                         }
                                                         disabled={processingIds.has(
-                                                            request.id
+                                                            request.id,
                                                         )}
-                                                        className="p-1.5 rounded-full bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        aria-label="Accept follow request"
+                                                        className='p-1.5 rounded-full bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                                                        aria-label='Accept follow request'
                                                     >
                                                         {processingIds.has(
-                                                            request.id
+                                                            request.id,
                                                         ) ? (
                                                             <Loader2
                                                                 size={14}
-                                                                className="animate-spin"
+                                                                className='animate-spin'
                                                             />
                                                         ) : (
                                                             <CheckIcon
@@ -300,21 +315,21 @@ export default function FollowRequestsDropdown({
                                                     <button
                                                         onClick={() =>
                                                             handleDecline(
-                                                                request.id
+                                                                request.id,
                                                             )
                                                         }
                                                         disabled={processingIds.has(
-                                                            request.id
+                                                            request.id,
                                                         )}
-                                                        className="p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        aria-label="Decline follow request"
+                                                        className='p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                                                        aria-label='Decline follow request'
                                                     >
                                                         {processingIds.has(
-                                                            request.id
+                                                            request.id,
                                                         ) ? (
                                                             <Loader2
                                                                 size={14}
-                                                                className="animate-spin"
+                                                                className='animate-spin'
                                                             />
                                                         ) : (
                                                             <XIcon
@@ -333,8 +348,8 @@ export default function FollowRequestsDropdown({
 
                         {/* Footer */}
                         {requests.length > 0 && (
-                            <div className="px-4 py-2 border-t border-text/10 bg-text/[0.02]">
-                                <p className="text-[10px] text-text/40 text-center">
+                            <div className='px-4 py-2 border-t border-text/10 bg-text/[0.02]'>
+                                <p className='text-[10px] text-text/40 text-center'>
                                     {requests.length} pending request
                                     {requests.length !== 1 ? "s" : ""}
                                 </p>
