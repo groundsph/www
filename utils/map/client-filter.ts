@@ -1,10 +1,12 @@
 import type { CafeWithRatings } from "@/utils/types/extra"
 import type { DayKey } from "@/utils/time"
+import { isCafeOpenNow } from "@/utils/time"
 
 export interface FilterOptions {
 	includeChains: boolean
 	is24_7: boolean
 	isHalalCertified: boolean
+	isOpenNow: boolean
 	todayKey: DayKey
 }
 
@@ -12,7 +14,7 @@ export function filterCafes(
 	cafes: CafeWithRatings[],
 	options: FilterOptions
 ): CafeWithRatings[] {
-	const { includeChains, is24_7, isHalalCertified, todayKey } = options
+	const { includeChains, is24_7, isHalalCertified, isOpenNow, todayKey } = options
 	return cafes.filter((cafe) => {
 		if (!includeChains && cafe.is_chain === true) return false
 		if (is24_7) {
@@ -24,6 +26,7 @@ export function filterCafes(
 			if (!todayEntry?.is_24_hours) return false
 		}
 		if (isHalalCertified && !cafe.is_halal_certified) return false
+		if (isOpenNow && !isCafeOpenNow(cafe.operating_hours, todayKey)) return false
 		return true
 	})
 }

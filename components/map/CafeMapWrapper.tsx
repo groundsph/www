@@ -5,7 +5,7 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { filterCafes } from "@/utils/map/client-filter"
 import dynamic from "next/dynamic"
 import { useState, useMemo } from "react"
-import { Store, Clock12 } from "lucide-react"
+import { Store, Clock12, ChessBishop, DoorOpen } from "lucide-react"
 import { getPHDayKey } from "@/utils/time"
 
 const CafeMap = dynamic(() => import("@/components/map/CafeMap"), {
@@ -26,14 +26,22 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
     const [includeChains, setIncludeChains] = useState(false)
     const [is24_7, setIs24_7] = useState(false)
     const [isHalalCertified, setIsHalalCertified] = useState(false)
+    const [isOpenNow, setIsOpenNow] = useState(false)
 
     // Derive the current PH day once per render (filters are applied client-side)
     const todayKey = useMemo(() => getPHDayKey(), [])
 
     // Apply all active filters purely in memory — no network calls
     const filteredCafes = useMemo(
-        () => filterCafes(cafes, { includeChains, is24_7, isHalalCertified, todayKey }),
-        [cafes, includeChains, is24_7, isHalalCertified, todayKey]
+        () =>
+            filterCafes(cafes, {
+                includeChains,
+                is24_7,
+                isHalalCertified,
+                isOpenNow,
+                todayKey,
+            }),
+        [cafes, includeChains, is24_7, isHalalCertified, isOpenNow, todayKey],
     )
 
     const toggleChains = () => {
@@ -51,6 +59,11 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
         setIsHalalCertified((prev) => !prev)
     }
 
+    const toggleOpenNow = () => {
+        trigger("selection")
+        setIsOpenNow((prev) => !prev)
+    }
+
     return (
         <div className='relative w-full h-full'>
             <CafeMap cafes={filteredCafes} />
@@ -58,8 +71,20 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
             {/* Filter Buttons */}
             <div className='absolute top-4 right-4 z-10 flex flex-col gap-2'>
                 <button
+                    onClick={toggleOpenNow}
+                    title='Currently Open'
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
+                        isOpenNow
+                            ? "bg-primary text-white"
+                            : "bg-background text-text/80 hover:bg-text/5"
+                    }`}
+                >
+                    <DoorOpen className='w-4 h-4' />
+                    <span className='hidden sm:inline'>Open Now</span>
+                </button>
+                <button
                     onClick={toggle24_7}
-                    title="24 Hours"
+                    title='24 Hours'
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
                         is24_7
                             ? "bg-text text-background"
@@ -71,18 +96,19 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
                 </button>
                 <button
                     onClick={toggleHalalCertified}
-                    title="Halal Certified"
+                    title='Halal Certified'
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
                         isHalalCertified
                             ? "bg-green-500 text-white"
                             : "bg-background text-text/80 hover:bg-text/5"
                     }`}
                 >
+                    <ChessBishop className='w-4 h-4' />
                     <span className='hidden sm:inline'>Halal Certified</span>
                 </button>
                 <button
                     onClick={toggleChains}
-                    title="Show Chains"
+                    title='Show Chains'
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
                         includeChains
                             ? "bg-orange-500 text-white"
