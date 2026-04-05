@@ -126,6 +126,12 @@ export default function Footer() {
                             >
                                 Roadmap
                             </Link>
+                            <Link
+                                href='/install'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                Install App
+                            </Link>
                         </div>
                         <div className='flex flex-col gap-3'>
                             <h4 className='font-serif font-semibold text-sm text-background/50 uppercase tracking-wider'>

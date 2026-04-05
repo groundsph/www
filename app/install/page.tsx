@@ -12,7 +12,7 @@ export default function InstallPage() {
             <div className='max-w-lg mx-auto px-4 py-12'>
                 <h1 className='text-3xl font-bold mb-2'>Install Grounds</h1>
                 <p className='text-text/60 mb-8'>
-                    Add Grounds to your home screen for a native app experience — fast loading, offline access, and no browser UI.
+                    Add Grounds to your home screen for a native app experience, fast loading and no browser UI.
                 </p>
                 <InstallTutorial />
             </div>
