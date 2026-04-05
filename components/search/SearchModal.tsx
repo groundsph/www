@@ -98,7 +98,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed left-1/2 top-[20%] -translate-x-1/2 w-full max-w-xl z-[var(--z-overlay)] px-4"
+            className="fixed left-1/2 top-[15%] sm:top-[20%] -translate-x-1/2 w-full max-w-xl z-[var(--z-overlay)] px-4 pb-[env(safe-area-inset-bottom)]"
           >
             <div className="bg-background rounded-2xl shadow-2xl border border-text/10 overflow-hidden">
               <div className="border-b border-text/10">
@@ -110,7 +110,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   placeholder="Search pages, cafes, users..."
                 />
               </div>
-              <div className="max-h-[60vh] overflow-y-auto">
+              <div className="max-h-[50vh] sm:max-h-[60vh] overflow-y-auto">
                 {query.trim() ? (
                   <SearchResults
                     results={results}
