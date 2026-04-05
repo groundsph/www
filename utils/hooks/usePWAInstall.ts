@@ -12,22 +12,39 @@ interface PWAInstallState {
 
 const DISMISS_KEY = "pwa-install-dismissed"
 
+// Cached snapshots to avoid infinite loops
+let cachedClientSnapshot: { isStandalone: boolean; isMobile: boolean; dismissed: boolean } | null = null
+const SERVER_SNAPSHOT = { isStandalone: false, isMobile: false, dismissed: true }
+
 function getSnapshot() {
     if (typeof window === "undefined") {
-        return { isStandalone: false, isMobile: false, dismissed: true }
+        return SERVER_SNAPSHOT
     }
+    
     const mq = window.matchMedia("(display-mode: standalone)")
     const ua = navigator.userAgent.toLowerCase()
     const stored = localStorage.getItem(DISMISS_KEY)
-    return {
+    
+    const newSnapshot = {
         isStandalone: mq.matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true,
         isMobile: /android|iphone|ipad|ipod/.test(ua),
         dismissed: stored === "true",
     }
+    
+    // Only return new object if values changed
+    if (cachedClientSnapshot && 
+        cachedClientSnapshot.isStandalone === newSnapshot.isStandalone &&
+        cachedClientSnapshot.isMobile === newSnapshot.isMobile &&
+        cachedClientSnapshot.dismissed === newSnapshot.dismissed) {
+        return cachedClientSnapshot
+    }
+    
+    cachedClientSnapshot = newSnapshot
+    return newSnapshot
 }
 
 function getServerSnapshot() {
-    return { isStandalone: false, isMobile: false, dismissed: true }
+    return SERVER_SNAPSHOT
 }
 
 function subscribe(callback: () => void) {
