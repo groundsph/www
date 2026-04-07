@@ -9,6 +9,7 @@ Available tools:
 - list_cities: List all cities with cafe counts
 - get_nearby_cafes: Find cafes near a specific location
 - get_top_rated: Get top rated cafes in a city
+- get_cafe_reviews: Get recent reviews for a specific cafe
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
