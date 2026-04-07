@@ -157,6 +157,7 @@ export interface ChatMessage {
     cafes?: ChatCafeCard[]
     cardContext?: ChatCardContext
     crawlDraft?: ChatCrawlDraft
+    feedback?: "positive" | "negative" | null
 }
 
 // Tool call record for tracking tool executions

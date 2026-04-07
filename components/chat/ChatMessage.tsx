@@ -1,9 +1,11 @@
 "use client"
 
 import { motion } from "motion/react"
+import { ThumbsUp, ThumbsDown } from "lucide-react"
 import MarkdownRender from "@/components/ui/MarkdownRender"
 import { cn } from "@/utils/cn"
 import type { ChatMessage } from "@/utils/types/chat"
+import { submitChatFeedback } from "@/app/api/actions/chat-feedback"
 import ChatCafeCarousel from "./ChatCafeCarousel"
 import ChatCrawlPreview from "./ChatCrawlPreview"
 
@@ -13,6 +15,15 @@ interface ChatMessageProps {
 
 export default function ChatMessage({ message }: ChatMessageProps) {
     const isUser = message.role === "user"
+
+    const handleFeedback = async (type: "positive" | "negative") => {
+        // Call server action
+        await submitChatFeedback({
+            messageId: message.id,
+            feedback: type,
+            messageContent: message.content.slice(0, 500),
+        })
+    }
 
     return (
         <div
@@ -51,6 +62,38 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                         <ChatCafeCarousel cafes={message.cafes} cardContext={message.cardContext} />
                     )}
                     {message.crawlDraft && <ChatCrawlPreview draft={message.crawlDraft} />}
+                    {!isUser && (
+                        <div className='flex items-center gap-1 mt-1'>
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => handleFeedback("positive")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    message.feedback === "positive"
+                                        ? "text-green-500 bg-green-500/10"
+                                        : "text-text/30 hover:text-text/60"
+                                )}
+                                aria-label="Helpful response"
+                            >
+                                <ThumbsUp className='w-3 h-3' />
+                            </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => handleFeedback("negative")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    message.feedback === "negative"
+                                        ? "text-red-500 bg-red-500/10"
+                                        : "text-text/30 hover:text-text/60"
+                                )}
+                                aria-label="Not helpful"
+                            >
+                                <ThumbsDown className='w-3 h-3' />
+                            </motion.button>
+                        </div>
+                    )}
                 </motion.div>
                 
                 {/* {isUser && (
