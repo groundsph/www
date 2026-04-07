@@ -29,6 +29,15 @@ export async function getUpcomingEvents(
     try {
         const now = new Date()
 
+        const conditions = [
+            eq(events.status, "published"),
+            gte(events.startDate, now),
+        ]
+
+        if (city) {
+            conditions.push(eq(events.city, city))
+        }
+
         const query = db
             .select({
                 id: events.id,
@@ -46,12 +55,7 @@ export async function getUpcomingEvents(
             })
             .from(events)
             .leftJoin(cafes, eq(events.cafeId, cafes.id))
-            .where(
-                and(
-                    eq(events.status, "published"),
-                    gte(events.startDate, now)
-                )
-            )
+            .where(and(...conditions))
             .orderBy(asc(events.startDate))
             .limit(limit)
 
