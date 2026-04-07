@@ -11,7 +11,6 @@ import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
-import { getGroundsInfo } from "@/utils/ai/grounds-info"
 import { CHAT_SYSTEM_PROMPT, CHAT_TOOLS } from "@/utils/ai/tool-definitions"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatContext } from "@/utils/types/chat"
 
@@ -98,7 +97,8 @@ async function executeTool(toolName: string, args: string): Promise<unknown> {
             return result
         }
         case "get_grounds_info": {
-            return getGroundsInfo()
+            const { getGroundsInfo } = await import("@/utils/ai/grounds-info")
+            return await getGroundsInfo()
         }
         case "get_cafe_reviews": {
             const { getCafeReviews } = await import("@/utils/ai/tools/cafe-reviews")
