@@ -1,9 +1,9 @@
 "use client"
 
-import { useHaptics } from "@/hooks/useHaptics"
 import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { X, Send, AlertCircle, Loader2, Sparkles } from "lucide-react"
+import { useHaptics } from "@/hooks/useHaptics"
 import ChatMessage from "./ChatMessage"
 import { cn } from "@/utils/cn"
 import { useUserLocation } from "@/hooks/useUserLocation"
@@ -246,6 +246,7 @@ export default function ChatWindow({
                             progressMessage: chunk.message,
                             progressStep: chunk.step ?? 0,
                         })
+                        trigger("selection")
                         break
                     case "tool":
                         setStreamState((prev) => ({
@@ -285,7 +286,7 @@ export default function ChatWindow({
         )
 
         return { cafes, cardContext, crawlDraft, finalMessage, finalRemaining }
-    }, [currentRemaining, recentCafes, recentToolCalls])
+    }, [currentRemaining, recentCafes, recentToolCalls, trigger])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -337,6 +338,7 @@ export default function ChatWindow({
             }
 
             setMessages((prev) => [...prev, assistantMessage])
+            trigger("success")
             setCurrentRemaining(finalRemaining)
         } catch (err) {
             setError(mapLocationError(err instanceof Error ? err.message : "An unexpected error occurred"))
@@ -378,6 +380,7 @@ export default function ChatWindow({
                 }
 
                 setMessages((prev) => [...prev, assistantMessage])
+                trigger("success")
                 setCurrentRemaining(finalRemaining)
             } catch (err) {
                 setError(mapLocationError(err instanceof Error ? err.message : "An unexpected error occurred"))
@@ -388,7 +391,7 @@ export default function ChatWindow({
                 setTimeout(scrollToBottom, 100)
             }
         })()
-    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom, processStreamResponse])
+    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom, processStreamResponse, trigger])
 
     useEffect(() => {
         if (locationError) {

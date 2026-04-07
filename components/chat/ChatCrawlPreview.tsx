@@ -5,6 +5,7 @@ import { MapPin, Route } from "lucide-react"
 import type { ChatCrawlDraft } from "@/utils/types/chat"
 import { saveChatCrawlDraft } from "@/utils/chat-crawl-draft"
 import { emitChatEvent } from "@/utils/chat-events"
+import { useHaptics } from "@/hooks/useHaptics"
 
 interface ChatCrawlPreviewProps {
     draft: ChatCrawlDraft
@@ -12,6 +13,7 @@ interface ChatCrawlPreviewProps {
 
 export default function ChatCrawlPreview({ draft }: ChatCrawlPreviewProps) {
     const router = useRouter()
+    const { trigger } = useHaptics()
 
     const handleSave = () => {
         saveChatCrawlDraft({ ...draft, isPublic: false })
@@ -37,7 +39,7 @@ export default function ChatCrawlPreview({ draft }: ChatCrawlPreviewProps) {
                     </p>
                 </div>
                 <button
-                    onClick={handleSave}
+                    onClick={() => { trigger("success"); handleSave() }}
                     className='px-3 py-2 text-xs font-bold rounded-lg bg-text text-background hover:bg-text/90 hover:scale-110 hover:shadow-2xs shadow-none transition-all text-nowrap'
                 >
                     Save Crawl
