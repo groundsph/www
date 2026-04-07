@@ -262,17 +262,9 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
     const cleanedMessage = stripLocationHint(message)
 
     // Check for context-based crawl BEFORE any tool calls
-    console.log("[runChatStream] Checking for context:", {
-        hasContext: !!options.context,
-        recentCafesCount: options.context?.recentCafes?.length ?? 0,
-        messageLength: cleanedMessage.length,
-    })
-
     if (options.context?.recentCafes?.length && cleanedMessage.length > 0) {
-        console.log("[runChatStream] Attempting to build crawl from context...")
         const contextCrawlDraft = await buildChatCrawlDraft([], cleanedMessage, options.context)
         if (contextCrawlDraft) {
-            console.log("[runChatStream] ✅ Successfully built crawl from context")
             await onChunk({ type: "crawlDraft", crawlDraft: contextCrawlDraft })
             await onChunk({
                 type: "complete",
@@ -280,9 +272,6 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             })
             return
         }
-        console.log("[runChatStream] ❌ buildChatCrawlDraft returned null, continuing to tool calls")
-    } else {
-        console.log("[runChatStream] No context available or empty message, proceeding to tool calls")
     }
 
     try {

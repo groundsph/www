@@ -105,6 +105,7 @@ export default function ChatWindow({
         { toolName: string; params: unknown; result: unknown }[]
     >([])
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const formRef = useRef<HTMLFormElement>(null)
 
     useEffect(() => {
         if (typeof window === "undefined") return
@@ -251,11 +252,7 @@ export default function ChatWindow({
         if (!autoSend || !prefillMessage || !input.trim()) return
         if (isLoading || currentRemaining <= 0) return
 
-        const form = document.querySelector('form[class*="p-3"]') as HTMLFormElement | null
-        if (form) {
-            const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
-            form.dispatchEvent(submitEvent)
-        }
+        formRef.current?.requestSubmit()
     }, [autoSend, prefillMessage, input, isLoading, currentRemaining])
 
     // Shared helper to process stream response
@@ -615,6 +612,7 @@ export default function ChatWindow({
 
             {/* Input */}
             <form
+                ref={formRef}
                 onSubmit={handleSubmit}
                 className='p-3 border-t border-primary/10 bg-background/80 backdrop-blur-sm'
             >
