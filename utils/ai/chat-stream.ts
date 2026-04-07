@@ -277,7 +277,6 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             await onChunk({
                 type: "complete",
                 message: `Built a crawl from your previous list with ${contextCrawlDraft.items.length} stops. ${contextCrawlDraft.description}`,
-                remaining: 10,
             })
             return
         }
@@ -320,7 +319,6 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
             await onChunk({
                 type: "complete",
                 message: finalMessage,
-                remaining: 10,
             })
             return
         }
@@ -411,7 +409,6 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                 await onChunk({
                     type: "complete",
                     message: finalMessage,
-                    remaining: 10,
                 })
                 return
             }
@@ -437,7 +434,6 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
         await onChunk({
             type: "complete",
             message: finalMessage,
-            remaining: 10,
         })
     } catch (error) {
         console.error(`Chat error for session ${sessionId}:`, error)

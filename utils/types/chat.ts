@@ -131,7 +131,7 @@ export const chatStreamChunkSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("complete"),
         message: z.string(),
-        remaining: z.number().int(),
+        remaining: z.number().int().optional(),
     }),
     z.object({
         type: z.literal("error"),
