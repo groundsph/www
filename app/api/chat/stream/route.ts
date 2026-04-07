@@ -5,6 +5,7 @@ import { getOrCreateChatSessionId } from "@/utils/chat-session"
 import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { getChatEnabled } from "@/utils/feature-flags"
 import { chatContextSchema } from "@/utils/types/chat"
+import { moderateMessage } from "@/utils/chat-moderation"
 import { z } from "zod"
 
 const requestSchema = z.object({
@@ -33,6 +34,15 @@ export async function POST(request: NextRequest) {
         if (!validated.success) {
             return new Response(
                 JSON.stringify({ type: "error", error: "Invalid message" }),
+                { status: 400, headers: { "Content-Type": "application/json" } }
+            )
+        }
+
+        // Moderate message content
+        const moderation = moderateMessage(validated.data.message)
+        if (!moderation.allowed) {
+            return new Response(
+                JSON.stringify({ type: "error", error: moderation.reason }),
                 { status: 400, headers: { "Content-Type": "application/json" } }
             )
         }
