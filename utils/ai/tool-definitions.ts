@@ -10,6 +10,7 @@ Available tools:
 - get_nearby_cafes: Find cafes near a specific location
 - get_top_rated: Get top rated cafes in a city
 - get_cafe_reviews: Get recent reviews for a specific cafe
+- get_cafe_menu: Get the menu for a specific cafe
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
@@ -149,6 +150,21 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                 properties: {
                     slug: { type: "string", description: "The cafe's unique slug identifier" },
                     limit: { type: "number", description: "Number of reviews to return (default 5, max 20)" },
+                },
+                required: ["slug"],
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_cafe_menu",
+            description: "Get the menu for a specific cafe. Returns items with names, descriptions, categories, and prices.",
+            parameters: {
+                type: "object",
+                properties: {
+                    slug: { type: "string", description: "The cafe's unique slug identifier" },
+                    category: { type: "string", description: "Filter by menu category (e.g., 'Coffee', 'Pastry', 'Food')" },
                 },
                 required: ["slug"],
             },
