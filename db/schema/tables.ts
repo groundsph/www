@@ -775,7 +775,7 @@ export const systemLogs = pgTable("system_logs", {
         .notNull()
         .references(() => profiles.id, { onDelete: "set null" }),
     action: text("action").notNull(), // "create", "update", "delete", "approve", "reject", "role_change"
-    entityType: text("entity_type").notNull(), // "cafe", "blog", "event", "user", "featured", etc.
+    entityType: text("entity_type").notNull(), // "cafe", "blog", "event", "user", "featured", "review", "verification", "mall_cafe_verification", "badge"
     entityId: uuid("entity_id").notNull(),
     beforeValue: jsonb("before_value"), // State before change (null for create)
     afterValue: jsonb("after_value"), // State after change (null for delete)
