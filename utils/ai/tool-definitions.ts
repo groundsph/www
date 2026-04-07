@@ -13,6 +13,7 @@ Available tools:
 - get_cafe_menu: Get the menu for a specific cafe
 - get_cafe_hours: Check a cafe's operating hours and current open/closed status
 - search_blog_posts: Search blog posts about cafes and coffee
+- get_upcoming_events: Get upcoming coffee events and meetups
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
@@ -198,6 +199,20 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                     limit: { type: "number", description: "Number of results to return (default 5, max 20)" },
                 },
                 required: ["query"],
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_upcoming_events",
+            description: "Get upcoming coffee events, meetups, and happenings. Can filter by city.",
+            parameters: {
+                type: "object",
+                properties: {
+                    city: { type: "string", description: "Filter events by city (optional)" },
+                    limit: { type: "number", description: "Number of events to return (default 10)" },
+                },
             },
         },
     },

@@ -91,6 +91,10 @@ async function executeTool(toolName: string, args: string): Promise<unknown> {
             const { searchBlogPosts } = await import("@/utils/ai/tools/blog-search")
             return await searchBlogPosts(parsed.query as string, parsed.limit ?? 5)
         }
+        case "get_upcoming_events": {
+            const { getUpcomingEvents } = await import("@/utils/ai/tools/events")
+            return await getUpcomingEvents(parsed.city, parsed.limit ?? 10)
+        }
         default:
             throw new Error(`Unknown tool: ${toolName}`)
     }
