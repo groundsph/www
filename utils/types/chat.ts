@@ -42,6 +42,10 @@ export const chatRequestSchema = z.object({
     message: z.string().min(1).max(2000),
     sessionId: z.string().min(8),
     context: chatContextSchema.optional(),
+    history: z.array(z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string(),
+    })).max(10).optional(), // Last 10 messages for context
 })
 
 export const chatCardContextSchema = z.object({

@@ -12,12 +12,13 @@ interface StreamContext {
 export async function sendChatMessageStream(
     message: string,
     onChunk: (chunk: ChatStreamChunk) => void,
-    context: StreamContext
+    context: StreamContext,
+    history?: { role: "user" | "assistant"; content: string }[]
 ): Promise<void> {
     const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, context }),
+        body: JSON.stringify({ message, context, history }),
     })
 
     if (!response.ok) {

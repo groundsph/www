@@ -11,6 +11,10 @@ const requestSchema = z.object({
     message: z.string().min(1).max(2000),
     sessionId: z.string().min(8).optional(),
     context: chatContextSchema.optional(),
+    history: z.array(z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string(),
+    })).max(10).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -56,6 +60,7 @@ export async function POST(request: NextRequest) {
                         message: validated.data.message,
                         sessionId,
                         context: validated.data.context,
+                        history: validated.data.history,
                         onChunk: async (chunk) => {
                             const data = JSON.stringify(chunk)
                             controller.enqueue(encoder.encode(`data: ${data}\n\n`))

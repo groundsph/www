@@ -31,6 +31,7 @@ export interface ChatStreamOptions {
     message: string
     sessionId: string
     context?: ChatContext
+    history?: { role: "user" | "assistant"; content: string }[]
     onChunk: (chunk: ChatStreamChunk) => void | Promise<void>
 }
 
@@ -56,7 +57,7 @@ function stripLocationHint(text: string): string {
 }
 
 export async function runChatStream(options: ChatStreamOptions): Promise<void> {
-    const { message, sessionId, onChunk } = options
+    const { message, sessionId, onChunk, history } = options
 
     if (!message?.trim()) {
         await onChunk({ type: "error", error: "Please enter a message" })
@@ -65,10 +66,20 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
     await onChunk({ type: "progress", message: "Thinking...", step: 1 })
 
+    // Build messages array with conversation history
     const messages: ChatMessage[] = [
         { role: "system", content: CHAT_SYSTEM_PROMPT },
-        { role: "user", content: message },
     ]
+
+    // Add conversation history for multi-turn context
+    if (history && history.length > 0) {
+        for (const h of history) {
+            messages.push({ role: h.role, content: h.content })
+        }
+    }
+
+    // Add the current user message
+    messages.push({ role: "user", content: message })
 
     const toolCallRecords: { toolName: string; params: unknown; result: unknown }[] = []
 

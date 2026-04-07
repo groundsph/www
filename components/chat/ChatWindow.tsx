@@ -255,6 +255,15 @@ export default function ChatWindow({
         formRef.current?.requestSubmit()
     }, [autoSend, prefillMessage, input, isLoading, currentRemaining])
 
+    // Build conversation history from recent messages
+    const buildHistory = useCallback(() => {
+        // Send last 10 messages (5 exchanges) for context
+        return messages.slice(-10).map((m) => ({
+            role: m.role,
+            content: m.content,
+        }))
+    }, [messages])
+
     // Shared helper to process stream response
     const processStreamResponse = useCallback(async (
         content: string,
@@ -316,11 +325,12 @@ export default function ChatWindow({
                 recentToolCalls,
                 pathname: window.location.pathname,
                 pageTitle: document.title,
-            }
+            },
+            buildHistory()
         )
 
         return { cafes, cardContext, crawlDraft, finalMessage, finalRemaining }
-    }, [currentRemaining, recentCafes, recentToolCalls, scrollToBottom, trigger])
+    }, [currentRemaining, recentCafes, recentToolCalls, scrollToBottom, trigger, buildHistory])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
