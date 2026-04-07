@@ -3,6 +3,7 @@
 import { useHaptics } from "@/hooks/useHaptics"
 import Image from "next/image"
 import { Coffee, MapPin, Star } from "lucide-react"
+import { motion } from "motion/react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
 
@@ -20,15 +21,29 @@ export default function ChatCafeCarousel({ cafes, cardContext }: ChatCafeCarouse
                 <p className="text-xs text-text/60 mb-2">{cardContext.title}</p>
             )}
             <div className="flex flex-row gap-4 min-w-full overflow-x-auto overscroll-x-contain px-2 pt-2 pb-4 snap-x snap-mandatory scroll-px-2">
-                {cafes.map((cafe) => (
-                    <a
+                {cafes.map((cafe, index) => (
+                    <motion.a
                         key={cafe.id}
                         href={`/cafes/${cafe.slug}`}
                         onClick={() => trigger("light")}
+                        initial={{ opacity: 0, x: 20, scale: 0.95 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        transition={{
+                            delay: index * 0.08,
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 25,
+                        }}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
                         className="group shrink-0 w-4/5 max-w-[85svw] snap-start flex flex-col gap-3"
                     >
                         <div className="flex items-center gap-3 bg-background rounded-lg p-2 shadow-sm shadow-black/10">
-                            <div className="w-14 h-14 rounded-lg overflow-hidden bg-text/5 shrink-0">
+                            <motion.div
+                                className="w-14 h-14 rounded-lg overflow-hidden bg-text/5 shrink-0"
+                                whileHover={{ scale: 1.05 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                            >
                                 {cafe.coverImageUrl ? (
                                     <Image
                                         src={getCafeThumbnailUrl(cafe.coverImageUrl)}
@@ -42,7 +57,7 @@ export default function ChatCafeCarousel({ cafes, cardContext }: ChatCafeCarouse
                                         <Coffee className="w-6 h-6 text-text opacity-30" />
                                     </div>
                                 )}
-                            </div>
+                            </motion.div>
                             <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold text-text group-hover:text-primary transition-colors truncate">
                                     {cafe.title}
@@ -79,7 +94,7 @@ export default function ChatCafeCarousel({ cafes, cardContext }: ChatCafeCarouse
                                 ))}
                             </div>
                         )} */}
-                    </a>
+                    </motion.a>
                 ))}
             </div>
         </div>
