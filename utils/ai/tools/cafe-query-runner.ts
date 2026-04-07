@@ -211,6 +211,14 @@ function buildConditions(params: CafeQueryInput) {
         conditions.push(eq(cafes.hasOutdoorSeating, params.hasOutdoorSeating))
     }
 
+    if (params.hasDecaf !== undefined) {
+        conditions.push(eq(cafes.hasDecaf, params.hasDecaf))
+    }
+
+    if (params.hasNonDairy !== undefined) {
+        conditions.push(eq(cafes.hasNonDairy, params.hasNonDairy))
+    }
+
     // Pricing
     if (params.priceLevel) {
         conditions.push(eq(cafes.priceLevel, params.priceLevel))
