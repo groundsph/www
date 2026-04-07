@@ -758,6 +758,16 @@ export async function deleteCafe(cafeId: string): Promise<AdminActionResult> {
         await updateContributorScoutStats(contributorId)
     }
 
+    // Log the cafe deletion
+    await logSystemAction(
+        "delete",
+        "cafe",
+        cafeId,
+        { name: cafe.name, isPublished: wasPublished, region: cafe.region },
+        null,
+        { reason: "Cafe permanently deleted by admin", cafeName: cafe.name, contributorId }
+    )
+
     return { success: true }
 }
 
@@ -959,6 +969,20 @@ export async function updateCafe(
         changed_fields: changedFields
     })
 
+    // Log to system logs
+    await logSystemAction(
+        "update",
+        "cafe",
+        cafeId,
+        currentCafe ? { name: currentCafe.name, region: currentCafe.region } : null,
+        updates,
+        {
+            source: "admin_edit",
+            cafe_name: updates.name || currentCafe?.name,
+            changed_fields: changedFields,
+        }
+    )
+
     return { success: true }
 }
 
@@ -992,6 +1016,21 @@ export async function bulkMarkAsChain(
             .set({ isChain, updatedAt: new Date() })
             .where(inArray(cafes.id, cafeIds))
 
+        // Log the bulk chain marking
+        await logSystemAction(
+            "update",
+            "cafe",
+            cafeIds[0],
+            null,
+            { isChain },
+            {
+                reason: `Bulk marked ${cafeIds.length} cafes as ${isChain ? "chain" : "non-chain"}`,
+                cafe_count: cafeIds.length,
+                cafe_ids: cafeIds,
+                is_chain: isChain,
+            }
+        )
+
         return { success: true, count: cafeIds.length }
     } catch (error) {
         console.error("Error bulk marking cafes as chain:", error)
@@ -1018,7 +1057,20 @@ export async function adminDeleteCafeImage(imageUrl: string): Promise<AdminActio
     }
 
     // Use the storage action to delete the image
-    return deleteSingleCafeImageAction(imageUrl)
+    const result = await deleteSingleCafeImageAction(imageUrl)
+
+    if (result.success) {
+        await logSystemAction(
+            "delete",
+            "cafe",
+            imageUrl,
+            { imageUrl },
+            null,
+            { reason: "Cafe image deleted by admin", image_url: imageUrl }
+        )
+    }
+
+    return result
 }
 
 /**
@@ -1507,6 +1559,16 @@ export async function verifyManualPayment(cafeId: string, subscriptionId: string
         }
     }
 
+    // Log the subscription verification
+    await logSystemAction(
+        "approve",
+        "cafe",
+        cafeId,
+        { paymentVerified: false, status: "pending" },
+        { paymentVerified: true, status: "active", tier: sub.tier },
+        { reason: "Manual payment verified by admin", cafeName, tier: sub.tier, subscriptionId }
+    )
+
     return { success: true, proofInfo }
 }
 
@@ -1611,6 +1673,16 @@ export async function rejectManualPayment(cafeId: string, subscriptionId: string
         }
     }
 
+    // Log the subscription rejection
+    await logSystemAction(
+        "reject",
+        "cafe",
+        cafeId,
+        { tier: sub?.tier },
+        { membershipTier: "free", isVerified: false },
+        { reason: reason || "Manual payment rejected by admin", cafeName: sub?.cafeName || "cafe", subscriptionId }
+    )
+
     return { success: true }
 }
 
@@ -1655,6 +1727,16 @@ export async function unpublishCafe(cafeId: string): Promise<AdminActionResult> 
     if (cafeResult[0]?.contributorId) {
         await updateContributorScoutStats(cafeResult[0].contributorId)
     }
+
+    // Log the cafe unpublish
+    await logSystemAction(
+        "update",
+        "cafe",
+        cafeId,
+        { isPublished: true },
+        { isPublished: false },
+        { reason: "Cafe unpublished by admin" }
+    )
 
     return { success: true }
 }
@@ -1757,6 +1839,16 @@ export async function upsertCafeStory(cafeId: string, content: string): Promise<
         return { success: false, error: "Failed to save story" }
     }
 
+    // Log the story upsert
+    await logSystemAction(
+        existingResult[0] ? "update" : "create",
+        "cafe",
+        cafeId,
+        existingResult[0] ? { storyExists: true } : null,
+        { contentLength: content.length },
+        { reason: existingResult[0] ? "Cafe story updated by admin" : "Cafe story created by admin" }
+    )
+
     return { success: true }
 }
 
@@ -1800,6 +1892,16 @@ export async function deleteCafeStory(cafeId: string): Promise<AdminActionResult
         console.error("Error deleting cafe story:", error)
         return { success: false, error: "Failed to delete story" }
     }
+
+    // Log the story deletion
+    await logSystemAction(
+        "delete",
+        "cafe",
+        cafeId,
+        { storyExists: true },
+        null,
+        { reason: "Cafe story deleted by admin" }
+    )
 
     return { success: true }
 }
@@ -2394,6 +2496,16 @@ export async function createBadgeDefinition(badge: {
             .returning()
 
         const newBadge = result[0]
+
+        await logSystemAction(
+            "create",
+            "badge",
+            newBadge.id,
+            null,
+            { name: newBadge.name, description: newBadge.description, category: newBadge.category, rarity: newBadge.rarity },
+            { reason: "Badge definition created by admin" }
+        )
+
         return {
             success: true,
             badge: {
@@ -2458,6 +2570,15 @@ export async function updateBadgeDefinition(
         return { success: false, error: "Failed to update badge" }
     }
 
+    await logSystemAction(
+        "update",
+        "badge",
+        badgeId,
+        null,
+        updates as Record<string, unknown>,
+        { reason: "Badge definition updated by admin" }
+    )
+
     return { success: true }
 }
 
@@ -2497,6 +2618,15 @@ export async function deleteBadgeDefinition(badgeId: string): Promise<AdminActio
     if (badgeResult[0]?.imageUrl) {
         await deleteBadgeImageAction(badgeResult[0].imageUrl)
     }
+
+    await logSystemAction(
+        "delete",
+        "badge",
+        badgeId,
+        null,
+        null,
+        { reason: "Badge definition deleted by admin" }
+    )
 
     return { success: true }
 }
@@ -3000,6 +3130,22 @@ export async function createFeaturedSchedule(schedule: {
 
         const cafe = cafeResult[0]
 
+        // Log the featured schedule creation
+        await logSystemAction(
+            "create",
+            "featured",
+            newSchedule.id,
+            null,
+            {
+                cafeId: schedule.cafe_id,
+                startDate: schedule.start_date,
+                endDate: schedule.end_date,
+                slotType: "hero",
+                cafeName: cafe?.name,
+            },
+            { reason: "Featured schedule created by admin", cafeName: cafe?.name }
+        )
+
         return {
             success: true,
             schedule: {
@@ -3113,6 +3259,16 @@ export async function updateFeaturedSchedule(
         return { success: false, error: "Failed to update featured schedule" }
     }
 
+    // Log the featured schedule update
+    await logSystemAction(
+        "update",
+        "featured",
+        scheduleId,
+        null,
+        updates as Record<string, unknown>,
+        { reason: "Featured schedule updated by admin" }
+    )
+
     return { success: true }
 }
 
@@ -3140,6 +3296,16 @@ export async function deleteFeaturedSchedule(scheduleId: string): Promise<AdminA
         console.error("Error deleting featured schedule:", error)
         return { success: false, error: "Failed to delete featured schedule" }
     }
+
+    // Log the featured schedule deletion
+    await logSystemAction(
+        "delete",
+        "featured",
+        scheduleId,
+        null,
+        null,
+        { reason: "Featured schedule deleted by admin" }
+    )
 
     return { success: true }
 }
@@ -3739,6 +3905,16 @@ export async function updateModeratorRegions(targetUserId: string, regions: stri
         return { success: false, error: "Failed to update moderator regions" }
     }
 
+    // Log the moderator regions update
+    await logSystemAction(
+        "role_change",
+        "user",
+        targetUserId,
+        null,
+        { moderatorRegions: normalized },
+        { reason: "Moderator regions updated by admin", targetUserId, regions: normalized }
+    )
+
     return { success: true }
 }
 
@@ -3876,6 +4052,16 @@ export async function adminUpdateFeaturedRequestStatus(
         console.error('Error updating featured request:', error)
         return { success: false, error: 'Failed to update request' }
     }
+
+    // Log the featured request status update
+    await logSystemAction(
+        status === "approved" ? "approve" : "reject",
+        "featured",
+        requestId,
+        null,
+        { status, adminNotes },
+        { reason: `Featured slot request ${status} by admin` }
+    )
 
     return { success: true }
 }

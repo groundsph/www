@@ -6,6 +6,7 @@ import { eq, and, desc, count, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { createNotification } from "./user-notifications"
+import { logSystemAction } from "./system-logs"
 
 export interface PendingBlogPost {
     id: string
@@ -179,6 +180,16 @@ export async function rejectBlogPost(
 
         revalidatePath("/admin/moderation")
         revalidatePath("/blog")
+
+        // Log the blog post rejection
+        await logSystemAction(
+            "reject",
+            "blog",
+            postId,
+            { status: "pending" },
+            { status: "archived", rejectionReason: reason },
+            { reason: `Blog post rejected: ${reason}`, postTitle: existing[0].title }
+        )
 
         return { success: true }
     } catch (error) {
