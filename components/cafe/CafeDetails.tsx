@@ -27,6 +27,7 @@ import {
 import CafeHero from "@/components/cafe/CafeHero"
 import CafeSidebar from "@/components/cafe/CafeSidebar"
 import CafeTabs from "@/components/cafe/CafeTabs"
+import CafeEditBanner from "@/components/cafe/CafeEditBanner"
 import {
     AboutTabContent,
     DetailsTabContent,
@@ -78,12 +79,16 @@ export default function CafeDetails({
     reviews = [],
     menuItems = [],
     heroImage,
+    canEdit = false,
+    editRole = null,
 }: {
     cafe: CafeWithRatings
     reviews?: Review[]
     menuItems?: CafeMenuItem[]
     /** Server-rendered hero image for better LCP */
     heroImage?: React.ReactNode
+    canEdit?: boolean
+    editRole?: "admin" | "moderator" | null
 }) {
     // Auth
     const authUser = useAuth().user
@@ -270,6 +275,15 @@ export default function CafeDetails({
                 onOpenAddToCollection={() => setIsAddToCollectionOpen(true)}
                 heroImage={heroImage}
             />
+
+            {/* Edit Banner - shown for admins/moderators */}
+            {canEdit && editRole && (
+                <CafeEditBanner
+                    cafeId={cafe.id}
+                    cafeName={cafe.name}
+                    role={editRole}
+                />
+            )}
 
             {/* Mobile Layout (< md) */}
             <section className='md:hidden py-4 w-full'>

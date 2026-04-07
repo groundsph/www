@@ -4,6 +4,7 @@ import Link from "next/link"
 import type { Metadata } from "next"
 import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"
 import { getCafeMenuItems } from "@/app/api/actions/owner"
+import { getCafeEditPermission } from "@/app/api/actions/cafe-edit-permission"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { getCafeDescription, getCafeThumbnailUrl } from "@/utils/extras"
 
@@ -169,6 +170,11 @@ export default async function CafePage({
         cafe ? getCafeMenuItems(cafe.id) : [],
     ])
 
+    // Check if user can edit this cafe
+    const editPermission = cafe
+        ? await getCafeEditPermission(cafe.id)
+        : { canEdit: false, role: null }
+
     if (!cafe)
         return (
             <section
@@ -204,6 +210,8 @@ export default async function CafePage({
                 cafe={cafe}
                 reviews={reviews}
                 menuItems={menuItems}
+                canEdit={editPermission.canEdit}
+                editRole={editPermission.role}
                 heroImage={
                     <CafeHeroImage
                         thumbnail={cafe.thumbnail ?? "placeholder"}
