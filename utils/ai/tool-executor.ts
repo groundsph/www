@@ -10,7 +10,12 @@ import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
 import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 
 export async function executeTool(toolName: string, args: string): Promise<unknown> {
-    const parsed = JSON.parse(args)
+    let parsed: unknown
+    try {
+        parsed = JSON.parse(args)
+    } catch {
+        return { error: "Invalid tool arguments" }
+    }
 
     switch (toolName) {
         case "query_cafes":
