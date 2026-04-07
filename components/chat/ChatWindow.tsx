@@ -39,6 +39,39 @@ interface StreamResult {
     finalRemaining: number
 }
 
+function TypingIndicator() {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="flex justify-start"
+        >
+            <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-background border border-primary/10">
+                <div className="flex items-center gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                        <motion.span
+                            key={i}
+                            className="w-2 h-2 rounded-full bg-text/40"
+                            animate={{
+                                opacity: [0.3, 1, 0.3],
+                                scale: [0.8, 1, 0.8],
+                            }}
+                            transition={{
+                                duration: 1.2,
+                                repeat: Infinity,
+                                delay: i * 0.2,
+                                ease: "easeInOut",
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
+        </motion.div>
+    )
+}
+
 export default function ChatWindow({
     remainingMessages,
     onClose,
@@ -515,6 +548,9 @@ export default function ChatWindow({
                             <ChatMessage message={message} />
                         </motion.div>
                     ))}
+                    {isLoading && !streamState.progressMessage && (
+                        <TypingIndicator key="typing-indicator" />
+                    )}
                     {isLoading && streamState.progressMessage && (
                         <motion.div
                             key="stream-progress"
