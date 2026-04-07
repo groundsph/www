@@ -15,6 +15,7 @@ Available tools:
 - search_blog_posts: Search blog posts about cafes and coffee
 - get_upcoming_events: Get upcoming coffee events and meetups
 - find_hidden_gems: Discover hidden gem cafes and lesser-known spots
+- find_cafes_with_feature: Find cafes with specific combinations of amenities
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
@@ -228,6 +229,27 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                     city: { type: "string", description: "Filter hidden gems by city (optional)" },
                     limit: { type: "number", description: "Number of results (default 10)" },
                 },
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "find_cafes_with_feature",
+            description: "Find cafes that have a specific combination of features/amenities. Use when the user asks for multiple amenity requirements at once.",
+            parameters: {
+                type: "object",
+                properties: {
+                    city: { type: "string", description: "City to search in (optional)" },
+                    province: { type: "string", description: "Province to search in (optional)" },
+                    features: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "List of features to search for. Available: wifi, sockets, aircon, pet friendly, work friendly, food, outdoor, parking, halal, decaf, non-dairy",
+                    },
+                    limit: { type: "number", description: "Max results (default 20)" },
+                },
+                required: ["features"],
             },
         },
     },

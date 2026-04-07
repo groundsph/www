@@ -124,6 +124,10 @@ async function executeTool(toolName: string, args: string): Promise<unknown> {
             const { findHiddenGems } = await import("@/utils/ai/tools/hidden-gems")
             return await findHiddenGems(parsed.city, parsed.limit ?? 10)
         }
+        case "find_cafes_with_feature": {
+            const { findCafesWithFeature } = await import("@/utils/ai/tools/feature-search")
+            return await findCafesWithFeature(parsed)
+        }
         default:
             throw new Error(`Unknown tool: ${toolName}`)
     }

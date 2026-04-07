@@ -29,6 +29,9 @@ export const cafeQuerySchema = z.object({
     isWorkFriendly: z.boolean().optional(),
     servesFood: z.boolean().optional(),
     hasOutdoorSeating: z.boolean().optional(),
+    hasParking: z.boolean().optional(),
+    hasDecaf: z.boolean().optional(),
+    hasNonDairy: z.boolean().optional(),
 
     // Pricing
     priceLevel: z.enum(["low", "medium", "high"]).optional(),
