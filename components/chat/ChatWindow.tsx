@@ -277,6 +277,7 @@ export default function ChatWindow({
                             progressStep: chunk.step ?? 0,
                         })
                         trigger("selection")
+                        setTimeout(scrollToBottom, 50)
                         break
                     case "tool":
                         setStreamState((prev) => ({
@@ -288,14 +289,17 @@ export default function ChatWindow({
                             ...prev,
                             { toolName: chunk.toolName, params: chunk.params, result: {} },
                         ])
+                        setTimeout(scrollToBottom, 50)
                         break
                     case "cafes":
                         cafes.push(...chunk.cafes)
                         cardContext = chunk.cardContext
                         setRecentCafes((prev) => [...prev, ...chunk.cafes])
+                        setTimeout(scrollToBottom, 50)
                         break
                     case "crawlDraft":
                         crawlDraft = chunk.crawlDraft
+                        setTimeout(scrollToBottom, 50)
                         break
                     case "complete":
                         finalMessage = chunk.message
@@ -316,7 +320,7 @@ export default function ChatWindow({
         )
 
         return { cafes, cardContext, crawlDraft, finalMessage, finalRemaining }
-    }, [currentRemaining, recentCafes, recentToolCalls, trigger])
+    }, [currentRemaining, recentCafes, recentToolCalls, scrollToBottom, trigger])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -368,6 +372,7 @@ export default function ChatWindow({
             }
 
             setMessages((prev) => [...prev, assistantMessage])
+            setTimeout(scrollToBottom, 100)
             trigger("success")
             setCurrentRemaining(finalRemaining)
         } catch (err) {
@@ -410,6 +415,7 @@ export default function ChatWindow({
                 }
 
                 setMessages((prev) => [...prev, assistantMessage])
+                setTimeout(scrollToBottom, 100)
                 trigger("success")
                 setCurrentRemaining(finalRemaining)
             } catch (err) {
