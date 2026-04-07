@@ -1,5 +1,7 @@
 "use client"
 
+import { useRef } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { EventWithCafe } from "@/utils/types/extra"
 import EventCard from "./EventCard"
 import { CalendarX } from "lucide-react"
@@ -17,6 +19,19 @@ export default function EventList({
     emptyMessage = "No events found",
     variant = "grid",
 }: EventListProps) {
+    const parentRef = useRef<HTMLDivElement>(null)
+
+    const virtualizer = useVirtualizer({
+        count: events.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 100, // estimated compact event card height
+        overscan: 5,
+        measureElement:
+            typeof window !== "undefined" && "ResizeObserver" in window
+                ? (element) => element.getBoundingClientRect().height
+                : undefined,
+    })
+
     if (loading) {
         return (
             <div
@@ -48,20 +63,44 @@ export default function EventList({
         )
     }
 
+    if (variant === "list") {
+        return (
+            <div ref={parentRef} className="overflow-auto">
+                <div
+                    style={{
+                        height: `${virtualizer.getTotalSize()}px`,
+                        width: "100%",
+                        position: "relative",
+                    }}
+                >
+                    {virtualizer.getVirtualItems().map((virtualItem) => {
+                        const event = events[virtualItem.index]
+                        return (
+                            <div
+                                key={event.id}
+                                ref={virtualizer.measureElement}
+                                data-index={virtualItem.index}
+                                style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    transform: `translateY(${virtualItem.start}px)`,
+                                }}
+                            >
+                                <EventCard event={event} variant="compact" />
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+        )
+    }
+
     return (
-        <div
-            className={
-                variant === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    : "flex flex-col gap-4"
-            }
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event) => (
-                <EventCard
-                    key={event.id}
-                    event={event}
-                    variant={variant === "list" ? "compact" : "default"}
-                />
+                <EventCard key={event.id} event={event} variant="default" />
             ))}
         </div>
     )
