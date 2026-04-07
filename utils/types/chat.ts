@@ -144,3 +144,13 @@ export const chatStreamChunkSchema = z.discriminatedUnion("type", [
 ])
 
 export type ChatStreamChunk = z.infer<typeof chatStreamChunkSchema>
+
+export interface ChatMessage {
+    id: string
+    role: "user" | "assistant"
+    content: string
+    timestamp: Date
+    cafes?: ChatCafeCard[]
+    cardContext?: ChatCardContext
+    crawlDraft?: ChatCrawlDraft
+}

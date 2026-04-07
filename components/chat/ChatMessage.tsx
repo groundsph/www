@@ -3,22 +3,12 @@
 import { motion } from "motion/react"
 import MarkdownRender from "@/components/ui/MarkdownRender"
 import { cn } from "@/utils/cn"
-import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft } from "@/utils/types/chat"
+import type { ChatMessage } from "@/utils/types/chat"
 import ChatCafeCarousel from "./ChatCafeCarousel"
 import ChatCrawlPreview from "./ChatCrawlPreview"
 
-interface Message {
-    id: string
-    role: "user" | "assistant"
-    content: string
-    timestamp: Date
-    cafes?: ChatCafeCard[]
-    cardContext?: ChatCardContext
-    crawlDraft?: ChatCrawlDraft
-}
-
 interface ChatMessageProps {
-    message: Message
+    message: ChatMessage
 }
 
 export default function ChatMessage({ message }: ChatMessageProps) {

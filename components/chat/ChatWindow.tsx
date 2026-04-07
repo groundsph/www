@@ -15,17 +15,7 @@ import {
     shouldClearChatHistory,
 } from "@/utils/chat-history"
 import { subscribeChatEvents } from "@/utils/chat-events"
-import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatStreamChunk } from "@/utils/types/chat"
-
-interface Message {
-    id: string
-    role: "user" | "assistant"
-    content: string
-    timestamp: Date
-    cafes?: ChatCafeCard[]
-    cardContext?: ChatCardContext
-    crawlDraft?: ChatCrawlDraft
-}
+import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatMessage as ChatMessageType, ChatStreamChunk } from "@/utils/types/chat"
 
 interface ChatWindowProps {
     remainingMessages: number
@@ -96,21 +86,21 @@ export default function ChatWindow({
 }: ChatWindowProps) {
     const isDev = process.env.NODE_ENV === "development"
     const { trigger } = useHaptics()
-    const [messages, setMessages] = useState<Message[]>(() => {
+    const [messages, setMessages] = useState<ChatMessageType[]>(() => {
         if (typeof window === "undefined") return []
         if (shouldClearChatHistory()) {
             clearChatHistory()
             return []
         }
         migrateLegacyChatHistory()
-        const saved = loadChatHistory<Message>()
+        const saved = loadChatHistory<ChatMessageType>()
         return saved.map((m) => ({ ...m, timestamp: new Date(m.timestamp) }))
     })
     const [input, setInput] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [currentRemaining, setCurrentRemaining] = useState(remainingMessages)
-    const [pendingMessage, setPendingMessage] = useState<Message | null>(null)
+    const [pendingMessage, setPendingMessage] = useState<ChatMessageType | null>(null)
     const [streamState, setStreamState] = useState<StreamState>({
         isStreaming: false,
         progressMessage: null,
@@ -279,7 +269,7 @@ export default function ChatWindow({
         if (!input.trim() || isLoading || currentRemaining <= 0) return
 
         trigger("rigid")
-        const userMessage: Message = {
+        const userMessage: ChatMessageType = {
             id: crypto.randomUUID(),
             role: "user",
             content: input.trim(),
@@ -364,7 +354,7 @@ export default function ChatWindow({
                 }
             )
 
-            const assistantMessage: Message = {
+            const assistantMessage: ChatMessageType = {
                 id: crypto.randomUUID(),
                 role: "assistant",
                 content: finalMessage,
@@ -456,7 +446,7 @@ export default function ChatWindow({
                     }
                 )
 
-                const assistantMessage: Message = {
+            const assistantMessage: ChatMessageType = {
                     id: crypto.randomUUID(),
                     role: "assistant",
                     content: finalMessage,
