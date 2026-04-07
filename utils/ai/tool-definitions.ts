@@ -12,6 +12,7 @@ Available tools:
 - get_cafe_reviews: Get recent reviews for a specific cafe
 - get_cafe_menu: Get the menu for a specific cafe
 - get_cafe_hours: Check a cafe's operating hours and current open/closed status
+- search_blog_posts: Search blog posts about cafes and coffee
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
@@ -182,6 +183,21 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                     slug: { type: "string", description: "The cafe's unique slug identifier" },
                 },
                 required: ["slug"],
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "search_blog_posts",
+            description: "Search blog posts about cafes, coffee, and the Philippine coffee scene. Returns articles with titles, excerpts, and metadata.",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: { type: "string", description: "Search query for blog posts" },
+                    limit: { type: "number", description: "Number of results to return (default 5, max 20)" },
+                },
+                required: ["query"],
             },
         },
     },
