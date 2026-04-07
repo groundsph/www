@@ -154,3 +154,10 @@ export interface ChatMessage {
     cardContext?: ChatCardContext
     crawlDraft?: ChatCrawlDraft
 }
+
+// Tool call record for tracking tool executions
+export interface ToolCallRecord {
+    toolName: string
+    params: unknown
+    result: unknown
+}

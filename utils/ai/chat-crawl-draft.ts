@@ -1,5 +1,4 @@
-import type { ChatCrawlDraft, ChatContext } from "@/utils/types/chat"
-import type { ToolCallRecord } from "@/utils/ai/chat-tools"
+import type { ChatCrawlDraft, ChatContext, ToolCallRecord } from "@/utils/types/chat"
 import type { OperatingHours } from "@/utils/types/cafe"
 import { buildRoutePlan } from "@/utils/crawls/route-planner"
 

@@ -1,5 +1,4 @@
-import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
-import type { ToolCallRecord } from "@/utils/ai/chat-tools"
+import type { ChatCafeCard, ChatCardContext, ToolCallRecord } from "@/utils/types/chat"
 
 type CardResult = { cafes: ChatCafeCard[]; cardContext?: ChatCardContext }
 
