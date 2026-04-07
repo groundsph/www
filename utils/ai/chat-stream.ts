@@ -81,6 +81,18 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
     // Add the current user message
     messages.push({ role: "user", content: message })
 
+    // Insert page context if available
+    if (options.context?.cafeSlug) {
+        const { getCafeBySlug } = await import("@/utils/ai/tools/cafe-insights")
+        const cafeInfo = await getCafeBySlug(options.context.cafeSlug)
+        if (cafeInfo && "name" in cafeInfo) {
+            messages.splice(1, 0, {
+                role: "system",
+                content: `The user is currently viewing the cafe page for "${cafeInfo.name}" (${cafeInfo.slug}) in ${cafeInfo.city_municipality}, ${cafeInfo.province}. Use this context when answering their questions.`,
+            })
+        }
+    }
+
     const toolCallRecords: { toolName: string; params: unknown; result: unknown }[] = []
 
     const cleanedMessage = stripLocationHint(message)
