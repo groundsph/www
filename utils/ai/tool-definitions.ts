@@ -138,4 +138,19 @@ export const CHAT_TOOLS: ToolDefinition[] = [
             parameters: { type: "object", properties: {} },
         },
     },
+    {
+        type: "function",
+        function: {
+            name: "get_cafe_reviews",
+            description: "Get recent reviews for a specific cafe. Returns the latest reviews with ratings, comments, and author info.",
+            parameters: {
+                type: "object",
+                properties: {
+                    slug: { type: "string", description: "The cafe's unique slug identifier" },
+                    limit: { type: "number", description: "Number of reviews to return (default 5, max 20)" },
+                },
+                required: ["slug"],
+            },
+        },
+    },
 ]

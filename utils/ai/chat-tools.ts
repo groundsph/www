@@ -100,6 +100,10 @@ async function executeTool(toolName: string, args: string): Promise<unknown> {
         case "get_grounds_info": {
             return getGroundsInfo()
         }
+        case "get_cafe_reviews": {
+            const { getCafeReviews } = await import("@/utils/ai/tools/cafe-reviews")
+            return await getCafeReviews(parsed.slug as string, parsed.limit ?? 5)
+        }
         default:
             throw new Error(`Unknown tool: ${toolName}`)
     }
