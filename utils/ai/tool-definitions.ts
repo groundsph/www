@@ -17,6 +17,7 @@ Available tools:
 - find_hidden_gems: Discover hidden gem cafes and lesser-known spots
 - find_cafes_with_feature: Find cafes with specific combinations of amenities
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
+- get_cafe_stats: Get aggregate statistics about cafes
 
 Rules:
 1. Always use tools when the user asks for specific cafe information
@@ -250,6 +251,19 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                     limit: { type: "number", description: "Max results (default 20)" },
                 },
                 required: ["features"],
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_cafe_stats",
+            description: "Get aggregate statistics about cafes -- total counts, average ratings, feature breakdowns. Can be scoped to a city.",
+            parameters: {
+                type: "object",
+                properties: {
+                    city: { type: "string", description: "Get stats for a specific city (optional, defaults to all)" },
+                },
             },
         },
     },
