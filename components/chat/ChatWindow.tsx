@@ -620,7 +620,7 @@ export default function ChatWindow({
             <form
                 ref={formRef}
                 onSubmit={handleSubmit}
-                className='p-3 border-t border-primary/10 bg-background/80 backdrop-blur-sm'
+                className='p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-primary/10 bg-background/80 backdrop-blur-sm'
             >
                 <div className='relative flex gap-2'>
                     <div className='flex-1 relative'>
@@ -628,6 +628,11 @@ export default function ChatWindow({
                             type='text'
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
+                            onFocus={() => {
+                                setTimeout(() => {
+                                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+                                }, 300)
+                            }}
                             placeholder={
                                 currentRemaining > 0
                                     ? "Ask about cafes, locations, or recommendations..."
