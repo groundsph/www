@@ -435,28 +435,40 @@ export default function CafesPageClient() {
         setFilters((prev) => ({ ...prev, [key]: !prev[key] }))
     }
 
-    const handleCafeClick = (cafeSlug: string) => {
-        if (!IS_SCROLL_RESTORE_ENABLED) return
-        if (typeof window !== "undefined") {
-            try {
-                sessionStorage.setItem(
-                    SESSION_STORAGE_SCROLL_POSITION_KEY,
-                    JSON.stringify({
-                        page: currentPage,
-                        scrollY: window.scrollY,
-                        filters: filters,
-                        search: search,
-                        sortBy: sortBy,
-                        timestamp: Date.now(),
-                        cafeSlug: cafeSlug,
-                    })
-                )
-            } catch {
-                // Silently fail - sessionStorage may be unavailable or quota exceeded
-                // Non-critical feature, safe to ignore errors
+    const handleCafeClick = useCallback(
+        (cafeSlug: string) => {
+            if (!IS_SCROLL_RESTORE_ENABLED) return
+            if (typeof window !== "undefined") {
+                try {
+                    sessionStorage.setItem(
+                        SESSION_STORAGE_SCROLL_POSITION_KEY,
+                        JSON.stringify({
+                            page: currentPage,
+                            scrollY: window.scrollY,
+                            filters: filters,
+                            search: search,
+                            sortBy: sortBy,
+                            timestamp: Date.now(),
+                            cafeSlug: cafeSlug,
+                        })
+                    )
+                } catch {
+                    // Silently fail - sessionStorage may be unavailable or quota exceeded
+                    // Non-critical feature, safe to ignore errors
+                }
             }
-        }
-    }
+        },
+        [currentPage, filters, search, sortBy]
+    )
+
+    // Memoized handler to prevent unnecessary re-renders of CafeCard
+    const handleCafeCardClick = useCallback(
+        (cafeSlug: string) => {
+            trigger("light")
+            handleCafeClick(cafeSlug)
+        },
+        [trigger, handleCafeClick]
+    )
 
     // Count active filters (excluding empty values)
     const activeFilterCount = Object.entries(filters).filter(
@@ -991,10 +1003,7 @@ export default function CafesPageClient() {
                                         <CafeCard
                                             cafe={cafe}
                                             animationDelay={virtualItem.index}
-                                            onClick={() => {
-                                                trigger("light")
-                                                handleCafeClick(cafe.slug)
-                                            }}
+                                            onClick={() => handleCafeCardClick(cafe.slug)}
                                         />
                                     </div>
                                 )
