@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import type { Review } from "@/components/cafe/CafeDetails"
 import { formatDistanceToNow } from "date-fns"
 import {
@@ -33,7 +34,7 @@ interface ReviewItemProps {
     onEdit?: (review: Review) => void
 }
 
-export default function ReviewItem({
+const ReviewItem = React.memo(function ReviewItem({
     review,
     currentUser,
     onEdit,
@@ -356,4 +357,6 @@ export default function ReviewItem({
                 )}
         </div>
     )
-}
+})
+
+export default ReviewItem

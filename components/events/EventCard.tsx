@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { EventWithCafe } from "@/utils/types/extra"
 import { CalendarIcon, MapPinIcon, TicketIcon, Clock } from "lucide-react"
 import Image from "next/image"
@@ -11,7 +12,7 @@ interface EventCardProps {
     variant?: "default" | "compact"
 }
 
-export default function EventCard({
+const EventCard = React.memo(function EventCard({
     event,
     variant = "default",
 }: EventCardProps) {
@@ -175,4 +176,6 @@ export default function EventCard({
             </div>
         </article>
     )
-}
+})
+
+export default EventCard

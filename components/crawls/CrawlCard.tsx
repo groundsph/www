@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useHaptics } from "@/hooks/useHaptics"
 import Link from "next/link"
 import Image from "next/image"
@@ -18,7 +19,7 @@ export interface CrawlCardProps {
     }
 }
 
-export default function CrawlCard({ crawl }: CrawlCardProps) {
+const CrawlCard = React.memo(function CrawlCard({ crawl }: CrawlCardProps) {
     const { trigger } = useHaptics()
     return (
         <Link
@@ -66,4 +67,6 @@ export default function CrawlCard({ crawl }: CrawlCardProps) {
             </div>
         </Link>
     )
-}
+})
+
+export default CrawlCard

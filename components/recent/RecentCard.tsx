@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { ArrowRightIcon, MapPinIcon, Coffee } from "lucide-react"
 import Image from "next/image"
@@ -7,15 +8,17 @@ import { motion } from "motion/react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { useState } from "react"
 
-export default function RecentCard({
-    cafe,
-    idx,
-    animate = false,
-}: {
+interface RecentCardProps {
     cafe: CafeWithRatings
     idx: number
     animate?: boolean
-}) {
+}
+
+const RecentCard = React.memo(function RecentCard({
+    cafe,
+    idx,
+    animate = false,
+}: RecentCardProps) {
     const [imageLoaded, setImageLoaded] = useState(false)
 
     return (
@@ -89,4 +92,6 @@ export default function RecentCard({
             </div>
         </motion.a>
     )
-}
+})
+
+export default RecentCard

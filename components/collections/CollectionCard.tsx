@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
@@ -27,7 +28,7 @@ interface CollectionCardProps {
     }
 }
 
-export default function CollectionCard({
+const CollectionCard = React.memo(function CollectionCard({
     collection,
     showAuthor,
     author,
@@ -126,4 +127,6 @@ export default function CollectionCard({
             </div>
         </Link>
     )
-}
+})
+
+export default CollectionCard
