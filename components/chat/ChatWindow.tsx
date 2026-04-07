@@ -640,9 +640,11 @@ export default function ChatWindow({
                             }
                             disabled={isLoading || currentRemaining <= 0}
                             className={cn(
-                                "w-full px-4 py-3 pr-12 border rounded-xl text-sm transition-all duration-200",
-                                "bg-background focus:bg-background",
+                                "w-full px-4 py-3 pr-12 border rounded-xl text-sm",
+                                "transition-all duration-200 ease-out",
+                                "bg-background",
                                 "focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none",
+                                "focus:shadow-md focus:shadow-primary/5",
                                 "disabled:opacity-50 disabled:cursor-not-allowed",
                                 input.trim()
                                     ? "border-primary/30"
@@ -650,18 +652,14 @@ export default function ChatWindow({
                             )}
                             maxLength={2000}
                         />
-                        <AnimatePresence>
-                            {input.trim() && (
-                                <motion.span
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.8 }}
-                                    className='absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-text/30 font-medium'
-                                >
-                                    {input.length}/2000
-                                </motion.span>
+                        <span
+                            className={cn(
+                                "absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-text/30 font-medium transition-all duration-200",
+                                input.trim() ? "opacity-100 scale-100" : "opacity-0 scale-80 pointer-events-none"
                             )}
-                        </AnimatePresence>
+                        >
+                            {input.length}/2000
+                        </span>
                     </div>
                     <motion.button
                         type='submit'
