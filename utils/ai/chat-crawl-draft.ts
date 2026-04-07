@@ -99,23 +99,14 @@ export async function buildChatCrawlDraft(
     message: string,
     context?: ChatContext
 ): Promise<ChatCrawlDraft | null> {
-    // Debug logging
-    const hasContext = !!context
     const recentCafesCount = context?.recentCafes?.length ?? 0
     const crawlIntent = hasCrawlIntent(message)
     const useContext = shouldUseRecentContext(message)
 
-    console.log("[buildChatCrawlDraft] Checking context:", {
-        hasContext,
-        recentCafesCount,
-        crawlIntent,
-        useContext,
-        message: message.substring(0, 50),
-    })
+
 
     // Check for recent cafes when crawl intent is present
     if (recentCafesCount > 0 && crawlIntent && useContext) {
-        console.log("[buildChatCrawlDraft] ✅ Using recent context with", recentCafesCount, "cafes")
         const prefs = parseCrawlTimePreferences(message)
         const requestedCount = getRequestedCount(message, Math.min(recentCafesCount, MAX_ITEMS))
         const limitedCafes = context!.recentCafes!.slice(0, requestedCount)
