@@ -11,6 +11,7 @@ Available tools:
 - get_top_rated: Get top rated cafes in a city
 - get_cafe_reviews: Get recent reviews for a specific cafe
 - get_cafe_menu: Get the menu for a specific cafe
+- get_cafe_hours: Check a cafe's operating hours and current open/closed status
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
@@ -165,6 +166,20 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                 properties: {
                     slug: { type: "string", description: "The cafe's unique slug identifier" },
                     category: { type: "string", description: "Filter by menu category (e.g., 'Coffee', 'Pastry', 'Food')" },
+                },
+                required: ["slug"],
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "get_cafe_hours",
+            description: "Check a cafe's operating hours and whether it's currently open. Returns the full weekly schedule and current open/closed status.",
+            parameters: {
+                type: "object",
+                properties: {
+                    slug: { type: "string", description: "The cafe's unique slug identifier" },
                 },
                 required: ["slug"],
             },
