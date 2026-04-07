@@ -1,17 +1,8 @@
-import { runCafeQuery } from "@/utils/ai/tools/cafe-query-runner"
-import {
-    getCafeBySlug,
-    compareCafes,
-    listCitiesWithCounts,
-    getNearbyCafes,
-    getTopRatedCafes,
-} from "@/utils/ai/tools/cafe-insights"
-import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
-import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
 import { CHAT_SYSTEM_PROMPT, CHAT_TOOLS } from "@/utils/ai/tool-definitions"
+import { executeTool } from "@/utils/ai/tool-executor"
 import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatContext } from "@/utils/types/chat"
 
 const MAX_TOOL_CALLS_DEFAULT = 6
@@ -65,76 +56,6 @@ interface ChatMessage {
     tool_calls?: ToolCall[]
     tool_call_id?: string
     name?: string
-}
-
-async function executeTool(toolName: string, args: string): Promise<unknown> {
-    const parsed = JSON.parse(args)
-
-    switch (toolName) {
-        case "query_cafes": {
-            const result = await runCafeQuery(parsed as CafeQueryInput)
-            return result
-        }
-        case "get_cafe_by_slug": {
-            const result = await getCafeBySlug(parsed.slug as string)
-            return result
-        }
-        case "compare_cafes": {
-            const result = await compareCafes(parsed.slugA as string, parsed.slugB as string)
-            return result
-        }
-        case "list_cities": {
-            const result = await listCitiesWithCounts()
-            return result
-        }
-        case "get_nearby_cafes": {
-            const latLng: GeoPoint = { lat: parsed.lat, lng: parsed.lng }
-            const result = await getNearbyCafes(latLng, parsed.radiusKm as number)
-            return result
-        }
-        case "get_top_rated": {
-            const result = await getTopRatedCafes(parsed.city as string, parsed.limit ?? 10)
-            return result
-        }
-        case "get_grounds_info": {
-            const { getGroundsInfo } = await import("@/utils/ai/grounds-info")
-            return await getGroundsInfo()
-        }
-        case "get_cafe_reviews": {
-            const { getCafeReviews } = await import("@/utils/ai/tools/cafe-reviews")
-            return await getCafeReviews(parsed.slug as string, parsed.limit ?? 5)
-        }
-        case "get_cafe_menu": {
-            const { getCafeMenu } = await import("@/utils/ai/tools/cafe-menu")
-            return await getCafeMenu(parsed.slug as string, parsed.category)
-        }
-        case "get_cafe_hours": {
-            const { getCafeHours } = await import("@/utils/ai/tools/cafe-hours")
-            return await getCafeHours(parsed.slug as string)
-        }
-        case "search_blog_posts": {
-            const { searchBlogPosts } = await import("@/utils/ai/tools/blog-search")
-            return await searchBlogPosts(parsed.query as string, parsed.limit ?? 5)
-        }
-        case "get_upcoming_events": {
-            const { getUpcomingEvents } = await import("@/utils/ai/tools/events")
-            return await getUpcomingEvents(parsed.city, parsed.limit ?? 10)
-        }
-        case "find_hidden_gems": {
-            const { findHiddenGems } = await import("@/utils/ai/tools/hidden-gems")
-            return await findHiddenGems(parsed.city, parsed.limit ?? 10)
-        }
-        case "find_cafes_with_feature": {
-            const { findCafesWithFeature } = await import("@/utils/ai/tools/feature-search")
-            return await findCafesWithFeature(parsed)
-        }
-        case "get_cafe_stats": {
-            const { getCafeStats } = await import("@/utils/ai/tools/cafe-stats")
-            return await getCafeStats(parsed.city)
-        }
-        default:
-            throw new Error(`Unknown tool: ${toolName}`)
-    }
 }
 
 function validateMaxToolCalls(max?: number): number {
