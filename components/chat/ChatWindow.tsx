@@ -39,6 +39,14 @@ interface StreamResult {
     finalRemaining: number
 }
 
+const SUGGESTED_PROMPTS = [
+    { label: "Best cafes in Manila", icon: "🏙️" },
+    { label: "Find hidden gems near me", icon: "💎" },
+    { label: "Work-friendly cafes with WiFi", icon: "💻" },
+    { label: "Plan a cafe crawl in Cebu", icon: "🗺️" },
+    { label: "What is Grounds.ph?", icon: "☕" },
+]
+
 function TypingIndicator() {
     return (
         <motion.div
@@ -523,26 +531,31 @@ export default function ChatWindow({
                         >
                             <motion.div
                                 className='p-4 bg-secondary/10 rounded-2xl'
-                                animate={{
-                                    y: [0, -5, 0],
-                                    rotate: [0, 2, -2, 0],
-                                }}
-                                transition={{
-                                    duration: 4,
-                                    repeat: Infinity,
-                                    repeatType: "loop",
-                                    ease: "easeInOut",
-                                }}
+                                animate={{ y: [0, -5, 0], rotate: [0, 2, -2, 0] }}
+                                transition={{ duration: 4, repeat: Infinity, repeatType: "loop", ease: "easeInOut" }}
                             >
                                 <Sparkles className='w-8 h-8 text-secondary' />
                             </motion.div>
                             <div className='space-y-1'>
-                                <p className='text-sm font-medium'>
-                                    Ask me anything about cafes!
-                                </p>
-                                <p className='text-xs text-text/50'>
-                                    Locations, recommendations, amenities...
-                                </p>
+                                <p className='text-sm font-medium'>Ask me anything about cafes!</p>
+                                <p className='text-xs text-text/50'>Locations, recommendations, amenities...</p>
+                            </div>
+                            <div className='flex flex-wrap gap-2 justify-center pt-2'>
+                                {SUGGESTED_PROMPTS.map((prompt, i) => (
+                                    <motion.button
+                                        key={prompt.label}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.3 + i * 0.08 }}
+                                        whileHover={{ scale: 1.05, y: -2 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => setInput(prompt.label)}
+                                        className='px-3 py-2 text-xs rounded-full border border-primary/15 bg-primary/5 hover:bg-primary/10 transition-colors text-left'
+                                    >
+                                        <span className='mr-1'>{prompt.icon}</span>
+                                        {prompt.label}
+                                    </motion.button>
+                                ))}
                             </div>
                         </motion.div>
                     )}
