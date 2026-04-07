@@ -2,7 +2,7 @@ import CafeDetails from "@/components/cafe/CafeDetails"
 import CafeHeroImage from "@/components/cafe/CafeHeroImage"
 import Link from "next/link"
 import type { Metadata } from "next"
-import { getCafeBySlug, getReviewsByCafeId } from "@/app/api/actions/cafe"
+import { getCafeBySlug, getReviewsByCafeIdPaginated } from "@/app/api/actions/cafe"
 import { getCafeMenuItems } from "@/app/api/actions/owner"
 import { getCafeEditPermission } from "@/app/api/actions/cafe-edit-permission"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -165,8 +165,8 @@ export default async function CafePage({
     // Constants
     const { slug } = await params
     const cafe = await getCafeBySlug(slug)
-    const [reviews, menuItems] = await Promise.all([
-        cafe ? getReviewsByCafeId(cafe.id) : [],
+    const [{ reviews: initialReviews, hasMore: initialHasMore }, menuItems] = await Promise.all([
+        cafe ? getReviewsByCafeIdPaginated(cafe.id, 1, 10) : { reviews: [], hasMore: false },
         cafe ? getCafeMenuItems(cafe.id) : [],
     ])
 
@@ -208,7 +208,8 @@ export default async function CafePage({
             <CafeDetails
                 key={cafe.id}
                 cafe={cafe}
-                reviews={reviews}
+                initialReviews={initialReviews}
+                initialHasMore={initialHasMore}
                 menuItems={menuItems}
                 canEdit={editPermission.canEdit}
                 editRole={editPermission.role}

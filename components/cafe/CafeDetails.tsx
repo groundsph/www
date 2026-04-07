@@ -6,7 +6,8 @@ import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
 import Image from "next/image"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { getReviewsByCafeIdPaginated } from "@/app/api/actions/cafe"
 import {
     WifiIcon,
     PlugIcon,
@@ -74,16 +75,20 @@ export interface Review {
     } | null
 }
 
+const REVIEWS_PER_PAGE = 10
+
 export default function CafeDetails({
     cafe,
-    reviews = [],
+    initialReviews = [],
+    initialHasMore = false,
     menuItems = [],
     heroImage,
     canEdit = false,
     editRole = null,
 }: {
     cafe: CafeWithRatings
-    reviews?: Review[]
+    initialReviews?: Review[]
+    initialHasMore?: boolean
     menuItems?: CafeMenuItem[]
     /** Server-rendered hero image for better LCP */
     heroImage?: React.ReactNode
@@ -136,6 +141,12 @@ export default function CafeDetails({
     // Group Check-in Modal State
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false)
 
+    // Pagination state for reviews
+    const [allReviews, setAllReviews] = useState<Review[]>(initialReviews)
+    const [hasMoreReviews, setHasMoreReviews] = useState(initialHasMore)
+    const [currentReviewPage, setCurrentReviewPage] = useState(1)
+    const [isLoadingMoreReviews, setIsLoadingMoreReviews] = useState(false)
+
     // Check-in handler (called from modal) - no longer triggers milestone here
     const handleCheckIn = async (companionIds?: string[]) => {
         const result = await checkIn(companionIds)
@@ -178,7 +189,7 @@ export default function CafeDetails({
 
     // Find if user has reviewed
     const userReview = user
-        ? reviews.find((r) => r.user_id === user.id)
+        ? allReviews.find((r) => r.user_id === user.id)
         : undefined
 
     // Track page view for analytics
@@ -200,15 +211,38 @@ export default function CafeDetails({
         </li>
     )
 
+    // Load more reviews handler
+    const loadMoreReviews = useCallback(async () => {
+        if (isLoadingMoreReviews || !hasMoreReviews) return
+
+        setIsLoadingMoreReviews(true)
+        const nextPage = currentReviewPage + 1
+
+        try {
+            const { reviews: newReviews, hasMore } = await getReviewsByCafeIdPaginated(
+                cafe.id,
+                nextPage,
+                REVIEWS_PER_PAGE
+            )
+            setAllReviews((prev) => [...prev, ...newReviews])
+            setHasMoreReviews(hasMore)
+            setCurrentReviewPage(nextPage)
+        } catch (error) {
+            console.error("Failed to load more reviews:", error)
+        } finally {
+            setIsLoadingMoreReviews(false)
+        }
+    }, [cafe.id, currentReviewPage, hasMoreReviews, isLoadingMoreReviews])
+
     // Reviews Section Component (shared between mobile tabs and desktop)
     const ReviewsSection = () => (
         <div className='flex flex-col gap-6'>
             <div className='flex flex-row items-center justify-between'>
                 <h2 className='text-xl font-semibold font-serif flex items-center gap-2'>
                     Reviews
-                    {reviews.length > 0 && (
+                    {allReviews.length > 0 && (
                         <span className='text-sm font-normal text-text/60'>
-                            ({reviews.length})
+                            ({allReviews.length})
                         </span>
                     )}
                 </h2>
@@ -229,9 +263,9 @@ export default function CafeDetails({
                 )}
             </div>
 
-            {reviews.length > 0 ? (
+            {allReviews.length > 0 ? (
                 <div className='flex flex-col gap-4'>
-                    {reviews.map((review) => (
+                    {allReviews.map((review) => (
                         <ReviewItem
                             key={review.id}
                             review={review}
@@ -244,6 +278,15 @@ export default function CafeDetails({
                             }}
                         />
                     ))}
+                    {hasMoreReviews && (
+                        <button
+                            onClick={loadMoreReviews}
+                            disabled={isLoadingMoreReviews}
+                            className='w-full py-3 text-sm text-text/60 hover:text-text transition-colors disabled:opacity-50 cursor-pointer'
+                        >
+                            {isLoadingMoreReviews ? "Loading..." : "Load more reviews"}
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className='bg-text/5 rounded-xl border border-text/10 p-8 text-center'>
@@ -288,14 +331,14 @@ export default function CafeDetails({
             {/* Mobile Layout (< md) */}
             <section className='md:hidden py-4 w-full'>
                 <CafeTabs
-                    reviewCount={reviews.length}
+                    reviewCount={allReviews.length}
                     menuCount={menuItems.length}
                     tabContent={{
                         about: <AboutTabContent cafe={cafe} />,
                         details: (
                             <DetailsTabContent
                                 cafe={cafe}
-                                reviews={reviews}
+                                reviews={allReviews}
                                 onOpenHistory={() => setIsHistoryOpen(true)}
                             />
                         ),
@@ -400,7 +443,7 @@ export default function CafeDetails({
                 <aside className='md:col-span-3'>
                     <CafeSidebar
                         cafe={cafe}
-                        reviews={reviews}
+                        reviews={allReviews}
                         onOpenHistory={() => setIsHistoryOpen(true)}
                     />
                 </aside>

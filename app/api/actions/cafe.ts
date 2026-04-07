@@ -848,6 +848,115 @@ export async function getReviewsByCafeId(cafeId: string) {
 }
 
 /**
+ * Get paginated reviews for a specific cafe
+ */
+export async function getReviewsByCafeIdPaginated(
+    cafeId: string,
+    page: number = 1,
+    limit: number = 10
+) {
+    const offset = (page - 1) * limit
+
+    // Get total count
+    const [{ count: total }] = await db
+        .select({ count: count() })
+        .from(reviews)
+        .where(and(eq(reviews.cafeId, cafeId), eq(reviews.status, "published")))
+
+    // Get paginated reviews
+    const reviewsResult = await db
+        .select({
+            id: reviews.id,
+            rating: reviews.rating,
+            comment: reviews.comment,
+            createdAt: reviews.createdAt,
+            userId: reviews.userId,
+            images: reviews.images,
+            likesCount: reviews.likesCount,
+            isEdited: reviews.isEdited,
+            isPinnedByOwner: reviews.isPinnedByOwner,
+            pinnedAt: reviews.pinnedAt,
+            authorDisplayName: profiles.displayName,
+            authorUsername: profiles.username,
+            authorAvatarUrl: profiles.avatarUrl,
+        })
+        .from(reviews)
+        .leftJoin(profiles, eq(reviews.userId, profiles.id))
+        .where(and(eq(reviews.cafeId, cafeId), eq(reviews.status, "published")))
+        .orderBy(desc(reviews.isPinnedByOwner), desc(reviews.createdAt))
+        .limit(limit)
+        .offset(offset)
+
+    // Get interactions and owner responses for these reviews
+    const reviewIds = reviewsResult.map(r => r.id)
+    if (reviewIds.length === 0) {
+        return {
+            reviews: [],
+            total,
+            hasMore: false,
+        }
+    }
+
+    const [interactionsResult, responsesResult] = await Promise.all([
+        db.select({ reviewId: reviewInteractions.reviewId, userId: reviewInteractions.userId, interactionType: reviewInteractions.interactionType })
+            .from(reviewInteractions)
+            .where(inArray(reviewInteractions.reviewId, reviewIds)),
+        db.select({
+            reviewId: ownerReviewResponses.reviewId,
+            id: ownerReviewResponses.id,
+            response: ownerReviewResponses.response,
+            createdAt: ownerReviewResponses.createdAt,
+            updatedAt: ownerReviewResponses.updatedAt,
+            ownerId: ownerReviewResponses.ownerId,
+            ownerDisplayName: profiles.displayName,
+            ownerAvatarUrl: profiles.avatarUrl,
+        })
+            .from(ownerReviewResponses)
+            .leftJoin(profiles, eq(ownerReviewResponses.ownerId, profiles.id))
+            .where(inArray(ownerReviewResponses.reviewId, reviewIds)),
+    ])
+
+    const interactionsMap = new Map<string, { user_id: string; interaction_type: string }[]>()
+    for (const i of interactionsResult) {
+        if (!interactionsMap.has(i.reviewId)) interactionsMap.set(i.reviewId, [])
+        interactionsMap.get(i.reviewId)!.push({ user_id: i.userId, interaction_type: i.interactionType })
+    }
+
+    const responsesMap = new Map<string, { id: string; response_text: string; created_at: string | null; updated_at: string | null; owner: { display_name: string; avatar_url: string | null } }>()
+    for (const r of responsesResult) {
+        responsesMap.set(r.reviewId, {
+            id: r.id,
+            response_text: r.response,
+            created_at: r.createdAt?.toISOString() ?? null,
+            updated_at: r.updatedAt?.toISOString() ?? null,
+            owner: { display_name: r.ownerDisplayName ?? "", avatar_url: r.ownerAvatarUrl },
+        })
+    }
+
+    const reviewsWithDetails = reviewsResult.map(r => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        created_at: r.createdAt?.toISOString() ?? null,
+        user_id: r.userId,
+        images: r.images,
+        likes_count: r.likesCount ?? 0,
+        is_edited: r.isEdited ?? false,
+        is_pinned_by_owner: r.isPinnedByOwner ?? false,
+        pinned_at: r.pinnedAt?.toISOString() ?? null,
+        review_interactions: interactionsMap.get(r.id) || [],
+        author: { display_name: r.authorDisplayName ?? "", username: r.authorUsername ?? "", avatar_url: r.authorAvatarUrl },
+        owner_response: responsesMap.get(r.id) || null,
+    }))
+
+    return {
+        reviews: reviewsWithDetails,
+        total,
+        hasMore: offset + reviewsResult.length < total,
+    }
+}
+
+/**
  * Get the count of published cafes
  */
 export async function getPublishedCafeCount(): Promise<number> {
