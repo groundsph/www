@@ -285,6 +285,40 @@ Environment values live in `.env.local`. The example template is `.env.example`.
 | `bun db-studio` | Open Drizzle Studio |
 | `bun merge` | Merge `dev` branch into `prod` |
 | `bun run llm:models` | List available AI models |
+| `bun generate:icons` | Regenerate all PWA icons from source |
+| `./scripts/generate-icons.sh` | Regenerate all PWA icons from source |
+
+### PWA Icons
+
+The site supports "Add to Home Screen" on iOS and Android. Icons and metadata are configured in two places:
+
+- `app/manifest.ts` — Android web app manifest (name, icons, theme, display mode)
+- `app/layout.tsx` — iOS meta tags via Next.js metadata API (`appleWebApp`, `icons.apple`)
+
+#### Source icon
+
+The single source of truth is `public/icon.png` (2048x2048 PNG, no transparency). All other icon files are generated from this.
+
+#### Regenerating icons
+
+After replacing `public/icon.png` with a new design, run:
+
+```bash
+bun generate:icons
+```
+
+This generates all required sizes using macOS `sips`:
+
+- **Apple**: 57, 60, 72, 76, 114, 120, 144, 152, 180
+- **Android**: 36, 48, 72, 96, 144, 192
+- **Favicon**: 16, 32, 96
+- **MS**: 70, 144, 150, 310
+
+#### Icon design tips
+
+- **iOS**: The icon is a flat PNG. Design the final look into the image — there's no layering or glass effect for web app icons.
+- **Android (maskable)**: Keep critical elements (logo, text) inside the center ~80% of the canvas. The outer 20% may be clipped by device-specific masks (circle, squircle, rounded square). The 192x192 icon has `purpose: "maskable"` in the manifest.
+- **Start at 1024x1024 minimum** (2048x2048 preferred). Use a solid background — no transparency.
 
 ## Testing and Linting
 

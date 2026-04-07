@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: "default",
-        title: "Grounds",
+        title: "GroundsPH",
     },
     openGraph: {
         type: "website",
@@ -98,6 +98,20 @@ export const metadata: Metadata = {
         },
     },
     manifest: "/manifest.webmanifest",
+    icons: {
+        icon: [
+            { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+            { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+            { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+        ],
+        apple: [
+            { url: "/apple-icon-180x180.png", sizes: "180x180" },
+            { url: "/apple-icon-152x152.png", sizes: "152x152" },
+            { url: "/apple-icon-144x144.png", sizes: "144x144" },
+            { url: "/apple-icon-120x120.png", sizes: "120x120" },
+            { url: "/apple-icon-114x114.png", sizes: "114x114" },
+        ],
+    },
     category: "food and drink",
 }
 
