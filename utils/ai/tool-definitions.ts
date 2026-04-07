@@ -14,6 +14,7 @@ Available tools:
 - get_cafe_hours: Check a cafe's operating hours and current open/closed status
 - search_blog_posts: Search blog posts about cafes and coffee
 - get_upcoming_events: Get upcoming coffee events and meetups
+- find_hidden_gems: Discover hidden gem cafes and lesser-known spots
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 
 Rules:
@@ -212,6 +213,20 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                 properties: {
                     city: { type: "string", description: "Filter events by city (optional)" },
                     limit: { type: "number", description: "Number of events to return (default 10)" },
+                },
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "find_hidden_gems",
+            description: "Discover hidden gem cafes -- lesser-known spots that are highly rated. Can filter by city.",
+            parameters: {
+                type: "object",
+                properties: {
+                    city: { type: "string", description: "Filter hidden gems by city (optional)" },
+                    limit: { type: "number", description: "Number of results (default 10)" },
                 },
             },
         },
