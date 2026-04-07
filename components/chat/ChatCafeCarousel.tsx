@@ -1,9 +1,9 @@
 "use client"
 
-import { useHaptics } from "@/hooks/useHaptics"
 import Image from "next/image"
 import { Coffee, MapPin, Star } from "lucide-react"
 import { motion } from "motion/react"
+import { useHaptics } from "@/hooks/useHaptics"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import type { ChatCafeCard, ChatCardContext } from "@/utils/types/chat"
 
