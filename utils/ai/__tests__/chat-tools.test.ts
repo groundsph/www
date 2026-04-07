@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
-import { AVAILABLE_TOOLS } from "@/utils/ai/chat-tools"
+import { CHAT_TOOLS } from "@/utils/ai/tool-definitions"
 
 interface MockCafe {
     id?: unknown
@@ -14,7 +14,7 @@ interface MockCafe {
 
 describe("chat tools", () => {
     it("includes get_grounds_info tool", () => {
-        const toolNames = AVAILABLE_TOOLS.map((t) => t.function.name)
+        const toolNames = CHAT_TOOLS.map((t) => t.function.name)
         expect(toolNames).toContain("get_grounds_info")
     })
 })
