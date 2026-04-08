@@ -1,35 +1,111 @@
-import { describe, it } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 
-describe("Follow Request Flow", () => {
-    describe("Private Profile Follow", () => {
-        it.todo("creates follow request when following private profile")
-        it.todo("returns requiresApproval: true for private profiles")
-        it.todo("does not create user_follows entry until approved")
+let mockUser: { id: string; role?: string } | null = null
+
+mock.module("next/headers", () => ({
+    headers: () =>
+        Promise.resolve({
+            get: () => null,
+        }),
+}))
+
+mock.module("@/lib/auth", () => ({
+    getCurrentUser: () => Promise.resolve(mockUser),
+}))
+
+mock.module("@/db", () => ({
+    db: {
+        select: () => ({
+            from: () => ({
+                where: () => ({
+                    and: () => ({
+                        orderBy: () => ({
+                            limit: () => ({
+                                offset: () => Promise.resolve([]),
+                                limit: () => Promise.resolve([]),
+                            }),
+                            limit: () => Promise.resolve([]),
+                        }),
+                        limit: () => Promise.resolve([]),
+                    }),
+                    limit: () => Promise.resolve([]),
+                }),
+                leftJoin: () => ({
+                    where: () => Promise.resolve([]),
+                }),
+                innerJoin: () => ({
+                    where: () => ({
+                        orderBy: () => ({
+                            limit: () => ({
+                                offset: () => Promise.resolve([]),
+                            }),
+                            limit: () => Promise.resolve([]),
+                        }),
+                        limit: () => Promise.resolve([]),
+                    }),
+                }),
+            }),
+        }),
+        insert: () => ({
+            values: () => ({
+                returning: () => Promise.resolve([{ id: "new-id" }]),
+            }),
+        }),
+        update: () => ({
+            set: () => ({
+                where: () => Promise.resolve({ rowsAffected: 1 }),
+            }),
+        }),
+    },
+    eq: () => ({}),
+    and: () => ({}),
+    or: () => ({}),
+    desc: () => ({}),
+    sql: () => ({}),
+    inArray: () => ({}),
+    count: () => ({}),
+}))
+
+const { updateProfile } = await import("../profile")
+
+describe("Privacy Enforcement Tests", () => {
+    beforeEach(() => {
+        mockUser = null
     })
 
-    describe("Public Profile Follow", () => {
-        it.todo("creates direct follow for public profiles")
-        it.todo("returns requiresApproval: false for public profiles")
-    })
+    describe("updateProfile authorization", () => {
+        it("rejects updates from non-owner users", async () => {
+            mockUser = { id: "stranger-id" }
 
-    describe("Accept Follow Request", () => {
-        it.todo("creates user_follows entry when accepted")
-        it.todo("updates request status to accepted")
-        it.todo("only target user can accept their own requests")
-    })
+            const result = await updateProfile("alice-id", { display_name: "Hacker" })
 
-    describe("Decline Follow Request", () => {
-        it.todo("updates request status to declined")
-        it.todo("allows re-requesting after decline")
-    })
+            expect(result.success).toBe(false)
+            expect(result.error).toBe("Not authorized to update this profile")
+        })
 
-    describe("Privacy Settings", () => {
-        it.todo("allows user to toggle privacy on/off")
-        it.todo("existing followers retain access when going private")
-    })
+        it("allows updates from the owner", async () => {
+            mockUser = { id: "alice-id" }
 
-    describe("Content Access", () => {
-        it.todo("restricts profile content for non-followers on private profiles")
-        it.todo("shows full content after follow is approved")
+            const result = await updateProfile("alice-id", { display_name: "Alice Updated" })
+
+            expect(result.success).toBe(true)
+        })
+
+        it("allows admin updates to any profile", async () => {
+            mockUser = { id: "admin-id", role: "admin" }
+
+            const result = await updateProfile("alice-id", { display_name: "Admin Update" })
+
+            expect(result.success).toBe(true)
+        })
+
+        it("rejects updates when not authenticated", async () => {
+            mockUser = null
+
+            const result = await updateProfile("alice-id", { display_name: "Hacker" })
+
+            expect(result.success).toBe(false)
+            expect(result.error).toBe("Authentication required")
+        })
     })
 })
