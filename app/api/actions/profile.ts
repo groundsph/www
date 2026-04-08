@@ -1609,8 +1609,11 @@ export async function getTodayVisitors(cafeId: string): Promise<{
     }[]
 }> {
     try {
-        // Get start and end of today (UTC+8 Philippine Time)
-        // Convert to Real UTC for DB Query
+        const currentUser = await getCurrentUser()
+        if (!currentUser) {
+            return { visitors: [] }
+        }
+
         const todayPH = getPHTodayStart()
         const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
         const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
@@ -1622,6 +1625,7 @@ export async function getTodayVisitors(cafeId: string): Promise<{
                 displayName: profiles.displayName,
                 avatarUrl: profiles.avatarUrl,
                 visitedAt: cafeVisits.visitedAt,
+                isPrivate: profiles.isPrivate,
             })
             .from(cafeVisits)
             .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
@@ -1634,8 +1638,29 @@ export async function getTodayVisitors(cafeId: string): Promise<{
             )
             .orderBy(desc(cafeVisits.visitedAt))
 
+        const filtered = []
+        for (const r of result) {
+            if (!r.isPrivate) {
+                filtered.push(r)
+                continue
+            }
+            const follows = await db
+                .select({ id: userFollows.id })
+                .from(userFollows)
+                .where(
+                    and(
+                        eq(userFollows.followerId, currentUser.id),
+                        eq(userFollows.followingId, r.userId)
+                    )
+                )
+                .limit(1)
+            if (follows.length > 0) {
+                filtered.push(r)
+            }
+        }
+
         return {
-            visitors: result.map((r) => ({
+            visitors: filtered.map((r) => ({
                 userId: r.userId,
                 username: r.username,
                 displayName: r.displayName,
