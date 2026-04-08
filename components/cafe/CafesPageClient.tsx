@@ -1,9 +1,7 @@
 "use client"
 
 import { useHaptics } from "@/hooks/useHaptics"
-import { isOpenNow } from "@/utils/extras"
 import { AnimatePresence, motion } from "motion/react"
-import { useVirtualizer } from "@tanstack/react-virtual"
 import {
     Wifi,
     Plug,
@@ -22,7 +20,6 @@ import {
     Cigarette,
     Store,
     Clock12,
-    X,
 } from "lucide-react"
 
 import { getAllCafes } from "@/app/api/actions/cafe"
@@ -32,7 +29,7 @@ import {
     COFFEE_STYLES,
     CAFE_VIBE_TAGS,
 } from "@/utils/data/philippines"
-import { useCallback, useEffect, useState, useTransition, useRef } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
 import RandomCafeButton from "@/components/map/RandomCafeButton"
 import MiniSubmitCafeBanner from "@/components/ui/MiniSubmitCafeBanner"
@@ -67,39 +64,6 @@ const INITIAL_FILTERS = {
 
 type SortOption = "recommended" | "rating" | "reviews"
 
-const buildFilterParams = (search: string, filters: typeof INITIAL_FILTERS, sortBy: SortOption) => ({
-    search,
-    has_wifi: filters.has_wifi,
-    has_smoking: filters.has_smoking,
-    has_sockets: filters.has_sockets,
-    has_parking: filters.has_parking,
-    has_aircon: filters.has_aircon,
-    is_pet_friendly: filters.is_pet_friendly,
-    has_outdoor_seating: filters.has_outdoor_seating,
-    has_indoor_seating: filters.has_indoor_seating,
-    has_restroom: filters.has_restroom,
-    has_bidet: filters.has_bidet,
-    has_non_dairy: filters.has_non_dairy,
-    has_decaf: filters.has_decaf,
-    is_work_friendly: filters.is_work_friendly,
-    is_24_7: filters.is_24_7 || undefined,
-    isHalalCertified: filters.is_halal_certified || undefined,
-    price_level: filters.price_level || undefined,
-    coffee_style: filters.coffee_style || undefined,
-    region: filters.region || undefined,
-    tags: filters.tags.length > 0 ? filters.tags : undefined,
-    sortBy,
-    include_chains: filters.include_chains || undefined,
-})
-
-const SESSION_STORAGE_SCROLL_POSITION_KEY = "cafes_scroll_position"
-const SESSION_STORAGE_TTL_MS = 10 * 60 * 1000
-const RESTORE_NOTICE_TIMEOUT_MS = 2500
-const SCROLL_RESTORATION_DELAY_MS = 400
-const SCROLL_RESTORATION_RETRY_INTERVAL_MS = 100
-const SCROLL_RESTORATION_MAX_RETRIES = 20
-const IS_SCROLL_RESTORE_ENABLED = false
-
 export default function CafesPageClient() {
     const { trigger } = useHaptics()
 
@@ -107,43 +71,20 @@ export default function CafesPageClient() {
     const [cafes, setCafes] = useState<CafeWithRatings[]>([])
     const [loading, setLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
-    const [hasMore, setHasMore] = useState(true)
+    const [hasMore, setHasMore] = useState(false)
     const [isLoadingMore, setIsLoadingMore] = useState(false)
-    const [isPending, startTransition] = useTransition()
     const [filtersOpen, setFiltersOpen] = useState(false)
-    const [showRestoreNotice, setShowRestoreNotice] = useState(false)
-    const [isRestoring, setIsRestoring] = useState(false)
     const [loadError, setLoadError] = useState(false)
-    const restoreNoticeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const [locationStatus, setLocationStatus] = useState<"loading" | "found" | "not_found">("loading")
     const fetchVersionRef = useRef(0)
-
-    const dismissRestoreNotice = useCallback(() => {
-        if (restoreNoticeTimeoutRef.current) {
-            clearTimeout(restoreNoticeTimeoutRef.current)
-            restoreNoticeTimeoutRef.current = null
-        }
-        setShowRestoreNotice(false)
-    }, [])
-
-    useEffect(() => {
-        if (showRestoreNotice) {
-            restoreNoticeTimeoutRef.current = setTimeout(() => {
-                setShowRestoreNotice(false)
-            }, RESTORE_NOTICE_TIMEOUT_MS)
-        }
-        return () => {
-            if (restoreNoticeTimeoutRef.current) {
-                clearTimeout(restoreNoticeTimeoutRef.current)
-            }
-        }
-    }, [showRestoreNotice])
+    const sentinelRef = useRef<HTMLDivElement>(null)
+    const observerRef = useRef<IntersectionObserver | null>(null)
+    const isFetchingRef = useRef(false)
+    const initializedRef = useRef(false)
+    const hasAutoEnabledNearMe = useRef(false)
 
     // Track if user has manually toggled location filter
     const hasUserToggledLocation = useRef(false)
-    const autoDisabledNearMe = useRef(false)
-    const restoreAppliedRef = useRef(false)
-    const scrollSentinelRef = useRef<HTMLDivElement>(null)
-    const parentRef = useRef<HTMLDivElement>(null)
 
     // Location State
     const [userLocation, setUserLocation] = useState<{
@@ -156,29 +97,70 @@ export default function CafesPageClient() {
     const [sortBy, setSortBy] = useState<SortOption>("recommended")
     const [filters, setFilters] = useState(INITIAL_FILTERS)
 
-    const getFilterParams = useCallback(() => buildFilterParams(debouncedSearch, filters, sortBy), [debouncedSearch, filters, sortBy])
+    // Build filter params
+    const getFilterParams = useCallback(() => ({
+        search: debouncedSearch,
+        has_wifi: filters.has_wifi,
+        has_smoking: filters.has_smoking,
+        has_sockets: filters.has_sockets,
+        has_parking: filters.has_parking,
+        has_aircon: filters.has_aircon,
+        is_pet_friendly: filters.is_pet_friendly,
+        has_outdoor_seating: filters.has_outdoor_seating,
+        has_indoor_seating: filters.has_indoor_seating,
+        has_restroom: filters.has_restroom,
+        has_bidet: filters.has_bidet,
+        has_non_dairy: filters.has_non_dairy,
+        has_decaf: filters.has_decaf,
+        is_work_friendly: filters.is_work_friendly,
+        is_24_7: filters.is_24_7 || undefined,
+        isHalalCertified: filters.is_halal_certified || undefined,
+        price_level: filters.price_level || undefined,
+        coffee_style: filters.coffee_style || undefined,
+        region: filters.region || undefined,
+        near_me: filters.near_me && userLocation ? { city: userLocation.city, region: userLocation.region } : undefined,
+        tags: filters.tags.length > 0 ? filters.tags : undefined,
+        sortBy,
+        include_chains: filters.include_chains || undefined,
+    }), [debouncedSearch, filters, sortBy, userLocation])
 
-    // Location Detection - reuse cache from landing page
+    // Fetch cafes function - defined early so it can be used in effects
+    const fetchCafes = useCallback(async (page: number) => {
+        if (isFetchingRef.current) return []
+        isFetchingRef.current = true
+        try {
+            const result = await getAllCafes(page, PAGE_SIZE, getFilterParams())
+            return result
+        } finally {
+            isFetchingRef.current = false
+        }
+    }, [getFilterParams])
+
+    // Location Detection - sets location and auto-enables near_me in one go
     useEffect(() => {
-        // Check sessionStorage cache first (set by landing page)
         const cachedLocation = sessionStorage.getItem("grounds_location")
         if (cachedLocation) {
             try {
                 const { city, region } = JSON.parse(cachedLocation)
                 if (city || region) {
                     setUserLocation({ city, region })
-                    // Auto-enable near_me filter if user hasn't manually toggled it
-                    if (!hasUserToggledLocation.current) {
+                    setLocationStatus("found")
+                    // Auto-enable near_me immediately when location is found
+                    if (!hasUserToggledLocation.current && !hasAutoEnabledNearMe.current) {
+                        hasAutoEnabledNearMe.current = true
                         setFilters((prev) => ({ ...prev, near_me: true }))
                     }
                     return
                 }
             } catch {
-                // Invalid cache, proceed with fresh fetch
+                // Invalid cache
             }
         }
 
-        if (!navigator.geolocation) return
+        if (!navigator.geolocation) {
+            setLocationStatus("not_found")
+            return
+        }
 
         navigator.geolocation.getCurrentPosition(
             async (position) => {
@@ -196,319 +178,148 @@ export default function CafesPageClient() {
                     const region = data.address?.state || data.address?.region
                     if (city || region) {
                         setUserLocation({ city, region })
-                        // Auto-enable near_me filter if user hasn't manually toggled it
-                        if (!hasUserToggledLocation.current) {
+                        setLocationStatus("found")
+                        // Auto-enable near_me immediately when location is found
+                        if (!hasUserToggledLocation.current && !hasAutoEnabledNearMe.current) {
+                            hasAutoEnabledNearMe.current = true
                             setFilters((prev) => ({ ...prev, near_me: true }))
                         }
+                    } else {
+                        setLocationStatus("not_found")
                     }
                 } catch (error) {
                     console.error("Failed to get location:", error)
+                    setLocationStatus("not_found")
                 }
             },
-            () => console.log("Location access denied"),
+            () => {
+                console.log("Location access denied")
+                setLocationStatus("not_found")
+            },
             { timeout: 10000, maximumAge: 300000 }
         )
     }, [])
 
-    const doInitialFetch = useCallback(async (page: number, filterParams?: ReturnType<typeof getFilterParams>) => {
-        try {
-            const params = filterParams || getFilterParams()
-            const fetchedCafes = await getAllCafes(page, PAGE_SIZE, params)
-            setCafes(fetchedCafes)
-            setLoading(false)
-            setHasMore(fetchedCafes.length === PAGE_SIZE)
-
-            // Mark server filters as synced so filter effect doesn't re-fetch on mount
-            const serverKey = JSON.stringify({
-                search: debouncedSearch,
-                has_wifi: filters.has_wifi,
-                has_smoking: filters.has_smoking,
-                has_sockets: filters.has_sockets,
-                has_parking: filters.has_parking,
-                has_aircon: filters.has_aircon,
-                is_pet_friendly: filters.is_pet_friendly,
-                has_outdoor_seating: filters.has_outdoor_seating,
-                has_indoor_seating: filters.has_indoor_seating,
-                has_restroom: filters.has_restroom,
-                has_bidet: filters.has_bidet,
-                has_non_dairy: filters.has_non_dairy,
-                has_decaf: filters.has_decaf,
-                is_work_friendly: filters.is_work_friendly,
-                is_24_7: filters.is_24_7,
-                is_halal_certified: filters.is_halal_certified,
-                price_level: filters.price_level,
-                coffee_style: filters.coffee_style,
-                region: filters.region,
-                tags: filters.tags,
-                include_chains: filters.include_chains,
-                sortBy,
-            })
-            prevServerFiltersRef.current = serverKey
-        } catch (error) {
-            console.error("Failed to fetch cafes:", error)
-            setLoading(false)
-        }
-    }, [getFilterParams, debouncedSearch, filters, sortBy])
-
-    const restoreFromSession = useCallback(async () => {
-        if (!IS_SCROLL_RESTORE_ENABLED) {
-            doInitialFetch(1)
-            return
-        }
-        if (typeof window === "undefined") return
-
-        try {
-            const storedData = sessionStorage.getItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
-            if (!storedData) {
-                doInitialFetch(1)
-                return
-            }
-
-            const parsedData = JSON.parse(storedData)
-            const {
-                page,
-                filters: storedFilters,
-                search: storedSearch,
-                sortBy: storedSortBy,
-                timestamp,
-                cafeSlug,
-            } = parsedData
-
-            const isRecent = Date.now() - timestamp < SESSION_STORAGE_TTL_MS
-
-            if (!isRecent) {
-                sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
-                doInitialFetch(1)
-                return
-            }
-
-            const restoredFilterParams = buildFilterParams(storedSearch, storedFilters, storedSortBy)
-
-            // Set restoring state BEFORE state updates to prevent filter useEffect from running
-            setIsRestoring(true)
-            
-            setFilters(storedFilters)
-            setSearch(storedSearch)
-            setSortBy(storedSortBy)
-            setCurrentPage(page)
-            restoreAppliedRef.current = true
-
-            // Fetch all pages from 1 to the restored page so scroll position is accurate
-            const allCafes = []
-            for (let i = 1; i <= page; i++) {
-                const pageCafes = await getAllCafes(i, PAGE_SIZE, restoredFilterParams)
-                allCafes.push(...pageCafes)
-                if (pageCafes.length < PAGE_SIZE) break // Last page has fewer items
-            }
-            setCafes(allCafes)
-            setLoading(false)
-            setHasMore(allCafes.length === page * PAGE_SIZE)
-
-            setShowRestoreNotice(true)
-            setTimeout(() => {
-                if (typeof window !== "undefined" && cafeSlug) {
-                    let attempts = 0
-                    const scrollToCafe = () => {
-                        const cafeElement = document.querySelector(
-                            `[data-cafe-slug="${cafeSlug}"]`
-                        )
-                        if (cafeElement) {
-                            cafeElement.scrollIntoView({
-                                behavior: "auto",
-                                block: "center",
-                            })
-                            return
-                        }
-                        attempts += 1
-                        if (attempts < SCROLL_RESTORATION_MAX_RETRIES) {
-                            setTimeout(
-                                scrollToCafe,
-                                SCROLL_RESTORATION_RETRY_INTERVAL_MS
-                            )
-                        }
-                    }
-                    scrollToCafe()
-                }
-                sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
-                // Reset restoring state so filter changes work normally
-                setIsRestoring(false)
-            }, SCROLL_RESTORATION_DELAY_MS)
-        } catch (error) {
-            console.error("Failed to restore from session:", error)
-            doInitialFetch(1)
-        }
-    }, [doInitialFetch])
-
+    // Initial fetch - runs AFTER location is determined AND near_me is potentially set
     useEffect(() => {
-        if (!restoreAppliedRef.current) {
-            restoreFromSession()
-        }
-    }, [restoreFromSession])
+        if (initializedRef.current) return
+        if (locationStatus === "loading") return
+        
+        // Use setTimeout to allow React to process the filter state update
+        initializedRef.current = true
+        setLoading(true)
 
-    // Track previous server-relevant filters to detect when we actually need a re-fetch
-    const prevServerFiltersRef = useRef<string>("")
+        setTimeout(() => {
+            fetchCafes(1)
+                .then((data) => {
+                    setCafes(data)
+                    setHasMore(data.length === PAGE_SIZE)
+                })
+                .catch((error) => {
+                    console.error("Failed to fetch cafes:", error)
+                    setLoadError(true)
+                })
+                .finally(() => {
+                    setLoading(false)
+                })
+        }, 0)
+    }, [locationStatus, fetchCafes])
 
-    // Filter Logic - reset pagination and fetch page 1 on filter changes
-    // Skip if restoration is in progress to avoid race conditions
-    // Client-side filters (near_me, open_now) don't trigger a re-fetch
-    useEffect(() => {
-        if (isRestoring) return
-
-        // Only compare server-relevant filters (exclude near_me and open_now which are client-side)
-        const serverKey = JSON.stringify({
-            search: debouncedSearch,
-            has_wifi: filters.has_wifi,
-            has_smoking: filters.has_smoking,
-            has_sockets: filters.has_sockets,
-            has_parking: filters.has_parking,
-            has_aircon: filters.has_aircon,
-            is_pet_friendly: filters.is_pet_friendly,
-            has_outdoor_seating: filters.has_outdoor_seating,
-            has_indoor_seating: filters.has_indoor_seating,
-            has_restroom: filters.has_restroom,
-            has_bidet: filters.has_bidet,
-            has_non_dairy: filters.has_non_dairy,
-            has_decaf: filters.has_decaf,
-            is_work_friendly: filters.is_work_friendly,
-            is_24_7: filters.is_24_7,
-            is_halal_certified: filters.is_halal_certified,
-            price_level: filters.price_level,
-            coffee_style: filters.coffee_style,
-            region: filters.region,
-            tags: filters.tags,
-            include_chains: filters.include_chains,
-            sortBy,
-        })
-
-        if (!prevServerFiltersRef.current) {
-            prevServerFiltersRef.current = serverKey
-            return
-        }
-
-        if (serverKey === prevServerFiltersRef.current) return
-        prevServerFiltersRef.current = serverKey
+    // Handle filter changes - refetch page 1
+    const handleFilterChange = useCallback(() => {
+        if (!initializedRef.current || locationStatus === "loading") return
 
         fetchVersionRef.current += 1
         const version = fetchVersionRef.current
+        setCurrentPage(1)
+        setLoadError(false)
+        setIsLoadingMore(false)
 
-        startTransition(async () => {
-            setCurrentPage(1)
-            setHasMore(true)
-            setLoadError(false)
-            setCafes([])
-
-            if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_STORAGE_SCROLL_POSITION_KEY)) {
-                sessionStorage.removeItem(SESSION_STORAGE_SCROLL_POSITION_KEY)
-            }
-
-            try {
-                const fetchedCafes = await getAllCafes(1, PAGE_SIZE, getFilterParams())
+        fetchCafes(1)
+            .then((data) => {
                 if (version !== fetchVersionRef.current) return
-                setCafes(fetchedCafes)
-                setLoading(false)
-                setHasMore(fetchedCafes.length === PAGE_SIZE)
-            } catch (error) {
-                if (version !== fetchVersionRef.current) return
-                console.error("Failed to fetch cafes:", error)
-                setLoading(false)
-            }
-        })
-    }, [debouncedSearch, sortBy, filters, getFilterParams, isRestoring])
-
-    // Client-side filtering for open_now and near_me
-    const filteredCafes = cafes.filter((cafe) => {
-        if (filters.open_now) {
-            if (
-                !cafe.operating_hours ||
-                !isOpenNow(cafe.operating_hours).isOpen
-            ) {
-                return false
-            }
-        }
-        if (filters.near_me && userLocation) {
-            const cityMatch =
-                userLocation.city &&
-                cafe.city_municipality
-                    ?.toLowerCase()
-                    .includes(userLocation.city.toLowerCase())
-            const regionMatch =
-                userLocation.region &&
-                cafe.region
-                    ?.toLowerCase()
-                    .includes(userLocation.region.toLowerCase())
-            if (!cityMatch && !regionMatch) {
-                return false
-            }
-        }
-        return true
-    })
-
-    // Virtualizer setup for cafe list
-    // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual returns functions that cannot be memoized
-    const virtualizer = useVirtualizer({
-        count: filteredCafes.length + (hasMore ? 1 : 0), // +1 for loading sentinel
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 280, // estimated cafe card height in px
-        overscan: 5,
-    })
-
-    // Auto-disable near_me filter if no results and user hasn't manually toggled it
-    useEffect(() => {
-        if (
-            filters.near_me &&
-            filteredCafes.length === 0 &&
-            cafes.length > 0 &&
-            !hasUserToggledLocation.current &&
-            !autoDisabledNearMe.current
-        ) {
-            autoDisabledNearMe.current = true
-            setFilters((prev) => ({ ...prev, near_me: false }))
-        }
-        // Reset the guard when near_me is turned off manually
-        if (!filters.near_me) {
-            autoDisabledNearMe.current = false
-        }
-    }, [filteredCafes.length, cafes.length, filters.near_me])
-
-    // Load more cafes (used by infinite scroll and retry button)
-    const loadMore = useCallback(() => {
-        if (isLoadingMore || !hasMore) return
-        trigger("light")
-        const nextPage = currentPage + 1
-        setCurrentPage(nextPage)
-        setIsLoadingMore(true)
-
-        const version = fetchVersionRef.current
-
-        getAllCafes(nextPage, PAGE_SIZE, getFilterParams())
-            .then((fetchedCafes) => {
-                if (version !== fetchVersionRef.current) return
-                setCafes((prev) => [...prev, ...fetchedCafes])
-                setHasMore(fetchedCafes.length === PAGE_SIZE)
+                setCafes(data)
+                setHasMore(data.length === PAGE_SIZE)
             })
             .catch((error) => {
                 if (version !== fetchVersionRef.current) return
-                console.error("Failed to fetch more cafes:", error)
+                console.error("Failed to fetch cafes:", error)
                 setLoadError(true)
                 setHasMore(false)
             })
-            .finally(() => {
-                setIsLoadingMore(false)
-            })
-    }, [currentPage, getFilterParams, hasMore, isLoadingMore, trigger])
+    }, [fetchCafes, locationStatus])
 
-    // Virtualizer-driven infinite scroll - trigger when last item is visible
-    const lastItem = virtualizer.getVirtualItems().at(-1)
+    // Watch for filter changes
     useEffect(() => {
-        if (
-            lastItem &&
-            lastItem.index >= filteredCafes.length - 1 &&
-            hasMore &&
-            !isLoadingMore
-        ) {
-            loadMore()
+        handleFilterChange()
+    }, [debouncedSearch, sortBy, filters.has_wifi, filters.has_smoking, filters.has_sockets, filters.has_parking,
+        filters.has_aircon, filters.is_pet_friendly, filters.has_outdoor_seating, filters.has_indoor_seating,
+        filters.has_restroom, filters.has_bidet, filters.has_non_dairy, filters.has_decaf, filters.is_work_friendly,
+        filters.is_24_7, filters.is_halal_certified, filters.price_level, filters.coffee_style, filters.region,
+        filters.near_me, filters.tags, filters.include_chains])
+
+    // Simple list - no virtualization needed for typical cafe lists
+    // Reset scroll position when cafes change (filter applied)
+    useEffect(() => {
+        if (cafes.length > 0) {
+            window.scrollTo({ top: 0, behavior: 'auto' })
         }
-    }, [lastItem, lastItem?.index, filteredCafes.length, hasMore, isLoadingMore, loadMore])
+    }, [cafes.length, filters.has_wifi, filters.price_level, filters.region, filters.near_me])
+
+    // Load more function
+    const loadMore = useCallback(async () => {
+        if (isLoadingMore || !hasMore) return
+
+        setIsLoadingMore(true)
+        const pageToFetch = currentPage + 1
+        const version = fetchVersionRef.current
+
+        try {
+            const fetchedCafes = await getAllCafes(pageToFetch, PAGE_SIZE, getFilterParams())
+            if (version !== fetchVersionRef.current) return
+
+            setCafes((prev) => [...prev, ...fetchedCafes])
+            setCurrentPage(pageToFetch)
+            setHasMore(fetchedCafes.length === PAGE_SIZE)
+        } catch (error) {
+            if (version !== fetchVersionRef.current) return
+            console.error("Failed to fetch more cafes:", error)
+            setLoadError(true)
+            setHasMore(false)
+        } finally {
+            setIsLoadingMore(false)
+        }
+    }, [currentPage, hasMore, isLoadingMore, getFilterParams])
+
+    // Infinite scroll with IntersectionObserver
+    useEffect(() => {
+        if (observerRef.current) {
+            observerRef.current.disconnect()
+            observerRef.current = null
+        }
+
+        if (!hasMore || isLoadingMore) return
+
+        const sentinel = sentinelRef.current
+        if (!sentinel) return
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const [entry] = entries
+                if (entry.isIntersecting && hasMore && !isLoadingMore) {
+                    loadMore()
+                }
+            },
+            { rootMargin: "400px", threshold: 0 }
+        )
+
+        observer.observe(sentinel)
+        observerRef.current = observer
+
+        return () => {
+            observer.disconnect()
+        }
+    }, [hasMore, isLoadingMore, loadMore])
 
     const toggleFilter = (key: keyof typeof filters) => {
         trigger("selection")
@@ -518,42 +329,7 @@ export default function CafesPageClient() {
         setFilters((prev) => ({ ...prev, [key]: !prev[key] }))
     }
 
-    const handleCafeClick = useCallback(
-        (cafeSlug: string) => {
-            if (!IS_SCROLL_RESTORE_ENABLED) return
-            if (typeof window !== "undefined") {
-                try {
-                    sessionStorage.setItem(
-                        SESSION_STORAGE_SCROLL_POSITION_KEY,
-                        JSON.stringify({
-                            page: currentPage,
-                            scrollY: window.scrollY,
-                            filters: filters,
-                            search: search,
-                            sortBy: sortBy,
-                            timestamp: Date.now(),
-                            cafeSlug: cafeSlug,
-                        })
-                    )
-                } catch {
-                    // Silently fail - sessionStorage may be unavailable or quota exceeded
-                    // Non-critical feature, safe to ignore errors
-                }
-            }
-        },
-        [currentPage, filters, search, sortBy]
-    )
-
-    // Memoized handler to prevent unnecessary re-renders of CafeCard
-    const handleCafeCardClick = useCallback(
-        (cafeSlug: string) => {
-            trigger("light")
-            handleCafeClick(cafeSlug)
-        },
-        [trigger, handleCafeClick]
-    )
-
-    // Count active filters (excluding empty values)
+    // Count active filters
     const activeFilterCount = Object.entries(filters).filter(
         ([key, value]) =>
             value === true ||
@@ -566,75 +342,25 @@ export default function CafesPageClient() {
     const filterOptions = [
         { key: "open_now", label: "Open Now", icon: null },
         { key: "has_wifi", label: "WiFi", icon: <Wifi className='w-4 h-4' /> },
-        {
-            key: "has_smoking",
-            label: "Smoking Area",
-            icon: <Cigarette className='w-4 h-4' />,
-        },
-        {
-            key: "has_sockets",
-
-            label: "Sockets",
-            icon: <Plug className='w-4 h-4' />,
-        },
-        {
-            key: "has_aircon",
-            label: "Aircon",
-            icon: <Wind className='w-4 h-4' />,
-        },
-        {
-            key: "has_parking",
-            label: "Parking",
-            icon: <Car className='w-4 h-4' />,
-        },
-        {
-            key: "is_pet_friendly",
-            label: "Pet Friendly",
-            icon: <PawPrint className='w-4 h-4' />,
-        },
-        {
-            key: "has_outdoor_seating",
-            label: "Outdoor",
-            icon: <TreePine className='w-4 h-4' />,
-        },
-        {
-            key: "has_indoor_seating",
-            label: "Indoor",
-            icon: <Armchair className='w-4 h-4' />,
-        },
-        {
-            key: "has_restroom",
-            label: "Restroom",
-            icon: <Toilet className='w-4 h-4' />,
-        },
-        {
-            key: "has_bidet",
-            label: "Bidet",
-            icon: <Droplet className='w-4 h-4' />,
-        },
-        {
-            key: "has_non_dairy",
-            label: "Non-Dairy",
-            icon: <MilkOff className='w-4 h-4' />,
-        },
-        {
-            key: "has_decaf",
-            label: "Decaf",
-            icon: <Coffee className='w-4 h-4' />,
-        },
-        {
-            key: "is_work_friendly",
-            label: "Work Friendly",
-            icon: <Briefcase className='w-4 h-4' />,
-        },
-        {
-            key: "is_24_7",
-            label: "24 Hours",
-            icon: <Clock12 className='w-4 h-4' />,
-        },
+        { key: "has_smoking", label: "Smoking Area", icon: <Cigarette className='w-4 h-4' /> },
+        { key: "has_sockets", label: "Sockets", icon: <Plug className='w-4 h-4' /> },
+        { key: "has_aircon", label: "Aircon", icon: <Wind className='w-4 h-4' /> },
+        { key: "has_parking", label: "Parking", icon: <Car className='w-4 h-4' /> },
+        { key: "is_pet_friendly", label: "Pet Friendly", icon: <PawPrint className='w-4 h-4' /> },
+        { key: "has_outdoor_seating", label: "Outdoor", icon: <TreePine className='w-4 h-4' /> },
+        { key: "has_indoor_seating", label: "Indoor", icon: <Armchair className='w-4 h-4' /> },
+        { key: "has_restroom", label: "Restroom", icon: <Toilet className='w-4 h-4' /> },
+        { key: "has_bidet", label: "Bidet", icon: <Droplet className='w-4 h-4' /> },
+        { key: "has_non_dairy", label: "Non-Dairy", icon: <MilkOff className='w-4 h-4' /> },
+        { key: "has_decaf", label: "Decaf", icon: <Coffee className='w-4 h-4' /> },
+        { key: "is_work_friendly", label: "Work Friendly", icon: <Briefcase className='w-4 h-4' /> },
+        { key: "is_24_7", label: "24 Hours", icon: <Clock12 className='w-4 h-4' /> },
     ]
 
-    // Render
+    const handleCafeCardClick = useCallback(() => {
+        trigger("light")
+    }, [trigger])
+
     return (
         <section className='w-full flex-1 py-6 flex flex-col gap-6 px-6'>
             <div className='flex flex-col gap-2 items-center text-center'>
@@ -646,32 +372,9 @@ export default function CafesPageClient() {
                 </p>
             </div>
 
-            {/* Restore notice */}
-            <AnimatePresence>
-                {showRestoreNotice && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className='fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-secondary/10 backdrop-blur-sm border border-secondary/20 text-secondary px-4 py-2.5 rounded-lg shadow-lg text-sm'
-                    >
-                        <Clock12 size={16} />
-                        <span className='font-medium'>Resuming from where you left off</span>
-                        <button
-                            onClick={dismissRestoreNotice}
-                            className='p-1 hover:bg-secondary/20 rounded-md transition-colors'
-                            aria-label='Dismiss notification'
-                        >
-                            <X size={14} />
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             <MiniSubmitCafeBanner />
 
-            {/* Controls - Compact Row */}
+            {/* Controls */}
             <div className='flex flex-col gap-3'>
                 <div className='flex flex-row gap-2 flex-wrap'>
                     <input
@@ -713,9 +416,7 @@ export default function CafesPageClient() {
                         <option value='rating'>Highest Rated</option>
                         <option value='reviews'>Most Reviewed</option>
                     </select>
-                    {/* Random Cafe Button */}
                     <RandomCafeButton cafes={cafes} />
-                    {/* Location Badge */}
                     {userLocation && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
@@ -737,7 +438,7 @@ export default function CafesPageClient() {
                     )}
                 </div>
 
-                {/* Expandable Filters Panel */}
+                {/* Expandable Filters */}
                 <AnimatePresence>
                     {filtersOpen && (
                         <motion.div
@@ -748,14 +449,13 @@ export default function CafesPageClient() {
                         >
                             <div className='p-4 bg-text/5 rounded-xl border border-text/10'>
                                 <div className='flex flex-row justify-between items-center mb-3'>
-                                    <span className='text-sm font-semibold'>
-                                        Filters
-                                    </span>
+                                    <span className='text-sm font-semibold'>Filters</span>
                                     {activeFilterCount > 0 && (
                                         <button
                                             onClick={() => {
                                                 trigger("soft")
                                                 hasUserToggledLocation.current = false
+                                                hasAutoEnabledNearMe.current = false
                                                 setFilters(INITIAL_FILTERS)
                                             }}
                                             className='text-xs text-text/60 hover:text-text cursor-pointer'
@@ -765,11 +465,9 @@ export default function CafesPageClient() {
                                     )}
                                 </div>
 
-                                {/* Price Filter */}
+                                {/* Price */}
                                 <div className='mb-3'>
-                                    <span className='text-xs text-text/60 mb-1.5 block'>
-                                        Price Range
-                                    </span>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>Price Range</span>
                                     <div className='flex flex-row gap-2'>
                                         {[
                                             { value: "", label: "All" },
@@ -783,17 +481,11 @@ export default function CafesPageClient() {
                                                 onClick={() =>
                                                     setFilters((prev) => ({
                                                         ...prev,
-                                                        price_level: value as
-                                                            | ""
-                                                            | "budget"
-                                                            | "mid"
-                                                            | "premium"
-                                                            | "luxury",
+                                                        price_level: value as "" | "budget" | "mid" | "premium" | "luxury",
                                                     }))
                                                 }
                                                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${
-                                                    filters.price_level ===
-                                                    value
+                                                    filters.price_level === value
                                                         ? "bg-text text-background border-text"
                                                         : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
                                                 }`}
@@ -804,33 +496,24 @@ export default function CafesPageClient() {
                                     </div>
                                 </div>
 
-                                {/* Coffee Style Filter */}
+                                {/* Coffee Style */}
                                 <div className='mb-3'>
-                                    <span className='text-xs text-text/60 mb-1.5 block'>
-                                        Coffee Style
-                                    </span>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>Coffee Style</span>
                                     <div className='flex flex-row gap-2'>
                                         {[
                                             { value: "", label: "All" },
-                                            ...COFFEE_STYLES.map((s) => ({
-                                                value: s.value,
-                                                label: s.label,
-                                            })),
+                                            ...COFFEE_STYLES.map((s) => ({ value: s.value, label: s.label })),
                                         ].map(({ value, label }) => (
                                             <button
                                                 key={value}
                                                 onClick={() =>
                                                     setFilters((prev) => ({
                                                         ...prev,
-                                                        coffee_style: value as
-                                                            | ""
-                                                            | "classic"
-                                                            | "artisan",
+                                                        coffee_style: value as "" | "classic" | "artisan",
                                                     }))
                                                 }
                                                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${
-                                                    filters.coffee_style ===
-                                                    value
+                                                    filters.coffee_style === value
                                                         ? "bg-text text-background border-text"
                                                         : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
                                                 }`}
@@ -841,75 +524,52 @@ export default function CafesPageClient() {
                                     </div>
                                 </div>
 
-                                {/* Region Filter */}
+                                {/* Region */}
                                 <div className='mb-3'>
-                                    <span className='text-xs text-text/60 mb-1.5 block'>
-                                        Region
-                                    </span>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>Region</span>
                                     <select
                                         value={filters.region}
                                         onChange={(e) =>
-                                            setFilters((prev) => ({
-                                                ...prev,
-                                                region: e.target.value,
-                                            }))
+                                            setFilters((prev) => ({ ...prev, region: e.target.value }))
                                         }
                                         className='w-full px-3 py-2 rounded-lg border border-text/20 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50 cursor-pointer'
                                     >
                                         <option value=''>All Regions</option>
-                                        {PHILIPPINES_LOCATIONS.regions.map(
-                                            (r) => (
-                                                <option
-                                                    key={r.name}
-                                                    value={r.name}
-                                                >
-                                                    {r.name}
-                                                </option>
-                                            )
-                                        )}
+                                        {PHILIPPINES_LOCATIONS.regions.map((r) => (
+                                            <option key={r.name} value={r.name}>
+                                                {r.name}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
-                                {/* Amenity Filters */}
+                                {/* Amenities */}
                                 <div>
-                                    <span className='text-xs text-text/60 mb-1.5 block'>
-                                        Amenities
-                                    </span>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>Amenities</span>
                                     <div className='flex flex-row flex-wrap gap-2'>
-                                        {filterOptions.map(
-                                            ({ key, label, icon }) => (
-                                                <button
-                                                    key={key}
-                                                    onClick={() =>
-                                                        toggleFilter(
-                                                            key as keyof typeof filters
-                                                        )
-                                                    }
-                                                    className={`flex flex-row items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
-                                                        filters[
-                                                            key as keyof typeof filters
-                                                        ]
-                                                            ? "bg-text text-background border-text"
-                                                            : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
-                                                    }`}
-                                                >
-                                                    {icon}
-                                                    {label}
-                                                </button>
-                                            )
-                                        )}
+                                        {filterOptions.map(({ key, label, icon }) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => toggleFilter(key as keyof typeof filters)}
+                                                className={`flex flex-row items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                                    filters[key as keyof typeof filters]
+                                                        ? "bg-text text-background border-text"
+                                                        : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                                }`}
+                                            >
+                                                {icon}
+                                                {label}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
-                                {/* Vibe Tags Filter */}
+                                {/* Vibes */}
                                 <div className='mt-3'>
-                                    <span className='text-xs text-text/60 mb-1.5 block'>
-                                        Vibes
-                                    </span>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>Vibes</span>
                                     <div className='flex flex-row flex-wrap gap-2'>
                                         {CAFE_VIBE_TAGS.map((tag) => {
-                                            const isSelected =
-                                                filters.tags.includes(tag)
+                                            const isSelected = filters.tags.includes(tag)
                                             return (
                                                 <button
                                                     key={tag}
@@ -917,15 +577,8 @@ export default function CafesPageClient() {
                                                         setFilters((prev) => ({
                                                             ...prev,
                                                             tags: isSelected
-                                                                ? prev.tags.filter(
-                                                                      (t) =>
-                                                                          t !==
-                                                                          tag
-                                                                  )
-                                                                : [
-                                                                      ...prev.tags,
-                                                                      tag,
-                                                                  ],
+                                                                ? prev.tags.filter((t) => t !== tag)
+                                                                : [...prev.tags, tag],
                                                         }))
                                                     }}
                                                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer capitalize ${
@@ -941,15 +594,11 @@ export default function CafesPageClient() {
                                     </div>
                                 </div>
 
-                                {/* Halal Certified Filter */}
+                                {/* Halal */}
                                 <div className='mt-3 pt-3 border-t border-text/10'>
                                     <button
                                         onClick={() =>
-                                            setFilters((prev) => ({
-                                                ...prev,
-                                                is_halal_certified:
-                                                    !prev.is_halal_certified,
-                                            }))
+                                            setFilters((prev) => ({ ...prev, is_halal_certified: !prev.is_halal_certified }))
                                         }
                                         className={`flex flex-row items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
                                             filters.is_halal_certified
@@ -959,20 +608,13 @@ export default function CafesPageClient() {
                                     >
                                         Halal Certified
                                     </button>
-                                    <p className='text-[10px] text-text/40 mt-1.5'>
-                                        Show only Halal certified cafes
-                                    </p>
                                 </div>
 
-                                {/* Show Chain Cafes Toggle */}
+                                {/* Chains */}
                                 <div className='mt-3 pt-3 border-t border-text/10'>
                                     <button
                                         onClick={() =>
-                                            setFilters((prev) => ({
-                                                ...prev,
-                                                include_chains:
-                                                    !prev.include_chains,
-                                            }))
+                                            setFilters((prev) => ({ ...prev, include_chains: !prev.include_chains }))
                                         }
                                         className={`flex flex-row items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer ${
                                             filters.include_chains
@@ -983,10 +625,6 @@ export default function CafesPageClient() {
                                         <Store className='w-4 h-4' />
                                         Show Chain Cafes
                                     </button>
-                                    <p className='text-[10px] text-text/40 mt-1.5'>
-                                        Chain cafes (e.g., Starbucks) are hidden
-                                        by default
-                                    </p>
                                 </div>
                             </div>
                         </motion.div>
@@ -995,12 +633,7 @@ export default function CafesPageClient() {
             </div>
 
             {/* Content */}
-            <div
-                ref={parentRef}
-                className={`flex flex-1 flex-col gap-6 transition-opacity duration-300 overflow-auto ${
-                    isPending ? "opacity-50 pointer-events-none" : "opacity-100"
-                }`}
-            >
+            <div id='cafes-list' className='flex flex-col'>
                 <AnimatePresence mode='popLayout'>
                     {loading ? (
                         Array.from({ length: 4 }).map((_, i) => (
@@ -1022,113 +655,77 @@ export default function CafesPageClient() {
                                 <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
                             </div>
                         ))
-                    ) : filteredCafes.length > 0 ? (
-                        <div
-                            style={{
-                                height: `${virtualizer.getTotalSize()}px`,
-                                width: "100%",
-                                position: "relative",
-                            }}
-                        >
-                            {virtualizer.getVirtualItems().map((virtualItem) => {
-                                // Check if this is the loading sentinel item
-                                if (virtualItem.index >= filteredCafes.length) {
-                                    return (
-                                        <div
-                                            key={virtualItem.key}
-                                            ref={virtualizer.measureElement}
-                                            data-index={virtualItem.index}
-                                            style={{
-                                                position: "absolute",
-                                                top: 0,
-                                                left: 0,
-                                                width: "100%",
-                                                transform: `translateY(${virtualItem.start}px)`,
-                                            }}
-                                        >
-                                            {loadError ? (
-                                                <div className='flex flex-col items-center justify-center py-8 gap-3'>
-                                                    <p className='text-sm text-text/60'>Failed to load more cafes</p>
-                                                    <button
-                                                        onClick={() => {
-                                                            setLoadError(false)
-                                                            setHasMore(true)
-                                                            setIsLoadingMore(false)
-                                                            loadMore()
-                                                        }}
-                                                        className='text-sm text-accent hover:underline'
-                                                    >
-                                                        Try again
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    {/* Loading more indicator */}
-                                                    {(isLoadingMore || hasMore) && (
-                                                        <div className='py-4 px-6 bg-background/70 border border-text/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
-                                                            <div className='flex-1 flex flex-col md:pr-24 gap-4'>
-                                                                <div className='flex flex-col gap-2'>
-                                                                    <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
-                                                                    <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
-                                                                </div>
-                                                                <div className='flex gap-2'>
-                                                                    <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
-                                                                    <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
-                                                                </div>
-                                                                <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
-                                                            </div>
-                                                            <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
-                                                        </div>
-                                                    )}
-                                                    {/* Scroll sentinel for infinite scroll */}
-                                                    {hasMore && (
-                                                        <div ref={scrollSentinelRef} className='h-1' />
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
-                                    )
-                                }
+                    ) : cafes.length > 0 ? (
+                        <>
+                            {/* Simple list rendering */}
+                            {cafes.map((cafe, index) => (
+                                <div key={cafe.id} className='pb-6'>
+                                    <CafeCard
+                                        cafe={cafe}
+                                        animationDelay={index}
+                                        onClick={handleCafeCardClick}
+                                    />
+                                </div>
+                            ))}
 
-                                const cafe = filteredCafes[virtualItem.index]
-                                return (
-                                    <div
-                                        key={cafe.id}
-                                        ref={virtualizer.measureElement}
-                                        data-index={virtualItem.index}
-                                        style={{
-                                            position: "absolute",
-                                            top: 0,
-                                            left: 0,
-                                            width: "100%",
-                                            transform: `translateY(${virtualItem.start}px)`,
-                                            paddingBottom: "24px", // gap-6 equivalent
-                                        }}
-                                    >
-                                        <CafeCard
-                                            cafe={cafe}
-                                            animationDelay={virtualItem.index}
-                                            onClick={() => handleCafeCardClick(cafe.slug)}
-                                        />
+                            {/* Loading more indicator */}
+                            {isLoadingMore && (
+                                <div className='py-4 px-6 bg-background/70 border border-text/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
+                                    <div className='flex-1 flex flex-col md:pr-24 gap-4'>
+                                        <div className='flex flex-col gap-2'>
+                                            <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
+                                            <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
+                                        </div>
+                                        <div className='flex gap-2'>
+                                            <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
+                                            <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
+                                        </div>
+                                        <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
                                     </div>
-                                )
-                            })}
-                        </div>
+                                    <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
+                                </div>
+                            )}
+
+                            {/* Sentinel for infinite scroll */}
+                            <div ref={sentinelRef} className='h-4' />
+
+                            {/* Load error */}
+                            {loadError && !isLoadingMore && (
+                                <div className='flex flex-col items-center justify-center py-8 gap-3'>
+                                    <p className='text-sm text-text/60'>Failed to load more cafes</p>
+                                    <button
+                                        onClick={() => {
+                                            setLoadError(false)
+                                            setHasMore(true)
+                                            loadMore()
+                                        }}
+                                        className='text-sm text-accent hover:underline'
+                                    >
+                                        Try again
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* End of list */}
+                            {!hasMore && cafes.length > 0 && !isLoadingMore && (
+                                <p className='text-center text-text/40 py-4 text-sm'>
+                                    You have reached the end
+                                </p>
+                            )}
+                        </>
                     ) : (
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className='flex flex-col items-center justify-center py-20 text-center gap-2'
                         >
-                            <p className='text-xl font-serif font-medium'>
-                                No cafes found
-                            </p>
-                            <p className='text-text/50'>
-                                Try adjusting your filters or search terms.
-                            </p>
+                            <p className='text-xl font-serif font-medium'>No cafes found</p>
+                            <p className='text-text/50'>Try adjusting your filters or search terms.</p>
                             <button
                                 onClick={() => {
                                     setSearch("")
+                                    hasUserToggledLocation.current = false
+                                    hasAutoEnabledNearMe.current = false
                                     setFilters(INITIAL_FILTERS)
                                 }}
                                 className='mt-4 text-sm font-bold text-secondary hover:underline cursor-pointer'

@@ -132,6 +132,11 @@ export interface CafeFilters {
     price_level?: Database['public']['Enums']['price_level']; // Uses of actual DB Enum type
     coffee_style?: Database['public']['Enums']['coffee_style']; // Classic (2nd-wave) or Artisan (3rd-wave)
     region?: string;
+    near_me?: {
+        city?: string;
+        province?: string;
+        region?: string;
+    };
     tags?: string[]; // Filter by vibe tags (any matching)
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";

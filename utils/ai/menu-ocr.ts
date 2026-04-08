@@ -72,7 +72,21 @@ export function parseOcrMenuItems(raw: string): OcrMenuItem[] {
 }
 
 const MENU_EXTRACTION_SYSTEM_PROMPT =
-    "You are a menu item extractor. Given an image of a cafe/restaurant menu, extract ALL menu items. Respond with a JSON array of menu items, each with: name (string), category (string), price (number or string representing a non-negative number), description (optional), is_food (optional boolean), is_hot (optional boolean), is_cold (optional boolean)."
+    `You are a menu item extractor. Given an image of a cafe/restaurant menu, extract ALL menu items.
+
+AVAILABLE CATEGORIES (use EXACTLY one of these):
+Coffee, Espresso Drinks, Cold Brew, Non-Coffee, Tea, Milk Drinks, Frappes, Smoothies, Specialty Drinks, Refreshers, Food, Rice Meals, Sandwiches, Pasta, Breakfast, Snacks, Pastries, Desserts, Cakes, Add-ons, Other
+
+For each item, respond with:
+- name: The item name exactly as written
+- category: MUST be one of the AVAILABLE CATEGORIES above (pick the closest match)
+- price: The numeric price (no currency symbol)
+- description: Brief description if visible (optional)
+- is_food: true if it's food, false if drink
+- is_hot: true if hot variant exists
+- is_cold: true if cold variant exists
+
+Respond with a JSON array of objects. If no menu items are found, return an empty array.`
 
 export async function extractMenuItemsFromImage(
     imageBase64: string
@@ -114,7 +128,7 @@ export async function extractMenuItemsFromImage(
             max_tokens: 4096,
             temperature: 0.3,
         }),
-        signal: AbortSignal.timeout(120000),
+        signal: AbortSignal.timeout(180000),
     })
 
     if (!response.ok) {

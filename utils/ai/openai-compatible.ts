@@ -82,7 +82,7 @@ export async function generateExcerpt(
                 },
                 {
                     role: "user",
-                    content: `Generate an excerpt for this blog post:\n\n${content}`,
+                    content: `Generate an excerpt for this blog post with max length of 250 characters:\n\n${content}`,
                 },
             ],
             max_tokens: 150,

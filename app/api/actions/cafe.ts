@@ -550,11 +550,6 @@ export async function getAllCafes(
         const searchResults = await db.execute(sql`SELECT * FROM search_cafes(${filters.search})`)
         let rows = searchResults.rows as Record<string, unknown>[]
 
-        // Filter out chains unless include_chains is true
-        if (!filters.include_chains) {
-            rows = rows.filter(row => row.is_chain !== true)
-        }
-
         // Filter to only 24-hour cafes for current day if is_24_7 is true
         if (filters.is_24_7) {
             const currentDay = getCurrentDayKey()
@@ -570,16 +565,11 @@ export async function getAllCafes(
         if (rows.length === 0) {
             const ilikeTerm = `%${filters.search}%`
 
-            // Build conditions for ILIKE fallback - include chain filtering
+            // Build conditions for ILIKE fallback
             const ilikConditions = [
                 eq(cafes.isPublished, true),
                 ilike(cafes.name, ilikeTerm)
             ]
-
-            // Exclude chains unless include_chains is true
-            if (!filters.include_chains) {
-                ilikConditions.push(or(eq(cafes.isChain, false), isNull(cafes.isChain))!)
-            }
 
             const fallbackResults = await db
                 .select({
@@ -701,6 +691,24 @@ export async function getAllCafes(
     if (filters.price_level) conditions.push(eq(cafes.priceLevel, filters.price_level))
     if (filters.coffee_style) conditions.push(eq(cafes.coffeeStyle, filters.coffee_style))
     if (filters.region) conditions.push(eq(cafes.region, filters.region))
+    // near_me filter - filter by city, province, or region
+    if (filters.near_me) {
+        const locationConditions: ReturnType<typeof sql>[] = []
+        if (filters.near_me.city) {
+            locationConditions.push(sql`${cafes.cityMunicipality} ILIKE ${'%' + filters.near_me.city + '%'}`)
+            locationConditions.push(sql`${cafes.province} ILIKE ${'%' + filters.near_me.city + '%'}`)
+        }
+        if (filters.near_me.province) {
+            locationConditions.push(sql`${cafes.province} ILIKE ${'%' + filters.near_me.province + '%'}`)
+            locationConditions.push(sql`${cafes.region} ILIKE ${'%' + filters.near_me.province + '%'}`)
+        }
+        if (filters.near_me.region) {
+            locationConditions.push(sql`${cafes.region} ILIKE ${'%' + filters.near_me.region + '%'}`)
+        }
+        if (locationConditions.length > 0) {
+            conditions.push(or(...locationConditions) as unknown as typeof conditions[number])
+        }
+    }
     if (filters.tags && filters.tags.length > 0) {
         // Match cafes that have any of the specified tags using PostgreSQL array overlap
         conditions.push(sql`${cafes.tags} && ARRAY[${sql.join(filters.tags.map(t => sql`${t}`), sql`, `)}]::text[]`)
