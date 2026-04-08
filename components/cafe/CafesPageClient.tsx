@@ -139,6 +139,7 @@ export default function CafesPageClient() {
 
     // Track if user has manually toggled location filter
     const hasUserToggledLocation = useRef(false)
+    const autoDisabledNearMe = useRef(false)
     const restoreAppliedRef = useRef(false)
     const scrollSentinelRef = useRef<HTMLDivElement>(null)
     const parentRef = useRef<HTMLDivElement>(null)
@@ -390,9 +391,15 @@ export default function CafesPageClient() {
             filters.near_me &&
             filteredCafes.length === 0 &&
             cafes.length > 0 &&
-            !hasUserToggledLocation.current
+            !hasUserToggledLocation.current &&
+            !autoDisabledNearMe.current
         ) {
+            autoDisabledNearMe.current = true
             setFilters((prev) => ({ ...prev, near_me: false }))
+        }
+        // Reset the guard when near_me is turned off manually
+        if (!filters.near_me) {
+            autoDisabledNearMe.current = false
         }
     }, [filteredCafes.length, cafes.length, filters.near_me])
 
