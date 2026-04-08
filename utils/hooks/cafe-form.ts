@@ -52,21 +52,15 @@ export const formatLabel = (s: string): string =>
  * @param file - The image file to check
  * @returns Promise<boolean> - True if aspect ratio is within tolerance of 16:9
  */
-export const checkAspectRatio = (file: File): Promise<boolean> => {
-    return new Promise((resolve) => {
-        const img = new window.Image()
-        img.onload = () => {
-            const aspect = img.width / img.height
-            // Allow some tolerance for 16:9 (1.777...)
-            const is16by9 = Math.abs(aspect - 16 / 9) < 0.05
-            URL.revokeObjectURL(img.src) // Clean up
-            resolve(is16by9)
-        }
-        img.onerror = () => {
-            resolve(false)
-        }
-        img.src = URL.createObjectURL(file)
-    })
+export const checkAspectRatio = async (file: File): Promise<boolean> => {
+    try {
+        const bitmap = await createImageBitmap(file)
+        const aspect = bitmap.width / bitmap.height
+        bitmap.close()
+        return Math.abs(aspect - 16 / 9) < 0.05
+    } catch {
+        return false
+    }
 }
 
 /**
