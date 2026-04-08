@@ -14,6 +14,7 @@ export interface MenuItemSuggestionData {
     is_food?: boolean
     is_hot?: boolean
     is_cold?: boolean
+    is_signature?: boolean
     calories?: number | null
     is_vegan?: boolean
     is_vegetarian?: boolean
@@ -152,6 +153,7 @@ export async function approveMenuItemSuggestion(suggestionId: string) {
                 isFood: data.is_food || false,
                 isHot: data.is_hot || false,
                 isCold: data.is_cold || false,
+                isSignature: data.is_signature || false,
                 calories: data.calories || null,
                 isVegan: data.is_vegan || false,
                 isVegetarian: data.is_vegetarian || false,
@@ -170,6 +172,7 @@ export async function approveMenuItemSuggestion(suggestionId: string) {
                     isFood: data.is_food,
                     isHot: data.is_hot,
                     isCold: data.is_cold,
+                    isSignature: data.is_signature,
                     calories: data.calories || null,
                     isVegan: data.is_vegan,
                     isVegetarian: data.is_vegetarian,
