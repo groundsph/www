@@ -2,12 +2,17 @@
 
 import { useState, useCallback, useMemo } from "react"
 import Image from "next/image"
-import { X, ChevronDown, Scale, Plus, Check, Flame, Snowflake, UtensilsCrossed, Leaf, Globe } from "lucide-react"
+import { X, ChevronDown, Scale, Plus, Check, Flame, Snowflake, UtensilsCrossed, Leaf, Globe, Pencil } from "lucide-react"
 import dynamic from "next/dynamic"
 import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
 
 const MenuComparisonModal = dynamic(
     () => import("@/components/menu/MenuComparisonModal"),
+    { ssr: false }
+)
+
+const SuggestMenuItemModal = dynamic(
+    () => import("@/components/suggestions/SuggestMenuItemModal"),
     { ssr: false }
 )
 
@@ -62,6 +67,7 @@ export default function MenuContent({
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false)
     const [compareItemIds, setCompareItemIds] = useState<string[]>([])
     const [activeFilter, setActiveFilter] = useState<FilterType>("all")
+    const [editTarget, setEditTarget] = useState<MenuItem | null>(null)
 
     const toggleCategory = (category: string) => {
         setCollapsedCategories((prev) => {
@@ -283,7 +289,7 @@ export default function MenuContent({
                         return (
                             <div
                                 key={item.id}
-                                className="relative p-3 flex flex-col min-h-[180px]"
+                                className="relative p-3 flex flex-col min-h-[180px] group"
                             >
                                 {/* Compare button - top right */}
                                 <button
@@ -301,6 +307,15 @@ export default function MenuContent({
                                     ) : (
                                         <Plus className="w-3.5 h-3.5" />
                                     )}
+                                </button>
+
+                                {/* Suggest edit button - bottom right */}
+                                <button
+                                    onClick={() => setEditTarget(item)}
+                                    className="absolute bottom-2 right-2 z-10 p-1.5 rounded-full bg-background/80 text-text/40 hover:text-primary hover:bg-background transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                                    title="Suggest an edit"
+                                >
+                                    <Pencil className="w-3 h-3" />
                                 </button>
 
                                 {/* Community indicator - top left */}
@@ -493,6 +508,31 @@ export default function MenuContent({
                 isOpen={isCompareModalOpen}
                 onClose={handleCloseCompareModal}
             />
+
+            {/* Suggest Edit Modal */}
+            {editTarget && (
+                <SuggestMenuItemModal
+                    isOpen={!!editTarget}
+                    onClose={() => setEditTarget(null)}
+                    cafeId={cafeId}
+                    cafeName={cafeName}
+                    mode="edit"
+                    existingItem={{
+                        id: editTarget.id,
+                        name: editTarget.name,
+                        category: editTarget.category,
+                        price: editTarget.price,
+                        description: editTarget.description,
+                        is_food: editTarget.isFood ?? undefined,
+                        is_hot: editTarget.isHot ?? undefined,
+                        is_cold: editTarget.isCold ?? undefined,
+                        is_vegan: editTarget.isVegan ?? undefined,
+                        is_vegetarian: editTarget.isVegetarian ?? undefined,
+                        calories: editTarget.calories ?? undefined,
+                        size_options: editTarget.sizeOptions ?? undefined,
+                    }}
+                />
+            )}
 
             {/* Lightbox Modal */}
             {lightboxImage && (

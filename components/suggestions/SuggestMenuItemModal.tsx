@@ -20,6 +20,13 @@ interface SuggestMenuItemModalProps {
         category: string
         price: number
         description: string | null
+        is_food?: boolean
+        is_hot?: boolean
+        is_cold?: boolean
+        is_vegan?: boolean
+        is_vegetarian?: boolean
+        calories?: number | null
+        size_options?: Array<{ label: string; price: number }> | null
     }
 }
 
@@ -56,19 +63,26 @@ export default function SuggestMenuItemModal({
                 setCategory(existingItem.category)
                 setPrice(existingItem.price.toString())
                 setDescription(existingItem.description || "")
+                setIsFood(existingItem.is_food ?? false)
+                setIsHot(existingItem.is_hot ?? false)
+                setIsCold(existingItem.is_cold ?? false)
+                setIsVegan(existingItem.is_vegan ?? false)
+                setIsVegetarian(existingItem.is_vegetarian ?? false)
+                setCalories(existingItem.calories?.toString() ?? "")
+                setSizeOptions(existingItem.size_options ?? [])
             } else {
                 setName("")
                 setCategory(MENU_CATEGORIES[0])
                 setPrice("")
                 setDescription("")
+                setIsFood(false)
+                setIsHot(false)
+                setIsCold(false)
+                setIsVegan(false)
+                setIsVegetarian(false)
+                setCalories("")
+                setSizeOptions([])
             }
-            setIsFood(false)
-            setIsHot(false)
-            setIsCold(false)
-            setIsVegan(false)
-            setIsVegetarian(false)
-            setCalories("")
-            setSizeOptions([])
             setError(null)
             setSuccess(false)
         }

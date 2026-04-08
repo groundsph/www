@@ -25,6 +25,7 @@ import {
     Scale,
     Plus,
     Check,
+    Pencil,
 } from "lucide-react"
 
 // Components
@@ -54,6 +55,11 @@ const ImageLightbox = dynamic(
 
 const MenuComparisonModal = dynamic(
     () => import("@/components/menu/MenuComparisonModal"),
+    { ssr: false }
+)
+
+const SuggestMenuItemModal = dynamic(
+    () => import("@/components/suggestions/SuggestMenuItemModal"),
     { ssr: false }
 )
 
@@ -158,6 +164,9 @@ export default function CafeDetails({
     // Menu Comparison Modal State
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false)
     const [compareItemIds, setCompareItemIds] = useState<string[]>([])
+
+    // Menu Item Edit State
+    const [editTargetItem, setEditTargetItem] = useState<CafeMenuItem | null>(null)
 
     // Pagination state for reviews
     const [allReviews, setAllReviews] = useState<Review[]>(initialReviews)
@@ -481,6 +490,13 @@ export default function CafeDetails({
                                                         ) : (
                                                             <Plus className='w-3.5 h-3.5' />
                                                         )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditTargetItem(item)}
+                                                        className="p-1 rounded-full text-text/30 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                                                        title="Suggest an edit"
+                                                    >
+                                                        <Pencil className="w-3 h-3" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -962,6 +978,13 @@ export default function CafeDetails({
                                                         <Plus className='w-3.5 h-3.5' />
                                                     )}
                                                 </button>
+                                                <button
+                                                    onClick={() => setEditTargetItem(item)}
+                                                    className="p-1 rounded-full text-text/30 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                                                    title="Suggest an edit"
+                                                >
+                                                    <Pencil className="w-3 h-3" />
+                                                </button>
                                             </div>
                                         </div>
                                         )
@@ -1109,6 +1132,31 @@ export default function CafeDetails({
                 isOpen={isCompareModalOpen}
                 onClose={handleCloseCompareModal}
             />
+
+            {/* Suggest Edit Modal */}
+            {editTargetItem && (
+                <SuggestMenuItemModal
+                    isOpen={!!editTargetItem}
+                    onClose={() => setEditTargetItem(null)}
+                    cafeId={cafe.id}
+                    cafeName={cafe.name}
+                    mode="edit"
+                    existingItem={{
+                        id: editTargetItem.id,
+                        name: editTargetItem.name,
+                        category: editTargetItem.category,
+                        price: editTargetItem.price,
+                        description: editTargetItem.description,
+                        is_food: editTargetItem.is_food ?? undefined,
+                        is_hot: editTargetItem.is_hot ?? undefined,
+                        is_cold: editTargetItem.is_cold ?? undefined,
+                        is_vegan: editTargetItem.is_vegan ?? undefined,
+                        is_vegetarian: editTargetItem.is_vegetarian ?? undefined,
+                        calories: editTargetItem.calories ?? undefined,
+                        size_options: editTargetItem.size_options ?? undefined,
+                    }}
+                />
+            )}
         </>
     )
 }
