@@ -31,29 +31,32 @@ describe("UserAvatar", () => {
         expect(img?.getAttribute("alt")).toBe("User avatar")
     })
 
-    it("renders /icon.png when src is null", () => {
+    it("renders initials fallback when src is null", () => {
         const { container } = render(
-            <UserAvatar src={null} alt="User avatar" size={48} />
+            <UserAvatar src={null} alt="Adrian Bonpin" size={48} />
         )
-        const img = container.querySelector("img")
-        expect(img).toBeTruthy()
-        expect(img?.getAttribute("src")).toBe("/icon.png")
-        expect(img?.getAttribute("alt")).toBe("Default avatar")
+        // Should render a div with initials, not an image
+        const fallbackDiv = container.querySelector("[role='img']")
+        expect(fallbackDiv).toBeTruthy()
+        expect(fallbackDiv?.getAttribute("aria-label")).toBe("Adrian Bonpin")
+        // Should contain initials text
+        const span = fallbackDiv?.querySelector("span")
+        expect(span?.textContent).toBe("AB")
     })
 
-    it("renders /icon.png when src is undefined", () => {
+    it("renders initials fallback when src is undefined", () => {
         const { container } = render(
-            <UserAvatar src={undefined} alt="User avatar" size={48} />
+            <UserAvatar src={undefined} alt="Jane Doe" size={48} />
         )
-        const img = container.querySelector("img")
-        expect(img).toBeTruthy()
-        expect(img?.getAttribute("src")).toBe("/icon.png")
-        expect(img?.getAttribute("alt")).toBe("Default avatar")
+        const fallbackDiv = container.querySelector("[role='img']")
+        expect(fallbackDiv).toBeTruthy()
+        const span = fallbackDiv?.querySelector("span")
+        expect(span?.textContent).toBe("JD")
     })
 
-    it("falls back to /icon.png when the image errors (onError fires)", () => {
+    it("falls back to initials when the image errors (onError fires)", () => {
         const { container } = render(
-            <UserAvatar src="/avatar.jpg" alt="User avatar" size={48} />
+            <UserAvatar src="/avatar.jpg" alt="Test User" size={48} />
         )
         const img = container.querySelector("img")
         expect(img).toBeTruthy()
@@ -62,11 +65,11 @@ describe("UserAvatar", () => {
         // Simulate error
         fireEvent.error(img!)
 
-        // After error, should show fallback
-        const fallbackImg = container.querySelector("img")
-        expect(fallbackImg).toBeTruthy()
-        expect(fallbackImg?.getAttribute("src")).toBe("/icon.png")
-        expect(fallbackImg?.getAttribute("alt")).toBe("Default avatar")
+        // After error, should show initials fallback
+        const fallbackDiv = container.querySelector("[role='img']")
+        expect(fallbackDiv).toBeTruthy()
+        const span = fallbackDiv?.querySelector("span")
+        expect(span?.textContent).toBe("TU")
     })
 
     it("applies size to the wrapper div", () => {
@@ -77,5 +80,27 @@ describe("UserAvatar", () => {
         expect(wrapper).toBeTruthy()
         expect(wrapper.style.width).toBe("64px")
         expect(wrapper.style.height).toBe("64px")
+    })
+
+    it("uses fallbackName for initials when provided", () => {
+        const { container } = render(
+            <UserAvatar src={null} alt="Display Name" size={48} fallbackName="Override Name" />
+        )
+        const fallbackDiv = container.querySelector("[role='img']")
+        const span = fallbackDiv?.querySelector("span")
+        expect(span?.textContent).toBe("ON")
+    })
+
+    it("applies a deterministic background color", () => {
+        const { container: c1 } = render(
+            <UserAvatar src={null} alt="Adrian" size={48} />
+        )
+        const { container: c2 } = render(
+            <UserAvatar src={null} alt="Adrian" size={48} />
+        )
+        const div1 = c1.querySelector("[role='img']") as HTMLElement
+        const div2 = c2.querySelector("[role='img']") as HTMLElement
+        expect(div1.style.backgroundColor).toBeTruthy()
+        expect(div1.style.backgroundColor).toBe(div2.style.backgroundColor)
     })
 })
