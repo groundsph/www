@@ -1,8 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import Image from "next/image"
-import { X, ChevronDown } from "lucide-react"
+import { X, ChevronDown, Scale, Plus, Check } from "lucide-react"
+import dynamic from "next/dynamic"
+
+const MenuComparisonModal = dynamic(
+    () => import("@/components/menu/MenuComparisonModal"),
+    { ssr: false }
+)
 
 interface MenuItem {
     id: string
@@ -31,6 +37,8 @@ export default function MenuContent({
     const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
         new Set()
     )
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false)
+    const [compareItemIds, setCompareItemIds] = useState<string[]>([])
 
     const toggleCategory = (category: string) => {
         setCollapsedCategories((prev) => {
@@ -44,8 +52,52 @@ export default function MenuContent({
         })
     }
 
+    const toggleCompareItem = useCallback((item: MenuItem) => {
+        setCompareItemIds((prev) => {
+            if (prev.includes(item.id)) {
+                return prev.filter((id) => id !== item.id)
+            }
+            if (prev.length >= 4) {
+                return prev
+            }
+            return [...prev, item.id]
+        })
+    }, [])
+
+    const isItemInComparison = useCallback(
+        (itemId: string) => compareItemIds.includes(itemId),
+        [compareItemIds]
+    )
+
+    const handleOpenCompareModal = useCallback(() => {
+        setIsCompareModalOpen(true)
+    }, [])
+
+    const handleCloseCompareModal = useCallback(() => {
+        setIsCompareModalOpen(false)
+    }, [])
+
     return (
         <>
+            {/* Compare Button Header */}
+            <div className="flex items-center justify-between px-4 py-3 bg-tertiary/40 border-b border-text/10">
+                <div className="flex items-center gap-2">
+                    {compareItemIds.length > 0 && (
+                        <span className="text-sm text-text/60">
+                            {compareItemIds.length} item{compareItemIds.length === 1 ? "" : "s"} selected
+                        </span>
+                    )}
+                </div>
+                <button
+                    onClick={handleOpenCompareModal}
+                    disabled={compareItemIds.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                    <Scale className="w-4 h-4" />
+                    Compare Items
+                </button>
+            </div>
+
             {categories.map((category) => {
                 const categoryItems = menuItems
                     .filter((item) => item.category === category)
@@ -74,11 +126,33 @@ export default function MenuContent({
                 const needsLgTwoPlaceholder = totalItems === 2 // 1 on left only
 
                 // Helper to render a menu item
-                const renderMenuItem = (item: MenuItem) => (
+                const renderMenuItem = (item: MenuItem) => {
+                    const isInComparison = isItemInComparison(item.id)
+                    const canAddMore = compareItemIds.length < 4 || isInComparison
+
+                    return (
                     <div
                         key={item.id}
                         className='relative p-3 flex flex-col min-h-[180px]'
                     >
+                        {/* Compare button - top right */}
+                        <button
+                            onClick={() => toggleCompareItem(item)}
+                            disabled={!canAddMore}
+                            className={`absolute top-2 right-2 z-10 p-1.5 rounded-full transition-all cursor-pointer ${
+                                isInComparison
+                                    ? 'bg-primary text-white'
+                                    : 'bg-background/80 text-text/60 hover:text-primary hover:bg-background'
+                            } ${!canAddMore ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={isInComparison ? 'Remove from comparison' : compareItemIds.length >= 4 ? 'Max 4 items' : 'Add to comparison'}
+                        >
+                            {isInComparison ? (
+                                <Check className='w-3.5 h-3.5' />
+                            ) : (
+                                <Plus className='w-3.5 h-3.5' />
+                            )}
+                        </button>
+
                         <div className='flex flex-col-reverse md:flex-row gap-3 flex-1'>
                             <div className='flex-1 flex flex-col'>
                                 <h3 className='font-bold text-base uppercase leading-tight'>
@@ -119,7 +193,8 @@ export default function MenuContent({
                             )}
                         </div>
                     </div>
-                )
+                    )
+                }
 
                 return (
                     <section key={category}>
@@ -243,6 +318,12 @@ export default function MenuContent({
                     </section>
                 )
             })}
+
+            {/* Menu Comparison Modal */}
+            <MenuComparisonModal
+                isOpen={isCompareModalOpen}
+                onClose={handleCloseCompareModal}
+            />
 
             {/* Lightbox Modal */}
             {lightboxImage && (

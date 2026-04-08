@@ -22,6 +22,9 @@ import {
     Armchair,
     Cigarette,
     Coffee,
+    Scale,
+    Plus,
+    Check,
 } from "lucide-react"
 
 // Components
@@ -45,6 +48,11 @@ import SuggestMenuItemButton from "@/components/suggestions/SuggestMenuItemButto
 
 const ImageLightbox = dynamic(
     () => import("@/components/modal/ImageLightbox"),
+    { ssr: false }
+)
+
+const MenuComparisonModal = dynamic(
+    () => import("@/components/menu/MenuComparisonModal"),
     { ssr: false }
 )
 
@@ -146,6 +154,10 @@ export default function CafeDetails({
     // Group Check-in Modal State
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false)
 
+    // Menu Comparison Modal State
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false)
+    const [compareItemIds, setCompareItemIds] = useState<string[]>([])
+
     // Pagination state for reviews
     const [allReviews, setAllReviews] = useState<Review[]>(initialReviews)
     const [hasMoreReviews, setHasMoreReviews] = useState(initialHasMore)
@@ -171,6 +183,32 @@ export default function CafeDetails({
         trigger("medium")
         setIsCheckInModalOpen(true)
     }
+
+    // Menu comparison handlers
+    const toggleCompareItem = useCallback((itemId: string) => {
+        setCompareItemIds((prev) => {
+            if (prev.includes(itemId)) {
+                return prev.filter((id) => id !== itemId)
+            }
+            if (prev.length >= 4) {
+                return prev
+            }
+            return [...prev, itemId]
+        })
+    }, [])
+
+    const isItemInComparison = useCallback(
+        (itemId: string) => compareItemIds.includes(itemId),
+        [compareItemIds]
+    )
+
+    const handleOpenCompareModal = useCallback(() => {
+        setIsCompareModalOpen(true)
+    }, [])
+
+    const handleCloseCompareModal = useCallback(() => {
+        setIsCompareModalOpen(false)
+    }, [])
 
     // Haptic-wrapped toggle handlers
     const handleToggleFavorite = async () => {
@@ -350,6 +388,24 @@ export default function CafeDetails({
                         menu:
                             menuItems.length > 0 ? (
                                 <div className='space-y-3 bg-tertiary/30 p-4 rounded-xl'>
+                                    {/* Compare button header */}
+                                    <div className="flex items-center justify-between pb-2 border-b border-text/10">
+                                        <div className="flex items-center gap-2">
+                                            {compareItemIds.length > 0 && (
+                                                <span className="text-sm text-text/60">
+                                                    {compareItemIds.length} item{compareItemIds.length === 1 ? "" : "s"} selected
+                                                </span>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={handleOpenCompareModal}
+                                            disabled={compareItemIds.length === 0}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                        >
+                                            <Scale className="w-3.5 h-3.5" />
+                                            Compare
+                                        </button>
+                                    </div>
                                     {menuItems
                                         .filter(
                                             (item) =>
@@ -380,10 +436,13 @@ export default function CafeDetails({
                                             return 0
                                         })
                                         .slice(0, 5)
-                                        .map((item) => (
+                                        .map((item) => {
+                                            const isInComparison = isItemInComparison(item.id)
+                                            const canAddMore = compareItemIds.length < 4 || isInComparison
+                                            return (
                                             <div
                                                 key={item.id}
-                                                className='flex justify-between items-start gap-4'
+                                                className='flex justify-between items-start gap-4 group'
                                             >
                                                 <div className='flex-1 min-w-0'>
                                                     <div className='flex items-center gap-2'>
@@ -402,11 +461,30 @@ export default function CafeDetails({
                                                         </p>
                                                     )}
                                                 </div>
-                                                <span className='font-medium text-text/80 shrink-0'>
-                                                    ₱{item.price.toFixed(2)}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className='font-medium text-text/80 shrink-0'>
+                                                        ₱{item.price.toFixed(2)}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => toggleCompareItem(item.id)}
+                                                        disabled={!canAddMore}
+                                                        className={`p-1 rounded-full transition-all cursor-pointer ${
+                                                            isInComparison
+                                                                ? 'bg-primary text-white'
+                                                                : 'text-text/40 hover:text-primary hover:bg-primary/10'
+                                                        } ${!canAddMore ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        title={isInComparison ? 'Remove from comparison' : compareItemIds.length >= 4 ? 'Max 4 items' : 'Add to comparison'}
+                                                    >
+                                                        {isInComparison ? (
+                                                            <Check className='w-3.5 h-3.5' />
+                                                        ) : (
+                                                            <Plus className='w-3.5 h-3.5' />
+                                                        )}
+                                                    </button>
+                                                </div>
                                             </div>
-                                        ))}
+                                            )
+                                        })}
                                     {menuItems.filter(
                                         (item) =>
                                             item.is_available &&
@@ -776,12 +854,27 @@ export default function CafeDetails({
                         <section className='w-full'>
                             <div className='flex items-center justify-between mb-4'>
                                 <h2 className='text-xl font-semibold'>Menu</h2>
-                                <Link
-                                    href={`/cafes/${cafe.slug}/menu`}
-                                    className='text-sm text-primary hover:text-primary/80 font-medium transition-colors'
-                                >
-                                    View Full Menu →
-                                </Link>
+                                <div className="flex items-center gap-2">
+                                    {compareItemIds.length > 0 && (
+                                        <span className="text-sm text-text/60">
+                                            {compareItemIds.length} selected
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={handleOpenCompareModal}
+                                        disabled={compareItemIds.length === 0}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                    >
+                                        <Scale className="w-3.5 h-3.5" />
+                                        Compare
+                                    </button>
+                                    <Link
+                                        href={`/cafes/${cafe.slug}/menu`}
+                                        className='text-sm text-primary hover:text-primary/80 font-medium transition-colors'
+                                    >
+                                        View Full Menu →
+                                    </Link>
+                                </div>
                             </div>
                             <div className='space-y-3 bg-tertiary/30 p-4 rounded-xl'>
                                 {/* Sort items: specialties first, then by signature status */}
@@ -809,10 +902,13 @@ export default function CafeDetails({
                                         return 0
                                     })
                                     .slice(0, 5)
-                                    .map((item) => (
+                                    .map((item) => {
+                                        const isInComparison = isItemInComparison(item.id)
+                                        const canAddMore = compareItemIds.length < 4 || isInComparison
+                                        return (
                                         <div
                                             key={item.id}
-                                            className='flex justify-between items-start gap-4'
+                                            className='flex justify-between items-start gap-4 group'
                                         >
                                             <div className='flex-1 min-w-0'>
                                                 <div className='flex items-center gap-2'>
@@ -831,11 +927,30 @@ export default function CafeDetails({
                                                     </p>
                                                 )}
                                             </div>
-                                            <span className='font-medium text-text/80 shrink-0'>
-                                                ₱{item.price.toFixed(2)}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className='font-medium text-text/80 shrink-0'>
+                                                    ₱{item.price.toFixed(2)}
+                                                </span>
+                                                <button
+                                                    onClick={() => toggleCompareItem(item.id)}
+                                                    disabled={!canAddMore}
+                                                    className={`p-1 rounded-full transition-all cursor-pointer ${
+                                                        isInComparison
+                                                            ? 'bg-primary text-white'
+                                                            : 'text-text/40 hover:text-primary hover:bg-primary/10'
+                                                    } ${!canAddMore ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    title={isInComparison ? 'Remove from comparison' : compareItemIds.length >= 4 ? 'Max 4 items' : 'Add to comparison'}
+                                                >
+                                                    {isInComparison ? (
+                                                        <Check className='w-3.5 h-3.5' />
+                                                    ) : (
+                                                        <Plus className='w-3.5 h-3.5' />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
-                                    ))}
+                                        )
+                                    })}
                                 {menuItems.filter(
                                     (item) =>
                                         item.is_available &&
@@ -958,6 +1073,12 @@ export default function CafeDetails({
                 visitedToday={visitedToday}
                 visitCount={visitCount}
                 initialCompanions={currentCompanions}
+            />
+
+            {/* Menu Comparison Modal */}
+            <MenuComparisonModal
+                isOpen={isCompareModalOpen}
+                onClose={handleCloseCompareModal}
             />
         </>
     )

@@ -118,7 +118,16 @@ export default async function MenuPage({ params }: MenuPageProps) {
                     </div>
                 ) : (
                     <MenuContent
-                        menuItems={menuItems}
+                        menuItems={menuItems.map((item) => ({
+                            id: item.id,
+                            name: item.name,
+                            description: item.description,
+                            price: item.price,
+                            category: item.category,
+                            imageUrl: item.imageUrl,
+                            isSignature: item.isSignature,
+                            isAvailable: item.isAvailable,
+                        }))}
                         categories={categories}
                     />
                 )}
