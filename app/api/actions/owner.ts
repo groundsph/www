@@ -343,7 +343,7 @@ export async function updateCafeAsOwner(
         milk_options: string[]
         serves_food: boolean
         is_work_friendly: boolean
-        price_level: 'low' | 'medium' | 'high'
+        price_level: 'budget' | 'mid' | 'premium' | 'luxury'
         payment_methods: string
         specialty: string[]
         tags: string[]

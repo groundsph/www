@@ -75,17 +75,37 @@ export async function getMenuItemSuggestionsForCafe(cafeId: string) {
         .orderBy(menuItemSuggestions.createdAt)
 }
 
-export async function getPendingMenuItemSuggestions() {
+export interface MenuItemSuggestion {
+    id: string
+    cafeId: string
+    userId: string
+    type: string
+    targetItemId: string | null
+    suggestedData: MenuItemSuggestionData
+    status: string | null
+    adminNotes: string | null
+    reviewedBy: string | null
+    reviewedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+}
+
+export async function getPendingMenuItemSuggestions(): Promise<MenuItemSuggestion[]> {
     const user = await getCurrentUser()
     if (!user || (user.role !== "admin" && user.role !== "moderator")) {
         return []
     }
 
-    return db
+    const results = await db
         .select()
         .from(menuItemSuggestions)
         .where(eq(menuItemSuggestions.status, "pending"))
         .orderBy(menuItemSuggestions.createdAt)
+
+    return results.map((r) => ({
+        ...r,
+        suggestedData: r.suggestedData as unknown as MenuItemSuggestionData,
+    }))
 }
 
 export async function getPendingMenuItemSuggestionsCount(cafeId: string) {

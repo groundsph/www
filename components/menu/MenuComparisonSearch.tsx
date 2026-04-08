@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { Search, X, Loader2, Coffee, UtensilsCrossed } from "lucide-react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
-import { searchMenuItemsForComparison } from "@/utils/menu-comparison"
+import { searchMenuItemsAction } from "@/app/api/actions/menu-comparison"
 import { useHaptics } from "@/hooks/useHaptics"
 import { cn } from "@/utils/cn"
 import type { ComparableMenuItem } from "@/utils/types/menu-comparison"
@@ -48,7 +48,7 @@ export default function MenuComparisonSearch({
 
 			setIsLoading(true)
 			try {
-				const items = await searchMenuItemsForComparison(debouncedQuery, 10)
+				const items = await searchMenuItemsAction(debouncedQuery, 10)
 				// Filter out already selected items
 				const selectedIds = new Set(selectedItems.map((item) => item.id))
 				const filtered = items
