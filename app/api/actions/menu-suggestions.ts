@@ -3,7 +3,7 @@
 import { db } from "@/db"
 import { menuItemSuggestions, cafeMenuItems } from "@/db/schema/tables"
 import { getCurrentUser } from "@/lib/auth"
-import { eq } from "drizzle-orm"
+import { eq, and, count } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 export interface MenuItemSuggestionData {
@@ -86,6 +86,23 @@ export async function getPendingMenuItemSuggestions() {
         .from(menuItemSuggestions)
         .where(eq(menuItemSuggestions.status, "pending"))
         .orderBy(menuItemSuggestions.createdAt)
+}
+
+export async function getPendingMenuItemSuggestionsCount(cafeId: string) {
+    const user = await getCurrentUser()
+    if (!user) return 0
+
+    const result = await db
+        .select({ count: count() })
+        .from(menuItemSuggestions)
+        .where(
+            and(
+                eq(menuItemSuggestions.cafeId, cafeId),
+                eq(menuItemSuggestions.status, "pending")
+            )
+        )
+
+    return result[0]?.count ?? 0
 }
 
 export async function approveMenuItemSuggestion(suggestionId: string) {

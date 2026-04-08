@@ -44,6 +44,8 @@ import {
     Upload,
     X,
     Stamp,
+    Users,
+    AlertCircle,
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
@@ -80,6 +82,9 @@ import {
     setCafeBadgeStamp,
     removeCafeBadgeStamp,
 } from "@/app/api/actions/owner"
+import {
+    getPendingMenuItemSuggestionsCount,
+} from "@/app/api/actions/menu-suggestions"
 
 interface CafeManagementProps {
     cafe: CafeWithRatings
@@ -205,6 +210,10 @@ export default function CafeManagement({
         cafe.badge_stamp_url || null,
     )
     const [uploadingBadgeStamp, setUploadingBadgeStamp] = useState(false)
+
+    // Menu suggestions state
+    const [pendingMenuSuggestions, setPendingMenuSuggestions] = useState(0)
+    const [menuFilter, setMenuFilter] = useState<"all" | "coffee" | "food" | "cold" | "hot" | "vegan">("all")
 
     // Fetch featured requests on load
     useEffect(() => {
@@ -445,6 +454,19 @@ export default function CafeManagement({
         }
         if (tab === "inventory" && !inventoryStats) {
             loadInventory()
+        }
+        if (tab === "menu") {
+            loadPendingMenuSuggestions()
+        }
+    }
+
+    // Load pending menu suggestions count
+    const loadPendingMenuSuggestions = async () => {
+        try {
+            const count = await getPendingMenuItemSuggestionsCount(cafe.id)
+            setPendingMenuSuggestions(count)
+        } catch (e) {
+            console.error("Failed to fetch pending menu suggestions", e)
         }
     }
 
@@ -1786,6 +1808,45 @@ export default function CafeManagement({
                             exit={{ opacity: 0, y: -10 }}
                             className='space-y-4'
                         >
+                            {/* Pending Suggestions Notice */}
+                            {pendingMenuSuggestions > 0 && (
+                                <div className='flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl'>
+                                    <AlertCircle className='w-5 h-5 text-amber-600 shrink-0' />
+                                    <div className='flex-1'>
+                                        <p className='font-medium text-amber-800'>
+                                            {pendingMenuSuggestions} community menu suggestion{pendingMenuSuggestions !== 1 ? "s" : ""} pending review
+                                        </p>
+                                        <p className='text-sm text-amber-700/70'>
+                                            Our team will review and notify you when suggestions are approved
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Filters */}
+                            <div className='flex flex-wrap gap-2'>
+                                {[
+                                    { key: "all", label: "All" },
+                                    { key: "coffee", label: "Coffee" },
+                                    { key: "food", label: "Food" },
+                                    { key: "cold", label: "Cold" },
+                                    { key: "hot", label: "Hot" },
+                                    { key: "vegan", label: "Vegan" },
+                                ].map((filter) => (
+                                    <button
+                                        key={filter.key}
+                                        onClick={() => setMenuFilter(filter.key as typeof menuFilter)}
+                                        className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                                            menuFilter === filter.key
+                                                ? "bg-primary text-white"
+                                                : "bg-text/10 text-text/70 hover:bg-text/20"
+                                        }`}
+                                    >
+                                        {filter.label}
+                                    </button>
+                                ))}
+                            </div>
+
                             <div className='flex items-center justify-between'>
                                 <div>
                                     <p className='text-text/60'>
@@ -1808,220 +1869,124 @@ export default function CafeManagement({
                                 </button>
                             </div>
 
-                            {menuItems.length === 0 ? (
-                                <div className='text-center py-12 text-text/60'>
-                                    <UtensilsCrossed className='w-12 h-12 mx-auto mb-3 opacity-30' />
-                                    <p>No menu items yet</p>
-                                    <p className='text-sm'>
-                                        Add your first menu item to showcase
-                                        your offerings
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className='space-y-6'>
-                                    {/* Group by category */}
-                                    {[
-                                        ...new Set(
-                                            menuItems.map(
-                                                (item) => item.category,
-                                            ),
-                                        ),
-                                    ].map((category) => (
-                                        <div key={category}>
-                                            <h3 className='text-sm font-semibold text-text/70 uppercase tracking-wide mb-3'>
-                                                {category}
-                                            </h3>
+                            {(() => {
+                                // Filter items based on active filter
+                                const filteredItems = (() => {
+                                    switch (menuFilter) {
+                                        case "coffee":
+                                            return menuItems.filter((item) => !item.is_food)
+                                        case "food":
+                                            return menuItems.filter((item) => item.is_food)
+                                        case "cold":
+                                            return menuItems.filter((item) => item.is_cold)
+                                        case "hot":
+                                            return menuItems.filter((item) => item.is_hot)
+                                        case "vegan":
+                                            return menuItems.filter((item) => item.is_vegan)
+                                        default:
+                                            return menuItems
+                                    }
+                                })()
 
-                                            {/* Add-ons: render as simple list */}
-                                            {category === "Add-ons" ? (
-                                                <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
-                                                    {menuItems
-                                                        .filter(
-                                                            (item) =>
-                                                                item.category ===
-                                                                category,
-                                                        )
-                                                        .map((item) => (
-                                                            <div
-                                                                key={item.id}
-                                                                className={`flex items-center justify-between py-2 px-3 rounded-lg border transition-all ${
-                                                                    item.is_available
-                                                                        ? "bg-text/5 border-text/10"
-                                                                        : "bg-red-50 border-red-200 opacity-60"
-                                                                }`}
-                                                            >
-                                                                <div className='flex-1 min-w-0'>
-                                                                    <span className='font-medium text-sm'>
-                                                                        {
-                                                                            item.name
-                                                                        }
-                                                                    </span>
-                                                                    {item.description && (
-                                                                        <span className='text-xs text-text/60 ml-2 truncate'>
-                                                                            {
-                                                                                item.description
-                                                                            }
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <span className='text-sm font-semibold text-primary mx-2'>
-                                                                    +₱
-                                                                    {item.price.toFixed(
-                                                                        0,
-                                                                    )}
-                                                                </span>
-                                                                {/* Toggle + Actions */}
-                                                                <div className='flex items-center gap-2'>
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handleToggleAvailability(
-                                                                                item,
-                                                                            )
-                                                                        }
-                                                                        className={`relative w-8 h-4 rounded-full transition-colors ${
-                                                                            item.is_available
-                                                                                ? "bg-green-500"
-                                                                                : "bg-gray-300"
-                                                                        }`}
-                                                                        title={
-                                                                            item.is_available
-                                                                                ? "Mark as unavailable"
-                                                                                : "Mark as available"
-                                                                        }
-                                                                    >
-                                                                        <span
-                                                                            className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${
-                                                                                item.is_available
-                                                                                    ? "translate-x-4"
-                                                                                    : "translate-x-0"
-                                                                            }`}
-                                                                        />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            openEditMenu(
-                                                                                item,
-                                                                            )
-                                                                        }
-                                                                        className='p-1 text-text/40 hover:text-text transition-colors'
-                                                                        title='Edit'
-                                                                    >
-                                                                        <Edit2 className='w-3 h-3' />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handleDeleteMenuItem(
-                                                                                item.id,
-                                                                            )
-                                                                        }
-                                                                        className='p-1 text-text/40 hover:text-red-500 transition-colors'
-                                                                        title='Delete'
-                                                                    >
-                                                                        <Trash2 className='w-3 h-3' />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                </div>
-                                            ) : (
-                                                /* Regular grid for other categories */
-                                                <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
-                                                    {menuItems
-                                                        .filter(
-                                                            (item) =>
-                                                                item.category ===
-                                                                category,
-                                                        )
-                                                        .map((item) => (
-                                                            <div
-                                                                key={item.id}
-                                                                className={`relative p-3 rounded-xl border transition-all ${
-                                                                    item.is_available
-                                                                        ? "bg-text/5 border-text/10"
-                                                                        : "bg-red-50 border-red-200 opacity-60"
-                                                                }`}
-                                                            >
-                                                                {/* Image */}
-                                                                {item.image_url ? (
-                                                                    <div className='relative w-full aspect-square rounded-lg overflow-hidden mb-2'>
-                                                                        <Image
-                                                                            src={
-                                                                                item.image_url
-                                                                            }
-                                                                            alt={
-                                                                                item.name
-                                                                            }
-                                                                            fill
-                                                                            className='object-cover'
-                                                                        />
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className='w-full aspect-square rounded-lg bg-text/10 flex items-center justify-center mb-2'>
-                                                                        <UtensilsCrossed className='w-8 h-8 text-text opacity-30' />
-                                                                    </div>
-                                                                )}
+                                const categories = [...new Set(filteredItems.map((item) => item.category))]
 
-                                                                {/* Item Info */}
-                                                                <div className='space-y-1'>
-                                                                    <h4 className='font-medium text-sm leading-tight'>
-                                                                        {
-                                                                            item.name
-                                                                        }
-                                                                        {item.is_signature && (
-                                                                            <span className='ml-1 text-amber-500'>
-                                                                                ★
+                                return filteredItems.length === 0 ? (
+                                    <div className='text-center py-12 text-text/60'>
+                                        <UtensilsCrossed className='w-12 h-12 mx-auto mb-3 opacity-30' />
+                                        <p>No menu items match this filter</p>
+                                    </div>
+                                ) : (
+                                    <div className='space-y-6'>
+                                        {/* Group by category */}
+                                        {categories.map((category) => (
+                                            <div key={category}>
+                                                <h3 className='text-sm font-semibold text-text/70 uppercase tracking-wide mb-3'>
+                                                    {category}
+                                                </h3>
+
+                                                {/* Add-ons: render as simple list */}
+                                                {category === "Add-ons" ? (
+                                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
+                                                        {filteredItems
+                                                            .filter(
+                                                                (item) =>
+                                                                    item.category ===
+                                                                    category,
+                                                            )
+                                                            .map((item) => (
+                                                                <div
+                                                                    key={item.id}
+                                                                    className={`flex items-center justify-between py-2 px-3 rounded-lg border transition-all ${
+                                                                        item.is_available
+                                                                            ? "bg-text/5 border-text/10"
+                                                                            : "bg-red-50 border-red-200 opacity-60"
+                                                                    }`}
+                                                                >
+                                                                    <div className='flex-1 min-w-0'>
+                                                                        <div className='flex items-center gap-2'>
+                                                                            <span className='font-medium text-sm'>
+                                                                                {
+                                                                                    item.name
+                                                                                }
+                                                                            </span>
+                                                                            {item.community_submitted && (
+                                                                                <span className='inline-flex items-center gap-0.5 text-xs text-emerald-600'>
+                                                                                    <Users className='w-3 h-3' />
+                                                                                    Community
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {item.description && (
+                                                                            <span className='text-xs text-text/60 block truncate'>
+                                                                                {
+                                                                                    item.description
+                                                                                }
                                                                             </span>
                                                                         )}
-                                                                    </h4>
-                                                                    <p className='text-sm font-semibold text-primary'>
-                                                                        ₱
+                                                                    </div>
+                                                                    <span className='text-sm font-semibold text-primary mx-2'>
+                                                                        +₱
                                                                         {item.price.toFixed(
                                                                             0,
                                                                         )}
-                                                                    </p>
-                                                                </div>
-
-                                                                {/* Actions Row */}
-                                                                <div className='flex items-center justify-between mt-3 pt-2 border-t border-text/10'>
-                                                                    {/* Availability Toggle */}
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handleToggleAvailability(
-                                                                                item,
-                                                                            )
-                                                                        }
-                                                                        className={`relative w-10 h-5 rounded-full transition-colors ${
-                                                                            item.is_available
-                                                                                ? "bg-green-500"
-                                                                                : "bg-gray-300"
-                                                                        }`}
-                                                                        title={
-                                                                            item.is_available
-                                                                                ? "Mark as unavailable"
-                                                                                : "Mark as available"
-                                                                        }
-                                                                    >
-                                                                        <span
-                                                                            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                                                                    </span>
+                                                                    {/* Toggle + Actions */}
+                                                                    <div className='flex items-center gap-2'>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                handleToggleAvailability(
+                                                                                    item,
+                                                                                )
+                                                                            }
+                                                                            className={`relative w-8 h-4 rounded-full transition-colors ${
                                                                                 item.is_available
-                                                                                    ? "translate-x-5"
-                                                                                    : "translate-x-0"
+                                                                                    ? "bg-green-500"
+                                                                                    : "bg-gray-300"
                                                                             }`}
-                                                                        />
-                                                                    </button>
-
-                                                                    {/* Edit/Delete Buttons */}
-                                                                    <div className='flex flex-1 items-center gap-1 pl-2'>
+                                                                            title={
+                                                                                item.is_available
+                                                                                    ? "Mark as unavailable"
+                                                                                    : "Mark as available"
+                                                                            }
+                                                                        >
+                                                                            <span
+                                                                                className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${
+                                                                                    item.is_available
+                                                                                        ? "translate-x-4"
+                                                                                        : "translate-x-0"
+                                                                                }`}
+                                                                            />
+                                                                        </button>
                                                                         <button
                                                                             onClick={() =>
                                                                                 openEditMenu(
                                                                                     item,
                                                                                 )
                                                                             }
-                                                                            className='p-1.5 flex-1 items-center flex justify-center bg-accent/10 hover:bg-accent/20 text-text/40 hover:text-text transition-colors rounded'
-                                                                            title='Edit item'
+                                                                            className='p-1 text-text/40 hover:text-text transition-colors'
+                                                                            title='Edit'
                                                                         >
-                                                                            <Edit2 className='w-3.5 h-3.5' />
+                                                                            <Edit2 className='w-3 h-3' />
                                                                         </button>
                                                                         <button
                                                                             onClick={() =>
@@ -2029,21 +1994,144 @@ export default function CafeManagement({
                                                                                     item.id,
                                                                                 )
                                                                             }
-                                                                            className='p-1.5 flex-1 text-text/40 hover:text-red-500 transition-colors rounded bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center'
-                                                                            title='Delete item'
+                                                                            className='p-1 text-text/40 hover:text-red-500 transition-colors'
+                                                                            title='Delete'
                                                                         >
-                                                                            <Trash2 className='w-3.5 h-3.5' />
+                                                                            <Trash2 className='w-3 h-3' />
                                                                         </button>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                                            ))}
+                                                    </div>
+                                                ) : (
+                                                    /* Regular grid for other categories */
+                                                    <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
+                                                        {filteredItems
+                                                            .filter(
+                                                                (item) =>
+                                                                    item.category ===
+                                                                    category,
+                                                            )
+                                                            .map((item) => (
+                                                                <div
+                                                                    key={item.id}
+                                                                    className={`relative p-3 rounded-xl border transition-all ${
+                                                                        item.is_available
+                                                                            ? "bg-text/5 border-text/10"
+                                                                            : "bg-red-50 border-red-200 opacity-60"
+                                                                    }`}
+                                                                >
+                                                                    {/* Image */}
+                                                                    {item.image_url ? (
+                                                                        <div className='relative w-full aspect-square rounded-lg overflow-hidden mb-2'>
+                                                                            <Image
+                                                                                src={
+                                                                                    item.image_url
+                                                                                }
+                                                                                alt={
+                                                                                    item.name
+                                                                                }
+                                                                                fill
+                                                                                className='object-cover'
+                                                                            />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className='w-full aspect-square rounded-lg bg-text/10 flex items-center justify-center mb-2'>
+                                                                            <UtensilsCrossed className='w-8 h-8 text-text opacity-30' />
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Item Info */}
+                                                                    <div className='space-y-1'>
+                                                                        <h4 className='font-medium text-sm leading-tight'>
+                                                                            {
+                                                                                item.name
+                                                                            }
+                                                                            {item.is_signature && (
+                                                                                <span className='ml-1 text-amber-500'>
+                                                                                    ★
+                                                                                </span>
+                                                                            )}
+                                                                        </h4>
+                                                                        {/* Community Badge */}
+                                                                        {item.community_submitted && (
+                                                                            <div className='flex items-center gap-1 text-xs text-emerald-600'>
+                                                                                <Users className='w-3 h-3' />
+                                                                                <span className='font-medium'>Community</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <p className='text-sm font-semibold text-primary'>
+                                                                            ₱
+                                                                            {item.price.toFixed(
+                                                                                0,
+                                                                            )}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    {/* Actions Row */}
+                                                                    <div className='flex items-center justify-between mt-3 pt-2 border-t border-text/10'>
+                                                                        {/* Availability Toggle */}
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                handleToggleAvailability(
+                                                                                    item,
+                                                                                )
+                                                                            }
+                                                                            className={`relative w-10 h-5 rounded-full transition-colors ${
+                                                                                item.is_available
+                                                                                    ? "bg-green-500"
+                                                                                    : "bg-gray-300"
+                                                                            }`}
+                                                                            title={
+                                                                                item.is_available
+                                                                                    ? "Mark as unavailable"
+                                                                                    : "Mark as available"
+                                                                            }
+                                                                        >
+                                                                            <span
+                                                                                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                                                                                    item.is_available
+                                                                                        ? "translate-x-5"
+                                                                                        : "translate-x-0"
+                                                                                }`}
+                                                                            />
+                                                                        </button>
+
+                                                                        {/* Edit/Delete Buttons */}
+                                                                        <div className='flex flex-1 items-center gap-1 pl-2'>
+                                                                            <button
+                                                                                onClick={() =>
+                                                                                    openEditMenu(
+                                                                                        item,
+                                                                                    )
+                                                                                }
+                                                                                className='p-1.5 flex-1 items-center flex justify-center bg-accent/10 hover:bg-accent/20 text-text/40 hover:text-text transition-colors rounded'
+                                                                                title='Edit item'
+                                                                            >
+                                                                                <Edit2 className='w-3.5 h-3.5' />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() =>
+                                                                                    handleDeleteMenuItem(
+                                                                                        item.id,
+                                                                                    )
+                                                                                }
+                                                                                className='p-1.5 flex-1 text-text/40 hover:text-red-500 transition-colors rounded bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center'
+                                                                                title='Delete item'
+                                                                            >
+                                                                                <Trash2 className='w-3.5 h-3.5' />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            })()}
                         </motion.div>
                     )}
 

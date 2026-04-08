@@ -1,16 +1,28 @@
-import { Coffee, Pencil, Trash2 } from "lucide-react"
+"use client"
+
+import { useState, useMemo } from "react"
+import { Coffee, Pencil, Trash2, Users, AlertCircle } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import { UseMenuItemsReturn } from "@/utils/hooks/useMenuItems"
+
+type FilterType = "all" | "coffee" | "food" | "cold" | "hot" | "vegan"
 
 interface MenuSectionProps {
     menu: UseMenuItemsReturn
     colorScheme?: "primary" | "accent"
+    pendingSuggestionsCount?: number
+    cafeSlug?: string
 }
 
 export default function MenuSection({
     menu,
     colorScheme = "primary",
+    pendingSuggestionsCount = 0,
+    cafeSlug,
 }: MenuSectionProps) {
+    const [activeFilter, setActiveFilter] = useState<FilterType>("all")
+
     const buttonBaseClasses =
         "inline-flex items-center gap-1 px-3 py-2 text-white rounded-lg text-sm font-medium transition-colors"
     const buttonColorClasses =
@@ -18,13 +30,75 @@ export default function MenuSection({
             ? "bg-accent hover:bg-accent/90"
             : "bg-primary hover:bg-primary/90"
 
+    // Filter items based on active filter
+    const filteredItems = useMemo(() => {
+        switch (activeFilter) {
+            case "coffee":
+                return menu.items.filter((item) => !item.is_food)
+            case "food":
+                return menu.items.filter((item) => item.is_food)
+            case "cold":
+                return menu.items.filter((item) => item.is_cold)
+            case "hot":
+                return menu.items.filter((item) => item.is_hot)
+            case "vegan":
+                return menu.items.filter((item) => item.is_vegan)
+            default:
+                return menu.items
+        }
+    }, [menu.items, activeFilter])
+
     // Group items by category
-    const categories = [...new Set(menu.items.map((item) => item.category))]
+    const categories = [...new Set(filteredItems.map((item) => item.category))]
+
+    const filterPills: { key: FilterType; label: string }[] = [
+        { key: "all", label: "All" },
+        { key: "coffee", label: "Coffee" },
+        { key: "food", label: "Food" },
+        { key: "cold", label: "Cold" },
+        { key: "hot", label: "Hot" },
+        { key: "vegan", label: "Vegan" },
+    ]
 
     return (
         <div className='space-y-6 [&_button]:cursor-pointer'>
+            {/* Pending Suggestions Notice */}
+            {pendingSuggestionsCount > 0 && (
+                <Link
+                    href={cafeSlug ? `/cafes/${cafeSlug}/suggestions` : "#"}
+                    className='flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors'
+                >
+                    <AlertCircle className='w-5 h-5 text-amber-600 shrink-0' />
+                    <div className='flex-1'>
+                        <p className='font-medium text-amber-800'>
+                            {pendingSuggestionsCount} community menu suggestion{pendingSuggestionsCount !== 1 ? "s" : ""} pending review
+                        </p>
+                        <p className='text-sm text-amber-700/70'>
+                            Click to review and approve or reject suggestions
+                        </p>
+                    </div>
+                </Link>
+            )}
+
+            {/* Filters */}
+            <div className='flex flex-wrap gap-2'>
+                {filterPills.map((filter) => (
+                    <button
+                        key={filter.key}
+                        onClick={() => setActiveFilter(filter.key)}
+                        className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                            activeFilter === filter.key
+                                ? "bg-primary text-white"
+                                : "bg-text/10 text-text/70 hover:bg-text/20"
+                        }`}
+                    >
+                        {filter.label}
+                    </button>
+                ))}
+            </div>
+
             <div className='flex items-center justify-between'>
-                <p className='text-text/60'>{menu.items.length} menu items</p>
+                <p className='text-text/60'>{filteredItems.length} menu items</p>
                 <button
                     onClick={menu.openCreateModal}
                     className={`${buttonBaseClasses} ${buttonColorClasses}`}
@@ -33,7 +107,7 @@ export default function MenuSection({
                 </button>
             </div>
 
-            {menu.items.length === 0 ? (
+            {filteredItems.length === 0 ? (
                 <div className='text-center py-8 text-text/50'>
                     <Coffee className='w-12 h-12 mx-auto mb-3 opacity-30' />
                     <p>No menu items yet</p>
@@ -46,7 +120,7 @@ export default function MenuSection({
                                 {category}
                             </h3>
                             <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
-                                {menu.items
+                                {filteredItems
                                     .filter(
                                         (item) => item.category === category
                                     )
@@ -83,6 +157,13 @@ export default function MenuSection({
                                                         )}
                                                     </h4>
                                                 </div>
+                                                {/* Community Badge */}
+                                                {item.community_submitted && (
+                                                    <div className='flex items-center gap-1 text-xs text-emerald-600'>
+                                                        <Users className='w-3 h-3' />
+                                                        <span className='font-medium'>Community</span>
+                                                    </div>
+                                                )}
                                                 <p className='text-sm font-semibold text-primary'>
                                                     ₱{item.price.toFixed(0)}
                                                 </p>
