@@ -36,7 +36,7 @@ export const membershipTierEnum = pgEnum("membership_tier", [
     "basic",
     "premium",
 ])
-export const priceLevelEnum = pgEnum("price_level", ["low", "medium", "high"])
+export const priceLevelEnum = pgEnum("price_level", ["budget", "mid", "premium", "luxury"])
 export const subscriptionStatusEnum = pgEnum("subscription_status", [
     "active",
     "cancelled",

@@ -4,12 +4,10 @@ import { Database } from "./types/database.types";
 
 export function getPriceLevel(priceLevel: Database["public"]["Enums"]["price_level"]) {
     switch (priceLevel) {
-        case "low":
-            return "₱";
-        case "medium":
-            return "₱ ₱";
-        case "high":
-            return "₱ ₱ ₱";
+        case "budget": return "₱";
+        case "mid": return "₱ ₱";
+        case "premium": return "₱ ₱ ₱";
+        case "luxury": return "₱ ₱ ₱ ₱";
     }
 }
 

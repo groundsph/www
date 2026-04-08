@@ -125,9 +125,10 @@ export const moveArrayItem = <T,>(
  * Price level configuration for UI display
  */
 export const PRICE_LEVELS = [
-    { value: "low" as const, level: 1, label: "₱", description: "Budget-friendly" },
-    { value: "medium" as const, level: 2, label: "₱₱", description: "Mid-range" },
-    { value: "high" as const, level: 3, label: "₱₱₱", description: "Premium" },
+    { value: "budget" as const, level: 1, label: "₱", range: "< ₱150 avg", description: "Budget-friendly" },
+    { value: "mid" as const, level: 2, label: "₱₱", range: "₱150 - ₱250 avg", description: "Mid-range" },
+    { value: "premium" as const, level: 3, label: "₱₱₱", range: "₱250 - ₱400 avg", description: "Premium" },
+    { value: "luxury" as const, level: 4, label: "₱₱₱₱", range: "₱400+ avg", description: "Luxury" },
 ]
 
 /**
