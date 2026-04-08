@@ -21,6 +21,7 @@ export default function EventList({
 }: EventListProps) {
     const parentRef = useRef<HTMLDivElement>(null)
 
+    // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual returns functions that can't be memoized, but this is expected behavior
     const virtualizer = useVirtualizer({
         count: events.length,
         getScrollElement: () => parentRef.current,

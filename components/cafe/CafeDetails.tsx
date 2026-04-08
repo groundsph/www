@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/static-components -- ReviewsSection is an intentional render helper */
 "use client"
 
 import { useHaptics } from "@/hooks/useHaptics"
