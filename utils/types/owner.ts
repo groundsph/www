@@ -267,6 +267,15 @@ export interface CafeMenuItem {
     image_url: string | null;
     is_signature: boolean;
     is_available: boolean;
+    is_food: boolean;
+    is_hot: boolean;
+    is_cold: boolean;
+    calories: number | null;
+    is_vegan: boolean;
+    is_vegetarian: boolean;
+    size_options: Array<{ label: string; price: number }> | null;
+    last_updated_by: string | null;
+    community_submitted: boolean;
     sort_order: number;
     created_at: string | null;
     updated_at: string | null;

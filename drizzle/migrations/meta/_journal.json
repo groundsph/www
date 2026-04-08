@@ -78,6 +78,13 @@
       "when": 1774529804925,
       "tag": "0010_fine_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1775659421534,
+      "tag": "0011_good_anita_blake",
+      "breakpoints": true
     }
   ]
 }
