@@ -4,6 +4,7 @@ import { useHaptics } from "@/hooks/useHaptics"
 import Link from "next/link"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
+import type { ComparableMenuItem } from "@/utils/types/menu-comparison"
 import Image from "next/image"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import dynamic from "next/dynamic"
@@ -212,6 +213,38 @@ export default function CafeDetails({
         [compareItemIds]
     )
 
+    // Helper to render edit button with auth check
+    const renderEditButton = useCallback((item: CafeMenuItem) => {
+        const className = "p-1 rounded-full text-text/30 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+        const title = "Suggest an edit"
+        const ariaLabel = "Suggest an edit to this menu item"
+        const icon = <Pencil className="w-3 h-3" />
+
+        if (authUser) {
+            return (
+                <button
+                    onClick={() => setEditTargetItem(item)}
+                    className={className}
+                    title={title}
+                    aria-label={ariaLabel}
+                >
+                    {icon}
+                </button>
+            )
+        }
+
+        return (
+            <Link
+                href={`/auth?redirect=/cafes/${cafe.slug}`}
+                className={className}
+                title={title}
+                aria-label={ariaLabel}
+            >
+                {icon}
+            </Link>
+        )
+    }, [authUser, cafe.slug])
+
     const handleOpenCompareModal = useCallback(() => {
         setIsCompareModalOpen(true)
     }, [])
@@ -219,6 +252,34 @@ export default function CafeDetails({
     const handleCloseCompareModal = useCallback(() => {
         setIsCompareModalOpen(false)
     }, [])
+
+    // Convert CafeMenuItem to ComparableMenuItem
+    const toComparableItem = useCallback((item: CafeMenuItem): ComparableMenuItem => ({
+        id: item.id,
+        cafeId: item.cafe_id,
+        cafeName: cafe.name,
+        cafeSlug: cafe.slug,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        description: item.description,
+        isAvailable: item.is_available,
+        isFood: item.is_food,
+        isHot: item.is_hot,
+        isCold: item.is_cold,
+        calories: item.calories,
+        isVegan: item.is_vegan,
+        isVegetarian: item.is_vegetarian,
+        sizeOptions: item.size_options,
+        imageUrl: item.image_url,
+    }), [cafe.name, cafe.slug])
+
+    // Get selected items for comparison
+    const selectedCompareItems = useMemo(() => {
+        return menuItems
+            .filter((item) => compareItemIds.includes(item.id))
+            .map(toComparableItem)
+    }, [menuItems, compareItemIds, toComparableItem])
 
     // Haptic-wrapped toggle handlers
     const handleToggleFavorite = async () => {
@@ -409,8 +470,7 @@ export default function CafeDetails({
                                         </div>
                                         <button
                                             onClick={handleOpenCompareModal}
-                                            disabled={compareItemIds.length === 0}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
                                         >
                                             <Scale className="w-3.5 h-3.5" />
                                             Compare
@@ -491,13 +551,7 @@ export default function CafeDetails({
                                                             <Plus className='w-3.5 h-3.5' />
                                                         )}
                                                     </button>
-                                                    <button
-                                                        onClick={() => setEditTargetItem(item)}
-                                                        className="p-1 rounded-full text-text/30 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
-                                                        title="Suggest an edit"
-                                                    >
-                                                        <Pencil className="w-3 h-3" />
-                                                    </button>
+                                                    {renderEditButton(item)}
                                                 </div>
                                             </div>
                                             )
@@ -893,8 +947,7 @@ export default function CafeDetails({
                                     )}
                                     <button
                                         onClick={handleOpenCompareModal}
-                                        disabled={compareItemIds.length === 0}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
                                     >
                                         <Scale className="w-3.5 h-3.5" />
                                         Compare
@@ -978,13 +1031,7 @@ export default function CafeDetails({
                                                         <Plus className='w-3.5 h-3.5' />
                                                     )}
                                                 </button>
-                                                <button
-                                                    onClick={() => setEditTargetItem(item)}
-                                                    className="p-1 rounded-full text-text/30 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
-                                                    title="Suggest an edit"
-                                                >
-                                                    <Pencil className="w-3 h-3" />
-                                                </button>
+                                                {renderEditButton(item)}
                                             </div>
                                         </div>
                                         )
@@ -1131,6 +1178,7 @@ export default function CafeDetails({
             <MenuComparisonModal
                 isOpen={isCompareModalOpen}
                 onClose={handleCloseCompareModal}
+                initialItems={selectedCompareItems}
             />
 
             {/* Suggest Edit Modal */}

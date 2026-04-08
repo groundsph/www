@@ -12,7 +12,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { SearchTrigger } from "@/components/search"
 import { useSearchKeyboard } from "@/utils/hooks/useSearchKeyboard"
@@ -27,6 +27,11 @@ const SearchModal = dynamic(
     }
 )
 
+const MenuComparisonModal = dynamic(
+    () => import("@/components/menu/MenuComparisonModal"),
+    { ssr: false }
+)
+
 export default function Navbar() {
     // Context
     const { user, isWriter, isAdmin, isLoading } = useAuth()
@@ -35,6 +40,7 @@ export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
     const [isSearchOpen, setIsSearchOpen] = useState(false)
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false)
 
     // Haptics
     const { trigger: hapticTrigger } = useHaptics()
@@ -44,6 +50,15 @@ export default function Navbar() {
 
     // Register keyboard shortcut globally
     useSearchKeyboard(() => setIsSearchOpen(true))
+
+    // Compare modal handlers
+    const handleOpenCompareModal = useCallback(() => {
+        setIsCompareModalOpen(true)
+    }, [])
+
+    const handleCloseCompareModal = useCallback(() => {
+        setIsCompareModalOpen(false)
+    }, [])
 
     // Close mobile menu on path change
     useEffect(() => {
@@ -593,6 +608,13 @@ export default function Navbar() {
             <SearchModal
                 isOpen={isSearchOpen}
                 onClose={() => setIsSearchOpen(false)}
+                onOpenCompare={handleOpenCompareModal}
+            />
+
+            {/* Compare Modal */}
+            <MenuComparisonModal
+                isOpen={isCompareModalOpen}
+                onClose={handleCloseCompareModal}
             />
         </nav>
     )

@@ -14,9 +14,10 @@ import { useHaptics } from "@/hooks/useHaptics"
 interface SearchModalProps {
   isOpen: boolean
   onClose: () => void
+  onOpenCompare?: () => void
 }
 
-export function SearchModal({ isOpen, onClose }: SearchModalProps) {
+export function SearchModal({ isOpen, onClose, onOpenCompare }: SearchModalProps) {
   const router = useRouter()
   const { query, setQuery, results, isLoading } = useSearch(150)
   const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -35,9 +36,15 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       onClose()
       return
     }
+    // Handle compare action specially
+    if (result.href === '#compare' || result.id === 'action-compare') {
+      onClose()
+      onOpenCompare?.()
+      return
+    }
     router.push(result.href)
     onClose()
-  }, [router, onClose, query, hapticTrigger])
+  }, [router, onClose, onOpenCompare, query, hapticTrigger])
 
   useEffect(() => {
     const resetState = () => {

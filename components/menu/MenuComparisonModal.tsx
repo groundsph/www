@@ -14,56 +14,44 @@ interface MenuComparisonModalProps {
 	isOpen: boolean
 	onClose: () => void
 	initialItemIds?: string[]
-}
-
-// Mock function to fetch items by IDs - in real implementation this would be a server action
-async function fetchMenuItemsByIds(ids: string[]): Promise<ComparableMenuItem[]> {
-	// For now, return empty - this would need a proper server action to fetch by IDs
-	// In a real implementation, you'd create a server action that queries the DB for these specific IDs
-	console.log("Fetching items by IDs:", ids)
-	return []
+	initialItems?: ComparableMenuItem[]
 }
 
 export default function MenuComparisonModal({
 	isOpen,
 	onClose,
 	initialItemIds = [],
+	initialItems = [],
 }: MenuComparisonModalProps) {
-	const [selectedItems, setSelectedItems] = useState<ComparableMenuItem[]>([])
-	const [isLoading, setIsLoading] = useState(false)
+	const [selectedItems, setSelectedItems] = useState<ComparableMenuItem[]>(initialItems)
+	const [isLoading] = useState(false)
 	const [isSharing, setIsSharing] = useState(false)
 	const [shareSuccess, setShareSuccess] = useState(false)
 	const searchParams = useSearchParams()
 	const { trigger: hapticTrigger } = useHaptics()
 
-	// Load initial items from URL params when modal opens
+	// Load initial items when modal opens
 	useEffect(() => {
 		if (!isOpen) return
 
-		const loadInitialItems = async () => {
-			// Check URL params for item IDs
-			const compareParam = searchParams.get("compare")
-			const ids = compareParam
-				? compareParam.split(",").filter(Boolean)
-				: initialItemIds
-
-			if (ids.length > 0) {
-				setIsLoading(true)
-				try {
-					const items = await fetchMenuItemsByIds(ids)
-					if (items.length > 0) {
-						setSelectedItems(items.slice(0, 4))
-					}
-				} catch (error) {
-					console.error("Error loading initial items:", error)
-				} finally {
-					setIsLoading(false)
-				}
-			}
+		// Use pre-loaded items if provided
+		if (initialItems.length > 0) {
+			setSelectedItems(initialItems.slice(0, 4))
+			return
 		}
 
-		loadInitialItems()
-	}, [isOpen, searchParams, initialItemIds])
+		// Otherwise load from URL params
+		const compareParam = searchParams.get("compare")
+		const ids = compareParam
+			? compareParam.split(",").filter(Boolean)
+			: initialItemIds
+
+		if (ids.length > 0) {
+			// Items will need to be fetched via search
+			// For now, we rely on the search functionality to add items
+			console.log("Items to load from IDs:", ids)
+		}
+	}, [isOpen, searchParams, initialItemIds, initialItems])
 
 	const handleAddItem = useCallback((item: ComparableMenuItem) => {
 		setSelectedItems((prev) => {

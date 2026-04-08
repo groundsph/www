@@ -252,7 +252,7 @@ export default function CafesPageClient() {
     // Watch for filter changes
     useEffect(() => {
         handleFilterChange()
-    }, [debouncedSearch, sortBy, filters.has_wifi, filters.has_smoking, filters.has_sockets, filters.has_parking,
+    }, [handleFilterChange, debouncedSearch, sortBy, filters.has_wifi, filters.has_smoking, filters.has_sockets, filters.has_parking,
         filters.has_aircon, filters.is_pet_friendly, filters.has_outdoor_seating, filters.has_indoor_seating,
         filters.has_restroom, filters.has_bidet, filters.has_non_dairy, filters.has_decaf, filters.is_work_friendly,
         filters.is_24_7, filters.is_halal_certified, filters.price_level, filters.coffee_style, filters.region,

@@ -2,9 +2,14 @@
 
 import { useState, useCallback, useMemo } from "react"
 import Image from "next/image"
-import { X, ChevronDown, Scale, Plus, Check, Flame, Snowflake, UtensilsCrossed, Leaf, Globe, Pencil } from "lucide-react"
+import Link from "next/link"
+import { motion, AnimatePresence } from "motion/react"
+import { X, ChevronDown, Scale, Plus, Check, Flame, Snowflake, UtensilsCrossed, Leaf, Globe, Pencil, Coffee } from "lucide-react"
 import dynamic from "next/dynamic"
 import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
+import { useAuth } from "@/components/layout/AuthProvider"
+import SuggestMenuItemButton from "@/components/suggestions/SuggestMenuItemButton"
+import type { ComparableMenuItem } from "@/utils/types/menu-comparison"
 
 const MenuComparisonModal = dynamic(
     () => import("@/components/menu/MenuComparisonModal"),
@@ -68,6 +73,8 @@ export default function MenuContent({
     const [compareItemIds, setCompareItemIds] = useState<string[]>([])
     const [activeFilter, setActiveFilter] = useState<FilterType>("all")
     const [editTarget, setEditTarget] = useState<MenuItem | null>(null)
+
+    const { user: authUser } = useAuth()
 
     const toggleCategory = (category: string) => {
         setCollapsedCategories((prev) => {
@@ -139,6 +146,34 @@ export default function MenuContent({
         { key: "vegan", label: "Vegan" },
     ]
 
+    // Convert MenuItem to ComparableMenuItem
+    const toComparableItem = useCallback((item: MenuItem): ComparableMenuItem => ({
+        id: item.id,
+        cafeId: cafeId,
+        cafeName: cafeName,
+        cafeSlug: cafeSlug,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        description: item.description,
+        isAvailable: item.isAvailable ?? true,
+        isFood: item.isFood ?? false,
+        isHot: item.isHot ?? false,
+        isCold: item.isCold ?? false,
+        calories: item.calories,
+        isVegan: item.isVegan ?? false,
+        isVegetarian: item.isVegetarian ?? false,
+        sizeOptions: item.sizeOptions,
+        imageUrl: item.imageUrl,
+    }), [cafeId, cafeName, cafeSlug])
+
+    // Get selected items for comparison
+    const selectedCompareItems = useMemo(() => {
+        return menuItems
+            .filter((item) => compareItemIds.includes(item.id))
+            .map(toComparableItem)
+    }, [menuItems, compareItemIds, toComparableItem])
+
     // Helper to render size options
     const renderSizeOptions = (sizeOptions: SizeOption[] | null) => {
         if (!sizeOptions || sizeOptions.length === 0) return null
@@ -209,6 +244,7 @@ export default function MenuContent({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
+                    <SuggestMenuItemButton cafeId={cafeId} cafeName={cafeName} variant="default" />
                     <MenuOcrScanButton
                         cafeId={cafeId}
                         cafeName={cafeName}
@@ -217,8 +253,7 @@ export default function MenuContent({
                     />
                     <button
                         onClick={handleOpenCompareModal}
-                        disabled={compareItemIds.length === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
                     >
                         <Scale className="w-4 h-4" />
                         Compare Items
@@ -265,21 +300,10 @@ export default function MenuContent({
                     const categoryItems = filteredMenuItems
                         .filter((item) => item.category === category)
                         .sort((a, b) => {
-                            // Signatures first
                             if (a.isSignature && !b.isSignature) return -1
                             if (!a.isSignature && b.isSignature) return 1
                             return 0
                         })
-                    const totalItems = categoryItems.length
-
-                    // First row: 2 items on mobile, 3 on lg
-                    const firstRowItems = categoryItems.slice(0, 3)
-                    const remainingItems = categoryItems.slice(3)
-
-                    // Placeholders needed
-                    const needsMobilePlaceholder = totalItems === 1
-                    const needsLgOnePlaceholder = totalItems === 1
-                    const needsLgTwoPlaceholder = totalItems === 2
 
                     // Helper to render a menu item
                     const renderMenuItem = (item: MenuItem) => {
@@ -289,70 +313,11 @@ export default function MenuContent({
                         return (
                             <div
                                 key={item.id}
-                                className="relative p-3 flex flex-col min-h-[180px] group"
+                                className="group bg-background rounded-xl border border-text/10 overflow-hidden hover:shadow-md hover:border-text/20 transition-all duration-200"
                             >
-                                {/* Compare button - top right */}
-                                <button
-                                    onClick={() => toggleCompareItem(item)}
-                                    disabled={!canAddMore}
-                                    className={`absolute top-2 right-2 z-10 p-1.5 rounded-full transition-all cursor-pointer ${
-                                        isInComparison
-                                            ? "bg-primary text-white"
-                                            : "bg-background/80 text-text/60 hover:text-primary hover:bg-background"
-                                    } ${!canAddMore ? "opacity-50 cursor-not-allowed" : ""}`}
-                                    title={isInComparison ? "Remove from comparison" : compareItemIds.length >= 4 ? "Max 4 items" : "Add to comparison"}
-                                >
-                                    {isInComparison ? (
-                                        <Check className="w-3.5 h-3.5" />
-                                    ) : (
-                                        <Plus className="w-3.5 h-3.5" />
-                                    )}
-                                </button>
-
-                                {/* Suggest edit button - bottom right */}
-                                <button
-                                    onClick={() => setEditTarget(item)}
-                                    className="absolute bottom-2 right-2 z-10 p-1.5 rounded-full bg-background/80 text-text/40 hover:text-primary hover:bg-background transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-                                    title="Suggest an edit"
-                                >
-                                    <Pencil className="w-3 h-3" />
-                                </button>
-
-                                {/* Community indicator - top left */}
-                                {item.communitySubmitted && (
-                                    <div className="absolute top-2 left-2 z-10">
-                                        <Globe className="w-3.5 h-3.5 text-text/40" />
-                                    </div>
-                                )}
-
-                                <div className="flex flex-col-reverse md:flex-row gap-3 flex-1">
-                                    <div className="flex-1 flex flex-col">
-                                        <h3 className="font-bold text-base uppercase leading-tight">
-                                            {item.name}
-                                            {item.isSignature && (
-                                                <span className="ml-1 text-amber-600">
-                                                    ★
-                                                </span>
-                                            )}
-                                        </h3>
-                                        <p className="text-sm font-medium text-text/70 md:mt-1">
-                                            ₱{item.price.toFixed(2)}
-                                        </p>
-                                        
-                                        {/* Size options */}
-                                        {renderSizeOptions(item.sizeOptions)}
-                                        
-                                        {/* Badges */}
-                                        {renderBadges(item)}
-                                        
-                                        <div className="flex-1 hidden md:block" />
-                                        {item.description && (
-                                            <p className="text-xs text-text/60 uppercase tracking-wide line-clamp-2 mt-2 md:mt-0">
-                                                {item.description}
-                                            </p>
-                                        )}
-                                    </div>
-                                    {item.imageUrl && (
+                                {/* Image Section */}
+                                <div className="relative aspect-[4/3] bg-secondary/20 overflow-hidden">
+                                    {item.imageUrl ? (
                                         <button
                                             onClick={() =>
                                                 setLightboxImage({
@@ -360,144 +325,185 @@ export default function MenuContent({
                                                     alt: item.name,
                                                 })
                                             }
-                                            className="relative w-full h-auto md:h-full md:w-auto aspect-square rounded-sm shadow-sm overflow-clip shrink-0 self-center cursor-pointer hover:opacity-90 transition-opacity"
+                                            className="relative w-full h-full cursor-pointer"
                                         >
                                             <Image
                                                 src={item.imageUrl}
                                                 alt={item.name}
                                                 fill
-                                                className="object-contain"
+                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                         </button>
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            {item.isFood ? (
+                                                <UtensilsCrossed className="w-16 h-16 text-text/15" />
+                                            ) : (
+                                                <Coffee className="w-16 h-16 text-text/15" />
+                                            )}
+                                        </div>
                                     )}
+
+                                    {/* Signature badge */}
+                                    {item.isSignature && (
+                                        <div className="absolute top-2 left-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                                            <span>★</span>
+                                            <span>Signature</span>
+                                        </div>
+                                    )}
+
+                                    {/* Community indicator */}
+                                    {item.communitySubmitted && (
+                                        <div className="absolute top-2 right-10 bg-background/90 backdrop-blur-sm p-1.5 rounded-full shadow-sm">
+                                            <Globe className="w-3.5 h-3.5 text-text/50" />
+                                        </div>
+                                    )}
+
+                                    {/* Compare button */}
+                                    <button
+                                        onClick={() => toggleCompareItem(item)}
+                                        disabled={!canAddMore}
+                                        className={`absolute top-2 right-2 z-10 p-1.5 rounded-full shadow-sm transition-all cursor-pointer ${
+                                            isInComparison
+                                                ? "bg-primary text-white"
+                                                : "bg-background/90 backdrop-blur-sm text-text/60 hover:text-primary hover:bg-background"
+                                        } ${!canAddMore ? "opacity-50 cursor-not-allowed" : ""}`}
+                                        title={isInComparison ? "Remove from comparison" : compareItemIds.length >= 4 ? "Max 4 items" : "Add to comparison"}
+                                    >
+                                        {isInComparison ? (
+                                            <Check className="w-3.5 h-3.5" />
+                                        ) : (
+                                            <Plus className="w-3.5 h-3.5" />
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Content Section */}
+                                <div className="p-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <h3 className="font-semibold text-sm leading-tight text-text flex-1">
+                                            {item.name}
+                                        </h3>
+                                        <span className="font-bold text-sm text-primary shrink-0">
+                                            ₱{item.price.toFixed(0)}
+                                        </span>
+                                    </div>
+
+                                    {/* Size options */}
+                                    {renderSizeOptions(item.sizeOptions)}
+
+                                    {/* Badges */}
+                                    <div className="mt-2">
+                                        {renderBadges(item)}
+                                    </div>
+
+                                    {/* Description */}
+                                    {item.description && (
+                                        <p className="text-xs text-text/50 mt-2 line-clamp-2">
+                                            {item.description}
+                                        </p>
+                                    )}
+
+                                    {/* Action row */}
+                                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-text/5">
+                                        <span className="text-[10px] text-text/30 uppercase tracking-wider font-medium">
+                                            {item.category}
+                                        </span>
+                                        {authUser ? (
+                                            <button
+                                                onClick={() => setEditTarget(item)}
+                                                className="text-text/30 hover:text-primary transition-colors cursor-pointer"
+                                                title="Suggest an edit"
+                                                aria-label="Suggest an edit to this menu item"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                href={`/auth?redirect=/cafes/${cafeSlug}/menu`}
+                                                className="text-text/30 hover:text-primary transition-colors cursor-pointer"
+                                                title="Suggest an edit"
+                                                aria-label="Suggest an edit to this menu item"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </Link>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )
                     }
 
                     return (
-                        <section key={category}>
+                        <section key={category} className="mb-6">
                             <button
                                 onClick={() => toggleCategory(category)}
-                                className="w-full flex items-center justify-between text-xl font-bold text-text uppercase tracking-wider border-b border-text/20 px-4 py-3 pb-1 hover:bg-text/5 transition-colors"
+                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-text/5 transition-colors rounded-lg"
                             >
-                                <span>{category}</span>
-                                <ChevronDown
-                                    className={`w-5 h-5 transition-transform ${
-                                        collapsedCategories.has(category)
-                                            ? "-rotate-90"
-                                            : "rotate-0"
-                                    }`}
-                                />
+                                <div className="flex items-center gap-3">
+                                    <span className="text-lg font-bold text-text">{category}</span>
+                                    <span className="text-sm text-text/40 font-medium">
+                                        {categoryItems.length} items
+                                    </span>
+                                </div>
+                                <motion.div
+                                    animate={{ rotate: collapsedCategories.has(category) ? -90 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <ChevronDown className="w-5 h-5 text-text/40" />
+                                </motion.div>
                             </button>
 
-                            {!collapsedCategories.has(category) && (
-                                <>
-                                    {/* Add-ons category: render as simple list */}
-                                    {category === "Add-ons" ? (
-                                        <div className="bg-tertiary/40 px-4">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                {categoryItems.map((item) => (
-                                                    <div
+                            <AnimatePresence initial={false}>
+                                {!collapsedCategories.has(category) && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                                        className="overflow-hidden"
+                                    >
+                                        {/* Add-ons: horizontal list layout */}
+                                        {category === "Add-ons" ? (
+                                            <div className="px-4 mt-2 space-y-2">
+                                                {categoryItems.map((item, index) => (
+                                                    <motion.div
                                                         key={item.id}
-                                                        className="flex flex-col items-center justify-between py-2"
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: index * 0.03 }}
+                                                        className="flex items-center justify-between py-2 px-3 bg-tertiary/30 rounded-lg"
                                                     >
-                                                        <div className="w-full flex justify-between items-center gap-4">
-                                                            <span className="font-semibold text-sm flex items-center gap-1">
-                                                                {item.communitySubmitted && (
-                                                                    <Globe className="w-3 h-3 text-text/40" />
-                                                                )}
-                                                                {item.name}
-                                                            </span>
-                                                            <div className="flex-1 border-b border-text/20 border-dashed" />
-                                                            <span className="text-sm font-semibold text-primary">
-                                                                ₱
-                                                                {item.price.toFixed(
-                                                                    2
-                                                                )}
-                                                            </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {item.communitySubmitted && (
+                                                                <Globe className="w-3 h-3 text-text/40" />
+                                                            )}
+                                                            <span className="font-medium text-sm">{item.name}</span>
                                                         </div>
-                                                        {item.description && (
-                                                            <span className="text-xs text-text/60 font-bold w-full text-left">
-                                                                {item.description}
-                                                            </span>
-                                                        )}
-                                                        {renderBadges(item)}
-                                                    </div>
+                                                        <span className="font-semibold text-sm text-primary">
+                                                            ₱{item.price.toFixed(0)}
+                                                        </span>
+                                                    </motion.div>
                                                 ))}
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {/* First Row: 2 cols mobile, 3 cols lg */}
-                                            <div className="grid grid-cols-2 lg:grid-cols-3 bg-tertiary/40">
-                                                {/* Left placeholder for centering (lg: 1 or 2 items) */}
-                                                {needsLgOnePlaceholder && (
-                                                    <div className="hidden lg:block min-h-[180px] border-2 border-dashed border-text/10" />
-                                                )}
-                                                {needsLgTwoPlaceholder && (
-                                                    <div className="hidden lg:block min-h-[180px]" />
-                                                )}
-
-                                                {/* Show first 2 items on mobile, first 3 on lg */}
-                                                {firstRowItems
-                                                    .slice(0, 2)
-                                                    .map(renderMenuItem)}
-                                                {/* Third item: hidden on mobile, shown on lg */}
-                                                {firstRowItems[2] && (
-                                                    <div className="hidden lg:flex">
-                                                        {renderMenuItem(
-                                                            firstRowItems[2]
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* Right placeholder for single item */}
-                                                {needsMobilePlaceholder && (
-                                                    <>
-                                                        {/* Mobile: single right placeholder */}
-                                                        <div className="min-h-[180px] border-2 border-dashed border-text/10 lg:hidden" />
-                                                        {/* LG: right placeholder to balance */}
-                                                        <div className="hidden lg:block min-h-[180px] border-2 border-dashed border-text/10" />
-                                                    </>
-                                                )}
+                                        ) : (
+                                            /* Regular items: card grid */
+                                            <div className="px-4 mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                                {categoryItems.map((item, index) => (
+                                                    <motion.div
+                                                        key={item.id}
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: index * 0.05 }}
+                                                    >
+                                                        {renderMenuItem(item)}
+                                                    </motion.div>
+                                                ))}
                                             </div>
-
-                                            {/* Remaining Rows: always 2 cols */}
-                                            {(remainingItems.length > 0 ||
-                                                (totalItems > 2 &&
-                                                    firstRowItems[2])) && (
-                                                <div className="grid grid-cols-2 bg-tertiary/40">
-                                                    {/* On mobile, third item goes here */}
-                                                    {firstRowItems[2] && (
-                                                        <div className="lg:hidden">
-                                                            {renderMenuItem(
-                                                                firstRowItems[2]
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {remainingItems.map(
-                                                        renderMenuItem
-                                                    )}
-                                                    {/* Placeholder if odd number of remaining items */}
-                                                    {(remainingItems.length +
-                                                        (firstRowItems[2]
-                                                            ? 1
-                                                            : 0)) %
-                                                        2 !==
-                                                        0 && (
-                                                        <div className="min-h-[180px] border-2 border-dashed border-text/10 lg:hidden" />
-                                                    )}
-                                                    {remainingItems.length % 2 !==
-                                                        0 && (
-                                                        <div className="hidden lg:block min-h-[180px] border-2 border-dashed border-text/10" />
-                                                    )}
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </>
-                            )}
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </section>
                     )
                 })
@@ -507,6 +513,7 @@ export default function MenuContent({
             <MenuComparisonModal
                 isOpen={isCompareModalOpen}
                 onClose={handleCloseCompareModal}
+                initialItems={selectedCompareItems}
             />
 
             {/* Suggest Edit Modal */}

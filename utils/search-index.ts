@@ -103,6 +103,15 @@ export const quickActions: SearchResult[] = [
     priority: 95,
     keywords: ['>leaderboard', 'leaderboard', 'rankings']
   },
+  {
+    id: 'action-compare',
+    type: 'action',
+    title: 'Quick: Compare Menu Items',
+    subtitle: "Type '>compare' to compare menu items",
+    href: '#compare',
+    priority: 94,
+    keywords: ['>compare', 'compare', 'menu compare', 'comparison']
+  },
 ]
 
 export const quickActionHelp: QuickAction[] = [
