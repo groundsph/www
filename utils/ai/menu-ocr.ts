@@ -23,6 +23,16 @@ const ocrMenuItemSchema = z.object({
     is_food: z.boolean().optional(),
     is_hot: z.boolean().optional(),
     is_cold: z.boolean().optional(),
+    is_vegan: z.boolean().optional(),
+    is_vegetarian: z.boolean().optional(),
+    calories: z.union([z.number().nonnegative(), z.string().transform((val, ctx) => {
+        const num = Number(val)
+        if (isNaN(num) || num < 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Calories must be a non-negative number" })
+            return z.NEVER
+        }
+        return num
+    })]).optional(),
 })
 
 export type OcrMenuItem = z.infer<typeof ocrMenuItemSchema>
@@ -85,6 +95,9 @@ For each item, respond with:
 - is_food: true if it's food, false if drink
 - is_hot: true if hot variant exists
 - is_cold: true if cold variant exists
+- is_vegan: true if the item or menu indicates it's vegan (optional)
+- is_vegetarian: true if the item or menu indicates it's vegetarian (optional)
+- calories: Numeric calorie count if visible on the menu (optional)
 
 Respond with a JSON array of objects. If no menu items are found, return an empty array.`
 
