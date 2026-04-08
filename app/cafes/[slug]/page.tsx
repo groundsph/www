@@ -108,11 +108,13 @@ function generateJsonLd(cafe: CafeWithRatings) {
         url: cafe.website_url,
         openingHours: openingHours,
         priceRange:
-            cafe.price_level === "low"
+            cafe.price_level === "budget"
                 ? "₱"
-                : cafe.price_level === "medium"
+                : cafe.price_level === "mid"
                   ? "₱₱"
-                  : "₱₱₱",
+                  : cafe.price_level === "premium"
+                    ? "₱₱₱"
+                    : "₱₱₱₱",
         aggregateRating: cafe.average_rating
             ? {
                   "@type": "AggregateRating",

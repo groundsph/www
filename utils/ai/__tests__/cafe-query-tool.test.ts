@@ -70,12 +70,12 @@ describe("cafeQuerySchema", () => {
 
     it("validates pricing fields", () => {
         const input = {
-            priceLevel: "medium",
+            priceLevel: "mid",
             coffeeStyle: "artisan",
             membershipTier: "premium",
         }
         const result = cafeQuerySchema.parse(input)
-        expect(result.priceLevel).toBe("medium")
+        expect(result.priceLevel).toBe("mid")
         expect(result.coffeeStyle).toBe("artisan")
         expect(result.membershipTier).toBe("premium")
     })

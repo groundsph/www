@@ -425,9 +425,10 @@ export function DetailsTabContent({
                 <div className='flex-1 bg-text/5 rounded-xl p-4 text-center'>
                     <p className='text-xs text-text/60 mb-1'>Price Range</p>
                     <p className='text-2xl font-bold'>
-                        {cafe.price_level === "low" && "₱"}
-                        {cafe.price_level === "medium" && "₱₱"}
-                        {cafe.price_level === "high" && "₱₱₱"}
+                        {cafe.price_level === "budget" && "₱"}
+                        {cafe.price_level === "mid" && "₱₱"}
+                        {cafe.price_level === "premium" && "₱₱₱"}
+                        {cafe.price_level === "luxury" && "₱₱₱₱"}
                     </p>
                 </div>
                 <div className='flex-1 bg-text/5 rounded-xl p-4 text-center'>

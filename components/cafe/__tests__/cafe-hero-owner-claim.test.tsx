@@ -45,7 +45,7 @@ const baseCafe: CafeWithRatings = {
     is_claimed: false,
     owner_ids: null,
     contributor_id: null,
-    price_level: "medium",
+    price_level: "mid",
     coffee_style: "classic",
     has_wifi: false,
     has_smoking: false,

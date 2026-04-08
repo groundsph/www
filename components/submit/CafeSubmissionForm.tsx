@@ -2086,19 +2086,24 @@ export default function CafeSubmissionForm({
                                     <div className='flex gap-3'>
                                         {[
                                             {
-                                                value: "low" as const,
+                                                value: "budget" as const,
                                                 symbol: "₱",
-                                                desc: "Under ₱120",
+                                                desc: "Under ₱150",
                                             },
                                             {
-                                                value: "medium" as const,
+                                                value: "mid" as const,
                                                 symbol: "₱₱",
-                                                desc: "₱120-200",
+                                                desc: "₱150-250",
                                             },
                                             {
-                                                value: "high" as const,
+                                                value: "premium" as const,
                                                 symbol: "₱₱₱",
-                                                desc: "Above ₱200",
+                                                desc: "₱250-400",
+                                            },
+                                            {
+                                                value: "luxury" as const,
+                                                symbol: "₱₱₱₱",
+                                                desc: "Above ₱400",
                                             },
                                         ].map(({ value, symbol, desc }) => (
                                             <motion.button
@@ -2391,11 +2396,13 @@ export default function CafeSubmissionForm({
                                                 {formData.price_level && (
                                                     <span className='px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs font-medium'>
                                                         {formData.price_level ===
-                                                            "low" && "₱"}
+                                                            "budget" && "₱"}
                                                         {formData.price_level ===
-                                                            "medium" && "₱₱"}
+                                                            "mid" && "₱₱"}
                                                         {formData.price_level ===
-                                                            "high" && "₱₱₱"}
+                                                            "premium" && "₱₱₱"}
+                                                        {formData.price_level ===
+                                                            "luxury" && "₱₱₱₱"}
                                                     </span>
                                                 )}
                                                 {formData.has_wifi && (

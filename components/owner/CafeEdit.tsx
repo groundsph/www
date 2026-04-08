@@ -114,7 +114,7 @@ export default function CafeEdit({
             milk_options: cafe.milk_options || [],
             serves_food: cafe.serves_food || false,
             is_work_friendly: cafe.is_work_friendly || false,
-            price_level: cafe.price_level || "medium",
+            price_level: cafe.price_level || "mid",
             specialty: cafe.specialty || [],
             tags: cafe.tags || [],
             brew_methods: cafe.brew_methods || [],
@@ -149,9 +149,10 @@ export default function CafeEdit({
     ]
 
     const PRICE_LEVELS: { value: PriceLevel; level: number }[] = [
-        { value: "low", level: 1 },
-        { value: "medium", level: 2 },
-        { value: "high", level: 3 },
+        { value: "budget", level: 1 },
+        { value: "mid", level: 2 },
+        { value: "premium", level: 3 },
+        { value: "luxury", level: 4 },
     ]
 
     return (

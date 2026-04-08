@@ -34,7 +34,7 @@ export const cafeQuerySchema = z.object({
     hasNonDairy: z.boolean().optional(),
 
     // Pricing
-    priceLevel: z.enum(["low", "medium", "high"]).optional(),
+    priceLevel: z.enum(["budget", "mid", "premium", "luxury"]).optional(),
     coffeeStyle: z.enum(["classic", "artisan"]).optional(),
     membershipTier: z.enum(["free", "basic", "premium"]).optional(),
 

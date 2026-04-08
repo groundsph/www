@@ -101,7 +101,7 @@ describe("runCafeQuery", () => {
     it("filters cafes by price level", async () => {
         const result = await runCafeQuery({
             city: "Cebu",
-            priceLevel: "medium",
+            priceLevel: "mid",
             limit: 5,
         })
         expect(result.cafes.length).toBeLessThanOrEqual(5)

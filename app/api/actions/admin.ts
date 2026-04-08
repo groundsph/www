@@ -856,7 +856,7 @@ export async function updateCafe(
         milk_options: string[]
         serves_food: boolean
         is_work_friendly: boolean
-        price_level: "low" | "medium" | "high"
+        price_level: "budget" | "mid" | "premium" | "luxury"
         specialty: string[]
         tags: string[]
         brew_methods: string[]

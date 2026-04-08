@@ -250,7 +250,7 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     is_halal_certified: false,
     straw_type: '',
     straw_type_other: '',
-    price_level: 'medium',
+    price_level: 'mid',
     coffee_style: null,
     payment_methods: '',
     specialty: [],

@@ -332,9 +332,10 @@ export default function CafeSidebar({
                     Price Range
                 </p>
                 <span className='text-base font-bold text-primary'>
-                    {cafe.price_level === "low" && "₱"}
-                    {cafe.price_level === "medium" && "₱₱"}
-                    {cafe.price_level === "high" && "₱₱₱"}
+                    {cafe.price_level === "budget" && "₱"}
+                    {cafe.price_level === "mid" && "₱₱"}
+                    {cafe.price_level === "premium" && "₱₱₱"}
+                    {cafe.price_level === "luxury" && "₱₱₱₱"}
                 </span>
             </div>
 

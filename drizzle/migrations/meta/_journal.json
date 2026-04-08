@@ -85,6 +85,13 @@
       "when": 1775659421534,
       "tag": "0011_good_anita_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1775660237657,
+      "tag": "0012_mysterious_white_queen",
+      "breakpoints": true
     }
   ]
 }

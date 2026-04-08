@@ -64,7 +64,7 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                     isWorkFriendly: { type: "boolean", description: "Filter for work-friendly cafes" },
                     servesFood: { type: "boolean", description: "Filter for cafes that serve food" },
                     hasOutdoorSeating: { type: "boolean", description: "Filter for cafes with outdoor seating" },
-                    priceLevel: { type: "string", enum: ["low", "medium", "high"], description: "Price level filter" },
+                    priceLevel: { type: "string", enum: ["budget", "mid", "premium", "luxury"], description: "Price level filter" },
                     coffeeStyle: { type: "string", enum: ["classic", "artisan"], description: "Coffee style filter" },
                 },
             },

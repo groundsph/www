@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js App Router, Drizzle ORM, PostgreSQL, Better Auth, OpenAI-compatible API, Tailwind CSS v4, motion/react, Fuse.js, Zod
 
-**Current Version:** `2026.15.0` → Target: `2027.0.0`
+**Current Version:** `2026.15.0` → Target: `2026.16.0`
 
 ---
 
@@ -1696,7 +1696,7 @@ git commit -m "docs: update terms of service for community contributions and AI 
 
 ## Part 9: Version Bump
 
-### Task 9.1: Bump version to 2027.0.0
+### Task 9.1: Bump version to 2026.16.0
 
 **Files:**
 - Modify: `package.json:3`
@@ -1704,7 +1704,14 @@ git commit -m "docs: update terms of service for community contributions and AI 
 **Step 1: Update version**
 
 ```json
-"version": "2027.0.0",
+"version": "2026.16.0",
+```
+
+**Step 2: Commit**
+
+```bash
+git add package.json
+git commit -m "chore: bump version to 2026.16.0"
 ```
 
 **Step 2: Commit**
@@ -1794,7 +1801,7 @@ Expected: Build succeeds
 
 ```bash
 git add -A
-git commit -m "feat: complete cafe menu overhaul - v2027.0.0"
+git commit -m "feat: complete cafe menu overhaul - v2026.16.0"
 ```
 
 ---
@@ -1854,4 +1861,4 @@ git commit -m "feat: complete cafe menu overhaul - v2027.0.0"
 | `components/chat/ChatMessage.tsx` | Feedback DB integration |
 | `components/search/SearchResults.tsx` | Menu item result rendering |
 | `components/search/search-utils.ts` | Menu items in Fuse index |
-| `package.json` | Version 2027.0.0 |
+| `package.json` | Version 2026.16.0 |

@@ -56,7 +56,7 @@ const INITIAL_FILTERS = {
     is_work_friendly: false,
     is_24_7: false,
     open_now: false,
-    price_level: "" as "" | "low" | "medium" | "high",
+    price_level: "" as "" | "budget" | "mid" | "premium" | "luxury",
     coffee_style: "" as "" | "classic" | "artisan",
     region: "",
     near_me: false,
@@ -710,9 +710,10 @@ export default function CafesPageClient() {
                                     <div className='flex flex-row gap-2'>
                                         {[
                                             { value: "", label: "All" },
-                                            { value: "low", label: "₱" },
-                                            { value: "medium", label: "₱₱" },
-                                            { value: "high", label: "₱₱₱" },
+                                            { value: "budget", label: "₱" },
+                                            { value: "mid", label: "₱₱" },
+                                            { value: "premium", label: "₱₱₱" },
+                                            { value: "luxury", label: "₱₱₱₱" },
                                         ].map(({ value, label }) => (
                                             <button
                                                 key={value}
@@ -721,9 +722,10 @@ export default function CafesPageClient() {
                                                         ...prev,
                                                         price_level: value as
                                                             | ""
-                                                            | "low"
-                                                            | "medium"
-                                                            | "high",
+                                                            | "budget"
+                                                            | "mid"
+                                                            | "premium"
+                                                            | "luxury",
                                                     }))
                                                 }
                                                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${

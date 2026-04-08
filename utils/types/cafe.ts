@@ -47,7 +47,7 @@ export interface Cafe {
     milk_options?: string[];
     serves_food: boolean;
     specialty?: string[];
-    price_level: "low" | "medium" | "high";
+    price_level: "budget" | "mid" | "premium" | "luxury";
     payment_methods?: string;
     roaster?: string;
     tags?: string[];

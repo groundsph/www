@@ -283,9 +283,10 @@ export default function CafeHero({
 
                         {/* Price Level */}
                         <div className='flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-white/10 text-white backdrop-blur-sm'>
-                            {cafe.price_level === "low" && "₱"}
-                            {cafe.price_level === "medium" && "₱₱"}
-                            {cafe.price_level === "high" && "₱₱₱"}
+                            {cafe.price_level === "budget" && "₱"}
+                            {cafe.price_level === "mid" && "₱₱"}
+                            {cafe.price_level === "premium" && "₱₱₱"}
+                            {cafe.price_level === "luxury" && "₱₱₱₱"}
                         </div>
 
                         {/* Coffee Style */}

@@ -1627,7 +1627,7 @@ export type Database = {
       event_status: "draft" | "published" | "cancelled"
       interaction_type: "like" | "report"
       membership_tier: "free" | "basic" | "premium"
-      price_level: "low" | "medium" | "high"
+      price_level: "budget" | "mid" | "premium" | "luxury"
       review_status: "published" | "hidden" | "flagged"
       scout_rank: "novice" | "scout" | "explorer" | "expert" | "vanguard" | "legend"
       slot_type: "hero" | "sidebar" | "collection" | "regional_spotlight"
@@ -1783,7 +1783,7 @@ export const Constants = {
       event_status: ["draft", "published", "cancelled"],
       interaction_type: ["like", "report"],
       membership_tier: ["free", "basic", "premium"],
-      price_level: ["low", "medium", "high"],
+      price_level: ["budget", "mid", "premium", "luxury"],
       review_status: ["published", "hidden", "flagged"],
       scout_rank: ["novice", "scout", "explorer", "expert", "vanguard", "legend"],
       slot_type: ["hero", "sidebar", "collection", "regional_spotlight"],

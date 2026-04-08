@@ -104,9 +104,10 @@ const AMENITY_FIELDS = [
 type AmenityKey = (typeof AMENITY_FIELDS)[number]["key"]
 
 const PRICE_LEVELS = [
-    { value: "low", label: "₱", description: "Budget-friendly" },
-    { value: "medium", label: "₱₱", description: "Mid-range" },
-    { value: "high", label: "₱₱₱", description: "Premium" },
+    { value: "budget", label: "₱", description: "Budget-friendly" },
+    { value: "mid", label: "₱₱", description: "Mid-range" },
+    { value: "premium", label: "₱₱₱", description: "Premium" },
+    { value: "luxury", label: "₱₱₱₱", description: "Luxury" },
 ] as const
 
 export default function SuggestEditModal({
@@ -1145,9 +1146,10 @@ export default function SuggestEditModal({
                                                                             updateChange(
                                                                                 "price_level",
                                                                                 level.value as
-                                                                                    | "low"
-                                                                                    | "medium"
-                                                                                    | "high",
+                                                                                    | "budget"
+                                                                                    | "mid"
+                                                                                    | "premium"
+                                                                                    | "luxury",
                                                                             )
                                                                         }
                                                                         className={`flex-1 p-3 rounded-lg border-2 transition-all cursor-pointer ${

@@ -53,7 +53,7 @@ describe("submitCafe", () => {
                 milk_options: [],
                 serves_food: false,
                 is_work_friendly: false,
-                price_level: "medium",
+                price_level: "mid",
                 coffee_style: null,
                 payment_methods: "",
                 specialty: [],
