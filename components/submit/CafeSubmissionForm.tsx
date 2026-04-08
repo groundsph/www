@@ -186,6 +186,7 @@ export default function CafeSubmissionForm({
         isFood: boolean
         isHot: boolean
         isCold: boolean
+        isSignature: boolean
         isVegan: boolean
         isVegetarian: boolean
         calories: string
@@ -200,6 +201,7 @@ export default function CafeSubmissionForm({
         isFood: false,
         isHot: false,
         isCold: false,
+        isSignature: false,
         isVegan: false,
         isVegetarian: false,
         calories: "",
@@ -2382,6 +2384,7 @@ export default function CafeSubmissionForm({
                                             isFood: menuItemForm.isFood,
                                             isHot: menuItemForm.isHot,
                                             isCold: menuItemForm.isCold,
+                                            isSignature: menuItemForm.isSignature,
                                             isVegan: menuItemForm.isVegan,
                                             isVegetarian: menuItemForm.isVegetarian,
                                             calories: menuItemForm.calories,
@@ -2451,6 +2454,7 @@ export default function CafeSubmissionForm({
                                                 isFood: false,
                                                 isHot: false,
                                                 isCold: false,
+                                                isSignature: false,
                                                 isVegan: false,
                                                 isVegetarian: false,
                                                 calories: '',
