@@ -73,13 +73,7 @@ export default function ExpandableRankCard({
                     className="flex items-center gap-4"
                 >
                     <div className="relative">
-                        {entries[0].avatarUrl ? (
-                            <UserAvatar src={entries[0].avatarUrl} alt={entries[0].displayName} size={56} className="border-2 border-white/50" />
-                        ) : (
-                            <div className="w-14 h-14 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-xl border-2 border-white/50">
-                                {entries[0].displayName.charAt(0)}
-                            </div>
-                        )}
+                        <UserAvatar src={entries[0].avatarUrl} alt={entries[0].displayName} size={56} className="border-2 border-white/50" />
                     </div>
                     <div className="flex-1">
                         <p className="text-white font-semibold text-lg">
@@ -114,13 +108,7 @@ export default function ExpandableRankCard({
                                         href={`/profile/${entry.username}`}
                                         className="flex items-center gap-3"
                                     >
-                                        {entry.avatarUrl ? (
-                                            <UserAvatar src={entry.avatarUrl} alt={entry.displayName} size={40} className="border border-white/30" />
-                                        ) : (
-                                            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30">
-                                                {entry.displayName.charAt(0)}
-                                            </div>
-                                        )}
+                                        <UserAvatar src={entry.avatarUrl} alt={entry.displayName} size={40} className="border border-white/30" />
                                         <div className="flex-1">
                                             <p className="text-white font-medium">
                                                 {entry.displayName}
