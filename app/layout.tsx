@@ -4,6 +4,31 @@ import Script from "next/script"
 import { Suspense } from "react"
 import "./globals.css"
 import AuthProvider from "@/components/layout/AuthProvider"
+
+/**
+ * Web Vitals metric type
+ */
+interface WebVitalsMetric {
+    id: string
+    name: string
+    startTime: number
+    value: number
+    label: "web-vital" | "custom"
+}
+
+/**
+ * Web Vitals reporting for performance monitoring
+ * Logs metrics in development, can be sent to analytics in production
+ */
+export function reportWebVitals(metric: WebVitalsMetric) {
+    // In development, log to console
+    if (process.env.NODE_ENV === "development") {
+        console.log(`[Web Vitals] ${metric.name}: ${metric.value}`)
+    }
+
+    // In production, could send to analytics service
+    // Example: analytics.track(metric)
+}
 import LayoutWrapper from "@/components/layout/LayoutWrapper"
 import NotificationProvider from "@/components/layout/NotificationProvider"
 import BadgeNotificationProvider from "@/components/badges/BadgeNotificationContext"
