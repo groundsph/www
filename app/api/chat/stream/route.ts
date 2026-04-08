@@ -6,6 +6,7 @@ import { checkChatLimit, incrementChatUsage } from "@/utils/chat-rate-limit"
 import { getChatEnabled } from "@/utils/feature-flags"
 import { chatContextSchema } from "@/utils/types/chat"
 import { moderateMessage } from "@/utils/chat-moderation"
+import { createConversation, saveMessage, endConversation } from "@/app/api/actions/chat-history"
 import { z } from "zod"
 
 const requestSchema = z.object({
@@ -60,6 +61,9 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Create conversation record before streaming
+        const conversationId = await createConversation(sessionId)
+
         // Create streaming response
         const stream = new ReadableStream({
             async start(controller) {
@@ -69,16 +73,23 @@ export async function POST(request: NextRequest) {
                     await runChatStream({
                         message: validated.data.message,
                         sessionId,
+                        conversationId,
                         context: validated.data.context,
                         history: validated.data.history,
                         onChunk: async (chunk) => {
                             const data = JSON.stringify(chunk)
                             controller.enqueue(encoder.encode(`data: ${data}\n\n`))
                         },
+                        onMessage: async (role, content, toolCalls, toolCallId) => {
+                            await saveMessage(conversationId, role, content, toolCalls, toolCallId)
+                        },
                     })
 
                     // Increment usage after successful completion
                     await incrementChatUsage(sessionId)
+
+                    // Mark conversation as ended
+                    await endConversation(conversationId)
 
                     // Send final remaining count
                     // Handle Infinity for dev mode (JSON doesn't support Infinity)
@@ -90,6 +101,8 @@ export async function POST(request: NextRequest) {
                     controller.enqueue(encoder.encode(`data: ${finalChunk}\n\n`))
                 } catch (error) {
                     console.error("Stream error:", error)
+                    // Mark conversation as ended even on error
+                    await endConversation(conversationId).catch(() => {})
                     const errorChunk = JSON.stringify({
                         type: "error",
                         error: "Stream processing failed",

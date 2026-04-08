@@ -30,9 +30,11 @@ interface ChatMessage {
 export interface ChatStreamOptions {
     message: string
     sessionId: string
+    conversationId?: string
     context?: ChatContext
     history?: { role: "user" | "assistant"; content: string }[]
     onChunk: (chunk: ChatStreamChunk) => void | Promise<void>
+    onMessage?: (role: string, content: string | null, toolCalls?: unknown, toolCallId?: string) => void | Promise<void>
 }
 
 function shouldForceCityQuery(text: string): string | null {
@@ -57,7 +59,7 @@ function stripLocationHint(text: string): string {
 }
 
 export async function runChatStream(options: ChatStreamOptions): Promise<void> {
-    const { message, sessionId, onChunk, history } = options
+    const { message, sessionId, conversationId, onChunk, onMessage, history } = options
 
     if (!message?.trim()) {
         await onChunk({ type: "error", error: "Please enter a message" })
@@ -80,6 +82,11 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
     // Add the current user message
     messages.push({ role: "user", content: message })
+
+    // Save user message to database if conversationId is provided
+    if (conversationId && onMessage) {
+        await onMessage("user", message)
+    }
 
     // Insert page context if available
     if (options.context?.cafeSlug) {
@@ -167,6 +174,11 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                 content: response.content ?? "",
             }
 
+            // Save assistant message to database if conversationId is provided
+            if (conversationId && onMessage) {
+                await onMessage("assistant", response.content ?? "", response.toolCalls)
+            }
+
             if (response.toolCalls && response.toolCalls.length > 0) {
                 assistantMessage.tool_calls = response.toolCalls
                 messages.push(assistantMessage)
@@ -198,6 +210,11 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                             tool_call_id: toolCall.id,
                             name: toolCall.function.name,
                         })
+
+                        // Save tool message to database if conversationId is provided
+                        if (conversationId && onMessage) {
+                            await onMessage("tool", JSON.stringify(result), undefined, toolCall.id)
+                        }
                     } catch (toolError) {
                         console.error(`Tool execution error for ${toolCall.function.name}:`, toolError)
                         toolCallRecords.push({
@@ -205,12 +222,19 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                             params: JSON.parse(toolCall.function.arguments),
                             result: { error: "Tool execution failed" },
                         })
+
+                        const toolErrorContent = JSON.stringify({ error: "Tool execution failed" })
                         messages.push({
                             role: "tool",
-                            content: JSON.stringify({ error: "Tool execution failed" }),
+                            content: toolErrorContent,
                             tool_call_id: toolCall.id,
                             name: toolCall.function.name,
                         })
+
+                        // Save tool error message to database if conversationId is provided
+                        if (conversationId && onMessage) {
+                            await onMessage("tool", toolErrorContent, undefined, toolCall.id)
+                        }
                     }
                 }
             } else {
