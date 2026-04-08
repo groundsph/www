@@ -143,6 +143,7 @@ export default function MenuItemModal({
                 maxWidthOrHeight: 800,
                 useWebWorker: true,
                 fileType: "image/webp",
+                initialQuality: 0.85,
             })
 
             // Store blob and create preview URL
