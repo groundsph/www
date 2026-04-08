@@ -603,7 +603,14 @@ export async function updateProfile(
         profile_completed?: boolean
     }
 ): Promise<{ success: boolean; error?: string }> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Authentication required" }
+
     if (!userId) return { success: false, error: "User ID required" }
+
+    if (currentUser.id !== userId && currentUser.role !== "admin") {
+        return { success: false, error: "Not authorized to update this profile" }
+    }
 
     try {
         const updateData: Partial<typeof profiles.$inferInsert> = {
