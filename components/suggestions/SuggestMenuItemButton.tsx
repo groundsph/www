@@ -32,7 +32,7 @@ export default function SuggestMenuItemButton({
                 }`}
             >
                 <Plus className='w-3.5 h-3.5' />
-                <span>Suggest Menu Item</span>
+                <span>Log an Item</span>
             </Link>
         )
     }
@@ -48,7 +48,7 @@ export default function SuggestMenuItemButton({
                 }`}
             >
                 <Plus className='w-3.5 h-3.5' />
-                <span>Suggest Menu Item</span>
+                <span>Log an Item</span>
             </button>
 
             <SuggestMenuItemModal

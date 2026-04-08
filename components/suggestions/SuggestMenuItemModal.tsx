@@ -192,7 +192,7 @@ export default function SuggestMenuItemModal({
                                 <span className='text-xs font-medium tracking-wide uppercase text-text/50'>
                                     {mode === "edit"
                                         ? "Suggest Edit"
-                                        : "Suggest Menu Item"}
+                                        : "Log an Item"}
                                 </span>
                                 <h2 className='text-xl font-serif font-semibold text-text'>
                                     {cafeName}
@@ -545,11 +545,11 @@ export default function SuggestMenuItemModal({
                                             <Loader2 className='w-4 h-4 animate-spin' />
                                             Submitting...
                                         </>
-                                    ) : mode === "edit" ? (
-                                        "Suggest Edit"
-                                    ) : (
-                                        "Suggest Item"
-                                    )}
+                                ) : mode === "edit" ? (
+                                    "Suggest Edit"
+                                ) : (
+                                    "Log Item"
+                                )}
                                 </button>
                             </div>
                         )}
