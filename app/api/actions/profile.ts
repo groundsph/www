@@ -721,8 +721,10 @@ export async function getCafesByIds(ids: string[]): Promise<CafeWithRatings[]> {
 /**
  * Get a user's public profile by username
  */
-export async function getProfileByUsername(username: string): Promise<ProfileWithBadges | null> {
-    // Fetch profile by username
+export async function getProfileByUsername(
+    username: string,
+    viewerId?: string
+): Promise<ProfileWithBadges | null> {
     const profileResult = await db
         .select()
         .from(profiles)
@@ -732,7 +734,31 @@ export async function getProfileByUsername(username: string): Promise<ProfileWit
     const profile = profileResult[0]
     if (!profile) return null
 
-    // Fetch user's badges
+    const { canView } = await canViewProfile(profile.id, viewerId)
+
+    if (!canView) {
+        return {
+            id: profile.id,
+            username: profile.username,
+            display_name: profile.displayName,
+            avatar_url: profile.avatarUrl,
+            bio: null,
+            role: null,
+            is_supporter: false,
+            support_since: null,
+            supporter_expires_at: null,
+            total_contribution: 0,
+            profile_completed: false,
+            passport: null,
+            stats: null,
+            created_at: null,
+            updated_at: null,
+            is_private: true,
+            moderator_regions: null,
+            badges: [],
+        } as ProfileWithBadges
+    }
+
     const badgesResult = await db
         .select({
             id: userBadges.id,
