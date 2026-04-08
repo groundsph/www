@@ -131,7 +131,7 @@ export function ChatWidget({
                             )}
                         </AnimatePresence>
 
-                        {remainingMessages > 0 && remainingMessages < 10 && (
+                        {remainingMessages > 0 && remainingMessages < 30 && (
                             <motion.span
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
@@ -142,7 +142,7 @@ export function ChatWidget({
                         )}
 
                         {/* Pulse animation for new users */}
-                        {!isOpen && remainingMessages === 10 && (
+                        {!isOpen && remainingMessages === 30 && (
                             <motion.span
                                 className='absolute inset-0 rounded-full bg-secondary/50'
                                 animate={{

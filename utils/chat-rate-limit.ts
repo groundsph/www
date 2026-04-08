@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { chatRateLimits } from "@/db/schema/chat-rate-limit"
 
-const MAX_USAGE = process.env.NODE_ENV === "development" ? Infinity : 10
+const MAX_USAGE = process.env.NODE_ENV === "development" ? Infinity : 30
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 // Skip rate limit in development
