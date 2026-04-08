@@ -43,7 +43,10 @@ export default function ImageCropper({
         setProcessing(true)
 
         try {
-            const image = await createImage(imageUrl)
+            const response = await fetch(imageUrl)
+            const blob = await response.blob()
+            const bitmap = await createImageBitmap(blob)
+
             const canvas = document.createElement("canvas")
             const ctx = canvas.getContext("2d")
 
@@ -51,12 +54,11 @@ export default function ImageCropper({
                 throw new Error("No 2d context")
             }
 
-            // Set canvas size to the final cropped size
             canvas.width = croppedAreaPixels.width
             canvas.height = croppedAreaPixels.height
 
             ctx.drawImage(
-                image,
+                bitmap,
                 croppedAreaPixels.x,
                 croppedAreaPixels.y,
                 croppedAreaPixels.width,
@@ -66,6 +68,8 @@ export default function ImageCropper({
                 croppedAreaPixels.width,
                 croppedAreaPixels.height
             )
+
+            bitmap.close()
 
             canvas.toBlob(
                 (blob) => {
@@ -171,12 +175,3 @@ export default function ImageCropper({
     )
 }
 
-function createImage(url: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-        const image = new Image()
-        image.addEventListener("load", () => resolve(image))
-        image.addEventListener("error", (error) => reject(error))
-        image.setAttribute("crossOrigin", "anonymous")
-        image.src = url
-    })
-}
