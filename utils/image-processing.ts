@@ -12,6 +12,23 @@
 
 import imageCompression from "browser-image-compression"
 
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function logCompressionResult(originalSize: number, compressedSize: number, label: string) {
+    const ratio = compressedSize / originalSize
+    if (ratio < 0.1) {
+        console.warn(
+            `[ImageCompression] ${label}: Heavy compression (${(ratio * 100).toFixed(1)}% of original). ` +
+            `Original: ${formatFileSize(originalSize)}, Compressed: ${formatFileSize(compressedSize)}. ` +
+            `Consider increasing maxSizeMB.`
+        )
+    }
+}
+
 // ============================================================================
 // Cafe Cover Image (Hero/Thumbnail)
 // ============================================================================
@@ -28,6 +45,8 @@ export async function compressCoverImage(file: File): Promise<File> {
         fileType: "image/webp",
         initialQuality: 0.9,
     })
+
+    logCompressionResult(file.size, compressed.size, "coverImage")
 
     return new File(
         [compressed],
@@ -53,6 +72,8 @@ export async function compressGalleryImage(file: File): Promise<File> {
         initialQuality: 0.85,
     })
 
+    logCompressionResult(file.size, compressed.size, "galleryImage")
+
     return new File(
         [compressed],
         file.name.replace(/\.[^/.]+$/, "") + ".webp",
@@ -76,6 +97,8 @@ export async function compressReviewImage(file: File): Promise<File> {
         fileType: "image/webp",
         initialQuality: 0.85,
     })
+
+    logCompressionResult(file.size, compressed.size, "reviewImage")
 
     return new File(
         [compressed],
@@ -101,6 +124,8 @@ export async function compressBlogCover(file: File): Promise<File> {
         fileType: "image/jpeg",
         initialQuality: 0.85,
     })
+
+    logCompressionResult(file.size, compressed.size, "blogCover")
 
     return new File(
         [compressed],
@@ -130,6 +155,8 @@ export async function compressCollectionCover(file: File): Promise<File> {
         initialQuality: 0.85,
     })
 
+    logCompressionResult(file.size, compressed.size, "collectionCover")
+
     return new File(
         [compressed],
         file.name.replace(/\.[^/.]+$/, "") + ".jpg",
@@ -154,6 +181,8 @@ export async function compressAvatar(file: File): Promise<File> {
         fileType: "image/jpeg",
         initialQuality: 0.9,
     })
+
+    logCompressionResult(file.size, compressed.size, "avatar")
 
     return new File(
         [compressed],
