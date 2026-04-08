@@ -37,10 +37,11 @@ import {
     Cigarette,
     Store,
     X,
+    Plus,
 } from "lucide-react"
 
 import { cn } from "@/utils/cn"
-import { CafeSubmission, DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
+import { CafeSubmission, DEFAULT_CAFE_SUBMISSION, MenuItemSubmission } from "@/utils/types/extra"
 import { OperatingHour } from "@/utils/types/cafe"
 
 import {
@@ -84,8 +85,9 @@ const STEPS = [
     { id: 2, title: "Location", icon: MapPin },
     { id: 3, title: "Amenities", icon: Settings },
     { id: 4, title: "Hours", icon: Clock },
-    { id: 5, title: "Contact", icon: Phone },
-    { id: 6, title: "Submit", icon: Send },
+    { id: 5, title: "Menu", icon: Utensils },
+    { id: 6, title: "Contact", icon: Phone },
+    { id: 7, title: "Submit", icon: Send },
 ]
 
 const DRAFT_KEY = "grounds_cafe_submission_draft"
@@ -170,6 +172,24 @@ export default function CafeSubmissionForm({
     // Google Maps URL Parsing State
     const [googleMapsUrl, setGoogleMapsUrl] = useState("")
     const [isParsingUrl, setIsParsingUrl] = useState(false)
+
+    // Menu Item Form State
+    const [menuItemForm, setMenuItemForm] = useState<{
+        name: string
+        category: string
+        price: string
+        description: string
+        imageFile: File | null
+        imagePreview: string | null
+    }>({
+        name: "",
+        category: "",
+        price: "",
+        description: "",
+        imageFile: null,
+        imagePreview: null,
+    })
+
 
     // Computed state for Step 0 verification
     const isNameVerified =
@@ -643,9 +663,45 @@ export default function CafeSubmissionForm({
                 }
             }
 
+            // 6. Upload Menu Item Images
+            setProcessingStatus("Uploading menu item images...")
+            const menuItemsWithUrls: { name: string; category: string; price: number; description: string; imageUrl: string | null }[] = []
+
+            for (let i = 0; i < formData.menu_items.length; i++) {
+                const item = formData.menu_items[i]
+                let imageUrl: string | null = null
+
+                if (item.imageFile) {
+                    const key = `menu-item-${i}`
+                    setUploadProgress((prev) => ({ ...prev, [key]: 0 }))
+
+                    const result = await uploadCafeImageWithProgress(
+                        item.imageFile,
+                        (progress: number) => {
+                            setUploadProgress((prev) => ({
+                                ...prev,
+                                [key]: progress,
+                            }))
+                        },
+                    )
+
+                    if (result.success && result.url) {
+                        imageUrl = result.url
+                    }
+                }
+
+                menuItemsWithUrls.push({
+                    name: item.name,
+                    category: item.category,
+                    price: item.price,
+                    description: item.description,
+                    imageUrl: imageUrl,
+                })
+            }
+
             setProcessingStatus("Finalizing submission...")
 
-            // 6. Submit cafe data
+            // 7. Submit cafe data
             console.log("[Cafe Submit] Submitting to server...")
             const {
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -654,12 +710,29 @@ export default function CafeSubmissionForm({
                 gallery,
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 ownership_proof_files,
-                ...serializableFormData
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                menu_items,
+                ...restFormData
             } = formData
+
+            // Build serializable form data with menu items (without File objects)
+            const serializableFormData = {
+                ...restFormData,
+                menu_items: menuItemsWithUrls.map(item => ({
+                    id: crypto.randomUUID(),
+                    name: item.name,
+                    category: item.category,
+                    price: item.price,
+                    description: item.description,
+                    imageUrl: item.imageUrl,
+                })),
+            }
+
             const result = await submitCafe(
                 serializableFormData,
                 thumbnailUrl,
                 galleryUrls,
+                menuItemsWithUrls,
             )
 
             if (!result.success) {
@@ -2250,8 +2323,290 @@ export default function CafeSubmissionForm({
                             </div>
                         )}
 
-                        {/* Step 5: Contact & Socials */}
+                        {/* Step 5: Menu Items */}
                         {currentStep === 5 && (
+                            <div className='space-y-6'>
+                                <div>
+                                    <h3 className='text-xl font-semibold font-serif mb-1'>
+                                        Menu Items
+                                    </h3>
+                                    <p className='text-text/60 text-sm'>
+                                        Optionally add some initial menu items for this cafe
+                                    </p>
+                                </div>
+
+                                {/* Info Notice */}
+                                <div className='p-4 bg-blue-50 border border-blue-200 rounded-xl'>
+                                    <div className='flex items-start gap-3'>
+                                        <div className='p-2 bg-blue-100 rounded-full text-blue-600'>
+                                            <Utensils className='w-4 h-4' />
+                                        </div>
+                                        <div>
+                                            <p className='font-medium text-blue-800 text-sm'>
+                                                Optional Step
+                                            </p>
+                                            <p className='text-xs text-blue-700 mt-1'>
+                                                You can skip this and add menu items later. As the initial submitter, you can upload photos for menu items (unlike community suggestions).
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Add Menu Item Form */}
+                                <div className='p-5 bg-background border border-text/10 rounded-xl space-y-4'>
+                                    <h4 className='font-medium text-sm text-text/70'>
+                                        Add a Menu Item
+                                    </h4>
+
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                        <div>
+                                            <label className='block text-sm font-medium mb-2'>
+                                                Item Name <span className='text-red-500'>*</span>
+                                            </label>
+                                            <input
+                                                type='text'
+                                                value={menuItemForm.name}
+                                                onChange={(e) =>
+                                                    setMenuItemForm((prev) => ({
+                                                        ...prev,
+                                                        name: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder='e.g. Cappuccino'
+                                                className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className='block text-sm font-medium mb-2'>
+                                                Category <span className='text-red-500'>*</span>
+                                            </label>
+                                            <select
+                                                value={menuItemForm.category}
+                                                onChange={(e) =>
+                                                    setMenuItemForm((prev) => ({
+                                                        ...prev,
+                                                        category: e.target.value,
+                                                    }))
+                                                }
+                                                className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                            >
+                                                <option value=''>Select category</option>
+                                                <option value='Coffee'>Coffee</option>
+                                                <option value='Tea'>Tea</option>
+                                                <option value='Non-Coffee'>Non-Coffee</option>
+                                                <option value='Pastry'>Pastry</option>
+                                                <option value='Food'>Food</option>
+                                                <option value='Dessert'>Dessert</option>
+                                                <option value='Other'>Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                        <div>
+                                            <label className='block text-sm font-medium mb-2'>
+                                                Price (₱) <span className='text-red-500'>*</span>
+                                            </label>
+                                            <input
+                                                type='number'
+                                                min='0'
+                                                step='0.01'
+                                                value={menuItemForm.price}
+                                                onChange={(e) =>
+                                                    setMenuItemForm((prev) => ({
+                                                        ...prev,
+                                                        price: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder='0.00'
+                                                className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className='block text-sm font-medium mb-2'>
+                                                Photo <span className='text-text/40 font-normal'>(optional)</span>
+                                            </label>
+                                            {menuItemForm.imagePreview ? (
+                                                <div className='relative w-24 h-24 rounded-lg overflow-hidden border border-text/20'>
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        src={menuItemForm.imagePreview}
+                                                        alt='Menu item preview'
+                                                        className='w-full h-full object-cover'
+                                                    />
+                                                    <button
+                                                        type='button'
+                                                        onClick={() =>
+                                                            setMenuItemForm((prev) => ({
+                                                                ...prev,
+                                                                imageFile: null,
+                                                                imagePreview: null,
+                                                            }))
+                                                        }
+                                                        className='absolute top-1 right-1 p-1 bg-black/60 hover:bg-black/80 text-white rounded transition-colors'
+                                                    >
+                                                        <X className='w-3 h-3' />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className='flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed border-text/20 bg-text/5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer'>
+                                                    <ImageIcon className='w-6 h-6 text-text/40' />
+                                                    <span className='text-xs text-text/50 mt-1'>Add photo</span>
+                                                    <input
+                                                        type='file'
+                                                        accept='image/jpeg,image/png,image/webp'
+                                                        className='hidden'
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0]
+                                                            if (file) {
+                                                                setMenuItemForm((prev) => ({
+                                                                    ...prev,
+                                                                    imageFile: file,
+                                                                    imagePreview: URL.createObjectURL(file),
+                                                                }))
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className='block text-sm font-medium mb-2'>
+                                            Description <span className='text-text/40 font-normal'>(optional)</span>
+                                        </label>
+                                        <textarea
+                                            value={menuItemForm.description}
+                                            onChange={(e) =>
+                                                setMenuItemForm((prev) => ({
+                                                    ...prev,
+                                                    description: e.target.value,
+                                                }))
+                                            }
+                                            placeholder='Brief description of the item...'
+                                            rows={2}
+                                            maxLength={200}
+                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none'
+                                        />
+                                        <p className='text-xs text-text/40 mt-1'>
+                                            {200 - menuItemForm.description.length} characters remaining
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type='button'
+                                        onClick={() => {
+                                            if (!menuItemForm.name.trim() || !menuItemForm.category || menuItemForm.price === '') {
+                                                setError('Please fill in all required fields (Name, Category, Price)')
+                                                return
+                                            }
+                                            const price = parseFloat(menuItemForm.price)
+                                            if (isNaN(price) || price < 0) {
+                                                setError('Please enter a valid price')
+                                                return
+                                            }
+                                            const newItem: MenuItemSubmission = {
+                                                id: crypto.randomUUID(),
+                                                name: menuItemForm.name.trim(),
+                                                category: menuItemForm.category,
+                                                price: price,
+                                                description: menuItemForm.description.trim(),
+                                                imageFile: menuItemForm.imageFile,
+                                                imagePreview: menuItemForm.imagePreview,
+                                            }
+                                            updateFormData('menu_items', [...formData.menu_items, newItem])
+                                            setMenuItemForm({
+                                                name: '',
+                                                category: '',
+                                                price: '',
+                                                description: '',
+                                                imageFile: null,
+                                                imagePreview: null,
+                                            })
+                                            setError(null)
+                                            trigger('medium')
+                                        }}
+                                        disabled={!menuItemForm.name.trim() || !menuItemForm.category || menuItemForm.price === ''}
+                                        className='flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                                    >
+                                        <Plus className='w-4 h-4' />
+                                        Add Item
+                                    </button>
+                                </div>
+
+                                {/* Added Items List */}
+                                {formData.menu_items.length > 0 && (
+                                    <div className='space-y-3'>
+                                        <h4 className='font-medium text-sm text-text/70'>
+                                            Added Items ({formData.menu_items.length})
+                                        </h4>
+                                        <div className='space-y-2'>
+                                            {formData.menu_items.map((item, index) => (
+                                                <motion.div
+                                                    key={item.id}
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className='flex items-start gap-3 p-3 bg-background border border-text/10 rounded-xl'
+                                                >
+                                                    {item.imagePreview ? (
+                                                        <div className='w-16 h-16 rounded-lg overflow-hidden shrink-0'>
+                                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                            <img
+                                                                src={item.imagePreview}
+                                                                alt={item.name}
+                                                                className='w-full h-full object-cover'
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className='w-16 h-16 rounded-lg bg-text/5 flex items-center justify-center shrink-0'>
+                                                            <Utensils className='w-6 h-6 text-text/30' />
+                                                        </div>
+                                                    )}
+                                                    <div className='flex-1 min-w-0'>
+                                                        <div className='flex items-center gap-2'>
+                                                            <span className='font-medium text-sm'>
+                                                                {item.name}
+                                                            </span>
+                                                            <span className='text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full'>
+                                                                {item.category}
+                                                            </span>
+                                                        </div>
+                                                        <p className='text-sm font-semibold text-primary'>
+                                                            ₱{item.price.toFixed(2)}
+                                                        </p>
+                                                        {item.description && (
+                                                            <p className='text-xs text-text/60 mt-1 line-clamp-2'>
+                                                                {item.description}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        type='button'
+                                                        onClick={() => {
+                                                            updateFormData(
+                                                                'menu_items',
+                                                                formData.menu_items.filter((_, i) => i !== index)
+                                                            )
+                                                            trigger('soft')
+                                                        }}
+                                                        className='p-2 hover:bg-red-100 rounded-lg transition-colors shrink-0'
+                                                    >
+                                                        <Trash2 className='w-4 h-4 text-red-500' />
+                                                    </button>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Step 6: Contact & Socials */}
+                        {currentStep === 6 && (
                             <div className='space-y-6'>
                                 <div>
                                     <h3 className='text-xl font-semibold font-serif mb-1'>
@@ -2332,8 +2687,8 @@ export default function CafeSubmissionForm({
                             </div>
                         )}
 
-                        {/* Step 6: Review & Submit - Live Preview */}
-                        {currentStep === 6 && (
+                        {/* Step 7: Review & Submit - Live Preview */}
+                        {currentStep === 7 && (
                             <div className='space-y-6'>
                                 <div>
                                     <h3 className='text-xl font-semibold font-serif mb-1'>

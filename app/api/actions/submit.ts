@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from "@/db"
-import { cafes, profiles } from "@/db/schema"
+import { cafes, profiles, cafeMenuItems } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { notifyDiscord } from "./notify"
@@ -54,7 +54,8 @@ export interface SubmitCafeResult {
 export async function submitCafe(
     formData: SerializableCafeSubmission,
     thumbnailUrl: string | null,
-    galleryUrls: string[]
+    galleryUrls: string[],
+    menuItems: { name: string; category: string; price: number; description: string; imageUrl: string | null }[] = []
 ): Promise<SubmitCafeResult> {
     // Get current user
     const user = await getCurrentUser()
@@ -199,6 +200,30 @@ export async function submitCafe(
             source: 'cafe_submission',
             cafe_name: formData.name
         })
+
+        // Insert menu items if any were submitted
+        if (menuItems.length > 0) {
+            console.log(`[Cafe Submit] Inserting ${menuItems.length} menu items...`)
+            for (let i = 0; i < menuItems.length; i++) {
+                const item = menuItems[i]
+                try {
+                    await db.insert(cafeMenuItems).values({
+                        cafeId: cafe.id,
+                        name: item.name,
+                        category: item.category,
+                        price: item.price,
+                        description: item.description || null,
+                        imageUrl: item.imageUrl,
+                        isAvailable: true,
+                        sortOrder: i,
+                        lastUpdatedBy: user.id,
+                    })
+                } catch (err) {
+                    console.error(`[Cafe Submit] Failed to insert menu item "${item.name}":`, err)
+                    // Continue with other items, don't fail the whole submission
+                }
+            }
+        }
 
         return {
             success: true,

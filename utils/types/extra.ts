@@ -2,6 +2,17 @@ import { Database } from './database.types';
 import { OperatingHours } from './cafe';
 import { CafeSocial } from './cafe';
 
+// Menu item submission type (for initial cafe submission)
+export interface MenuItemSubmission {
+    id: string; // temporary ID for UI management
+    name: string;
+    category: string;
+    price: number;
+    description: string;
+    imageFile?: File | null;
+    imagePreview?: string | null;
+}
+
 // 1. Extract database-generated types for convenience
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 export type Views<T extends keyof Database['public']['Views']> = Database['public']['Views'][T]['Row'];
@@ -200,7 +211,10 @@ export interface CafeSubmission {
     // Step 4: Operating Hours
     operating_hours: OperatingHours;
 
-    // Step 5: Contact & Socials
+    // Step 5: Menu Items (optional)
+    menu_items: MenuItemSubmission[];
+
+    // Step 6: Contact & Socials
     website_url: string;
     phone: string;
     email: string;
@@ -216,8 +230,20 @@ export interface CafeSubmission {
     is_chain: boolean,
 }
 
+// Serializable menu item (excludes File objects)
+export interface SerializableMenuItem {
+    id: string;
+    name: string;
+    category: string;
+    price: number;
+    description: string;
+    imageUrl?: string | null;
+}
+
 // Serializable version of CafeSubmission for server actions (excludes File objects)
-export type SerializableCafeSubmission = Omit<CafeSubmission, 'thumbnail' | 'gallery' | 'ownership_proof_files'>;
+export type SerializableCafeSubmission = Omit<CafeSubmission, 'thumbnail' | 'gallery' | 'ownership_proof_files' | 'menu_items'> & {
+    menu_items: SerializableMenuItem[];
+};
 
 // Default empty submission for form initialization
 export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
@@ -258,6 +284,7 @@ export const DEFAULT_CAFE_SUBMISSION: CafeSubmission = {
     brew_methods: [],
     roaster: '',
     operating_hours: [],
+    menu_items: [],
     website_url: '',
     phone: '',
     email: '',
