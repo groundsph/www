@@ -3,10 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
-import { X as XIcon, Camera, Loader2, Check, Trash2, ScanLine, AlertCircle } from "lucide-react"
+import { X as XIcon, Camera, Loader2, Check, Trash2, ScanLine, AlertCircle, ChevronDown, Plus } from "lucide-react"
 import imageCompression from "browser-image-compression"
-import { scanMenuImage, saveOcrMenuItems } from "@/app/api/actions/menu-ocr"
+import { saveOcrMenuItems } from "@/app/api/actions/menu-ocr"
+import { streamOcrScan } from "@/utils/ocr-stream-client"
 import { MENU_CATEGORIES } from "@/utils/types/owner"
+import { cn } from "@/utils/cn"
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
 import Link from "next/link"
 
@@ -25,6 +27,15 @@ interface EditableItem {
     name: string
     category: string
     price: number
+    description: string
+    isFood: boolean
+    isHot: boolean
+    isCold: boolean
+    isVegan: boolean
+    isVegetarian: boolean
+    calories: string
+    sizeOptions: { label: string; price: number }[]
+    isExpanded: boolean
 }
 
 const itemVariants = {
@@ -35,6 +46,41 @@ const itemVariants = {
         transition: { delay: i * 0.05, duration: 0.2 },
     }),
     exit: { opacity: 0, x: -20, transition: { duration: 0.15 } },
+}
+
+function CustomCheckbox({
+    checked,
+    onChange,
+    label,
+}: {
+    checked: boolean
+    onChange: (checked: boolean) => void
+    label: string
+}) {
+    return (
+        <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-text/5 transition-colors">
+            <div className={cn(
+                "relative w-4 h-4 border-2 rounded flex items-center justify-center transition-all duration-200",
+                checked ? "border-primary/30 bg-primary/5" : "border-text/10 bg-text/5"
+            )}>
+                <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => onChange(e.target.checked)}
+                    className="sr-only"
+                />
+                <svg
+                    className={cn("w-2.5 h-2.5 transition-all duration-200", checked ? "opacity-100 scale-100" : "opacity-0 scale-75")}
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                >
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+            </div>
+            <span className={cn("text-xs transition-colors duration-200", checked ? "text-text" : "text-text/60")}>
+                {label}
+            </span>
+        </label>
+    )
 }
 
 export default function MenuOcrScanModal({
@@ -51,6 +97,9 @@ export default function MenuOcrScanModal({
     const [error, setError] = useState<string | null>(null)
     const [savedCount, setSavedCount] = useState(0)
     const [scanElapsed, setScanElapsed] = useState(0)
+    const [statusMessage, setStatusMessage] = useState("Preparing...")
+    const [streamedContent, setStreamedContent] = useState("")
+    const streamedContentRef = useRef("")
     const fileInputRef = useRef<HTMLInputElement>(null)
     const shouldResetRef = useRef(false)
 
@@ -62,6 +111,9 @@ export default function MenuOcrScanModal({
         setError(null)
         setSavedCount(0)
         setScanElapsed(0)
+        setStatusMessage("Preparing...")
+        setStreamedContent("")
+        streamedContentRef.current = ""
     }, [])
 
     useEffect(() => {
@@ -80,6 +132,12 @@ export default function MenuOcrScanModal({
             setSavedCount(0)
              
             setScanElapsed(0)
+             
+            setStatusMessage("Preparing...")
+             
+            setStreamedContent("")
+             
+            streamedContentRef.current = ""
             shouldResetRef.current = false
         }
         if (isOpen) {
@@ -133,28 +191,47 @@ export default function MenuOcrScanModal({
             setImagePreview(URL.createObjectURL(compressed))
             setStep("scanning")
             setError(null)
+            setStreamedContent("")
+            streamedContentRef.current = ""
+            setStatusMessage("Uploading image...")
 
-            const result = await scanMenuImage(cafeId, base64)
-
-            if (result.success) {
-                const editableItems: EditableItem[] = (result.deduplicated ?? []).map(
-                    (item, index) => ({
-                        id: index,
-                        name: item.name,
-                        category: MENU_CATEGORIES.includes(item.category as typeof MENU_CATEGORIES[number])
-                            ? item.category
-                            : "Other",
-                        price: typeof item.price === "string" ? parseFloat(item.price) : item.price,
-                    })
-                )
-                setExtractedItems(editableItems)
-                setDuplicates(result.duplicates ?? [])
-                // Small delay before showing review for smooth transition
-                setTimeout(() => setStep("review"), 300)
-            } else {
-                setError(result.error ?? "Failed to scan menu")
-                setStep("upload")
-            }
+            await streamOcrScan(cafeId, base64, {
+                onStatus: (message) => {
+                    setStatusMessage(message)
+                },
+                onContent: (token) => {
+                    streamedContentRef.current += token
+                    setStreamedContent(streamedContentRef.current)
+                },
+                onComplete: (data) => {
+                    const editableItems: EditableItem[] = (data.deduplicated ?? []).map(
+                        (item, index) => ({
+                            id: index,
+                            name: item.name,
+                            category: MENU_CATEGORIES.includes(item.category as typeof MENU_CATEGORIES[number])
+                                ? item.category
+                                : "Other",
+                            price: typeof item.price === "string" ? parseFloat(item.price) : item.price,
+                            description: item.description ?? "",
+                            isFood: item.is_food ?? false,
+                            isHot: item.is_hot ?? false,
+                            isCold: item.is_cold ?? false,
+                            isVegan: item.is_vegan ?? false,
+                            isVegetarian: item.is_vegetarian ?? false,
+                            calories: item.calories != null ? String(item.calories) : "",
+                            sizeOptions: [],
+                            isExpanded: !!(item.is_food || item.is_hot || item.is_cold || item.is_vegan || item.is_vegetarian || item.description || item.calories),
+                        })
+                    )
+                    setExtractedItems(editableItems)
+                    setDuplicates(data.duplicates ?? [])
+                    setTimeout(() => setStep("review"), 300)
+                },
+                onError: (errorMsg) => {
+                    setError(errorMsg)
+                    setStep("upload")
+                },
+            })
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to process image")
             setStep("upload")
@@ -172,10 +249,18 @@ export default function MenuOcrScanModal({
         setExtractedItems((prev) => prev.filter((item) => item.id !== id))
     }
 
-    const handleUpdateItem = (id: number, field: keyof EditableItem, value: string | number) => {
+    const handleUpdateItem = (id: number, field: keyof EditableItem, value: string | number | boolean | { label: string; price: number }[]) => {
         setExtractedItems((prev) =>
             prev.map((item) =>
                 item.id === id ? { ...item, [field]: value } : item
+            )
+        )
+    }
+
+    const handleToggleExpand = (id: number) => {
+        setExtractedItems((prev) =>
+            prev.map((item) =>
+                item.id === id ? { ...item, isExpanded: !item.isExpanded } : item
             )
         )
     }
@@ -350,10 +435,36 @@ export default function MenuOcrScanModal({
                                             >
                                                 <Loader2 className="w-5 h-5 text-primary" />
                                             </motion.div>
-                                            <span className="text-text/70 font-medium animate-pulse">
-                                                Scanning menu...
-                                            </span>
+                                            <AnimatePresence mode="wait">
+                                                <motion.span
+                                                    key={statusMessage}
+                                                    initial={{ opacity: 0, y: 8 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -8 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="text-text/70 font-medium"
+                                                >
+                                                    {statusMessage}
+                                                </motion.span>
+                                            </AnimatePresence>
                                         </div>
+
+                                        {streamedContent && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: "auto" }}
+                                                className="max-h-28 overflow-y-auto bg-text/5 rounded-xl p-3 border border-text/10"
+                                            >
+                                                <p className="text-xs text-text/50 font-mono leading-relaxed break-words whitespace-pre-wrap">
+                                                    {streamedContent}
+                                                    <motion.span
+                                                        animate={{ opacity: [1, 0] }}
+                                                        transition={{ duration: 0.5, repeat: Infinity }}
+                                                        className="inline-block w-1.5 h-3.5 bg-primary/60 rounded-sm align-middle ml-0.5"
+                                                    />
+                                                </p>
+                                            </motion.div>
+                                        )}
 
                                         <div className="w-full max-w-sm space-y-2">
                                             <div className="flex items-center justify-between text-xs text-text/50">
@@ -398,12 +509,7 @@ export default function MenuOcrScanModal({
                             )}
 
                             {step === "review" && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="space-y-4"
-                                >
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                                     <AnimatePresence mode="wait">
                                         {duplicates.length > 0 && (
                                             <motion.div
@@ -459,89 +565,139 @@ export default function MenuOcrScanModal({
                                                 <p className="text-sm font-medium text-text/70">
                                                     Review {extractedItems.length} extracted item{extractedItems.length === 1 ? "" : "s"}
                                                 </p>
-                                                <motion.span
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium"
-                                                >
+                                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                                    className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
                                                     {extractedItems.length} items
                                                 </motion.span>
                                             </div>
 
-                                            <motion.div
-                                                initial="hidden"
-                                                animate="visible"
-                                                className="space-y-2"
-                                            >
+                                            <motion.div initial="hidden" animate="visible" className="space-y-2">
                                                 {extractedItems.map((item, idx) => (
-                                                    <motion.div
-                                                        key={item.id}
-                                                        custom={idx}
-                                                        variants={itemVariants}
-                                                        initial="hidden"
-                                                        animate="visible"
-                                                        exit="exit"
-                                                        layout
-                                                        className="group flex items-center gap-2 p-3 bg-text/5 hover:bg-text/10 rounded-xl transition-colors"
+                                                    <motion.div key={item.id} custom={idx} variants={itemVariants}
+                                                        initial="hidden" animate="visible" exit="exit" layout
+                                                        className="group border border-text/10 rounded-xl overflow-hidden bg-text/[0.02] hover:bg-text/[0.04] transition-colors"
                                                     >
-                                                        <motion.div
-                                                            initial={{ opacity: 0, x: -5 }}
-                                                            animate={{ opacity: 1, x: 0 }}
-                                                            className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary"
-                                                        >
-                                                            {idx + 1}
-                                                        </motion.div>
-                                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                                            <motion.input
-                                                                whileFocus={{ scale: 1.02 }}
-                                                                type="text"
-                                                                value={item.name}
-                                                                onChange={(e) =>
-                                                                    handleUpdateItem(item.id, "name", e.target.value)
-                                                                }
-                                                                className="px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                                                                placeholder="Item name"
-                                                            />
-                                                            <select
-                                                                value={item.category}
-                                                                onChange={(e) =>
-                                                                    handleUpdateItem(item.id, "category", e.target.value)
-                                                                }
-                                                                className="px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer"
-                                                            >
-                                                                {MENU_CATEGORIES.map((cat) => (
-                                                                    <option key={cat} value={cat}>
-                                                                        {cat}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                            <div className="relative">
-                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text/40 text-sm">₱</span>
-                                                                <motion.input
-                                                                    whileFocus={{ scale: 1.02 }}
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    min="0"
-                                                                    value={item.price}
-                                                                    onChange={(e) =>
-                                                                        handleUpdateItem(
-                                                                            item.id,
-                                                                            "price",
-                                                                            parseFloat(e.target.value) || 0
-                                                                        )
-                                                                    }
-                                                                    className="w-full pl-7 pr-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                                                                />
+                                                        {/* Compact Row */}
+                                                        <div className="flex items-center gap-2 p-3">
+                                                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
+                                                                {idx + 1}
                                                             </div>
+                                                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                                <input type="text" value={item.name}
+                                                                    onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
+                                                                    className="px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                                                                    placeholder="Item name" />
+                                                                <select value={item.category}
+                                                                    onChange={(e) => handleUpdateItem(item.id, "category", e.target.value)}
+                                                                    className="px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer">
+                                                                    {MENU_CATEGORIES.map((cat) => (
+                                                                        <option key={cat} value={cat}>{cat}</option>
+                                                                    ))}
+                                                                </select>
+                                                                <div className="relative">
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text/40 text-sm">₱</span>
+                                                                    <input type="number" step="0.01" min="0" value={item.price}
+                                                                        onChange={(e) => handleUpdateItem(item.id, "price", parseFloat(e.target.value) || 0)}
+                                                                        className="w-full pl-7 pr-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
+                                                                </div>
+                                                            </div>
+                                                            {/* Active flags badges */}
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                {item.isFood && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">Food</span>}
+                                                                {item.isHot && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full">Hot</span>}
+                                                                {item.isCold && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full">Cold</span>}
+                                                            </div>
+                                                            {/* Expand toggle */}
+                                                            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                                                onClick={() => handleToggleExpand(item.id)}
+                                                                className="p-2 hover:bg-text/10 rounded-lg transition-colors text-text/40 hover:text-text cursor-pointer">
+                                                                <motion.div animate={{ rotate: item.isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                                                                    <ChevronDown className="w-4 h-4" />
+                                                                </motion.div>
+                                                            </motion.button>
+                                                            {/* Delete */}
+                                                            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                                                onClick={() => handleRemoveItem(item.id)}
+                                                                className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-text/30 hover:text-destructive cursor-pointer opacity-0 group-hover:opacity-100">
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </motion.button>
                                                         </div>
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.1 }}
-                                                            whileTap={{ scale: 0.9 }}
-                                                            onClick={() => handleRemoveItem(item.id)}
-                                                            className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-text/30 hover:text-destructive cursor-pointer opacity-0 group-hover:opacity-100"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </motion.button>
+
+                                                        {/* Expanded Panel */}
+                                                        <AnimatePresence>
+                                                            {item.isExpanded && (
+                                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                                                                    exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                                                                    className="overflow-hidden">
+                                                                    <div className="px-3 pb-3 pt-1 border-t border-text/5 space-y-3">
+                                                                        {/* Description */}
+                                                                        <div>
+                                                                            <label className="text-xs font-medium text-text/50 mb-1 block">Description</label>
+                                                                            <textarea value={item.description} rows={2}
+                                                                                onChange={(e) => handleUpdateItem(item.id, "description", e.target.value)}
+                                                                                className="w-full px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none"
+                                                                                placeholder="Brief description..." />
+                                                                        </div>
+                                                                        {/* Type Toggles */}
+                                                                        <div>
+                                                                            <label className="text-xs font-medium text-text/50 mb-1 block">Item Type</label>
+                                                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                                                                <CustomCheckbox checked={item.isFood} onChange={(v) => handleUpdateItem(item.id, "isFood", v)} label="Food" />
+                                                                                <CustomCheckbox checked={item.isHot} onChange={(v) => handleUpdateItem(item.id, "isHot", v)} label="Hot" />
+                                                                                <CustomCheckbox checked={item.isCold} onChange={(v) => handleUpdateItem(item.id, "isCold", v)} label="Cold" />
+                                                                                <CustomCheckbox checked={item.isVegan} onChange={(v) => handleUpdateItem(item.id, "isVegan", v)} label="Vegan" />
+                                                                                <CustomCheckbox checked={item.isVegetarian} onChange={(v) => handleUpdateItem(item.id, "isVegetarian", v)} label="Vegetarian" />
+                                                                            </div>
+                                                                        </div>
+                                                                        {/* Calories */}
+                                                                        <div>
+                                                                            <label className="text-xs font-medium text-text/50 mb-1 block">Calories</label>
+                                                                            <input type="number" min="0" value={item.calories}
+                                                                                onChange={(e) => handleUpdateItem(item.id, "calories", e.target.value)}
+                                                                                className="w-32 px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                                                                                placeholder="e.g. 250" />
+                                                                        </div>
+                                                                        {/* Size Options */}
+                                                                        <div>
+                                                                            <div className="flex items-center justify-between mb-1">
+                                                                                <label className="text-xs font-medium text-text/50">Size Options</label>
+                                                                                <button type="button"
+                                                                                    onClick={() => handleUpdateItem(item.id, "sizeOptions", [...item.sizeOptions, { label: "", price: 0 }])}
+                                                                                    className="text-xs flex items-center gap-1 text-primary hover:text-primary/80 transition-colors cursor-pointer">
+                                                                                    <Plus className="w-3 h-3" /> Add size
+                                                                                </button>
+                                                                            </div>
+                                                                            {item.sizeOptions.length === 0 && (
+                                                                                <p className="text-xs text-text/30 italic">No sizes added</p>
+                                                                            )}
+                                                                            {item.sizeOptions.map((opt, si) => (
+                                                                                <div key={si} className="flex items-center gap-2 mt-1">
+                                                                                    <input type="text" value={opt.label} placeholder="Size (e.g., Large)"
+                                                                                        onChange={(e) => {
+                                                                                            const updated = [...item.sizeOptions]
+                                                                                            updated[si] = { ...updated[si], label: e.target.value }
+                                                                                            handleUpdateItem(item.id, "sizeOptions", updated)
+                                                                                        }}
+                                                                                        className="flex-1 px-2 py-1.5 bg-background border border-text/10 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
+                                                                                    <input type="number" min="0" step="0.01" value={opt.price || ""} placeholder="Price"
+                                                                                        onChange={(e) => {
+                                                                                            const updated = [...item.sizeOptions]
+                                                                                            updated[si] = { ...updated[si], price: parseFloat(e.target.value) || 0 }
+                                                                                            handleUpdateItem(item.id, "sizeOptions", updated)
+                                                                                        }}
+                                                                                        className="w-24 px-2 py-1.5 bg-background border border-text/10 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
+                                                                                    <button type="button"
+                                                                                        onClick={() => handleUpdateItem(item.id, "sizeOptions", item.sizeOptions.filter((_, i) => i !== si))}
+                                                                                        className="p-1.5 text-text/30 hover:text-destructive rounded-lg transition-colors cursor-pointer">
+                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
                                                     </motion.div>
                                                 ))}
                                             </motion.div>
