@@ -710,10 +710,10 @@ export default function CafesPageClient() {
                                     <div className='flex flex-row gap-2'>
                                         {[
                                             { value: "", label: "All" },
-                                            { value: "budget", label: "₱" },
-                                            { value: "mid", label: "₱₱" },
-                                            { value: "premium", label: "₱₱₱" },
-                                            { value: "luxury", label: "₱₱₱₱" },
+                                            { value: "budget", label: "Budget" },
+                                            { value: "mid", label: "Mid" },
+                                            { value: "premium", label: "Premium" },
+                                            { value: "luxury", label: "Luxury" },
                                         ].map(({ value, label }) => (
                                             <button
                                                 key={value}
