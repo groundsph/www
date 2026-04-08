@@ -76,8 +76,7 @@ export default function ImageCropper({
                     onComplete(blob)
                     setProcessing(false)
                 },
-                "image/jpeg",
-                0.9
+                "image/png"
             )
         } catch (e) {
             console.error(e)
