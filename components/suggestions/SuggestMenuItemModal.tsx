@@ -23,6 +23,7 @@ interface SuggestMenuItemModalProps {
         is_food?: boolean
         is_hot?: boolean
         is_cold?: boolean
+        is_signature?: boolean
         is_vegan?: boolean
         is_vegetarian?: boolean
         calories?: number | null
@@ -50,6 +51,7 @@ export default function SuggestMenuItemModal({
     const [isFood, setIsFood] = useState(false)
     const [isHot, setIsHot] = useState(false)
     const [isCold, setIsCold] = useState(false)
+    const [isSignature, setIsSignature] = useState(false)
     const [isVegan, setIsVegan] = useState(false)
     const [isVegetarian, setIsVegetarian] = useState(false)
     const [calories, setCalories] = useState("")
@@ -66,6 +68,7 @@ export default function SuggestMenuItemModal({
                 setIsFood(existingItem.is_food ?? false)
                 setIsHot(existingItem.is_hot ?? false)
                 setIsCold(existingItem.is_cold ?? false)
+                setIsSignature(existingItem.is_signature ?? false)
                 setIsVegan(existingItem.is_vegan ?? false)
                 setIsVegetarian(existingItem.is_vegetarian ?? false)
                 setCalories(existingItem.calories?.toString() ?? "")
@@ -78,6 +81,7 @@ export default function SuggestMenuItemModal({
                 setIsFood(false)
                 setIsHot(false)
                 setIsCold(false)
+                setIsSignature(false)
                 setIsVegan(false)
                 setIsVegetarian(false)
                 setCalories("")
@@ -132,6 +136,7 @@ export default function SuggestMenuItemModal({
                     is_food: isFood,
                     is_hot: isHot,
                     is_cold: isCold,
+                    is_signature: isSignature,
                     is_vegan: isVegan,
                     is_vegetarian: isVegetarian,
                     calories: calories ? parseInt(calories, 10) : null,
@@ -230,6 +235,7 @@ export default function SuggestMenuItemModal({
                                         isFood,
                                         isHot,
                                         isCold,
+                                        isSignature,
                                         isVegan,
                                         isVegetarian,
                                         calories,
@@ -243,6 +249,7 @@ export default function SuggestMenuItemModal({
                                         if (updates.isFood !== undefined) setIsFood(updates.isFood)
                                         if (updates.isHot !== undefined) setIsHot(updates.isHot)
                                         if (updates.isCold !== undefined) setIsCold(updates.isCold)
+                                        if (updates.isSignature !== undefined) setIsSignature(updates.isSignature)
                                         if (updates.isVegan !== undefined) setIsVegan(updates.isVegan)
                                         if (updates.isVegetarian !== undefined) setIsVegetarian(updates.isVegetarian)
                                         if (updates.calories !== undefined) setCalories(updates.calories)
