@@ -265,6 +265,14 @@ export default function MenuOcrScanModal({
         )
     }
 
+    const handleExpandAll = () => {
+        setExtractedItems((prev) => prev.map((item) => ({ ...item, isExpanded: true })))
+    }
+
+    const handleCollapseAll = () => {
+        setExtractedItems((prev) => prev.map((item) => ({ ...item, isExpanded: false })))
+    }
+
     const handleSave = async () => {
         setStep("saving")
 
@@ -272,6 +280,13 @@ export default function MenuOcrScanModal({
             name: item.name,
             category: item.category,
             price: item.price,
+            description: item.description || undefined,
+            is_food: item.isFood,
+            is_hot: item.isHot,
+            is_cold: item.isCold,
+            is_vegan: item.isVegan,
+            is_vegetarian: item.isVegetarian,
+            calories: item.calories ? Number(item.calories) : undefined,
         }))
 
         const result = await saveOcrMenuItems(cafeId, itemsToSave)
@@ -565,6 +580,17 @@ export default function MenuOcrScanModal({
                                                 <p className="text-sm font-medium text-text/70">
                                                     Review {extractedItems.length} extracted item{extractedItems.length === 1 ? "" : "s"}
                                                 </p>
+                                                <div className="flex items-center gap-2">
+                                                    <button type="button" onClick={handleExpandAll}
+                                                        className="text-xs text-text/40 hover:text-text transition-colors cursor-pointer">
+                                                        Expand all
+                                                    </button>
+                                                    <span className="text-text/20">|</span>
+                                                    <button type="button" onClick={handleCollapseAll}
+                                                        className="text-xs text-text/40 hover:text-text transition-colors cursor-pointer">
+                                                        Collapse all
+                                                    </button>
+                                                </div>
                                                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
                                                     className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
                                                     {extractedItems.length} items
