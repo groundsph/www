@@ -1,5 +1,24 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, mock } from "bun:test"
+import React from "react"
 import { render } from "@testing-library/react"
+
+// Mock next/image to avoid DOM prop warnings
+interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+    src: string
+    alt: string
+    fill?: boolean
+    sizes?: string
+    priority?: boolean
+    blurDataURL?: string
+}
+
+mock.module("next/image", () => ({
+    default: ({ src, alt, fill, sizes, priority, blurDataURL, ...rest }: ImageProps) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={alt} {...rest} />
+    ),
+}))
+
 import CafeHero from "@/components/cafe/CafeHero"
 import { CafeWithRatings } from "@/utils/types/extra"
 

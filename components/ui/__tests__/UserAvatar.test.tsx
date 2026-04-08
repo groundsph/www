@@ -4,11 +4,14 @@ import { render, fireEvent } from "@testing-library/react"
 interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     src: string
     alt: string
+    fill?: boolean
+    sizes?: string
+    priority?: boolean
     onError?: () => void
 }
 
 mock.module("next/image", () => ({
-    default: ({ src, alt, onError, ...rest }: ImageProps) => (
+    default: ({ src, alt, onError, fill, sizes, priority, ...rest }: ImageProps) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={alt} onError={onError} {...rest} />
     ),

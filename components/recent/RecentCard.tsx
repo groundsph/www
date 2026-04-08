@@ -50,6 +50,7 @@ const RecentCard = React.memo(function RecentCard({
                         className={`object-cover transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                         draggable={false}
                         sizes='(max-width: 768px) 85vw, (max-width: 1200px) 33vw, 25vw'
+                        loading='lazy'
                         onLoad={() => setImageLoaded(true)}
                     />
                 ) : (

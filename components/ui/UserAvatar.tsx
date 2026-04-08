@@ -40,6 +40,7 @@ export function UserAvatar({ src, alt, size, className }: UserAvatarProps) {
                     fill
                     sizes={`${size}px`}
                     className="object-cover"
+                    loading='lazy'
                 />
             ) : (
                 <Image
@@ -48,6 +49,7 @@ export function UserAvatar({ src, alt, size, className }: UserAvatarProps) {
                     fill
                     sizes={`${size}px`}
                     className="object-cover"
+                    loading='lazy'
                     onError={() => setHasError(true)}
                 />
             )}

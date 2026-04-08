@@ -9,6 +9,14 @@ import {
 import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
 import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getArg(parsed: unknown, key: string): any {
+    if (typeof parsed !== "object" || parsed === null) {
+        return undefined
+    }
+    return (parsed as Record<string, unknown>)[key]
+}
+
 export async function executeTool(toolName: string, args: string): Promise<unknown> {
     let parsed: unknown
     try {
@@ -21,50 +29,53 @@ export async function executeTool(toolName: string, args: string): Promise<unkno
         case "query_cafes":
             return runCafeQuery(parsed as CafeQueryInput)
         case "get_cafe_by_slug":
-            return getCafeBySlug(parsed.slug as string)
+            return getCafeBySlug(getArg(parsed, "slug") as string)
         case "compare_cafes":
-            return compareCafes(parsed.slugA as string, parsed.slugB as string)
+            return compareCafes(getArg(parsed, "slugA") as string, getArg(parsed, "slugB") as string)
         case "list_cities":
             return listCitiesWithCounts()
         case "get_nearby_cafes":
-            return getNearbyCafes({ lat: parsed.lat, lng: parsed.lng } as GeoPoint, parsed.radiusKm as number)
+            return getNearbyCafes(
+                { lat: getArg(parsed, "lat") as number, lng: getArg(parsed, "lng") as number } as GeoPoint,
+                getArg(parsed, "radiusKm") as number
+            )
         case "get_top_rated":
-            return getTopRatedCafes(parsed.city as string, parsed.limit ?? 10)
+            return getTopRatedCafes(getArg(parsed, "city") as string, (getArg(parsed, "limit") ?? 10) as number)
         case "get_grounds_info": {
             const { getGroundsInfo } = await import("@/utils/ai/grounds-info")
             return await getGroundsInfo()
         }
         case "get_cafe_reviews": {
             const { getCafeReviews } = await import("@/utils/ai/tools/cafe-reviews")
-            return getCafeReviews(parsed.slug as string, parsed.limit ?? 5)
+            return getCafeReviews(getArg(parsed, "slug") as string, (getArg(parsed, "limit") ?? 5) as number)
         }
         case "get_cafe_menu": {
             const { getCafeMenu } = await import("@/utils/ai/tools/cafe-menu")
-            return getCafeMenu(parsed.slug as string, parsed.category)
+            return getCafeMenu(getArg(parsed, "slug") as string, getArg(parsed, "category"))
         }
         case "get_cafe_hours": {
             const { getCafeHours } = await import("@/utils/ai/tools/cafe-hours")
-            return getCafeHours(parsed.slug as string)
+            return getCafeHours(getArg(parsed, "slug") as string)
         }
         case "search_blog_posts": {
             const { searchBlogPosts } = await import("@/utils/ai/tools/blog-search")
-            return searchBlogPosts(parsed.query as string, parsed.limit ?? 5)
+            return searchBlogPosts(getArg(parsed, "query") as string, (getArg(parsed, "limit") ?? 5) as number)
         }
         case "get_upcoming_events": {
             const { getUpcomingEvents } = await import("@/utils/ai/tools/events")
-            return getUpcomingEvents(parsed.city, parsed.limit ?? 10)
+            return getUpcomingEvents(getArg(parsed, "city"), (getArg(parsed, "limit") ?? 10) as number)
         }
         case "find_hidden_gems": {
             const { findHiddenGems } = await import("@/utils/ai/tools/hidden-gems")
-            return findHiddenGems(parsed.city, parsed.limit ?? 10)
+            return findHiddenGems(getArg(parsed, "city"), (getArg(parsed, "limit") ?? 10) as number)
         }
         case "find_cafes_with_feature": {
             const { findCafesWithFeature } = await import("@/utils/ai/tools/feature-search")
-            return findCafesWithFeature(parsed)
+            return findCafesWithFeature(parsed as { city?: string; province?: string; features: string[]; limit?: number })
         }
         case "get_cafe_stats": {
             const { getCafeStats } = await import("@/utils/ai/tools/cafe-stats")
-            return getCafeStats(parsed.city)
+            return getCafeStats(getArg(parsed, "city"))
         }
         default:
             throw new Error(`Unknown tool: ${toolName}`)

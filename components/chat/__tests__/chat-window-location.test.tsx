@@ -1,6 +1,13 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
-import ChatWindow from "@/components/chat/ChatWindow"
+
+// Mock crypto.randomUUID before importing ChatWindow
+Object.defineProperty(global, "crypto", {
+    value: {
+        randomUUID: () => "test-uuid-123",
+    },
+    writable: true,
+})
 
 const localStorageMock = {
     getItem: mock(() => null),
@@ -52,9 +59,17 @@ const mockUseUserLocation = mock(() => ({
     refresh: mockRefresh,
 }))
 
+// Mock hooks before importing component
 mock.module("@/hooks/useUserLocation", () => ({
     useUserLocation: mockUseUserLocation,
 }))
+
+mock.module("@/hooks/useHaptics", () => ({
+    useHaptics: () => ({ trigger: mock(() => {}) }),
+}))
+
+// Import ChatWindow after mocks
+import ChatWindow from "@/components/chat/ChatWindow"
 
 describe("ChatWindow location behavior", () => {
     beforeEach(() => {

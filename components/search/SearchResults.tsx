@@ -36,6 +36,7 @@ function ResultIcon({ result }: { result: SearchResult }) {
           width={32}
           height={32}
           className="w-full h-full object-cover"
+          loading='lazy'
         />
       </div>
     )

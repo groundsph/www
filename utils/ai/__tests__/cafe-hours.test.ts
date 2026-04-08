@@ -1,4 +1,17 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, mock } from "bun:test"
+
+// Mock the db module before importing the function
+mock.module("@/db", () => ({
+    db: {
+        select: () => ({
+            from: () => ({
+                where: () => ({
+                    limit: () => Promise.resolve([]),
+                }),
+            }),
+        }),
+    },
+}))
 
 describe("getCafeHours", () => {
     it("exports a getCafeHours function", async () => {

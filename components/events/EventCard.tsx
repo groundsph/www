@@ -87,6 +87,8 @@ const EventCard = React.memo(function EventCard({
                         alt={event.title}
                         fill
                         className='object-cover'
+                        sizes='(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw'
+                        loading='lazy'
                     />
                 ) : (
                     <div className='absolute inset-0 flex items-center justify-center'>
@@ -152,6 +154,8 @@ const EventCard = React.memo(function EventCard({
                                     alt={event.cafe.name}
                                     fill
                                     className='object-cover'
+                                    sizes='20px'
+                                    loading='lazy'
                                 />
                             </div>
                             <span>Hosted by {event.cafe.name}</span>

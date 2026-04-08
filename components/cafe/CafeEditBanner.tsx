@@ -24,9 +24,9 @@ export default function CafeEditBanner({ cafeId, cafeName, role }: CafeEditBanne
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className='mx-4 lg:mx-0 mt-4'
+                    className='w-full'
                 >
-                    <div className='flex items-center justify-between gap-3 bg-primary/10 border border-primary/20 rounded-xl px-4 py-3'>
+                    <div className='w-full flex items-center justify-between gap-3 bg-primary/10 border border-primary/20 px-4 py-3'>
                         <div className='flex items-center gap-3 min-w-0'>
                             <div className='flex items-center justify-center w-8 h-8 rounded-lg bg-primary/15 shrink-0'>
                                 <Pencil className='w-4 h-4 text-primary' />

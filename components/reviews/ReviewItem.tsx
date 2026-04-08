@@ -274,6 +274,8 @@ const ReviewItem = React.memo(function ReviewItem({
                                     alt={`Review image ${idx + 1}`}
                                     fill
                                     className='object-cover'
+                                    sizes='80px'
+                                    loading='lazy'
                                 />
                             </div>
                         ))}

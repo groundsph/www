@@ -848,7 +848,7 @@ export default function CafeManagement({
                                 </div>
 
                                 <p className='text-xs text-text/40 mt-3'>
-                                    PNG format only. Max 500KB.
+                                    PNG format only. Max 500KB. 512x512px required.
                                 </p>
                             </div>
 
