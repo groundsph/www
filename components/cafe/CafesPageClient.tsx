@@ -92,8 +92,6 @@ const buildFilterParams = (search: string, filters: typeof INITIAL_FILTERS, sort
     include_chains: filters.include_chains || undefined,
 })
 
-const INTERSECTION_OBSERVER_THRESHOLD = 0.1
-const INTERSECTION_OBSERVER_ROOT_MARGIN = "200px"
 const SESSION_STORAGE_SCROLL_POSITION_KEY = "cafes_scroll_position"
 const SESSION_STORAGE_TTL_MS = 10 * 60 * 1000
 const RESTORE_NOTICE_TIMEOUT_MS = 2500
@@ -391,41 +389,33 @@ export default function CafesPageClient() {
         }
     }, [filteredCafes.length, cafes.length, filters.near_me])
 
-    // Infinite scroll detection
+    // Virtualizer-driven infinite scroll - trigger when last item is visible
+    const lastItem = virtualizer.getVirtualItems().at(-1)
     useEffect(() => {
-        if (!scrollSentinelRef.current || !hasMore || isLoadingMore) return
+        if (
+            lastItem &&
+            lastItem.index >= filteredCafes.length - 1 &&
+            hasMore &&
+            !isLoadingMore
+        ) {
+            trigger("light")
+            const nextPage = currentPage + 1
+            setCurrentPage(nextPage)
+            setIsLoadingMore(true)
 
-        const observer = new IntersectionObserver(
-            async (entries) => {
-                const target = entries[0]
-                if (target.isIntersecting && hasMore && !isLoadingMore) {
-                    trigger("light")
-                    const nextPage = currentPage + 1
-                    setCurrentPage(nextPage)
-                    setIsLoadingMore(true)
-
-                    try {
-                        const fetchedCafes = await getAllCafes(
-                            nextPage,
-                            PAGE_SIZE,
-                            getFilterParams()
-                        )
-                        setCafes((prev) => [...prev, ...fetchedCafes])
-                        setHasMore(fetchedCafes.length === PAGE_SIZE)
-                    } catch (error) {
-                        console.error("Failed to fetch more cafes:", error)
-                    } finally {
-                        setIsLoadingMore(false)
-                    }
-                }
-            },
-            { threshold: INTERSECTION_OBSERVER_THRESHOLD, rootMargin: INTERSECTION_OBSERVER_ROOT_MARGIN }
-        )
-
-        observer.observe(scrollSentinelRef.current)
-
-        return () => observer.disconnect()
-    }, [currentPage, hasMore, isLoadingMore, getFilterParams, trigger])
+            getAllCafes(nextPage, PAGE_SIZE, getFilterParams())
+                .then((fetchedCafes) => {
+                    setCafes((prev) => [...prev, ...fetchedCafes])
+                    setHasMore(fetchedCafes.length === PAGE_SIZE)
+                })
+                .catch((error) => {
+                    console.error("Failed to fetch more cafes:", error)
+                })
+                .finally(() => {
+                    setIsLoadingMore(false)
+                })
+        }
+    }, [lastItem, lastItem?.index, filteredCafes.length, hasMore, isLoadingMore, currentPage, getFilterParams, trigger])
 
     const toggleFilter = (key: keyof typeof filters) => {
         trigger("selection")
@@ -998,6 +988,7 @@ export default function CafesPageClient() {
                                             left: 0,
                                             width: "100%",
                                             transform: `translateY(${virtualItem.start}px)`,
+                                            paddingBottom: "24px", // gap-6 equivalent
                                         }}
                                     >
                                         <CafeCard

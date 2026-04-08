@@ -87,6 +87,7 @@ export default function EventList({
                                     left: 0,
                                     width: "100%",
                                     transform: `translateY(${virtualItem.start}px)`,
+                                    paddingBottom: "16px", // gap-4 equivalent
                                 }}
                             >
                                 <EventCard event={event} variant="compact" />
