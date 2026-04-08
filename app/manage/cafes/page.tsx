@@ -9,6 +9,7 @@ import {
 } from "@/app/api/actions/admin"
 import { getPendingSuggestions } from "@/app/api/actions/suggestions"
 import { getPendingClaims } from "@/app/api/actions/claim"
+import { getPendingMenuItemSuggestions } from "@/app/api/actions/menu-suggestions"
 import CafesManagement from "@/components/manage/CafesManagement"
 
 export const metadata = {
@@ -32,6 +33,7 @@ export default async function ManageCafesPage() {
         pendingClaims,
         manualSubscriptions,
         featuredSchedules,
+        menuSuggestions,
     ] = await Promise.all([
         getPaginatedCafes({
             isPublished: false,
@@ -50,6 +52,7 @@ export default async function ManageCafesPage() {
         getPendingClaims(),
         getManualSubscriptions(),
         getFeaturedSchedules(),
+        getPendingMenuItemSuggestions(),
     ])
 
     return (
@@ -66,6 +69,7 @@ export default async function ManageCafesPage() {
             pendingClaims={pendingClaims}
             manualSubscriptions={manualSubscriptions}
             featuredSchedules={featuredSchedules}
+            menuSuggestions={menuSuggestions}
         />
     )
 }
