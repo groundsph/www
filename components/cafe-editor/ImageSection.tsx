@@ -28,6 +28,7 @@ import { useCoverImageUpload } from "@/utils/hooks/useCoverImageUpload"
 import { compressGalleryImage } from "@/utils/image-processing"
 import { uploadCafeImage, uploadCafeBadgeStamp } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import { getOptimizedImageUrl, getResponsiveSrcSet } from "@/utils/cloudflare-image"
 import ImageCropper from "@/components/ui/ImageCropper"
 
 interface ImageSectionProps {
@@ -279,7 +280,8 @@ export default function ImageSection({
                                 className='relative h-48 w-auto shrink-0 rounded-lg overflow-hidden group cursor-move active:cursor-grabbing bg-gray-50 flex items-center justify-center border border-text/10'
                             >
                                 <img
-                                    src={url}
+                                    src={getOptimizedImageUrl(url, { width: 1024 })}
+                                    srcSet={getResponsiveSrcSet(url)}
                                     alt={`Gallery ${idx + 1}`}
                                     className='h-full w-auto object-contain pointer-events-none max-w-none'
                                 />

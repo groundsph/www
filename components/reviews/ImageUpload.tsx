@@ -6,6 +6,7 @@ import { useCallback, useState, useEffect } from "react"
 import { useDropzone } from "react-dropzone"
 import { cn } from "@/utils/cn"
 import { Reorder } from "motion/react"
+import { getOptimizedImageUrl, getResponsiveSrcSet } from "@/utils/cloudflare-image"
 
 interface ImageUploadProps {
     value: (string | File)[]
@@ -128,9 +129,10 @@ export default function ImageUpload({
                         >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                src={previewUrl}
+                                src={getOptimizedImageUrl(previewUrl, { width: 1024 })}
+                                srcSet={getResponsiveSrcSet(previewUrl)}
                                 alt='Review image'
-                                className='h-full w-auto object-contain pointer-events-none max-w-none' // Prevent image drag interfering with item drag
+                                className='h-full w-auto object-contain pointer-events-none max-w-none'
                             />
                             <button
                                 type='button'

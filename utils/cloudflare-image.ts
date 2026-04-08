@@ -1,12 +1,15 @@
 /**
- * Cloudflare Image Resizing loader for hero images only
+ * Cloudflare Image Resizing loader
  * 
  * This transforms images via Cloudflare's Image Resizing service:
  * - Automatic WebP/AVIF format selection
  * - Responsive sizing
  * - Edge caching (transformed images cached indefinitely)
  * 
- * Usage is limited to hero images to stay within free tier limits (5k/month)
+ * Hero images use getHeroImageSrcSet() with widths [640, 1024, 1920]
+ * Gallery/review images use getResponsiveSrcSet() with widths [480, 768, 1024, 1920]
+ * 
+ * Usage is limited to stay within free tier limits (5k/month)
  */
 
 interface CloudflareImageParams {
@@ -78,3 +81,45 @@ export function getHeroImageSrcSet(src: string, quality = 80): string {
  * 
  * Example: 500 cafes × 3 sizes = 1,500 transformations (one-time)
  */
+
+export function getOptimizedImageUrl(
+    src: string,
+    options: { width?: number; quality?: number; fit?: string } = {}
+): string {
+    const { width, quality = 80, fit = "cover" } = options
+
+    if (!src.includes(CDN_DOMAIN)) {
+        return src
+    }
+
+    let path: string
+    try {
+        const url = new URL(src)
+        path = url.pathname
+    } catch {
+        path = src.startsWith("/") ? src : `/${src}`
+    }
+
+    const params = [
+        width ? `width=${width}` : null,
+        `quality=${quality}`,
+        `format=auto`,
+        `fit=${fit}`,
+    ].filter(Boolean).join(",")
+
+    return `https://${CDN_DOMAIN}/cdn-cgi/image/${params}${path}`
+}
+
+export function getResponsiveSrcSet(
+    src: string,
+    widths: number[] = [480, 768, 1024, 1920],
+    quality = 80
+): string {
+    if (!src.includes(CDN_DOMAIN)) {
+        return ""
+    }
+
+    return widths
+        .map((w) => `${getOptimizedImageUrl(src, { width: w, quality })} ${w}w`)
+        .join(", ")
+}
