@@ -6,6 +6,7 @@ import { getResultIcon } from "./search-utils"
 import { FileText, Coffee, User, Zap, CornerDownRight, MapIcon, Layers, Calendar, Sparkles, Lock } from "lucide-react"
 import { cn } from "@/utils/cn"
 import Image from "next/image"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 
 const iconMap = { FileText, Coffee, User, Zap, MapIcon, Layers, Calendar, Sparkles }
 
@@ -27,6 +28,16 @@ function highlightMatch(text: string, query: string) {
 }
 
 function ResultIcon({ result }: { result: SearchResult }) {
+  if (result.type === 'user') {
+    return (
+      <UserAvatar
+        src={result.imageUrl}
+        alt={result.title}
+        size={32}
+      />
+    )
+  }
+
   if (result.imageUrl) {
     return (
       <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
@@ -50,7 +61,6 @@ function ResultIcon({ result }: { result: SearchResult }) {
       result.type === 'action' && "bg-accent/20 text-accent",
       result.type === 'page' && "bg-secondary/20 text-secondary",
       result.type === 'cafe' && "bg-primary/20 text-primary",
-      result.type === 'user' && "bg-tertiary text-text",
       result.type === 'blog' && "bg-secondary/20 text-secondary",
       result.type === 'crawl' && "bg-primary/20 text-primary",
       result.type === 'collection' && "bg-accent/20 text-accent",
