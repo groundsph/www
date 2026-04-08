@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useDebounce } from "./useDebounce"
+import { useUserLocation } from "@/hooks/useUserLocation"
 import { SearchResult } from "@/utils/types/search"
 import { globalSearch } from "@/app/api/actions/search"
 import { buildChatResult } from "@/components/search/search-utils"
@@ -10,6 +11,7 @@ export function useSearch(debounceMs = 150) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { location: { lat, lng } } = useUserLocation()
   const debouncedQuery = useDebounce(query, debounceMs)
 
   const performSearch = useCallback(async (searchQuery: string) => {
@@ -20,7 +22,11 @@ export function useSearch(debounceMs = 150) {
     setIsLoading(true)
     setError(null)
     try {
-      const searchResults = await globalSearch(searchQuery)
+      const searchResults = await globalSearch(
+        searchQuery,
+        lat ?? undefined,
+        lng ?? undefined
+      )
       const chatResult = buildChatResult(searchQuery)
       setResults(chatResult ? [chatResult, ...searchResults] : searchResults)
     } catch (err) {
@@ -29,7 +35,7 @@ export function useSearch(debounceMs = 150) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [lat, lng])
 
   useEffect(() => {
     performSearch(debouncedQuery)

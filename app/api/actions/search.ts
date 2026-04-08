@@ -179,7 +179,23 @@ async function searchEvents(query: string): Promise<SearchResult[]> {
   }))
 }
 
-async function searchMenuItems(query: string): Promise<SearchResult[]> {
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+async function searchMenuItems(
+  query: string,
+  userLat?: number,
+  userLng?: number
+): Promise<SearchResult[]> {
   if (!query || query.length < 2) return []
 
   const items = await db
@@ -190,6 +206,8 @@ async function searchMenuItems(query: string): Promise<SearchResult[]> {
       price: cafeMenuItems.price,
       cafeName: cafes.name,
       cafeSlug: cafes.slug,
+      cafeLat: cafes.lat,
+      cafeLng: cafes.lng,
     })
     .from(cafeMenuItems)
     .innerJoin(cafes, eq(cafeMenuItems.cafeId, cafes.id))
@@ -200,9 +218,9 @@ async function searchMenuItems(query: string): Promise<SearchResult[]> {
         eq(cafes.isPublished, true)
       )
     )
-    .limit(3)
+    .limit(5)
 
-  return items.map(item => ({
+  const results = items.map(item => ({
     id: item.id,
     type: "menu-item" as const,
     title: item.name,
@@ -210,10 +228,31 @@ async function searchMenuItems(query: string): Promise<SearchResult[]> {
     href: `/cafes/${item.cafeSlug}`,
     priority: 60,
     keywords: [item.name, item.category, item.cafeName],
+    distance: userLat !== undefined && userLng !== undefined && item.cafeLat !== null && item.cafeLng !== null
+      ? haversineDistance(userLat, userLng, item.cafeLat, item.cafeLng)
+      : null,
   }))
+
+  if (userLat !== undefined && userLng !== undefined) {
+    results.sort((a, b) => {
+      if (a.distance === null && b.distance === null) return 0
+      if (a.distance === null) return 1
+      if (b.distance === null) return -1
+      return a.distance - b.distance
+    })
+  }
+
+  return results.slice(0, 3).map(item => {
+    const { distance: _distance, ...rest } = item
+    return rest
+  })
 }
 
-export async function globalSearch(query: string): Promise<SearchResult[]> {
+export async function globalSearch(
+  query: string,
+  userLat?: number,
+  userLng?: number
+): Promise<SearchResult[]> {
   const trimmedQuery = query.trim().toLowerCase()
   if (!trimmedQuery) return []
 
@@ -234,8 +273,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
   if (trimmedQuery.startsWith('#')) {
     const menuQuery = trimmedQuery.slice(1).trim()
     if (menuQuery.length >= 2) {
-      const menuResults = await searchMenuItems(menuQuery)
-      // Return only menu items, increased limit
+      const menuResults = await searchMenuItems(menuQuery, userLat, userLng)
       return menuResults.map(r => ({ ...r, priority: 1 }))
     }
     return []
@@ -247,7 +285,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     searchCrawls(trimmedQuery),
     searchCollections(trimmedQuery),
     searchEvents(trimmedQuery),
-    searchMenuItems(trimmedQuery),
+    searchMenuItems(trimmedQuery, userLat, userLng),
   ])
 
   const allResults = [
