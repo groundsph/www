@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from "react"
 import Image from "next/image"
 import { X, ChevronDown, Scale, Plus, Check, Flame, Snowflake, UtensilsCrossed, Leaf, Globe } from "lucide-react"
 import dynamic from "next/dynamic"
+import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
 
 const MenuComparisonModal = dynamic(
     () => import("@/components/menu/MenuComparisonModal"),
@@ -37,6 +38,9 @@ interface MenuItem {
 interface MenuContentProps {
     menuItems: MenuItem[]
     categories: string[]
+    cafeId: string
+    cafeName: string
+    cafeSlug: string
 }
 
 type FilterType = "all" | "coffee" | "food" | "cold" | "hot" | "vegan"
@@ -44,6 +48,9 @@ type FilterType = "all" | "coffee" | "food" | "cold" | "hot" | "vegan"
 export default function MenuContent({
     menuItems,
     categories,
+    cafeId,
+    cafeName,
+    cafeSlug,
 }: MenuContentProps) {
     const [lightboxImage, setLightboxImage] = useState<{
         url: string
@@ -195,14 +202,22 @@ export default function MenuContent({
                         </span>
                     )}
                 </div>
-                <button
-                    onClick={handleOpenCompareModal}
-                    disabled={compareItemIds.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                    <Scale className="w-4 h-4" />
-                    Compare Items
-                </button>
+                <div className="flex items-center gap-2">
+                    <MenuOcrScanButton
+                        cafeId={cafeId}
+                        cafeName={cafeName}
+                        cafeSlug={cafeSlug}
+                        variant="default"
+                    />
+                    <button
+                        onClick={handleOpenCompareModal}
+                        disabled={compareItemIds.length === 0}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        <Scale className="w-4 h-4" />
+                        Compare Items
+                    </button>
+                </div>
             </div>
 
             {/* Filter Pills */}

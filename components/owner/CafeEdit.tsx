@@ -595,6 +595,9 @@ export default function CafeEdit({
                             <MenuSection
                                 menu={menu}
                                 colorScheme='primary'
+                                cafeId={cafe.id}
+                                cafeName={cafe.name}
+                                cafeSlug={cafe.slug}
                             />
                         )}
                     </motion.div>

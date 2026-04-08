@@ -155,6 +155,9 @@ export default async function MenuPage({ params }: MenuPageProps) {
                             communitySubmitted: item.communitySubmitted,
                         }))}
                         categories={categories}
+                        cafeId={cafe.id}
+                        cafeName={cafe.name}
+                        cafeSlug={cafe.slug}
                     />
                 )}
             </main>

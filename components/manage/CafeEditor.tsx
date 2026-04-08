@@ -830,6 +830,9 @@ export default function CafeEditor({
                     <MenuSection
                         menu={menu}
                         colorScheme='accent'
+                        cafeId={cafe.id}
+                        cafeName={cafe.name}
+                        cafeSlug={cafe.slug}
                     />
                 )}
 

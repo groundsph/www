@@ -45,6 +45,7 @@ import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
 import MilestoneCelebration from "@/components/ui/MilestoneCelebration"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
 import SuggestMenuItemButton from "@/components/suggestions/SuggestMenuItemButton"
+import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
 
 const ImageLightbox = dynamic(
     () => import("@/components/modal/ImageLightbox"),
@@ -506,10 +507,17 @@ export default function CafeDetails({
                                             items) →
                                         </Link>
                                     )}
-                                    <div className='pt-2 border-t border-text/10'>
+                                    <div className='pt-2 border-t border-text/10 flex items-center gap-3'>
                                         <SuggestMenuItemButton
                                             cafeId={cafe.id}
                                             cafeName={cafe.name}
+                                            variant='compact'
+                                        />
+                                        <MenuOcrScanButton
+                                            cafeId={cafe.id}
+                                            cafeName={cafe.name}
+                                            cafeSlug={cafe.slug}
+                                            variant='compact'
                                         />
                                     </div>
                                 </div>
@@ -518,10 +526,17 @@ export default function CafeDetails({
                                     <div className='text-center py-8 text-text/50 bg-tertiary/30 rounded-xl'>
                                         <p>No menu items available</p>
                                     </div>
-                                    <div className='flex justify-center'>
+                                    <div className='flex justify-center gap-3'>
                                         <SuggestMenuItemButton
                                             cafeId={cafe.id}
                                             cafeName={cafe.name}
+                                            variant='compact'
+                                        />
+                                        <MenuOcrScanButton
+                                            cafeId={cafe.id}
+                                            cafeName={cafe.name}
+                                            cafeSlug={cafe.slug}
+                                            variant='compact'
                                         />
                                     </div>
                                 </div>
@@ -971,10 +986,17 @@ export default function CafeDetails({
                                         items) →
                                     </Link>
                                 )}
-                                <div className='pt-3 border-t border-text/10 flex justify-center'>
+                                <div className='pt-3 border-t border-text/10 flex items-center justify-center gap-3'>
                                     <SuggestMenuItemButton
                                         cafeId={cafe.id}
                                         cafeName={cafe.name}
+                                        variant='default'
+                                    />
+                                    <MenuOcrScanButton
+                                        cafeId={cafe.id}
+                                        cafeName={cafe.name}
+                                        cafeSlug={cafe.slug}
+                                        variant='default'
                                     />
                                 </div>
                             </div>
@@ -988,10 +1010,17 @@ export default function CafeDetails({
                                 <p className='text-text/50'>
                                     No menu items available yet
                                 </p>
-                                <div className='flex justify-center'>
+                                <div className='flex justify-center gap-3'>
                                     <SuggestMenuItemButton
                                         cafeId={cafe.id}
                                         cafeName={cafe.name}
+                                        variant='default'
+                                    />
+                                    <MenuOcrScanButton
+                                        cafeId={cafe.id}
+                                        cafeName={cafe.name}
+                                        cafeSlug={cafe.slug}
+                                        variant='default'
                                     />
                                 </div>
                             </div>

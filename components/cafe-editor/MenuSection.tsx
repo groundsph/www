@@ -5,6 +5,7 @@ import { Coffee, Pencil, Trash2, Users, AlertCircle } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { UseMenuItemsReturn } from "@/utils/hooks/useMenuItems"
+import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
 
 type FilterType = "all" | "coffee" | "food" | "cold" | "hot" | "vegan"
 
@@ -12,6 +13,8 @@ interface MenuSectionProps {
     menu: UseMenuItemsReturn
     colorScheme?: "primary" | "accent"
     pendingSuggestionsCount?: number
+    cafeId: string
+    cafeName: string
     cafeSlug?: string
 }
 
@@ -19,6 +22,8 @@ export default function MenuSection({
     menu,
     colorScheme = "primary",
     pendingSuggestionsCount = 0,
+    cafeId,
+    cafeName,
     cafeSlug,
 }: MenuSectionProps) {
     const [activeFilter, setActiveFilter] = useState<FilterType>("all")
@@ -99,12 +104,20 @@ export default function MenuSection({
 
             <div className='flex items-center justify-between'>
                 <p className='text-text/60'>{filteredItems.length} menu items</p>
-                <button
-                    onClick={menu.openCreateModal}
-                    className={`${buttonBaseClasses} ${buttonColorClasses}`}
-                >
-                    + Add Item
-                </button>
+                <div className='flex items-center gap-2'>
+                    <MenuOcrScanButton
+                        cafeId={cafeId}
+                        cafeName={cafeName}
+                        cafeSlug={cafeSlug ?? ""}
+                        variant='default'
+                    />
+                    <button
+                        onClick={menu.openCreateModal}
+                        className={`${buttonBaseClasses} ${buttonColorClasses}`}
+                    >
+                        + Add Item
+                    </button>
+                </div>
             </div>
 
             {filteredItems.length === 0 ? (
