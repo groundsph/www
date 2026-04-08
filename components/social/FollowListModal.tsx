@@ -317,20 +317,11 @@ export default function FollowListModal({
                                                 onClick={onClose}
                                                 className='shrink-0'
                                             >
-                                                {user.avatarUrl ? (
-                                                    <UserAvatar
-                                                        src={user.avatarUrl}
-                                                        alt={user.displayName}
-                                                        size={40}
-                                                        className='rounded-full bg-text/10 overflow-hidden relative'
-                                                    />
-                                                ) : (
-                                                    <div className='w-10 h-10 rounded-full bg-text/10 overflow-hidden relative flex items-center justify-center'>
-                                                        <span className='text-xs font-bold opacity-40'>
-                                                            {user.displayName.charAt(0)}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                <UserAvatar
+                                                src={user.avatarUrl}
+                                                alt={user.displayName}
+                                                size={40}
+                                            />
                                             </Link>
                                             <div className='flex-1 min-w-0'>
                                                 <Link
@@ -436,20 +427,11 @@ export default function FollowListModal({
                                                         onClick={onClose}
                                                         className='shrink-0'
                                                     >
-                                                        {user.avatarUrl ? (
-                                                            <UserAvatar
-                                                                src={user.avatarUrl}
-                                                                alt={user.displayName}
-                                                                size={40}
-                                                                className='rounded-full bg-text/10 overflow-hidden relative'
-                                                            />
-                                                        ) : (
-                                                            <div className='w-10 h-10 rounded-full bg-text/10 overflow-hidden relative flex items-center justify-center'>
-                                                                <span className='text-xs font-bold opacity-40'>
-                                                                    {user.displayName.charAt(0)}
-                                                                </span>
-                                                            </div>
-                                                        )}
+                                                    <UserAvatar
+                                                        src={user.avatarUrl}
+                                                        alt={user.displayName}
+                                                        size={40}
+                                                    />
                                                     </Link>
                                                     <div className='flex-1 min-w-0'>
                                                         <Link
