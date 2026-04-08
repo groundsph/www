@@ -3,12 +3,12 @@
 import { motion } from "motion/react"
 import { SearchResult } from "@/utils/types/search"
 import { getResultIcon } from "./search-utils"
-import { FileText, Coffee, User, Zap, CornerDownRight, MapIcon, Layers, Calendar, Sparkles, Lock } from "lucide-react"
+import { FileText, Coffee, User, Zap, CornerDownRight, MapIcon, Layers, Calendar, Sparkles, Lock, UtensilsCrossed } from "lucide-react"
 import { cn } from "@/utils/cn"
 import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 
-const iconMap = { FileText, Coffee, User, Zap, MapIcon, Layers, Calendar, Sparkles }
+const iconMap = { FileText, Coffee, User, Zap, MapIcon, Layers, Calendar, Sparkles, UtensilsCrossed }
 
 interface SearchResultsProps {
   results: SearchResult[]
@@ -65,7 +65,8 @@ function ResultIcon({ result }: { result: SearchResult }) {
       result.type === 'crawl' && "bg-primary/20 text-primary",
       result.type === 'collection' && "bg-accent/20 text-accent",
       result.type === 'event' && "bg-tertiary/20 text-tertiary",
-      result.type === 'chat' && "bg-primary/20 text-primary"
+      result.type === 'chat' && "bg-primary/20 text-primary",
+      result.type === 'menu-item' && "bg-secondary/20 text-secondary"
     )}>
       <Icon className="w-4 h-4" />
     </div>
@@ -88,10 +89,10 @@ export function SearchResults({ results, selectedIndex, onSelect, query }: Searc
     return acc
   }, {} as Record<string, SearchResult[]>)
 
-  const groupOrder = ['chat', 'action', 'page', 'cafe', 'user', 'blog', 'crawl', 'collection', 'event']
+  const groupOrder = ['chat', 'action', 'page', 'cafe', 'user', 'blog', 'crawl', 'collection', 'event', 'menu-item']
   const groupLabels: Record<string, string> = {
     chat: 'Grounds AI', action: 'Quick Actions', page: 'Pages', cafe: 'Cafes', user: 'Users',
-    blog: 'Blogs', crawl: 'Crawls', collection: 'Collections', event: 'Events',
+    blog: 'Blogs', crawl: 'Crawls', collection: 'Collections', event: 'Events', 'menu-item': 'Menu Items',
   }
 
   return (

@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { cafes, profiles, blogPosts, cafeCrawls, collections, events } from "@/db/schema"
+import { cafes, profiles, blogPosts, cafeCrawls, collections, events, cafeMenuItems } from "@/db/schema"
 import { ilike, or, eq, and } from "drizzle-orm"
 import { SearchResult } from "@/utils/types/search"
 import { staticPages, quickActions } from "@/utils/search-index"
@@ -179,6 +179,40 @@ async function searchEvents(query: string): Promise<SearchResult[]> {
   }))
 }
 
+async function searchMenuItems(query: string): Promise<SearchResult[]> {
+  if (!query || query.length < 2) return []
+
+  const items = await db
+    .select({
+      id: cafeMenuItems.id,
+      name: cafeMenuItems.name,
+      category: cafeMenuItems.category,
+      price: cafeMenuItems.price,
+      cafeName: cafes.name,
+      cafeSlug: cafes.slug,
+    })
+    .from(cafeMenuItems)
+    .innerJoin(cafes, eq(cafeMenuItems.cafeId, cafes.id))
+    .where(
+      and(
+        ilike(cafeMenuItems.name, `%${query}%`),
+        eq(cafeMenuItems.isAvailable, true),
+        eq(cafes.isPublished, true)
+      )
+    )
+    .limit(3)
+
+  return items.map(item => ({
+    id: item.id,
+    type: "menu-item" as const,
+    title: item.name,
+    subtitle: `${item.cafeName} · ${item.category} · ₱${item.price.toFixed(2)}`,
+    href: `/cafes/${item.cafeSlug}/menu`,
+    priority: 60,
+    keywords: [item.name, item.category, item.cafeName],
+  }))
+}
+
 export async function globalSearch(query: string): Promise<SearchResult[]> {
   const trimmedQuery = query.trim().toLowerCase()
   if (!trimmedQuery) return []
@@ -197,12 +231,13 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     return results.filter(r => r.type === 'user')
   }
 
-  const [dynamicResults, blogResults, crawlResults, collectionResults, eventResults] = await Promise.all([
+  const [dynamicResults, blogResults, crawlResults, collectionResults, eventResults, menuItemResults] = await Promise.all([
     searchCafesAndUsers(trimmedQuery),
     searchBlogs(trimmedQuery),
     searchCrawls(trimmedQuery),
     searchCollections(trimmedQuery),
     searchEvents(trimmedQuery),
+    searchMenuItems(trimmedQuery),
   ])
 
   const allResults = [
@@ -216,6 +251,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     ...crawlResults,
     ...collectionResults,
     ...eventResults,
+    ...menuItemResults,
   ]
 
   return allResults.sort((a, b) => b.priority - a.priority).slice(0, MAX_RESULTS)

@@ -27,6 +27,7 @@ export function getResultIcon(type: string): string {
     case "crawl": return "MapIcon"
     case "collection": return "Layers"
     case "event": return "Calendar"
+    case "menu-item": return "UtensilsCrossed"
     default: return "Search"
   }
 }

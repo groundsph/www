@@ -1,4 +1,4 @@
-export type SearchResultType = 'page' | 'cafe' | 'user' | 'action' | 'blog' | 'crawl' | 'collection' | 'event' | 'chat'
+export type SearchResultType = 'page' | 'cafe' | 'user' | 'action' | 'blog' | 'crawl' | 'collection' | 'event' | 'chat' | 'menu-item'
 
 export interface SearchResult {
   id: string
