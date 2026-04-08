@@ -137,10 +137,10 @@ export default function MenuItemModal({
                 type: "image/webp",
             })
 
-            // Compress to max 800x800 and ~150KB
+            // Compress to max 1200x1200 and ~200KB
             const compressedBlob = await imageCompression(croppedFile, {
-                maxSizeMB: 0.15, // ~150KB
-                maxWidthOrHeight: 800,
+                maxSizeMB: 0.2, // ~200KB
+                maxWidthOrHeight: 1200,
                 useWebWorker: true,
                 fileType: "image/webp",
                 initialQuality: 0.85,
