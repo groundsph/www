@@ -217,11 +217,38 @@ export default function CafesPageClient() {
             setCafes(fetchedCafes)
             setLoading(false)
             setHasMore(fetchedCafes.length === PAGE_SIZE)
+
+            // Mark server filters as synced so filter effect doesn't re-fetch on mount
+            const serverKey = JSON.stringify({
+                search: debouncedSearch,
+                has_wifi: filters.has_wifi,
+                has_smoking: filters.has_smoking,
+                has_sockets: filters.has_sockets,
+                has_parking: filters.has_parking,
+                has_aircon: filters.has_aircon,
+                is_pet_friendly: filters.is_pet_friendly,
+                has_outdoor_seating: filters.has_outdoor_seating,
+                has_indoor_seating: filters.has_indoor_seating,
+                has_restroom: filters.has_restroom,
+                has_bidet: filters.has_bidet,
+                has_non_dairy: filters.has_non_dairy,
+                has_decaf: filters.has_decaf,
+                is_work_friendly: filters.is_work_friendly,
+                is_24_7: filters.is_24_7,
+                is_halal_certified: filters.is_halal_certified,
+                price_level: filters.price_level,
+                coffee_style: filters.coffee_style,
+                region: filters.region,
+                tags: filters.tags,
+                include_chains: filters.include_chains,
+                sortBy,
+            })
+            prevServerFiltersRef.current = serverKey
         } catch (error) {
             console.error("Failed to fetch cafes:", error)
             setLoading(false)
         }
-    }, [getFilterParams])
+    }, [getFilterParams, debouncedSearch, filters, sortBy])
 
     const restoreFromSession = useCallback(async () => {
         if (!IS_SCROLL_RESTORE_ENABLED) {
@@ -318,10 +345,43 @@ export default function CafesPageClient() {
         }
     }, [restoreFromSession])
 
+    // Track previous server-relevant filters to detect when we actually need a re-fetch
+    const prevServerFiltersRef = useRef<string>("")
+
     // Filter Logic - reset pagination and fetch page 1 on filter changes
     // Skip if restoration is in progress to avoid race conditions
+    // Client-side filters (near_me, open_now) don't trigger a re-fetch
     useEffect(() => {
         if (isRestoring) return
+
+        // Only compare server-relevant filters (exclude near_me and open_now which are client-side)
+        const serverKey = JSON.stringify({
+            search: debouncedSearch,
+            has_wifi: filters.has_wifi,
+            has_smoking: filters.has_smoking,
+            has_sockets: filters.has_sockets,
+            has_parking: filters.has_parking,
+            has_aircon: filters.has_aircon,
+            is_pet_friendly: filters.is_pet_friendly,
+            has_outdoor_seating: filters.has_outdoor_seating,
+            has_indoor_seating: filters.has_indoor_seating,
+            has_restroom: filters.has_restroom,
+            has_bidet: filters.has_bidet,
+            has_non_dairy: filters.has_non_dairy,
+            has_decaf: filters.has_decaf,
+            is_work_friendly: filters.is_work_friendly,
+            is_24_7: filters.is_24_7,
+            is_halal_certified: filters.is_halal_certified,
+            price_level: filters.price_level,
+            coffee_style: filters.coffee_style,
+            region: filters.region,
+            tags: filters.tags,
+            include_chains: filters.include_chains,
+            sortBy,
+        })
+
+        if (serverKey === prevServerFiltersRef.current) return
+        prevServerFiltersRef.current = serverKey
 
         fetchVersionRef.current += 1
         const version = fetchVersionRef.current
@@ -446,28 +506,6 @@ export default function CafesPageClient() {
             loadMore()
         }
     }, [lastItem, lastItem?.index, filteredCafes.length, hasMore, isLoadingMore, loadMore])
-
-    // Auto-load more when the list is short and more data is available
-    // This ensures infinite scroll works when filtering reduces visible items
-    // and the sentinel isn't visible in the viewport
-    useEffect(() => {
-        if (
-            !loading &&
-            !isLoadingMore &&
-            hasMore &&
-            filteredCafes.length > 0 &&
-            filteredCafes.length <= PAGE_SIZE
-        ) {
-            const scrollEl = parentRef.current
-            if (scrollEl) {
-                const scrollHeight = scrollEl.scrollHeight
-                const clientHeight = scrollEl.clientHeight
-                if (scrollHeight <= clientHeight * 1.5) {
-                    loadMore()
-                }
-            }
-        }
-    }, [filteredCafes.length, hasMore, isLoadingMore, loading, loadMore])
 
     const toggleFilter = (key: keyof typeof filters) => {
         trigger("selection")
