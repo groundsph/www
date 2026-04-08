@@ -363,6 +363,13 @@ export interface MenuItemForm {
     image_url?: string;
     is_signature?: boolean;
     is_available?: boolean;
+    is_food?: boolean;
+    is_hot?: boolean;
+    is_cold?: boolean;
+    calories?: number;
+    is_vegan?: boolean;
+    is_vegetarian?: boolean;
+    size_options?: Array<{ label: string; price: number }>;
 }
 
 // ============================================

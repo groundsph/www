@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from "react"
-import { Loader2, ImagePlus, X } from "lucide-react"
+import { Loader2, ImagePlus, X, Plus, Trash2 } from "lucide-react"
 import Image from "next/image"
 import imageCompression from "browser-image-compression"
 import ImageCropper from "@/components/ui/ImageCropper"
@@ -42,6 +42,13 @@ const DEFAULT_FORM: MenuItemForm = {
     price: 0,
     is_signature: false,
     is_available: true,
+    is_food: false,
+    is_hot: false,
+    is_cold: false,
+    calories: undefined,
+    is_vegan: false,
+    is_vegetarian: false,
+    size_options: [],
 }
 
 /**
@@ -82,6 +89,13 @@ export default function MenuItemModal({
                     image_url: editingItem.image_url || undefined,
                     is_signature: editingItem.is_signature,
                     is_available: editingItem.is_available,
+                    is_food: editingItem.is_food,
+                    is_hot: editingItem.is_hot,
+                    is_cold: editingItem.is_cold,
+                    calories: editingItem.calories ?? undefined,
+                    is_vegan: editingItem.is_vegan,
+                    is_vegetarian: editingItem.is_vegetarian,
+                    size_options: editingItem.size_options ?? [],
                 })
             } else {
                 setForm(DEFAULT_FORM)
@@ -167,6 +181,24 @@ export default function MenuItemModal({
         }
         setPendingImage(null)
         setForm({ ...form, image_url: undefined })
+    }
+
+    // Size options helpers
+    const addSizeOption = () => {
+        const current = form.size_options || []
+        setForm({ ...form, size_options: [...current, { label: "", price: 0 }] })
+    }
+
+    const updateSizeOption = (index: number, field: "label" | "price", value: string | number) => {
+        const current = form.size_options || []
+        const updated = [...current]
+        updated[index] = { ...updated[index], [field]: value }
+        setForm({ ...form, size_options: updated })
+    }
+
+    const removeSizeOption = (index: number) => {
+        const current = form.size_options || []
+        setForm({ ...form, size_options: current.filter((_, i) => i !== index) })
     }
 
     const handleSubmit = async () => {
@@ -412,6 +444,150 @@ export default function MenuItemModal({
                                 />
                                 <span className='text-sm'>Available</span>
                             </label>
+                        </div>
+
+                        {/* Type Toggles */}
+                        <div>
+                            <label className='block text-sm font-medium mb-2'>
+                                Type
+                            </label>
+                            <div className='flex flex-wrap gap-2'>
+                                {[
+                                    { key: "is_food", label: "Food" },
+                                    { key: "is_hot", label: "Hot" },
+                                    { key: "is_cold", label: "Cold" },
+                                ].map(({ key, label }) => (
+                                    <button
+                                        key={key}
+                                        type='button'
+                                        onClick={() =>
+                                            setForm({
+                                                ...form,
+                                                [key]: !(form[key as keyof MenuItemForm] as boolean),
+                                            })
+                                        }
+                                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                            (form[key as keyof MenuItemForm] as boolean)
+                                                ? `${colors.bg} text-white`
+                                                : "bg-text/10 text-text/70 hover:bg-text/20"
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Dietary */}
+                        <div>
+                            <label className='block text-sm font-medium mb-2'>
+                                Dietary
+                            </label>
+                            <div className='flex flex-wrap gap-2'>
+                                {[
+                                    { key: "is_vegan", label: "Vegan" },
+                                    { key: "is_vegetarian", label: "Vegetarian" },
+                                ].map(({ key, label }) => (
+                                    <button
+                                        key={key}
+                                        type='button'
+                                        onClick={() =>
+                                            setForm({
+                                                ...form,
+                                                [key]: !(form[key as keyof MenuItemForm] as boolean),
+                                            })
+                                        }
+                                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                            (form[key as keyof MenuItemForm] as boolean)
+                                                ? `${colors.bg} text-white`
+                                                : "bg-text/10 text-text/70 hover:bg-text/20"
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Calories */}
+                        <div>
+                            <label className='block text-sm font-medium mb-1'>
+                                Calories (optional)
+                            </label>
+                            <input
+                                type='number'
+                                min='0'
+                                value={form.calories || ""}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        calories: e.target.value
+                                            ? parseInt(e.target.value)
+                                            : undefined,
+                                    })
+                                }
+                                className={`w-full px-3 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 ${colors.focusRing}`}
+                                placeholder='e.g., 250'
+                            />
+                        </div>
+
+                        {/* Size Options */}
+                        <div>
+                            <div className='flex items-center justify-between mb-2'>
+                                <label className='block text-sm font-medium'>
+                                    Size Options
+                                </label>
+                                <button
+                                    type='button'
+                                    onClick={addSizeOption}
+                                    className={`flex items-center gap-1 text-xs ${colors.text} hover:opacity-80`}
+                                >
+                                    <Plus className='w-3 h-3' />
+                                    Add Size
+                                </button>
+                            </div>
+                            <div className='space-y-2'>
+                                {(form.size_options || []).map((option, index) => (
+                                    <div key={index} className='flex gap-2 items-center'>
+                                        <input
+                                            type='text'
+                                            value={option.label}
+                                            onChange={(e) =>
+                                                updateSizeOption(index, "label", e.target.value)
+                                            }
+                                            className={`flex-1 px-3 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 ${colors.focusRing} text-sm`}
+                                            placeholder='e.g., Small, Medium, Large'
+                                        />
+                                        <input
+                                            type='number'
+                                            min='0'
+                                            step='0.01'
+                                            value={option.price || ""}
+                                            onChange={(e) =>
+                                                updateSizeOption(
+                                                    index,
+                                                    "price",
+                                                    parseFloat(e.target.value) || 0
+                                                )
+                                            }
+                                            className={`w-24 px-3 py-2 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 ${colors.focusRing} text-sm`}
+                                            placeholder='Price'
+                                        />
+                                        <button
+                                            type='button'
+                                            onClick={() => removeSizeOption(index)}
+                                            className='p-2 text-text/40 hover:text-red-500 transition-colors'
+                                        >
+                                            <Trash2 className='w-4 h-4' />
+                                        </button>
+                                    </div>
+                                ))}
+                                {(form.size_options || []).length === 0 && (
+                                    <p className='text-sm text-text/40 italic'>
+                                        No size options added. Click &quot;Add Size&quot; to add options like Small, Medium, Large.
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
 

@@ -915,6 +915,15 @@ export async function getCafeMenuItems(cafeId: string): Promise<CafeMenuItem[]> 
         image_url: item.imageUrl,
         is_available: item.isAvailable ?? true,
         is_signature: item.isSignature ?? false,
+        is_food: item.isFood ?? false,
+        is_hot: item.isHot ?? false,
+        is_cold: item.isCold ?? false,
+        calories: item.calories ?? null,
+        is_vegan: item.isVegan ?? false,
+        is_vegetarian: item.isVegetarian ?? false,
+        size_options: item.sizeOptions ?? null,
+        last_updated_by: item.lastUpdatedBy ?? null,
+        community_submitted: item.communitySubmitted ?? false,
         sort_order: item.sortOrder ?? 0,
         created_at: item.createdAt?.toISOString() ?? null,
         updated_at: item.updatedAt?.toISOString() ?? null,
@@ -991,6 +1000,13 @@ export async function addMenuItem(
             imageUrl: item.image_url || null,
             isSignature: item.is_signature || false,
             isAvailable: item.is_available ?? true,
+            isFood: item.is_food || false,
+            isHot: item.is_hot || false,
+            isCold: item.is_cold || false,
+            calories: item.calories ?? null,
+            isVegan: item.is_vegan || false,
+            isVegetarian: item.is_vegetarian || false,
+            sizeOptions: item.size_options ?? [],
             sortOrder,
         }).returning()
 
@@ -1009,6 +1025,15 @@ export async function addMenuItem(
                 image_url: newItem.imageUrl,
                 is_available: newItem.isAvailable ?? true,
                 is_signature: newItem.isSignature ?? false,
+                is_food: newItem.isFood ?? false,
+                is_hot: newItem.isHot ?? false,
+                is_cold: newItem.isCold ?? false,
+                calories: newItem.calories ?? null,
+                is_vegan: newItem.isVegan ?? false,
+                is_vegetarian: newItem.isVegetarian ?? false,
+                size_options: newItem.sizeOptions ?? null,
+                last_updated_by: newItem.lastUpdatedBy ?? null,
+                community_submitted: newItem.communitySubmitted ?? false,
                 sort_order: newItem.sortOrder ?? 0,
                 created_at: newItem.createdAt?.toISOString() ?? null,
                 updated_at: newItem.updatedAt?.toISOString() ?? null,
@@ -1071,6 +1096,13 @@ export async function updateMenuItem(
     if (updates.image_url !== undefined) drizzleUpdates.imageUrl = updates.image_url
     if (updates.is_signature !== undefined) drizzleUpdates.isSignature = updates.is_signature
     if (updates.is_available !== undefined) drizzleUpdates.isAvailable = updates.is_available
+    if (updates.is_food !== undefined) drizzleUpdates.isFood = updates.is_food
+    if (updates.is_hot !== undefined) drizzleUpdates.isHot = updates.is_hot
+    if (updates.is_cold !== undefined) drizzleUpdates.isCold = updates.is_cold
+    if (updates.calories !== undefined) drizzleUpdates.calories = updates.calories
+    if (updates.is_vegan !== undefined) drizzleUpdates.isVegan = updates.is_vegan
+    if (updates.is_vegetarian !== undefined) drizzleUpdates.isVegetarian = updates.is_vegetarian
+    if (updates.size_options !== undefined) drizzleUpdates.sizeOptions = updates.size_options
 
     try {
         await db.update(cafeMenuItems)
