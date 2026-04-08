@@ -220,18 +220,22 @@ async function searchMenuItems(
     )
     .limit(5)
 
-  const results = items.map(item => ({
-    id: item.id,
-    type: "menu-item" as const,
-    title: item.name,
-    subtitle: `${item.cafeName} · ${item.category} · ₱${item.price.toFixed(2)}`,
-    href: `/cafes/${item.cafeSlug}`,
-    priority: 60,
-    keywords: [item.name, item.category, item.cafeName],
-    distance: userLat !== undefined && userLng !== undefined && item.cafeLat !== null && item.cafeLng !== null
+  // Map to include distance for sorting (if location available)
+  const results = items.map(item => {
+    const distance = userLat !== undefined && userLng !== undefined && item.cafeLat !== null && item.cafeLng !== null
       ? haversineDistance(userLat, userLng, item.cafeLat, item.cafeLng)
-      : null,
-  }))
+      : null
+    return {
+      id: item.id,
+      type: "menu-item" as const,
+      title: item.name,
+      subtitle: `${item.cafeName} · ${item.category} · ₱${item.price.toFixed(2)}`,
+      href: `/cafes/${item.cafeSlug}`,
+      priority: 60,
+      keywords: [item.name, item.category, item.cafeName],
+      distance,
+    }
+  })
 
   if (userLat !== undefined && userLng !== undefined) {
     results.sort((a, b) => {
@@ -242,10 +246,8 @@ async function searchMenuItems(
     })
   }
 
-  return results.slice(0, 3).map(item => {
-    const { distance: _distance, ...rest } = item
-    return rest
-  })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  return results.slice(0, 3).map(({ distance, ...rest }) => rest)
 }
 
 export async function globalSearch(
