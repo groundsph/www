@@ -39,10 +39,14 @@ import dynamic from "next/dynamic"
 import RatingDistribution from "./RatingDistribution"
 import SuggestEditButton from "@/components/suggestions/SuggestEditButton"
 import ReportCafeModal from "@/components/modal/ReportCafeModal"
-import ImageLightbox from "@/components/modal/ImageLightbox"
 import Link from "next/link"
 import { motion } from "motion/react"
 import { getCafeVisitStats, getTodayVisitors } from "@/app/api/actions/profile"
+
+const ImageLightbox = dynamic(
+    () => import("@/components/modal/ImageLightbox"),
+    { ssr: false }
+)
 
 // Animation variants
 const containerVariants = {

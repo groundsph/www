@@ -7,6 +7,7 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeMenuItem } from "@/utils/types/owner"
 import Image from "next/image"
 import { useState, useEffect, useMemo, useCallback } from "react"
+import dynamic from "next/dynamic"
 import { getReviewsByCafeIdPaginated } from "@/app/api/actions/cafe"
 import {
     WifiIcon,
@@ -36,12 +37,16 @@ import {
 import ReviewModal from "@/components/reviews/ReviewModal"
 import ReviewItem from "@/components/reviews/ReviewItem"
 import MarkdownRender from "@/components/ui/MarkdownRender"
-import ImageLightbox from "@/components/modal/ImageLightbox"
 import ClaimCafeModal from "@/components/modal/ClaimCafeModal"
 import ContributionHistoryModal from "@/components/history/ContributionHistoryModal"
 import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
 import MilestoneCelebration from "@/components/ui/MilestoneCelebration"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
+
+const ImageLightbox = dynamic(
+    () => import("@/components/modal/ImageLightbox"),
+    { ssr: false }
+)
 
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"

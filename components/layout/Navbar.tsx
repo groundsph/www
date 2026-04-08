@@ -13,10 +13,19 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { SearchModal, SearchTrigger } from "@/components/search"
+import dynamic from "next/dynamic"
+import { SearchTrigger } from "@/components/search"
 import { useSearchKeyboard } from "@/utils/hooks/useSearchKeyboard"
 import { useHaptics } from "@/hooks/useHaptics"
 import FollowRequestsDropdown from "@/components/social/FollowRequestsDropdown"
+
+const SearchModal = dynamic(
+    () => import("@/components/search").then((mod) => mod.SearchModal),
+    {
+        loading: () => null,
+        ssr: false,
+    }
+)
 
 export default function Navbar() {
     // Context

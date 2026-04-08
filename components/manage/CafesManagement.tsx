@@ -72,8 +72,13 @@ import {
 import { EditSuggestion } from "@/utils/types/suggestions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
-import ImageLightbox from "@/components/modal/ImageLightbox"
+import dynamic from "next/dynamic"
 import SubscriptionsTable from "@/components/manage/SubscriptionsTable"
+
+const ImageLightbox = dynamic(
+    () => import("@/components/modal/ImageLightbox"),
+    { ssr: false }
+)
 import RejectCafeModal from "@/components/admin/RejectCafeModal"
 import FeaturedScheduleManager from "@/components/manage/FeaturedScheduleManager"
 import { CreditCard, Star } from "lucide-react"

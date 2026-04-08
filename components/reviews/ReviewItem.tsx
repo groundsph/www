@@ -14,6 +14,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import {
     toggleReviewLike,
     deleteReview,
@@ -22,8 +23,12 @@ import {
 import { useRouter } from "next/navigation"
 import { cn } from "@/utils/cn"
 import MarkdownRender from "@/components/ui/MarkdownRender"
-import ImageLightbox from "@/components/modal/ImageLightbox"
 import { UserAvatar } from "@/components/ui/UserAvatar"
+
+const ImageLightbox = dynamic(
+    () => import("@/components/modal/ImageLightbox"),
+    { ssr: false }
+)
 
 // Simple user type - only needs id for this component
 type SimpleUser = { id: string } | null
