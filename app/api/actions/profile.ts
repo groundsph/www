@@ -47,7 +47,13 @@ export interface FullProfileData {
  * Get all profile page data in a single call
  * Reduces 7 separate API calls to 1
  */
-export async function getFullProfileData(userId: string): Promise<FullProfileData> {
+export async function getFullProfileData(
+    userId: string,
+    viewerId?: string
+): Promise<FullProfileData | null> {
+    const { canView } = await canViewProfile(userId, viewerId)
+    if (!canView) return null
+
     // 1. Get profile with badges
     const profileResult = await db.select().from(profiles).where(eq(profiles.id, userId)).limit(1)
     const profile = profileResult[0]

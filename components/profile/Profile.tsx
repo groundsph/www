@@ -280,7 +280,12 @@ export default function Profile() {
 
             try {
                 // Single API call instead of 7 separate calls
-                const data = await getFullProfileData(user.id)
+                const data = await getFullProfileData(user.id, user.id)
+
+                if (!data) {
+                    setLoading(false)
+                    return
+                }
 
                 setProfileData(data.profile)
                 setAllBadges(data.allBadges)
