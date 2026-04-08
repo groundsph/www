@@ -1,25 +1,35 @@
 "use server"
 
-import { z } from "zod"
-
-const feedbackSchema = z.object({
-    messageId: z.string(),
-    feedback: z.enum(["positive", "negative"]),
-    messageContent: z.string().max(500),
-})
+import { db } from "@/db"
+import { chatFeedback } from "@/db/schema/tables"
+import { getCurrentUser } from "@/lib/auth"
+import { getChatSessionId } from "@/utils/chat-session"
 
 export async function submitChatFeedback(
-    input: z.infer<typeof feedbackSchema>
+    messageId: string,
+    rating: 1 | -1,
+    comment?: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const parsed = feedbackSchema.parse(input)
+        // Get current user and session
+        const user = await getCurrentUser()
+        const sessionId = await getChatSessionId()
 
-        // Log to console for now -- can be stored in DB later
-        console.log(`[Chat Feedback] ${parsed.feedback}: ${parsed.messageId}`)
+        if (!sessionId) {
+            return { success: false, error: "No session found" }
+        }
+
+        await db.insert(chatFeedback).values({
+            messageId,
+            sessionId,
+            userId: user?.id || null,
+            rating,
+            comment: comment || null,
+        })
 
         return { success: true }
     } catch (error) {
-        console.error("Chat feedback error:", error)
-        return { success: false, error: "Failed to submit feedback" }
+        console.error("Failed to save chat feedback:", error)
+        return { success: false, error: "Failed to save feedback" }
     }
 }

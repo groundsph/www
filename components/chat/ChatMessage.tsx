@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { motion } from "motion/react"
 import { ThumbsUp, ThumbsDown } from "lucide-react"
 import MarkdownRender from "@/components/ui/MarkdownRender"
@@ -13,16 +14,32 @@ interface ChatMessageProps {
     message: ChatMessage
 }
 
+type FeedbackState = "none" | "up" | "down"
+
 export default function ChatMessage({ message }: ChatMessageProps) {
     const isUser = message.role === "user"
+    const [feedbackState, setFeedbackState] = useState<FeedbackState>(
+        message.feedback === "positive" ? "up" : message.feedback === "negative" ? "down" : "none"
+    )
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
-    const handleFeedback = async (type: "positive" | "negative") => {
-        // Call server action
-        await submitChatFeedback({
-            messageId: message.id,
-            feedback: type,
-            messageContent: message.content.slice(0, 500),
-        })
+    const handleFeedback = async (type: "up" | "down") => {
+        // Prevent duplicate feedback
+        if (feedbackState !== "none" || isSubmitting) return
+
+        setIsSubmitting(true)
+        const rating = type === "up" ? 1 : -1
+
+        try {
+            const result = await submitChatFeedback(message.id, rating)
+            if (result.success) {
+                setFeedbackState(type)
+            }
+        } catch (error) {
+            console.error("Failed to submit feedback:", error)
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     return (
@@ -30,16 +47,6 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             className={`flex ${isUser ? "justify-end" : "justify-start"}`}
         >
             <div className="flex items-end gap-2 max-w-[90%]">
-                {/* {!isUser && (
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="w-8 h-8 rounded-xl bg-secondary/20 flex items-center justify-center shrink-0"
-                    >
-                        <Bot className="w-4 h-4 text-secondary" />
-                    </motion.div>
-                )} */}
-                
                 <motion.div
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -63,48 +70,54 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                     )}
                     {message.crawlDraft && <ChatCrawlPreview draft={message.crawlDraft} />}
                     {!isUser && (
-                        <div className='flex items-center gap-1 mt-1'>
+                        <div className="flex items-center gap-1 mt-1">
                             <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => handleFeedback("positive")}
+                                whileHover={feedbackState === "none" && !isSubmitting ? { scale: 1.1 } : {}}
+                                whileTap={feedbackState === "none" && !isSubmitting ? { scale: 0.9 } : {}}
+                                onClick={() => handleFeedback("up")}
+                                disabled={feedbackState !== "none" || isSubmitting}
                                 className={cn(
                                     "p-1 rounded transition-colors",
-                                    message.feedback === "positive"
+                                    feedbackState === "up"
                                         ? "text-green-500 bg-green-500/10"
-                                        : "text-text/30 hover:text-text/60"
+                                        : feedbackState === "none" && !isSubmitting
+                                            ? "text-text/30 hover:text-text/60"
+                                            : "text-text/20 cursor-default"
                                 )}
                                 aria-label="Helpful response"
                             >
-                                <ThumbsUp className='w-3 h-3' />
+                                <ThumbsUp
+                                    className={cn(
+                                        "w-3 h-3 transition-all",
+                                        feedbackState === "up" && "fill-current"
+                                    )}
+                                />
                             </motion.button>
                             <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => handleFeedback("negative")}
+                                whileHover={feedbackState === "none" && !isSubmitting ? { scale: 1.1 } : {}}
+                                whileTap={feedbackState === "none" && !isSubmitting ? { scale: 0.9 } : {}}
+                                onClick={() => handleFeedback("down")}
+                                disabled={feedbackState !== "none" || isSubmitting}
                                 className={cn(
                                     "p-1 rounded transition-colors",
-                                    message.feedback === "negative"
+                                    feedbackState === "down"
                                         ? "text-red-500 bg-red-500/10"
-                                        : "text-text/30 hover:text-text/60"
+                                        : feedbackState === "none" && !isSubmitting
+                                            ? "text-text/30 hover:text-text/60"
+                                            : "text-text/20 cursor-default"
                                 )}
                                 aria-label="Not helpful"
                             >
-                                <ThumbsDown className='w-3 h-3' />
+                                <ThumbsDown
+                                    className={cn(
+                                        "w-3 h-3 transition-all",
+                                        feedbackState === "down" && "fill-current"
+                                    )}
+                                />
                             </motion.button>
                         </div>
                     )}
                 </motion.div>
-                
-                {/* {isUser && (
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"
-                    >
-                        <User className="w-4 h-4 text-primary" />
-                    </motion.div>
-                )} */}
             </div>
         </div>
     )

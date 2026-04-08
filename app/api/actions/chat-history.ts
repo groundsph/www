@@ -20,14 +20,18 @@ export async function saveMessage(
     content: string | null,
     toolCalls?: unknown,
     toolCallId?: string
-): Promise<void> {
-    await db.insert(chatMessages).values({
-        conversationId,
-        role,
-        content,
-        toolCalls: toolCalls || null,
-        toolCallId: toolCallId || null,
-    })
+): Promise<string> {
+    const [message] = await db
+        .insert(chatMessages)
+        .values({
+            conversationId,
+            role,
+            content,
+            toolCalls: toolCalls || null,
+            toolCallId: toolCallId || null,
+        })
+        .returning({ id: chatMessages.id })
+    return message.id
 }
 
 export async function endConversation(conversationId: string): Promise<void> {
