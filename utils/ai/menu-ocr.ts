@@ -105,6 +105,7 @@ export async function extractMenuItemsFromImage(
                             type: "image_url",
                             image_url: {
                                 url: `data:image/jpeg;base64,${imageBase64}`,
+                                detail: "low",
                             },
                         },
                     ],

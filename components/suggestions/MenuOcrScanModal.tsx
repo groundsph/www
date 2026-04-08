@@ -76,8 +76,8 @@ export default function MenuOcrScanModal({
     const handleImageSelect = async (file: File) => {
         try {
             const compressed = await imageCompression(file, {
-                maxSizeMB: 2,
-                maxWidthOrHeight: 2048,
+                maxSizeMB: 0.5,
+                maxWidthOrHeight: 1024,
                 useWebWorker: true,
             })
 
