@@ -2,7 +2,7 @@
  * Client-side image processing utilities using browser-image-compression
  *
  * Image types and their compression settings:
- * - Cover images (cafe thumbnails): WebP, 250KB, 1920px
+ * - Cover images (cafe thumbnails): WebP, 300KB, 1920px
  * - Gallery images: WebP, 200KB, 1920px
  * - Review images: WebP, 250KB, 1920px
  * - Blog/Event covers: JPEG, 200KB, 1920px (display in list cards)
@@ -18,15 +18,15 @@ import imageCompression from "browser-image-compression"
 
 /**
  * Compress a cover image for cafe hero/thumbnails.
- * @returns Compressed File (WebP, max 250KB, max 1920px)
+ * @returns Compressed File (WebP, max 300KB, max 1920px)
  */
 export async function compressCoverImage(file: File): Promise<File> {
     const compressed = await imageCompression(file, {
-        maxSizeMB: 0.25,
+        maxSizeMB: 0.3,
         maxWidthOrHeight: 1920,
         useWebWorker: true,
         fileType: "image/webp",
-        initialQuality: 0.85,
+        initialQuality: 0.9,
     })
 
     return new File(
