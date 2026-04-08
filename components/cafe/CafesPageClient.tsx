@@ -115,7 +115,6 @@ export default function CafesPageClient() {
     const [isRestoring, setIsRestoring] = useState(false)
     const restoreNoticeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const fetchVersionRef = useRef(0)
-    const abortControllerRef = useRef<AbortController | null>(null)
 
     const dismissRestoreNotice = useCallback(() => {
         if (restoreNoticeTimeoutRef.current) {
@@ -322,10 +321,6 @@ export default function CafesPageClient() {
     useEffect(() => {
         if (isRestoring) return
 
-        // Cancel any in-flight load-more requests
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort()
-        }
         fetchVersionRef.current += 1
         const version = fetchVersionRef.current
 
