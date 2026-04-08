@@ -169,6 +169,14 @@ export default function Passport({
                                                 delay: index * 0.05,
                                                 duration: 0.3,
                                             }}
+                                            whileHover={{
+                                                rotate: 0,
+                                                scale: 1.05,
+                                                transition: {
+                                                    delay: 0
+                                                }
+                                            }}
+                                            title={`Visit "${cafe.name}"`}
                                             className='relative aspect-square'
                                         >
                                             <Link
@@ -178,13 +186,6 @@ export default function Passport({
                                             >
                                                 {/* Stamp Visual */}
                                                 <div className='absolute inset-0 flex flex-col items-center justify-center p-4 text-center transition-all duration-300'>
-                                                    <Coffee className='w-6 h-6 text-primary opacity-50 mb-1' />
-                                                    <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight max-w-4/5'>
-                                                        {cafe.name}
-                                                    </span>
-                                                    <span className='text-[10px] text-primary/40 mt-1 font-mono'>
-                                                        VISITED
-                                                    </span>
                                                     {(() => {
                                                         const customUrl =
                                                             selectStampImage(
@@ -193,24 +194,35 @@ export default function Passport({
                                                             )
                                                         if (customUrl) {
                                                             return (
-                                                                <Image
-                                                                    src={
-                                                                        customUrl
-                                                                    }
-                                                                    alt={`${cafe.name} stamp`}
-                                                                    fill
-                                                                    className='object-contain'
-                                                                />
+                                                                <>
+                                                                    <Image
+                                                                        src={
+                                                                            customUrl
+                                                                        }
+                                                                        alt={`${cafe.name} stamp`}
+                                                                        fill
+                                                                        className='object-contain'
+                                                                    />
+                                                                </>
                                                             )
                                                         }
                                                         return (
-                                                            <Image
-                                                                src={getStamp(
-                                                                    cafe.name,
-                                                                )}
-                                                                alt=''
-                                                                className='w-full h-full absolute inset-0 object-contain'
-                                                            />
+                                                            <>
+                                                                <Coffee className='w-6 h-6 text-primary opacity-50 mb-1' />
+                                                                <span className='text-xs font-bold text-primary/80 line-clamp-2 uppercase tracking-tight max-w-4/5'>
+                                                                    {cafe.name}
+                                                                </span>
+                                                                <span className='text-[10px] text-primary/40 mt-1 font-mono'>
+                                                                    VISITED
+                                                                </span>
+                                                                <Image
+                                                                    src={getStamp(
+                                                                        cafe.name,
+                                                                    )}
+                                                                    alt=''
+                                                                    className='w-full h-full absolute inset-0 object-contain'
+                                                                />
+                                                            </>
                                                         )
                                                     })()}
                                                 </div>
