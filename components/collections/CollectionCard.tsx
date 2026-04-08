@@ -85,19 +85,11 @@ const CollectionCard = React.memo(function CollectionCard({
                 {/* Author */}
                 {showAuthor && author && (
                     <div className='flex items-center gap-2 mt-1'>
-                        {author.avatarUrl ? (
-                            <UserAvatar
-                                src={author.avatarUrl}
-                                alt={author.displayName}
-                                size={20}
-                            />
-                        ) : (
-                            <div className='w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center'>
-                                <span className='text-xs text-primary font-medium'>
-                                    {author.displayName.charAt(0).toUpperCase()}
-                                </span>
-                            </div>
-                        )}
+                        <UserAvatar
+                            src={author.avatarUrl}
+                            alt={author.displayName}
+                            size={20}
+                        />
                         <span className='text-xs text-text/60'>
                             by {author.displayName}
                         </span>
