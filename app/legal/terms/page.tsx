@@ -22,7 +22,7 @@ export default function TermsPage() {
                 Terms of Service
             </h1>
             <p className='text-text/50 text-sm mb-8'>
-                Last updated: January 5, 2026
+                Last updated: April 9, 2026
             </p>
 
             <div className='prose prose-neutral max-w-none space-y-8'>
@@ -59,6 +59,8 @@ export default function TermsPage() {
                         </li>
                         <li>Creating and managing user accounts</li>
                         <li>Participating in community features</li>
+                        <li>Contributing to community-edited menus</li>
+                        <li>Using AI-powered features for cafe discovery</li>
                     </ul>
                 </section>
 
@@ -86,20 +88,23 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        4. User-Generated Content
+                        4. Community Contributions and User-Generated Content
                     </h2>
                     <p className='text-text/80 leading-relaxed mb-4'>
                         Grounds.ph relies on community contributions. When you
                         submit content to the Service (including but not limited
-                        to cafe information, photos, reviews, and comments),
-                        you:
+                        to cafe information, photos, reviews, comments, menu
+                        items, menu edits, and corrections), you:
                     </p>
                     <ul className='list-disc list-inside text-text/80 space-y-2'>
                         <li>
                             <strong>Grant us a license:</strong> You grant
-                            Grounds.ph a non-exclusive, worldwide, royalty-free
-                            license to use, display, reproduce, and distribute
-                            your content in connection with the Service.
+                            Grounds.ph a non-exclusive, worldwide, royalty-free,
+                            perpetual license to use, display, reproduce,
+                            modify, and distribute your content in connection
+                            with the Service. This includes incorporating your
+                            contributions into our platform data, including
+                            community-edited menus and cafe information.
                         </li>
                         <li>
                             <strong>Represent ownership:</strong> You represent
@@ -112,6 +117,13 @@ export default function TermsPage() {
                             <strong>Accept responsibility:</strong> You are
                             solely responsible for the content you submit and
                             any consequences arising from its submission.
+                        </li>
+                        <li>
+                            <strong>Acknowledge community nature:</strong> You
+                            understand that menu contributions and edits become
+                            part of the platform&apos;s shared data and may be
+                            modified or removed by other community members or
+                            moderators.
                         </li>
                         <li>
                             <strong>Acknowledge moderation:</strong> We reserve
@@ -130,7 +142,50 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        5. Prohibited Conduct
+                        5. AI Features and Data Usage
+                    </h2>
+                    <p className='text-text/80 leading-relaxed mb-4'>
+                        Grounds.ph may offer AI-powered features to enhance your
+                        experience, including but not limited to cafe discovery,
+                        menu assistance, and conversational recommendations.
+                        When using these features:
+                    </p>
+                    <ul className='list-disc list-inside text-text/80 space-y-2'>
+                        <li>
+                            <strong>AI-generated content disclaimer:</strong>{" "}
+                            AI-generated responses are provided for informational
+                            purposes only and may contain inaccuracies,
+                            hallucinations, or outdated information. Always
+                            verify important details directly with cafes or
+                            official sources.
+                        </li>
+                        <li>
+                            <strong>Service improvement:</strong> By using AI
+                            features, you consent to your conversation data being
+                            stored, processed, and used to improve our AI
+                            services, train models, and enhance response
+                            quality. Personal information will be handled in
+                            accordance with our{" "}
+                            <Link
+                                href='/legal/privacy'
+                                className='text-primary hover:underline'
+                            >
+                                Privacy Policy
+                            </Link>
+                            .
+                        </li>
+                        <li>
+                            <strong>No reliance:</strong> You agree not to rely
+                            solely on AI-generated responses for critical
+                            decisions, including dietary restrictions, allergen
+                            information, pricing, or business hours.
+                        </li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 className='text-2xl font-serif font-semibold mb-4'>
+                        6. Prohibited Conduct
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         You agree not to:
@@ -165,7 +220,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        6. Intellectual Property
+                        7. Intellectual Property
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         The Service and its original content (excluding
@@ -180,7 +235,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        7. Third-Party Links and Services
+                        8. Third-Party Links and Services
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         The Service may contain links to third-party websites or
@@ -193,7 +248,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        8. Disclaimer of Warranties
+                        9. Disclaimer of Warranties
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         The Service is provided &quot;as is&quot; and &quot;as
@@ -209,7 +264,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        9. Limitation of Liability
+                        10. Limitation of Liability
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         To the maximum extent permitted by law, Grounds.ph shall
@@ -224,7 +279,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        10. Indemnification
+                        11. Indemnification
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         You agree to indemnify and hold harmless Grounds.ph and
@@ -238,7 +293,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        11. Modifications to Terms
+                        12. Modifications to Terms
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         We reserve the right to modify these Terms of Service at
@@ -252,7 +307,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        12. Governing Law
+                        13. Governing Law
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         These Terms shall be governed by and construed in
@@ -264,7 +319,7 @@ export default function TermsPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        13. Contact
+                        14. Contact
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         For questions about these Terms of Service, please
