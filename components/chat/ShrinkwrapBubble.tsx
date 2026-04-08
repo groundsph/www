@@ -1,12 +1,11 @@
 "use client"
 
-import { useRef, useLayoutEffect, useState, ReactNode } from "react"
+import { useLayoutEffect, useState, ReactNode } from "react"
 import { prepareWithSegments, walkLineRanges } from "@chenglou/pretext"
 
 interface ShrinkwrapBubbleProps {
     text: string
     font: string
-    lineHeight: number
     maxWidth: number
     minWidth?: number
     children: ReactNode
@@ -16,7 +15,6 @@ interface ShrinkwrapBubbleProps {
 function measureShrinkwrapWidth(
     text: string,
     font: string,
-    lineHeight: number,
     maxWidth: number,
     minWidth: number
 ): number {
@@ -66,28 +64,20 @@ function measureShrinkwrapWidth(
 export default function ShrinkwrapBubble({
     text,
     font,
-    lineHeight,
     maxWidth,
     minWidth = 80,
     children,
     className,
 }: ShrinkwrapBubbleProps) {
     const [calculatedMaxWidth, setCalculatedMaxWidth] = useState(maxWidth)
-    const prevTextRef = useRef(text)
 
     useLayoutEffect(() => {
         if (!text) return
 
-        const width = measureShrinkwrapWidth(
-            text,
-            font,
-            lineHeight,
-            maxWidth,
-            minWidth
-        )
+        const width = measureShrinkwrapWidth(text, font, maxWidth, minWidth)
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Layout measurement required before paint
         setCalculatedMaxWidth(width)
-        prevTextRef.current = text
-    }, [text, font, lineHeight, maxWidth, minWidth])
+    }, [text, font, maxWidth, minWidth])
 
     return (
         <div

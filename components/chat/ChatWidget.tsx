@@ -14,7 +14,7 @@ interface ChatWidgetProps {
 }
 
 export function ChatWidget({
-    remainingMessages = 10,
+    remainingMessages = 30,
     isEnabled = true,
 }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false)
@@ -130,16 +130,6 @@ export function ChatWidget({
                                 </motion.div>
                             )}
                         </AnimatePresence>
-
-                        {remainingMessages > 0 && remainingMessages < 30 && (
-                            <motion.span
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className='absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg'
-                            >
-                                {remainingMessages}
-                            </motion.span>
-                        )}
 
                         {/* Pulse animation for new users */}
                         {!isOpen && remainingMessages === 30 && (

@@ -76,18 +76,18 @@ describe("chat-rate-limit", () => {
         resetStore()
     })
 
-    it("enforces 10 per session", async () => {
+    it("enforces 30 per session", async () => {
         const sessionId = "test-session"
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 30; i++) {
             await incrementChatUsage(sessionId)
         }
         const remaining = await getChatRemaining(sessionId)
         expect(remaining).toBe(0)
     })
 
-    it("throws RateLimitExceededError on 11th request", async () => {
+    it("throws RateLimitExceededError on 31st request", async () => {
         const sessionId = "test-session"
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 30; i++) {
             await incrementChatUsage(sessionId)
         }
         expect(incrementChatUsage(sessionId)).rejects.toThrow()
@@ -95,8 +95,8 @@ describe("chat-rate-limit", () => {
 
     it("resets window after 7 days", async () => {
         const sessionId = "test-session"
-        // Use up all 10 requests
-        for (let i = 0; i < 10; i++) {
+        // Use up all 30 requests
+        for (let i = 0; i < 30; i++) {
             await incrementChatUsage(sessionId)
         }
 
@@ -104,7 +104,7 @@ describe("chat-rate-limit", () => {
         const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
         mockRateLimitStore.set(sessionId, {
             sessionId,
-            usedCount: 10,
+            usedCount: 30,
             windowStartedAt: eightDaysAgo,
             updatedAt: eightDaysAgo,
         })
@@ -112,13 +112,13 @@ describe("chat-rate-limit", () => {
         // Should be able to send again
         await incrementChatUsage(sessionId)
         const remaining = await getChatRemaining(sessionId)
-        expect(remaining).toBe(9)
+        expect(remaining).toBe(29)
     })
 
-    it("returns 10 for new session", async () => {
+    it("returns 30 for new session", async () => {
         const sessionId = "new-session"
         const remaining = await getChatRemaining(sessionId)
-        expect(remaining).toBe(10)
+        expect(remaining).toBe(30)
     })
 
     it("validates sessionId length", async () => {
@@ -139,7 +139,7 @@ describe("chat-rate-limit", () => {
         await incrementChatUsage(sessionA)
         await incrementChatUsage(sessionB)
 
-        expect(await getChatRemaining(sessionA)).toBe(8)
-        expect(await getChatRemaining(sessionB)).toBe(9)
+        expect(await getChatRemaining(sessionA)).toBe(28)
+        expect(await getChatRemaining(sessionB)).toBe(29)
     })
 })

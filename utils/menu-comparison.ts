@@ -1,6 +1,6 @@
 import { db } from "@/db"
 import { cafeMenuItems, cafes } from "@/db/schema/tables"
-import { eq, ilike, and, sql } from "drizzle-orm"
+import { eq, ilike, and } from "drizzle-orm"
 import type { ComparableMenuItem, ComparisonResult } from "./types/menu-comparison"
 
 /**

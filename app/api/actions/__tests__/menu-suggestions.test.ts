@@ -70,6 +70,7 @@ async function submitMenuItemSuggestion(
             return { error: "Name, category, and price are required" }
         }
         // Strip imageUrl from community submissions
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { imageUrl, ...safeData } = data
         data = safeData
     }

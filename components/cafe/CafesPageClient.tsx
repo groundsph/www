@@ -380,6 +380,11 @@ export default function CafesPageClient() {
             sortBy,
         })
 
+        if (!prevServerFiltersRef.current) {
+            prevServerFiltersRef.current = serverKey
+            return
+        }
+
         if (serverKey === prevServerFiltersRef.current) return
         prevServerFiltersRef.current = serverKey
 
@@ -398,7 +403,7 @@ export default function CafesPageClient() {
 
             try {
                 const fetchedCafes = await getAllCafes(1, PAGE_SIZE, getFilterParams())
-                if (version !== fetchVersionRef.current) return // Stale fetch, discard
+                if (version !== fetchVersionRef.current) return
                 setCafes(fetchedCafes)
                 setLoading(false)
                 setHasMore(fetchedCafes.length === PAGE_SIZE)
@@ -488,9 +493,7 @@ export default function CafesPageClient() {
                 setHasMore(false)
             })
             .finally(() => {
-                if (version === fetchVersionRef.current) {
-                    setIsLoadingMore(false)
-                }
+                setIsLoadingMore(false)
             })
     }, [currentPage, getFilterParams, hasMore, isLoadingMore, trigger])
 
