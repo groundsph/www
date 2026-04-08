@@ -113,6 +113,7 @@ export default function CafesPageClient() {
     const [filtersOpen, setFiltersOpen] = useState(false)
     const [showRestoreNotice, setShowRestoreNotice] = useState(false)
     const [isRestoring, setIsRestoring] = useState(false)
+    const [loadError, setLoadError] = useState(false)
     const restoreNoticeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const fetchVersionRef = useRef(0)
 
@@ -328,6 +329,7 @@ export default function CafesPageClient() {
         startTransition(async () => {
             setCurrentPage(1)
             setHasMore(true)
+            setLoadError(false)
             setCafes([])
 
             if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_STORAGE_SCROLL_POSITION_KEY)) {
@@ -428,6 +430,7 @@ export default function CafesPageClient() {
                 .catch((error) => {
                     if (version !== fetchVersionRef.current) return
                     console.error("Failed to fetch more cafes:", error)
+                    setLoadError(true)
                     setHasMore(false) // Stop trying on error
                 })
                 .finally(() => {
@@ -972,26 +975,44 @@ export default function CafesPageClient() {
                                                 transform: `translateY(${virtualItem.start}px)`,
                                             }}
                                         >
-                                            {/* Loading more indicator */}
-                                            {(isLoadingMore || hasMore) && (
-                                                <div className='py-4 px-6 bg-background/70 border border-text/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
-                                                    <div className='flex-1 flex flex-col md:pr-24 gap-4'>
-                                                        <div className='flex flex-col gap-2'>
-                                                            <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
-                                                            <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
-                                                        </div>
-                                                        <div className='flex gap-2'>
-                                                            <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
-                                                            <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
-                                                        </div>
-                                                        <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
-                                                    </div>
-                                                    <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
+                                            {loadError ? (
+                                                <div className='flex flex-col items-center justify-center py-8 gap-3'>
+                                                    <p className='text-sm text-text/60'>Failed to load more cafes</p>
+                                                    <button
+                                                        onClick={() => {
+                                                            setLoadError(false)
+                                                            setHasMore(true)
+                                                            setIsLoadingMore(false)
+                                                        }}
+                                                        className='text-sm text-accent hover:underline'
+                                                    >
+                                                        Try again
+                                                    </button>
                                                 </div>
-                                            )}
-                                            {/* Scroll sentinel for infinite scroll */}
-                                            {hasMore && (
-                                                <div ref={scrollSentinelRef} className='h-1' />
+                                            ) : (
+                                                <>
+                                                    {/* Loading more indicator */}
+                                                    {(isLoadingMore || hasMore) && (
+                                                        <div className='py-4 px-6 bg-background/70 border border-text/10 rounded-xl flex flex-col-reverse md:flex-row gap-4 md:gap-0'>
+                                                            <div className='flex-1 flex flex-col md:pr-24 gap-4'>
+                                                                <div className='flex flex-col gap-2'>
+                                                                    <div className='h-8 w-64 bg-text/10 rounded-lg animate-pulse' />
+                                                                    <div className='h-4 w-40 bg-text/5 rounded-lg animate-pulse' />
+                                                                </div>
+                                                                <div className='flex gap-2'>
+                                                                    <div className='h-6 w-12 bg-text/5 rounded-full animate-pulse' />
+                                                                    <div className='h-6 w-20 bg-text/5 rounded-full animate-pulse' />
+                                                                </div>
+                                                                <div className='h-24 w-full bg-text/5 rounded-lg animate-pulse mt-2' />
+                                                            </div>
+                                                            <div className='flex-1 aspect-square md:aspect-auto bg-text/10 rounded-2xl animate-pulse' />
+                                                        </div>
+                                                    )}
+                                                    {/* Scroll sentinel for infinite scroll */}
+                                                    {hasMore && (
+                                                        <div ref={scrollSentinelRef} className='h-1' />
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     )
