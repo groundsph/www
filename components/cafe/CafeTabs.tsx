@@ -47,8 +47,6 @@ export default function CafeTabs({
                     const Icon = tab.icon
                     const isActive = activeTab === tab.id
 
-                    if (tab.id === "menu" && menuCount === 0) return null
-
                     return (
                         <button
                             key={tab.id}
@@ -64,6 +62,9 @@ export default function CafeTabs({
                         >
                             <Icon className='w-4 h-4' />
                             {tab.label}
+                            {tab.id === "menu" && menuCount === 0 && (
+                                <span className='absolute top-1.5 right-1/2 translate-x-6 w-2 h-2 bg-primary rounded-full' />
+                            )}
                             {tab.id === "reviews" &&
                                 reviewCount !== undefined &&
                                 reviewCount > 0 && (
