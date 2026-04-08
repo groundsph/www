@@ -17,6 +17,7 @@ import { useNotification } from "@/components/layout/NotificationProvider"
 import type { PendingBlogPost } from "@/app/api/actions/moderation"
 import PostPreviewModal from "./PostPreviewModal"
 import RejectPostModal from "./RejectPostModal"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 
 interface ModerationStats {
     pending: number
@@ -222,20 +223,11 @@ export default function ModerationQueue({
                             >
                                 {/* Author Avatar */}
                                 <div className="shrink-0">
-                                    {post.author.avatarUrl ? (
-                                        /* eslint-disable-next-line @next/next/no-img-element -- External avatar URL */
-                                        <img
-                                            src={post.author.avatarUrl}
-                                            alt={post.author.displayName}
-                                            className="w-10 h-10 rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-full bg-tertiary/50 flex items-center justify-center text-text/60 text-sm font-medium">
-                                            {post.author.displayName
-                                                .charAt(0)
-                                                .toUpperCase()}
-                                        </div>
-                                    )}
+                                    <UserAvatar
+                                        src={post.author.avatarUrl}
+                                        alt={post.author.displayName}
+                                        size={40}
+                                    />
                                 </div>
 
                                 {/* Post Info */}

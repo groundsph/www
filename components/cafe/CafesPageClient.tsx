@@ -370,6 +370,7 @@ export default function CafesPageClient() {
     })
 
     // Virtualizer setup for cafe list
+    // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual returns functions that cannot be memoized
     const virtualizer = useVirtualizer({
         count: filteredCafes.length + (hasMore ? 1 : 0), // +1 for loading sentinel
         getScrollElement: () => parentRef.current,

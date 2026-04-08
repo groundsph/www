@@ -1,6 +1,7 @@
 "use client"
 
-import { X, CheckCircle, Loader2, User, Calendar } from "lucide-react"
+import { X, CheckCircle, Loader2, Calendar } from "lucide-react"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 
 interface PendingBlogPost {
     id: string
@@ -107,18 +108,11 @@ export default function PostPreviewModal({
 
                     {/* Author Info */}
                     <div className="flex items-center gap-3 mb-6 p-3 bg-tertiary/10 rounded-xl">
-                        {post.author.avatarUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element -- External avatar URL */
-                            <img
-                                src={post.author.avatarUrl}
-                                alt={post.author.displayName}
-                                className="w-10 h-10 rounded-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full bg-tertiary/50 flex items-center justify-center text-text/60">
-                                <User className="w-5 h-5" />
-                            </div>
-                        )}
+                        <UserAvatar
+                            src={post.author.avatarUrl}
+                            alt={post.author.displayName}
+                            size={40}
+                        />
                         <div className="flex-1">
                             <p className="font-medium text-text">
                                 {post.author.displayName}
