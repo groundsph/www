@@ -108,6 +108,7 @@ export const quickActions: SearchResult[] = [
 export const quickActionHelp: QuickAction[] = [
   { prefix: '>', description: 'Quick actions', example: '>submit, >map' },
   { prefix: '@', description: 'Search users', example: '@username' },
+  { prefix: '#', description: 'Search menu items', example: '#spanish latte' },
   { prefix: '?', description: 'Ask Grounds AI', example: '?best cafes in cebu' },
 ]
 
@@ -135,5 +136,13 @@ export const emptyStateSuggestions: SearchResult[] = [
     subtitle: 'Add your favorite spot',
     href: '/submit',
     priority: 90
+  },
+  {
+    id: 'suggest-menu-search',
+    type: 'action',
+    title: 'Search menu: #spanish latte',
+    subtitle: 'Find specific menu items across cafes',
+    href: '#',
+    priority: 85
   },
 ]

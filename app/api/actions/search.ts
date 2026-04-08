@@ -231,6 +231,16 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     return results.filter(r => r.type === 'user')
   }
 
+  if (trimmedQuery.startsWith('#')) {
+    const menuQuery = trimmedQuery.slice(1).trim()
+    if (menuQuery.length >= 2) {
+      const menuResults = await searchMenuItems(menuQuery)
+      // Return only menu items, increased limit
+      return menuResults.map(r => ({ ...r, priority: 1 }))
+    }
+    return []
+  }
+
   const [dynamicResults, blogResults, crawlResults, collectionResults, eventResults, menuItemResults] = await Promise.all([
     searchCafesAndUsers(trimmedQuery),
     searchBlogs(trimmedQuery),
