@@ -114,6 +114,8 @@ export default function CafesPageClient() {
     const [showRestoreNotice, setShowRestoreNotice] = useState(false)
     const [isRestoring, setIsRestoring] = useState(false)
     const restoreNoticeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const fetchVersionRef = useRef(0)
+    const abortControllerRef = useRef<AbortController | null>(null)
 
     const dismissRestoreNotice = useCallback(() => {
         if (restoreNoticeTimeoutRef.current) {
@@ -319,7 +321,14 @@ export default function CafesPageClient() {
     // Skip if restoration is in progress to avoid race conditions
     useEffect(() => {
         if (isRestoring) return
-        
+
+        // Cancel any in-flight load-more requests
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort()
+        }
+        fetchVersionRef.current += 1
+        const version = fetchVersionRef.current
+
         startTransition(async () => {
             setCurrentPage(1)
             setHasMore(true)
@@ -331,10 +340,12 @@ export default function CafesPageClient() {
 
             try {
                 const fetchedCafes = await getAllCafes(1, PAGE_SIZE, getFilterParams())
+                if (version !== fetchVersionRef.current) return // Stale fetch, discard
                 setCafes(fetchedCafes)
                 setLoading(false)
                 setHasMore(fetchedCafes.length === PAGE_SIZE)
             } catch (error) {
+                if (version !== fetchVersionRef.current) return
                 console.error("Failed to fetch cafes:", error)
                 setLoading(false)
             }
@@ -404,16 +415,23 @@ export default function CafesPageClient() {
             setCurrentPage(nextPage)
             setIsLoadingMore(true)
 
+            const version = fetchVersionRef.current
+
             getAllCafes(nextPage, PAGE_SIZE, getFilterParams())
                 .then((fetchedCafes) => {
+                    if (version !== fetchVersionRef.current) return // Stale fetch
                     setCafes((prev) => [...prev, ...fetchedCafes])
                     setHasMore(fetchedCafes.length === PAGE_SIZE)
                 })
                 .catch((error) => {
+                    if (version !== fetchVersionRef.current) return
                     console.error("Failed to fetch more cafes:", error)
+                    setHasMore(false) // Stop trying on error
                 })
                 .finally(() => {
-                    setIsLoadingMore(false)
+                    if (version === fetchVersionRef.current) {
+                        setIsLoadingMore(false)
+                    }
                 })
         }
     }, [lastItem, lastItem?.index, filteredCafes.length, hasMore, isLoadingMore, currentPage, getFilterParams, trigger])
