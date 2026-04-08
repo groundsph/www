@@ -8,7 +8,8 @@ import MarkdownRender from "@/components/ui/MarkdownRender"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Calendar, Clock, ArrowLeft, Eye, Coffee, User } from "lucide-react"
+import { Calendar, Clock, ArrowLeft, Eye, Coffee } from "lucide-react"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import ShareButton from "@/components/blog/ShareButton"
 import ReportButton from "@/components/blog/ReportButton"
 import { getCafesByIds, getCafesBySlugs } from "@/app/api/actions/cafe"
@@ -173,19 +174,11 @@ export default async function BlogPostPage({
                                     href={`/profile/${post.author.username}`}
                                     className='flex items-center gap-3 hover:opacity-80 transition-opacity'
                                 >
-                                    {post.author.avatar_url ? (
-                                        <Image
-                                            src={post.author.avatar_url}
-                                            alt={post.author.display_name}
-                                            width={44}
-                                            height={44}
-                                            className='rounded-full object-cover'
-                                        />
-                                    ) : (
-                                        <div className='w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center'>
-                                            <User className='w-5 h-5 text-primary' />
-                                        </div>
-                                    )}
+                                    <UserAvatar
+                                        src={post.author.avatar_url}
+                                        alt={post.author.display_name}
+                                        size={44}
+                                    />
                                     <div>
                                         <p className='font-medium text-text'>
                                             {post.author.display_name}

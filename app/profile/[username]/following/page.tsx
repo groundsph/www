@@ -5,8 +5,8 @@ import {
     isFollowing as checkIsFollowing,
 } from "@/app/api/actions/social"
 import Link from "next/link"
-import Image from "next/image"
 import { ArrowLeft, User } from "lucide-react"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { notFound } from "next/navigation"
 import FollowButton from "@/components/social/FollowButton"
 import { getCurrentUser } from "@/lib/auth"
@@ -82,21 +82,11 @@ export default async function FollowingPage({
                             className='flex items-center gap-3 p-3 bg-text/5 border border-text/10 rounded-xl hover:bg-text/[0.07] transition-colors'
                         >
                             <Link href={`/profile/${user.username}`}>
-                                {user.avatarUrl ? (
-                                    <Image
-                                        src={user.avatarUrl}
-                                        alt={user.displayName}
-                                        width={48}
-                                        height={48}
-                                        className='w-12 h-12 rounded-full object-cover'
-                                    />
-                                ) : (
-                                    <div className='w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center'>
-                                        <span className='text-primary font-bold text-lg'>
-                                            {user.displayName.charAt(0)}
-                                        </span>
-                                    </div>
-                                )}
+                                <UserAvatar
+                                    src={user.avatarUrl}
+                                    alt={user.displayName}
+                                    size={48}
+                                />
                             </Link>
                             <div className='flex-1 min-w-0'>
                                 <Link

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import Image from "next/image"
 import { useNotification } from "@/components/layout/NotificationProvider"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import {
     getProfilesForAdmin,
     deleteUserAsAdmin,
@@ -288,26 +288,12 @@ export default function UsersManagePage() {
                                     >
                                         <td className='px-4 py-3'>
                                             <div className='flex items-center gap-3'>
-                                                <div className='relative w-10 h-10 rounded-full overflow-hidden bg-tertiary/30 shrink-0'>
-                                                    {profile.avatarUrl ? (
-                                                        <Image
-                                                            src={
-                                                                profile.avatarUrl
-                                                            }
-                                                            alt={
-                                                                profile.displayName
-                                                            }
-                                                            fill
-                                                            className='object-cover'
-                                                        />
-                                                    ) : (
-                                                        <div className='w-full h-full flex items-center justify-center text-text opacity-30 text-lg font-semibold'>
-                                                            {profile.displayName
-                                                                ?.charAt(0)
-                                                                .toUpperCase() ||
-                                                                "?"}
-                                                        </div>
-                                                    )}
+                                                <div className='relative w-10 h-10 rounded-full overflow-hidden shrink-0'>
+                                                    <UserAvatar
+                                                        src={profile.avatarUrl}
+                                                        alt={profile.displayName}
+                                                        size={40}
+                                                    />
                                                 </div>
                                                 <span className='font-medium truncate max-w-[150px]'>
                                                     {profile.displayName}

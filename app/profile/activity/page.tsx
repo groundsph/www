@@ -3,6 +3,7 @@ import { getFollowedUsersCheckIns } from "@/app/api/actions/social"
 import Link from "next/link"
 import Image from "next/image"
 import { Coffee, ArrowLeft, Users, MapPin, Clock } from "lucide-react"
+import { UserAvatar } from "@/components/ui/UserAvatar"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { formatDistanceToNow } from "date-fns"
 
@@ -60,21 +61,11 @@ export default async function ActivityPage() {
                             {/* User info */}
                             <div className='flex items-start gap-3 mb-3'>
                                 <Link href={`/profile/${checkIn.username}`}>
-                                    {checkIn.avatarUrl ? (
-                                        <Image
-                                            src={checkIn.avatarUrl}
-                                            alt={checkIn.displayName}
-                                            width={44}
-                                            height={44}
-                                            className='w-11 h-11 rounded-full object-cover'
-                                        />
-                                    ) : (
-                                        <div className='w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center'>
-                                            <span className='text-primary font-bold text-lg'>
-                                                {checkIn.displayName.charAt(0)}
-                                            </span>
-                                        </div>
-                                    )}
+                                    <UserAvatar
+                                        src={checkIn.avatarUrl}
+                                        alt={checkIn.displayName}
+                                        size={44}
+                                    />
                                 </Link>
                                 <div className='flex-1 min-w-0'>
                                     <div className='flex items-center gap-2 flex-wrap'>
@@ -149,25 +140,12 @@ export default async function ActivityPage() {
                                                     href={`/profile/${companion.username}`}
                                                     className='flex items-center gap-1 px-2 py-0.5 bg-text/5 rounded-full hover:bg-text/10 transition-colors'
                                                 >
-                                                    {companion.avatarUrl ? (
-                                                        <Image
-                                                            src={
-                                                                companion.avatarUrl
-                                                            }
-                                                            alt={
-                                                                companion.displayName
-                                                            }
-                                                            width={18}
-                                                            height={18}
-                                                            className='w-4.5 h-4.5 rounded-full object-cover'
-                                                        />
-                                                    ) : (
-                                                        <div className='w-4.5 h-4.5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary'>
-                                                            {companion.displayName.charAt(
-                                                                0
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    <UserAvatar
+                                                        src={companion.avatarUrl}
+                                                        alt={companion.displayName}
+                                                        size={18}
+                                                        className="shrink-0"
+                                                    />
                                                     <span className='text-xs font-medium'>
                                                         {companion.displayName}
                                                     </span>
