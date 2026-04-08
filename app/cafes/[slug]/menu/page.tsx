@@ -81,9 +81,27 @@ export default async function MenuPage({ params }: MenuPageProps) {
         notFound()
     }
 
-    // Fetch menu items
+    // Fetch menu items with all metadata fields
     const menuItems = await db
-        .select()
+        .select({
+            id: cafeMenuItems.id,
+            name: cafeMenuItems.name,
+            description: cafeMenuItems.description,
+            price: cafeMenuItems.price,
+            category: cafeMenuItems.category,
+            imageUrl: cafeMenuItems.imageUrl,
+            isAvailable: cafeMenuItems.isAvailable,
+            isSignature: cafeMenuItems.isSignature,
+            isFood: cafeMenuItems.isFood,
+            isHot: cafeMenuItems.isHot,
+            isCold: cafeMenuItems.isCold,
+            calories: cafeMenuItems.calories,
+            isVegan: cafeMenuItems.isVegan,
+            isVegetarian: cafeMenuItems.isVegetarian,
+            sizeOptions: cafeMenuItems.sizeOptions,
+            communitySubmitted: cafeMenuItems.communitySubmitted,
+            sortOrder: cafeMenuItems.sortOrder,
+        })
         .from(cafeMenuItems)
         .where(
             and(
@@ -127,6 +145,14 @@ export default async function MenuPage({ params }: MenuPageProps) {
                             imageUrl: item.imageUrl,
                             isSignature: item.isSignature,
                             isAvailable: item.isAvailable,
+                            isFood: item.isFood,
+                            isHot: item.isHot,
+                            isCold: item.isCold,
+                            calories: item.calories,
+                            isVegan: item.isVegan,
+                            isVegetarian: item.isVegetarian,
+                            sizeOptions: item.sizeOptions,
+                            communitySubmitted: item.communitySubmitted,
                         }))}
                         categories={categories}
                     />
