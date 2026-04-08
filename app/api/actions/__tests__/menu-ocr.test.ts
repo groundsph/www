@@ -252,7 +252,7 @@ describe("deduplicateMenuItems", () => {
         expect(result.map(i => i.name)).not.toContain("Espresso")
     })
 
-    it("preserves all properties of non-duplicate items", async () => {
+    it("preserves all properties of non-duplicate items including new fields", async () => {
         const newItems: OcrMenuItem[] = [
             { 
                 name: "Signature Latte", 
@@ -260,6 +260,9 @@ describe("deduplicateMenuItems", () => {
                 price: 180, 
                 description: "Our special latte",
                 is_hot: true,
+                is_vegan: true,
+                is_vegetarian: true,
+                calories: 250,
             },
         ]
         const existingItems: Array<{ name: string; category: string; price: number }> = []
@@ -272,5 +275,8 @@ describe("deduplicateMenuItems", () => {
         expect(result[0].price).toBe(180)
         expect(result[0].description).toBe("Our special latte")
         expect(result[0].is_hot).toBe(true)
+        expect(result[0].is_vegan).toBe(true)
+        expect(result[0].is_vegetarian).toBe(true)
+        expect(result[0].calories).toBe(250)
     })
 })

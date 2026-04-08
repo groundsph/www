@@ -65,4 +65,68 @@ Let me know if you need anything else!
         expect(items[0].name).toBe("Latte")
         expect(items[1].name).toBe("Sandwich")
     })
+
+    it("parses items with is_vegan, is_vegetarian, and calories fields", () => {
+        const raw = JSON.stringify([
+            {
+                name: "Veggie Wrap",
+                category: "Food",
+                price: 180,
+                description: "Fresh vegetable wrap",
+                is_food: true,
+                is_hot: false,
+                is_cold: true,
+                is_vegan: true,
+                is_vegetarian: true,
+                calories: 350,
+            },
+        ])
+        const items = parseOcrMenuItems(raw)
+        expect(items).toHaveLength(1)
+        expect(items[0].name).toBe("Veggie Wrap")
+        expect(items[0].is_vegan).toBe(true)
+        expect(items[0].is_vegetarian).toBe(true)
+        expect(items[0].calories).toBe(350)
+    })
+
+    it("handles missing optional fields gracefully", () => {
+        const raw = JSON.stringify([
+            {
+                name: "Black Coffee",
+                category: "Coffee",
+                price: 120,
+            },
+        ])
+        const items = parseOcrMenuItems(raw)
+        expect(items).toHaveLength(1)
+        expect(items[0].is_vegan).toBeUndefined()
+        expect(items[0].calories).toBeUndefined()
+    })
+
+    it("parses calories as string and converts to number", () => {
+        const raw = JSON.stringify([
+            {
+                name: "Latte",
+                category: "Coffee",
+                price: 150,
+                calories: "200",
+            },
+        ])
+        const items = parseOcrMenuItems(raw)
+        expect(items).toHaveLength(1)
+        expect(items[0].calories).toBe(200)
+    })
+
+    it("rejects negative calories", () => {
+        const raw = JSON.stringify([
+            {
+                name: "Bad Item",
+                category: "Other",
+                price: 100,
+                calories: -50,
+            },
+        ])
+        const items = parseOcrMenuItems(raw)
+        expect(items).toHaveLength(0)
+    })
 })
