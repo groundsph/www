@@ -447,6 +447,28 @@ export default function CafesPageClient() {
         }
     }, [lastItem, lastItem?.index, filteredCafes.length, hasMore, isLoadingMore, loadMore])
 
+    // Auto-load more when the list is short and more data is available
+    // This ensures infinite scroll works when filtering reduces visible items
+    // and the sentinel isn't visible in the viewport
+    useEffect(() => {
+        if (
+            !loading &&
+            !isLoadingMore &&
+            hasMore &&
+            filteredCafes.length > 0 &&
+            filteredCafes.length <= PAGE_SIZE
+        ) {
+            const scrollEl = parentRef.current
+            if (scrollEl) {
+                const scrollHeight = scrollEl.scrollHeight
+                const clientHeight = scrollEl.clientHeight
+                if (scrollHeight <= clientHeight * 1.5) {
+                    loadMore()
+                }
+            }
+        }
+    }, [filteredCafes.length, hasMore, isLoadingMore, loading, loadMore])
+
     const toggleFilter = (key: keyof typeof filters) => {
         trigger("selection")
         if (key === "near_me") {
@@ -710,10 +732,10 @@ export default function CafesPageClient() {
                                     <div className='flex flex-row gap-2'>
                                         {[
                                             { value: "", label: "All" },
-                                            { value: "budget", label: "Budget" },
-                                            { value: "mid", label: "Mid" },
-                                            { value: "premium", label: "Premium" },
-                                            { value: "luxury", label: "Luxury" },
+                                            { value: "budget", label: "₱ Budget" },
+                                            { value: "mid", label: "₱₱ Mid" },
+                                            { value: "premium", label: "₱₱₱ Premium" },
+                                            { value: "luxury", label: "₱₱₱₱ Luxury" },
                                         ].map(({ value, label }) => (
                                             <button
                                                 key={value}
