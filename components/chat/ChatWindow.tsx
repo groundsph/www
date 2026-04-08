@@ -557,6 +557,9 @@ export default function ChatWindow({
                                     </motion.button>
                                 ))}
                             </div>
+                            <div className="text-xs text-text/40 text-center mt-2">
+                                AI responses may not always be accurate. Menu data is community-contributed.
+                            </div>
                         </motion.div>
                     )}
                     {messages.map((message, index) => (
@@ -645,6 +648,15 @@ export default function ChatWindow({
                 onSubmit={handleSubmit}
                 className='p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-primary/10 bg-background/80 backdrop-blur-sm'
             >
+                {messages.length === 0 && (
+                    <p className="text-[10px] text-text/50 text-center px-4 pb-2">
+                        Conversations are stored to improve our AI. By chatting, you agree to our{" "}
+                        <a href="/legal/privacy" target="_blank" className="underline hover:text-text/80">
+                            Privacy Policy
+                        </a>
+                        .
+                    </p>
+                )}
                 <div className='relative flex gap-2'>
                     <div className='flex-1 relative'>
                         <input
