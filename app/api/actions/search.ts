@@ -207,7 +207,7 @@ async function searchMenuItems(query: string): Promise<SearchResult[]> {
     type: "menu-item" as const,
     title: item.name,
     subtitle: `${item.cafeName} · ${item.category} · ₱${item.price.toFixed(2)}`,
-    href: `/cafes/${item.cafeSlug}/menu`,
+    href: `/cafes/${item.cafeSlug}`,
     priority: 60,
     keywords: [item.name, item.category, item.cafeName],
   }))
