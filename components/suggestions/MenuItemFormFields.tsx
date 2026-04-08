@@ -33,6 +33,10 @@ export interface MenuItemFormFieldsProps {
     error?: string | null
     /** Whether to show the image upload section */
     showImageUpload?: boolean
+    /** Image preview URL (when showImageUpload is true) */
+    imagePreview?: string | null
+    /** Callback when image changes (when showImageUpload is true) */
+    onImageChange?: (file: File | null) => void
     /** Custom className for the container */
     className?: string
 }
@@ -109,6 +113,8 @@ export default function MenuItemFormFields({
     onChange,
     error,
     showImageUpload = false,
+    imagePreview,
+    onImageChange,
     className,
 }: MenuItemFormFieldsProps) {
     const handleAddSizeOption = () => {
@@ -160,15 +166,43 @@ export default function MenuItemFormFields({
                         Item Photo{" "}
                         <span className="text-text/50">(optional)</span>
                     </label>
-                    <div className="border-2 border-dashed border-text/20 rounded-lg p-6 text-center hover:border-primary/30 transition-colors cursor-pointer bg-text/5">
-                        <div className="text-text/40 text-sm">
-                            <span className="text-primary">Click to upload</span> or
-                            drag and drop
+                    {imagePreview ? (
+                        <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-text/20">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={imagePreview}
+                                alt="Menu item preview"
+                                className="w-full h-full object-cover"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => onImageChange?.(null)}
+                                className="absolute top-1 right-1 p-1 bg-black/60 hover:bg-black/80 text-white rounded transition-colors"
+                            >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
-                        <p className="text-text/30 text-xs mt-1">
-                            PNG, JPG up to 5MB
-                        </p>
-                    </div>
+                    ) : (
+                        <label className="flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed border-text/20 bg-text/5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+                            <svg className="w-6 h-6 text-text/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-xs text-text/50 mt-1">Add photo</span>
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0]
+                                    if (file) {
+                                        onImageChange?.(file)
+                                    }
+                                }}
+                            />
+                        </label>
+                    )}
                 </div>
             )}
 

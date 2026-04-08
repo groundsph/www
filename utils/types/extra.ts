@@ -11,6 +11,16 @@ export interface MenuItemSubmission {
     description: string;
     imageFile?: File | null;
     imagePreview?: string | null;
+    // Type toggles
+    isFood?: boolean;
+    isHot?: boolean;
+    isCold?: boolean;
+    isVegan?: boolean;
+    isVegetarian?: boolean;
+    // Calories
+    calories?: number;
+    // Size options
+    sizeOptions?: { label: string; price: number }[];
 }
 
 // 1. Extract database-generated types for convenience

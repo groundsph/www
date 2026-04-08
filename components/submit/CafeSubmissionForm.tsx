@@ -42,6 +42,8 @@ import {
 
 import { cn } from "@/utils/cn"
 import { CafeSubmission, DEFAULT_CAFE_SUBMISSION, MenuItemSubmission } from "@/utils/types/extra"
+import MenuItemFormFields from "@/components/suggestions/MenuItemFormFields"
+import type { SizeOption } from "@/components/suggestions/MenuItemFormFields"
 import { OperatingHour } from "@/utils/types/cafe"
 
 import {
@@ -181,6 +183,13 @@ export default function CafeSubmissionForm({
         description: string
         imageFile: File | null
         imagePreview: string | null
+        isFood: boolean
+        isHot: boolean
+        isCold: boolean
+        isVegan: boolean
+        isVegetarian: boolean
+        calories: string
+        sizeOptions: SizeOption[]
     }>({
         name: "",
         category: "",
@@ -188,6 +197,13 @@ export default function CafeSubmissionForm({
         description: "",
         imageFile: null,
         imagePreview: null,
+        isFood: false,
+        isHot: false,
+        isCold: false,
+        isVegan: false,
+        isVegetarian: false,
+        calories: "",
+        sizeOptions: [],
     })
 
 
@@ -2357,148 +2373,43 @@ export default function CafeSubmissionForm({
                                     <h4 className='font-medium text-sm text-text/70'>
                                         Add a Menu Item
                                     </h4>
-
-                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                        <div>
-                                            <label className='block text-sm font-medium mb-2'>
-                                                Item Name <span className='text-red-500'>*</span>
-                                            </label>
-                                            <input
-                                                type='text'
-                                                value={menuItemForm.name}
-                                                onChange={(e) =>
-                                                    setMenuItemForm((prev) => ({
-                                                        ...prev,
-                                                        name: e.target.value,
-                                                    }))
-                                                }
-                                                placeholder='e.g. Cappuccino'
-                                                className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className='block text-sm font-medium mb-2'>
-                                                Category <span className='text-red-500'>*</span>
-                                            </label>
-                                            <select
-                                                value={menuItemForm.category}
-                                                onChange={(e) =>
-                                                    setMenuItemForm((prev) => ({
-                                                        ...prev,
-                                                        category: e.target.value,
-                                                    }))
-                                                }
-                                                className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
-                                            >
-                                                <option value=''>Select category</option>
-                                                <option value='Coffee'>Coffee</option>
-                                                <option value='Tea'>Tea</option>
-                                                <option value='Non-Coffee'>Non-Coffee</option>
-                                                <option value='Pastry'>Pastry</option>
-                                                <option value='Food'>Food</option>
-                                                <option value='Dessert'>Dessert</option>
-                                                <option value='Other'>Other</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                        <div>
-                                            <label className='block text-sm font-medium mb-2'>
-                                                Price (₱) <span className='text-red-500'>*</span>
-                                            </label>
-                                            <input
-                                                type='number'
-                                                min='0'
-                                                step='0.01'
-                                                value={menuItemForm.price}
-                                                onChange={(e) =>
-                                                    setMenuItemForm((prev) => ({
-                                                        ...prev,
-                                                        price: e.target.value,
-                                                    }))
-                                                }
-                                                placeholder='0.00'
-                                                className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className='block text-sm font-medium mb-2'>
-                                                Photo <span className='text-text/40 font-normal'>(optional)</span>
-                                            </label>
-                                            {menuItemForm.imagePreview ? (
-                                                <div className='relative w-24 h-24 rounded-lg overflow-hidden border border-text/20'>
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img
-                                                        src={menuItemForm.imagePreview}
-                                                        alt='Menu item preview'
-                                                        className='w-full h-full object-cover'
-                                                    />
-                                                    <button
-                                                        type='button'
-                                                        onClick={() =>
-                                                            setMenuItemForm((prev) => ({
-                                                                ...prev,
-                                                                imageFile: null,
-                                                                imagePreview: null,
-                                                            }))
-                                                        }
-                                                        className='absolute top-1 right-1 p-1 bg-black/60 hover:bg-black/80 text-white rounded transition-colors'
-                                                    >
-                                                        <X className='w-3 h-3' />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <label className='flex flex-col items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed border-text/20 bg-text/5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer'>
-                                                    <ImageIcon className='w-6 h-6 text-text/40' />
-                                                    <span className='text-xs text-text/50 mt-1'>Add photo</span>
-                                                    <input
-                                                        type='file'
-                                                        accept='image/jpeg,image/png,image/webp'
-                                                        className='hidden'
-                                                        onChange={(e) => {
-                                                            const file = e.target.files?.[0]
-                                                            if (file) {
-                                                                setMenuItemForm((prev) => ({
-                                                                    ...prev,
-                                                                    imageFile: file,
-                                                                    imagePreview: URL.createObjectURL(file),
-                                                                }))
-                                                            }
-                                                        }}
-                                                    />
-                                                </label>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className='block text-sm font-medium mb-2'>
-                                            Description <span className='text-text/40 font-normal'>(optional)</span>
-                                        </label>
-                                        <textarea
-                                            value={menuItemForm.description}
-                                            onChange={(e) =>
+                                    <MenuItemFormFields
+                                        data={{
+                                            name: menuItemForm.name,
+                                            category: menuItemForm.category,
+                                            price: menuItemForm.price,
+                                            description: menuItemForm.description,
+                                            isFood: menuItemForm.isFood,
+                                            isHot: menuItemForm.isHot,
+                                            isCold: menuItemForm.isCold,
+                                            isVegan: menuItemForm.isVegan,
+                                            isVegetarian: menuItemForm.isVegetarian,
+                                            calories: menuItemForm.calories,
+                                            sizeOptions: menuItemForm.sizeOptions,
+                                        }}
+                                        onChange={(updates) => {
+                                            setMenuItemForm((prev) => ({ ...prev, ...updates }))
+                                        }}
+                                        showImageUpload={true}
+                                        imagePreview={menuItemForm.imagePreview}
+                                        onImageChange={(file) => {
+                                            if (file) {
                                                 setMenuItemForm((prev) => ({
                                                     ...prev,
-                                                    description: e.target.value,
+                                                    imageFile: file,
+                                                    imagePreview: URL.createObjectURL(file),
                                                 }))
+                                            } else {
+                                                setMenuItemForm((prev) => ({ ...prev, imageFile: null, imagePreview: null }))
                                             }
-                                            placeholder='Brief description of the item...'
-                                            rows={2}
-                                            maxLength={200}
-                                            className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none'
-                                        />
-                                        <p className='text-xs text-text/40 mt-1'>
-                                            {200 - menuItemForm.description.length} characters remaining
-                                        </p>
-                                    </div>
+                                        }}
+                                    />
 
+                                    {/* Add Item button */}
                                     <button
                                         type='button'
                                         onClick={() => {
+                                            // Validation logic stays the same
                                             if (!menuItemForm.name.trim() || !menuItemForm.category || menuItemForm.price === '') {
                                                 setError('Please fill in all required fields (Name, Category, Price)')
                                                 return
@@ -2508,6 +2419,7 @@ export default function CafeSubmissionForm({
                                                 setError('Please enter a valid price')
                                                 return
                                             }
+
                                             const newItem: MenuItemSubmission = {
                                                 id: crypto.randomUUID(),
                                                 name: menuItemForm.name.trim(),
@@ -2516,8 +2428,19 @@ export default function CafeSubmissionForm({
                                                 description: menuItemForm.description.trim(),
                                                 imageFile: menuItemForm.imageFile,
                                                 imagePreview: menuItemForm.imagePreview,
+                                                // Add new fields if MenuItemSubmission type supports them
+                                                ...(menuItemForm.isFood && { isFood: true }),
+                                                ...(menuItemForm.isHot && { isHot: true }),
+                                                ...(menuItemForm.isCold && { isCold: true }),
+                                                ...(menuItemForm.isVegan && { isVegan: true }),
+                                                ...(menuItemForm.isVegetarian && { isVegetarian: true }),
+                                                ...(menuItemForm.calories && { calories: parseInt(menuItemForm.calories, 10) }),
+                                                ...(menuItemForm.sizeOptions.length > 0 && { sizeOptions: menuItemForm.sizeOptions }),
                                             }
+
                                             updateFormData('menu_items', [...formData.menu_items, newItem])
+
+                                            // Reset form
                                             setMenuItemForm({
                                                 name: '',
                                                 category: '',
@@ -2525,6 +2448,13 @@ export default function CafeSubmissionForm({
                                                 description: '',
                                                 imageFile: null,
                                                 imagePreview: null,
+                                                isFood: false,
+                                                isHot: false,
+                                                isCold: false,
+                                                isVegan: false,
+                                                isVegetarian: false,
+                                                calories: '',
+                                                sizeOptions: [],
                                             })
                                             setError(null)
                                             trigger('medium')
