@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { getInitials, getAvatarColor } from "@/utils/avatar"
+import { getInitials, getAvatarColor, AVATAR_COLORS } from "@/utils/avatar"
 
 describe("getInitials", () => {
     it("returns first letter for single-word names", () => {
@@ -28,9 +28,9 @@ describe("getInitials", () => {
 })
 
 describe("getAvatarColor", () => {
-    it("returns a valid HSL string", () => {
+    it("returns a color from the AVATAR_COLORS palette", () => {
         const color = getAvatarColor("Adrian Bonpin")
-        expect(color).toMatch(/^hsl\(\d+,\s*\d+%,\s*\d+%\)$/)
+        expect(AVATAR_COLORS).toContain(color)
     })
 
     it("returns consistent color for same input", () => {
@@ -47,6 +47,6 @@ describe("getAvatarColor", () => {
 
     it("handles empty string", () => {
         const color = getAvatarColor("")
-        expect(color).toMatch(/^hsl\(\d+,\s*\d+%,\s*\d+%\)$/)
+        expect(AVATAR_COLORS).toContain(color)
     })
 })
