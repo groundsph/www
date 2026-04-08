@@ -132,20 +132,12 @@ function LandingFeedView({ groupedCheckIns, ref, isInView }: LandingFeedViewProp
                                         title={visitor.displayName}
                                         style={{ zIndex: 3 - i }}
                                     >
-                                        {visitor.avatarUrl ? (
-                                            <UserAvatar
-                                                src={visitor.avatarUrl}
-                                                alt={visitor.displayName}
-                                                size={28}
-                                                className='border-2 border-background'
-                                            />
-                                        ) : (
-                                            <div className='w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center border-2 border-background'>
-                                                <span className='text-primary font-bold text-sm'>
-                                                    {visitor.displayName.charAt(0)}
-                                                </span>
-                                            </div>
-                                        )}
+                                        <UserAvatar
+                                            src={visitor.avatarUrl}
+                                            alt={visitor.displayName}
+                                            size={28}
+                                            className='border-2 border-background'
+                                        />
                                     </Link>
                                 ))}
                                 {group.visitorCount > 3 && (
@@ -262,19 +254,11 @@ function FullFeedView({ checkIns, ref, isInView }: FullFeedViewProps) {
                                 onClick={(e) => e.stopPropagation()}
                                 title={checkIn.displayName}
                             >
-                                {checkIn.avatarUrl ? (
-                                    <UserAvatar
-                                        src={checkIn.avatarUrl}
-                                        alt={checkIn.displayName}
-                                        size={24}
-                                    />
-                                ) : (
-                                    <div className='w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center'>
-                                        <span className='text-primary font-bold'>
-                                            {checkIn.displayName.charAt(0)}
-                                        </span>
-                                    </div>
-                                )}
+                                <UserAvatar
+                                    src={checkIn.avatarUrl}
+                                    alt={checkIn.displayName}
+                                    size={24}
+                                />
                             </Link>
                             <Link
                                 href={`/profile/${checkIn.username}`}
@@ -340,17 +324,11 @@ function FullFeedView({ checkIns, ref, isInView }: FullFeedViewProps) {
                                     onClick={(e) => e.stopPropagation()}
                                     title={checkIn.companions[0].displayName}
                                 >
-                                    {checkIn.companions[0].avatarUrl ? (
-                                        <UserAvatar
-                                            src={checkIn.companions[0].avatarUrl}
-                                            alt={checkIn.companions[0].displayName}
-                                            size={24}
-                                        />
-                                    ) : (
-                                        <div className='w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary'>
-                                            {checkIn.companions[0].displayName.charAt(0)}
-                                        </div>
-                                    )}
+                                    <UserAvatar
+                                        src={checkIn.companions[0].avatarUrl}
+                                        alt={checkIn.companions[0].displayName}
+                                        size={24}
+                                    />
                                 </Link>
                                 {checkIn.companions.length > 1 && (
                                     <span className='text-sm text-text/60'>
