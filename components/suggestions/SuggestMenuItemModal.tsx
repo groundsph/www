@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { XIcon, Loader2, Plus, Trash2, Check } from "lucide-react"
+import { XIcon, Loader2, Check } from "lucide-react"
 import { submitMenuItemSuggestion } from "@/app/api/actions/menu-suggestions"
+import MenuItemFormFields from "./MenuItemFormFields"
+import type { SizeOption } from "./MenuItemFormFields"
 import { MENU_CATEGORIES } from "@/utils/types/owner"
-
-interface SizeOption {
-    label: string
-    price: number
-}
 
 interface SuggestMenuItemModalProps {
     isOpen: boolean
@@ -86,24 +83,6 @@ export default function SuggestMenuItemModal({
             return () => clearTimeout(timer)
         }
     }, [success, onClose])
-
-    const addSizeOption = () => {
-        setSizeOptions([...sizeOptions, { label: "", price: 0 }])
-    }
-
-    const removeSizeOption = (index: number) => {
-        setSizeOptions(sizeOptions.filter((_, i) => i !== index))
-    }
-
-    const updateSizeOption = (
-        index: number,
-        field: keyof SizeOption,
-        value: string | number,
-    ) => {
-        const updated = [...sizeOptions]
-        updated[index] = { ...updated[index], [field]: value }
-        setSizeOptions(updated)
-    }
 
     const validateForm = (): boolean => {
         if (!name.trim()) {
@@ -214,8 +193,8 @@ export default function SuggestMenuItemModal({
                                     animate={{ opacity: 1, scale: 1 }}
                                     className='flex flex-col items-center justify-center py-12 gap-4'
                                 >
-                                    <div className='w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center'>
-                                        <Check className='w-8 h-8 text-green-500' />
+                                    <div className='w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center'>
+                                        <Check className='w-8 h-8 text-primary' />
                                     </div>
                                     <div className='text-center'>
                                         <h3 className='text-lg font-semibold'>
@@ -228,298 +207,35 @@ export default function SuggestMenuItemModal({
                                     </div>
                                 </motion.div>
                             ) : (
-                                <>
-                                    {/* Photo Upload Notice */}
-                                    <div className='bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800'>
-                                        <p className='flex items-center gap-2'>
-                                            <span className='font-medium'>
-                                                Note:
-                                            </span>
-                                            Photo uploads are not available for
-                                            community suggestions.
-                                        </p>
-                                    </div>
-
-                                    {/* Error Message */}
-                                    {error && (
-                                        <div className='bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700'>
-                                            {error}
-                                        </div>
-                                    )}
-
-                                    {/* Name */}
-                                    <div className='space-y-2'>
-                                        <label className='text-sm font-medium text-text/80'>
-                                            Name{" "}
-                                            <span className='text-red-500'>
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type='text'
-                                            value={name}
-                                            onChange={(e) =>
-                                                setName(e.target.value)
-                                            }
-                                            placeholder='e.g., Iced Caramel Latte'
-                                            className='w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                        />
-                                    </div>
-
-                                    {/* Category */}
-                                    <div className='space-y-2'>
-                                        <label className='text-sm font-medium text-text/80'>
-                                            Category{" "}
-                                            <span className='text-red-500'>
-                                                *
-                                            </span>
-                                        </label>
-                                        <select
-                                            value={category}
-                                            onChange={(e) =>
-                                                setCategory(e.target.value)
-                                            }
-                                            className='w-full bg-text/5 text-sm focus:outline-none p-3 rounded-lg border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                        >
-                                            {MENU_CATEGORIES.map((cat) => (
-                                                <option key={cat} value={cat}>
-                                                    {cat}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* Price */}
-                                    <div className='space-y-2'>
-                                        <label className='text-sm font-medium text-text/80'>
-                                            Price (₱){" "}
-                                            <span className='text-red-500'>
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type='number'
-                                            min='0'
-                                            step='0.01'
-                                            value={price}
-                                            onChange={(e) =>
-                                                setPrice(e.target.value)
-                                            }
-                                            placeholder='0.00'
-                                            className='w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                        />
-                                    </div>
-
-                                    {/* Description */}
-                                    <div className='space-y-2'>
-                                        <label className='text-sm font-medium text-text/80'>
-                                            Description{" "}
-                                            <span className='text-text/50'>
-                                                (optional)
-                                            </span>
-                                        </label>
-                                        <textarea
-                                            value={description}
-                                            onChange={(e) =>
-                                                setDescription(e.target.value)
-                                            }
-                                            placeholder='Brief description of the item...'
-                                            rows={3}
-                                            className='w-full bg-text/5 text-sm leading-relaxed placeholder:text-text/30 focus:outline-none p-3 resize-none rounded-lg border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                        />
-                                    </div>
-
-                                    {/* Type Toggles */}
-                                    <div className='space-y-3'>
-                                        <label className='text-sm font-medium text-text/80'>
-                                            Item Type
-                                        </label>
-                                        <div className='grid grid-cols-2 gap-3'>
-                                            <label className='flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-text/5 transition-colors'>
-                                                <input
-                                                    type='checkbox'
-                                                    checked={isFood}
-                                                    onChange={(e) =>
-                                                        setIsFood(
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                    className='rounded border-text/20 text-primary focus:ring-primary'
-                                                />
-                                                <span className='text-sm'>
-                                                    Food
-                                                </span>
-                                            </label>
-                                            <label className='flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-text/5 transition-colors'>
-                                                <input
-                                                    type='checkbox'
-                                                    checked={isHot}
-                                                    onChange={(e) =>
-                                                        setIsHot(
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                    className='rounded border-text/20 text-primary focus:ring-primary'
-                                                />
-                                                <span className='text-sm'>
-                                                    Hot
-                                                </span>
-                                            </label>
-                                            <label className='flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-text/5 transition-colors'>
-                                                <input
-                                                    type='checkbox'
-                                                    checked={isCold}
-                                                    onChange={(e) =>
-                                                        setIsCold(
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                    className='rounded border-text/20 text-primary focus:ring-primary'
-                                                />
-                                                <span className='text-sm'>
-                                                    Cold
-                                                </span>
-                                            </label>
-                                            <label className='flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-text/5 transition-colors'>
-                                                <input
-                                                    type='checkbox'
-                                                    checked={isVegan}
-                                                    onChange={(e) =>
-                                                        setIsVegan(
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                    className='rounded border-text/20 text-primary focus:ring-primary'
-                                                />
-                                                <span className='text-sm'>
-                                                    Vegan
-                                                </span>
-                                            </label>
-                                            <label className='flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-text/5 transition-colors col-span-2'>
-                                                <input
-                                                    type='checkbox'
-                                                    checked={isVegetarian}
-                                                    onChange={(e) =>
-                                                        setIsVegetarian(
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                    className='rounded border-text/20 text-primary focus:ring-primary'
-                                                />
-                                                <span className='text-sm'>
-                                                    Vegetarian
-                                                </span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Calories */}
-                                    <div className='space-y-2'>
-                                        <label className='text-sm font-medium text-text/80'>
-                                            Calories{" "}
-                                            <span className='text-text/50'>
-                                                (optional)
-                                            </span>
-                                        </label>
-                                        <input
-                                            type='number'
-                                            min='0'
-                                            value={calories}
-                                            onChange={(e) =>
-                                                setCalories(e.target.value)
-                                            }
-                                            placeholder='e.g., 250'
-                                            className='w-full bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-3 rounded-lg border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                        />
-                                    </div>
-
-                                    {/* Size Options */}
-                                    <div className='space-y-3'>
-                                        <div className='flex items-center justify-between'>
-                                            <label className='text-sm font-medium text-text/80'>
-                                                Size Options{" "}
-                                                <span className='text-text/50'>
-                                                    (optional)
-                                                </span>
-                                            </label>
-                                            <button
-                                                type='button'
-                                                onClick={addSizeOption}
-                                                className='text-xs flex items-center gap-1 text-primary hover:text-primary/80 transition-colors cursor-pointer'
-                                            >
-                                                <Plus className='w-3.5 h-3.5' />
-                                                Add size
-                                            </button>
-                                        </div>
-
-                                        {sizeOptions.map((option, index) => (
-                                            <motion.div
-                                                key={index}
-                                                initial={{
-                                                    opacity: 0,
-                                                    height: 0,
-                                                }}
-                                                animate={{
-                                                    opacity: 1,
-                                                    height: "auto",
-                                                }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                className='flex items-center gap-2'
-                                            >
-                                                <input
-                                                    type='text'
-                                                    value={option.label}
-                                                    onChange={(e) =>
-                                                        updateSizeOption(
-                                                            index,
-                                                            "label",
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder='Size (e.g., Large)'
-                                                    className='flex-1 bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-2.5 rounded-lg border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                                />
-                                                <input
-                                                    type='number'
-                                                    min='0'
-                                                    step='0.01'
-                                                    value={
-                                                        option.price || ""
-                                                    }
-                                                    onChange={(e) =>
-                                                        updateSizeOption(
-                                                            index,
-                                                            "price",
-                                                            parseFloat(
-                                                                e.target.value,
-                                                            ) || 0,
-                                                        )
-                                                    }
-                                                    placeholder='Price'
-                                                    className='w-28 bg-text/5 text-sm placeholder:text-text/30 focus:outline-none p-2.5 rounded-lg border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                                />
-                                                <button
-                                                    type='button'
-                                                    onClick={() =>
-                                                        removeSizeOption(index)
-                                                    }
-                                                    className='p-2.5 text-text/40 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer'
-                                                >
-                                                    <Trash2 className='w-4 h-4' />
-                                                </button>
-                                            </motion.div>
-                                        ))}
-
-                                        {sizeOptions.length === 0 && (
-                                            <p className='text-sm text-text/40 italic'>
-                                                No size options added. Click
-                                                &quot;Add size&quot; to add
-                                                options like Small, Medium,
-                                                Large.
-                                            </p>
-                                        )}
-                                    </div>
-                                </>
+                                <MenuItemFormFields
+                                    data={{
+                                        name,
+                                        category,
+                                        price,
+                                        description,
+                                        isFood,
+                                        isHot,
+                                        isCold,
+                                        isVegan,
+                                        isVegetarian,
+                                        calories,
+                                        sizeOptions,
+                                    }}
+                                    onChange={(updates) => {
+                                        if (updates.name !== undefined) setName(updates.name)
+                                        if (updates.category !== undefined) setCategory(updates.category)
+                                        if (updates.price !== undefined) setPrice(updates.price)
+                                        if (updates.description !== undefined) setDescription(updates.description)
+                                        if (updates.isFood !== undefined) setIsFood(updates.isFood)
+                                        if (updates.isHot !== undefined) setIsHot(updates.isHot)
+                                        if (updates.isCold !== undefined) setIsCold(updates.isCold)
+                                        if (updates.isVegan !== undefined) setIsVegan(updates.isVegan)
+                                        if (updates.isVegetarian !== undefined) setIsVegetarian(updates.isVegetarian)
+                                        if (updates.calories !== undefined) setCalories(updates.calories)
+                                        if (updates.sizeOptions !== undefined) setSizeOptions(updates.sizeOptions)
+                                    }}
+                                    error={error}
+                                />
                             )}
                         </div>
 
