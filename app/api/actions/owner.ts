@@ -32,6 +32,7 @@ import {
 import { CafeWithRatings } from "@/utils/types/extra"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
 import { revalidatePath } from "next/cache"
+import { recalculatePriceLevel } from "./price-level"
 
 // ============================================
 // Permission Checks
@@ -993,6 +994,9 @@ export async function addMenuItem(
             sortOrder,
         }).returning()
 
+        // Recalculate price level after adding menu item
+        await recalculatePriceLevel(cafeId)
+
         return {
             success: true,
             item: {
@@ -1072,6 +1076,9 @@ export async function updateMenuItem(
         await db.update(cafeMenuItems)
             .set(drizzleUpdates)
             .where(eq(cafeMenuItems.id, itemId))
+
+        // Recalculate price level after updating menu item
+        await recalculatePriceLevel(item.cafeId)
     } catch (error) {
         console.error('Error updating menu item:', error)
         return { success: false, error: 'Failed to update menu item' }
@@ -1121,6 +1128,9 @@ export async function deleteMenuItem(itemId: string): Promise<OwnerActionResult>
     try {
         await db.delete(cafeMenuItems)
             .where(eq(cafeMenuItems.id, itemId))
+
+        // Recalculate price level after deleting menu item
+        await recalculatePriceLevel(item.cafeId)
     } catch (error) {
         console.error('Error deleting menu item:', error)
         return { success: false, error: 'Failed to delete menu item' }
