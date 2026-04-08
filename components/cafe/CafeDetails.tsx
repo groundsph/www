@@ -41,6 +41,7 @@ import ContributionHistoryModal from "@/components/history/ContributionHistoryMo
 import AddToCollectionModal from "@/components/collections/AddToCollectionModal"
 import MilestoneCelebration from "@/components/ui/MilestoneCelebration"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
+import SuggestMenuItemButton from "@/components/suggestions/SuggestMenuItemButton"
 
 const ImageLightbox = dynamic(
     () => import("@/components/modal/ImageLightbox"),
@@ -427,10 +428,24 @@ export default function CafeDetails({
                                             items) →
                                         </Link>
                                     )}
+                                    <div className='pt-2 border-t border-text/10'>
+                                        <SuggestMenuItemButton
+                                            cafeId={cafe.id}
+                                            cafeName={cafe.name}
+                                        />
+                                    </div>
                                 </div>
                             ) : (
-                                <div className='text-center py-8 text-text/50'>
-                                    <p>No menu items available</p>
+                                <div className='space-y-4'>
+                                    <div className='text-center py-8 text-text/50 bg-tertiary/30 rounded-xl'>
+                                        <p>No menu items available</p>
+                                    </div>
+                                    <div className='flex justify-center'>
+                                        <SuggestMenuItemButton
+                                            cafeId={cafe.id}
+                                            cafeName={cafe.name}
+                                        />
+                                    </div>
                                 </div>
                             ),
                         reviews: <ReviewsSection />,
@@ -757,7 +772,7 @@ export default function CafeDetails({
                     )}
 
                     {/* Menu Section - Preview with specialties priority */}
-                    {menuItems.length > 0 && (
+                    {menuItems.length > 0 ? (
                         <section className='w-full'>
                             <div className='flex items-center justify-between mb-4'>
                                 <h2 className='text-xl font-semibold'>Menu</h2>
@@ -841,6 +856,29 @@ export default function CafeDetails({
                                         items) →
                                     </Link>
                                 )}
+                                <div className='pt-3 border-t border-text/10 flex justify-center'>
+                                    <SuggestMenuItemButton
+                                        cafeId={cafe.id}
+                                        cafeName={cafe.name}
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                    ) : (
+                        <section className='w-full'>
+                            <div className='flex items-center justify-between mb-4'>
+                                <h2 className='text-xl font-semibold'>Menu</h2>
+                            </div>
+                            <div className='bg-tertiary/30 p-8 rounded-xl text-center space-y-4'>
+                                <p className='text-text/50'>
+                                    No menu items available yet
+                                </p>
+                                <div className='flex justify-center'>
+                                    <SuggestMenuItemButton
+                                        cafeId={cafe.id}
+                                        cafeName={cafe.name}
+                                    />
+                                </div>
                             </div>
                         </section>
                     )}
