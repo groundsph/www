@@ -1013,6 +1013,9 @@ export async function addMenuItem(
         // Recalculate price level after adding menu item
         await recalculatePriceLevel(cafeId)
 
+        revalidatePath("/cafes/[slug]/menu", "page")
+        revalidatePath("/owner/cafes/[slug]/edit", "page")
+
         return {
             success: true,
             item: {
@@ -1111,6 +1114,9 @@ export async function updateMenuItem(
 
         // Recalculate price level after updating menu item
         await recalculatePriceLevel(item.cafeId)
+
+        revalidatePath("/cafes/[slug]/menu", "page")
+        revalidatePath("/owner/cafes/[slug]/edit", "page")
     } catch (error) {
         console.error('Error updating menu item:', error)
         return { success: false, error: 'Failed to update menu item' }
@@ -1163,6 +1169,9 @@ export async function deleteMenuItem(itemId: string): Promise<OwnerActionResult>
 
         // Recalculate price level after deleting menu item
         await recalculatePriceLevel(item.cafeId)
+
+        revalidatePath("/cafes/[slug]/menu", "page")
+        revalidatePath("/owner/cafes/[slug]/edit", "page")
     } catch (error) {
         console.error('Error deleting menu item:', error)
         return { success: false, error: 'Failed to delete menu item' }
