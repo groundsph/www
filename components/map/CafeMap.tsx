@@ -8,6 +8,7 @@ import {
     Marker,
     Popup,
     useMap,
+    useMapEvents,
 } from "react-leaflet"
 import { DivIcon, point } from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -99,6 +100,336 @@ function LocationMarker() {
             <Popup>You are here</Popup>
         </Marker>
     ) : null
+}
+
+function ViewportMarkers({
+    cafes,
+    regularIcon,
+    premiumIcon,
+}: {
+    cafes: CafeWithRatings[]
+    regularIcon: DivIcon
+    premiumIcon: DivIcon
+}) {
+    const map = useMap()
+    const [visibleCafes, setVisibleCafes] = useState<typeof cafes>([])
+
+    // Filter cafes based on viewport bounds with padding
+    const updateVisibleCafes = useCallback(() => {
+        const bounds = map.getBounds()
+        const padded = bounds.pad(0.5) // 50% padding around viewport
+        setVisibleCafes(
+            cafes.filter(
+                (cafe) =>
+                    cafe.lat != null &&
+                    cafe.lng != null &&
+                    padded.contains([cafe.lat, cafe.lng])
+            )
+        )
+    }, [cafes, map])
+
+    // Subscribe to map events for viewport changes
+    useMapEvents({
+        moveend: updateVisibleCafes,
+        zoomend: updateVisibleCafes,
+    })
+
+    // Initial render - use a ref to avoid synchronous setState in effect
+    const hasInitialized = useRef(false)
+    useEffect(() => {
+        if (!hasInitialized.current) {
+            hasInitialized.current = true
+            // Defer the update to avoid cascading renders
+            const timeoutId = setTimeout(updateVisibleCafes, 0)
+            return () => clearTimeout(timeoutId)
+        }
+    }, [updateVisibleCafes])
+
+    // Filter valid cafes for rendering
+    const validCafes = visibleCafes.filter(
+        (
+            c
+        ): c is typeof c & {
+            lat: number
+            lng: number
+            slug: string
+            name: string
+        } => c.lat != null && c.lng != null && c.slug != null && c.name != null
+    )
+
+    return (
+        <>
+            {validCafes.map((cafe) => (
+                <Marker
+                    key={cafe.id}
+                    position={[cafe.lat, cafe.lng]}
+                    icon={
+                        cafe.membership_tier === "premium"
+                            ? premiumIcon
+                            : regularIcon
+                    }
+                    eventHandlers={{
+                        click: () => {
+                            haptics?.trigger("light")
+                        },
+                    }}
+                >
+                    <Popup className="cafe-popup">
+                        <div className="w-72 max-w-[70svw] flex flex-col rounded-xl overflow-hidden shadow-lg border border-secondary/20 bg-background">
+                            {/* Image with gradient overlay */}
+                            <div className="relative w-full h-36 overflow-clip rounded-t-xl bg-linear-to-br from-secondary/30 to-secondary/10">
+                                {cafe.thumbnail && (
+                                    /* eslint-disable-next-line @next/next/no-img-element -- Leaflet popups don't support next/image */
+                                    <img
+                                        src={getCafeThumbnailUrl(
+                                            cafe.thumbnail
+                                        )}
+                                        alt={cafe.name}
+                                        className="object-cover w-full h-full"
+                                    />
+                                )}
+                                {/* Gradient overlay for text readability */}
+                                <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent" />
+
+                                {/* Rating pill */}
+                                <div className="absolute top-3 left-3 bg-primary px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+                                    <StarIcon className="w-3.5 h-3.5 fill-background text-background" />
+                                    <span className="text-xs font-bold text-background">
+                                        {cafe.average_rating?.toFixed(1) ||
+                                            "N/A"}
+                                    </span>
+                                </div>
+
+                                {/* Cafe name overlaid on image */}
+                                <div className="absolute bottom-0 left-0 right-0 p-3">
+                                    <h3 className="font-serif font-bold text-white text-lg leading-tight drop-shadow-lg">
+                                        {cafe.name}
+                                    </h3>
+                                </div>
+                            </div>
+
+                            {/* Content section */}
+                            <div className="p-4 flex flex-col gap-3 bg-linear-to-b from-background to-tertiary/50 rounded-b-xl">
+                                {/* Address with icon */}
+                                <div className="flex items-start gap-2">
+                                    <svg
+                                        className="w-4 h-4 text-secondary mt-0.5 shrink-0"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                        />
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                        />
+                                    </svg>
+                                    <p className="text-text/70 text-sm leading-snug line-clamp-2">
+                                        {cafe.address_display}
+                                    </p>
+                                </div>
+
+                                {/* Amenities icons */}
+                                {(cafe.has_wifi ||
+                                    cafe.has_smoking ||
+                                    cafe.has_sockets ||
+                                    cafe.has_parking ||
+                                    cafe.has_aircon ||
+                                    cafe.is_pet_friendly ||
+                                    cafe.has_outdoor_seating ||
+                                    cafe.has_indoor_seating ||
+                                    cafe.has_restroom ||
+                                    cafe.has_bidet ||
+                                    cafe.has_non_dairy ||
+                                    cafe.has_decaf ||
+                                    cafe.serves_food ||
+                                    cafe.is_work_friendly) && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {cafe.has_wifi && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="WiFi"
+                                            >
+                                                <Wifi className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_smoking && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Smoking Area"
+                                            >
+                                                <Cigarette className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_sockets && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Power Outlets"
+                                            >
+                                                <Plug className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_parking && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Parking"
+                                            >
+                                                <Car className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_aircon && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Air Conditioning"
+                                            >
+                                                <Snowflake className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.is_pet_friendly && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Pet Friendly"
+                                            >
+                                                <PawPrint className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_outdoor_seating && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Outdoor Seating"
+                                            >
+                                                <Sun className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_indoor_seating && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Indoor Seating"
+                                            >
+                                                <Armchair className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_restroom && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Restroom"
+                                            >
+                                                <Toilet className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_bidet && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Bidet"
+                                            >
+                                                <Droplet className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_non_dairy && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Non-Dairy Milk"
+                                            >
+                                                <MilkOff className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.has_decaf && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Decaf Options"
+                                            >
+                                                <Coffee className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.serves_food && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Serves Food"
+                                            >
+                                                <Utensils className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.is_work_friendly && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-primary/10 text-primary"
+                                                title="Work Friendly"
+                                            >
+                                                <Laptop className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
+                                        {cafe.is_halal_certified && (
+                                            <div
+                                                className="p-1.5 rounded-lg bg-green-500/10 text-green-600"
+                                                title="Halal Certified"
+                                            >
+                                                <span className="text-xs font-bold">
+                                                    H
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Divider */}
+                                <div className="w-full h-px bg-linear-to-r from-transparent via-secondary/30 to-transparent" />
+
+                                {/* Footer */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                        <svg
+                                            className="w-4 h-4 text-secondary"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                            />
+                                        </svg>
+                                        <span className="text-text/60 text-xs font-medium">
+                                            {cafe.total_reviews || 0} reviews
+                                        </span>
+                                    </div>
+                                    <Link
+                                        href={`/cafes/${cafe.slug}`}
+                                        onClick={() =>
+                                            haptics?.trigger("light")
+                                        }
+                                        className="group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-xs font-semibold rounded-full transition-all hover:gap-2 shadow-sm text-text!"
+                                    >
+                                        Explore
+                                        <svg
+                                            className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2.5}
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </Popup>
+                </Marker>
+            ))}
+        </>
+    )
 }
 
 export default function CafeMap({ cafes }: CafeMapProps) {
@@ -225,288 +556,11 @@ export default function CafeMap({ cafes }: CafeMapProps) {
                 maxClusterRadius={60}
                 iconCreateFunction={createClusterCustomIcon}
             >
-                {cafes
-                    .filter(
-                        (
-                            c
-                        ): c is CafeWithRatings & {
-                            lat: number
-                            lng: number
-                            slug: string
-                            name: string
-                        } =>
-                            c.lat != null &&
-                            c.lng != null &&
-                            c.slug != null &&
-                            c.name != null
-                    )
-                    .map((cafe) => (
-                        <Marker
-                            key={cafe.id}
-                            position={[cafe.lat, cafe.lng]}
-                            icon={
-                                cafe.membership_tier === "premium"
-                                    ? premiumIcon
-                                    : regularIcon
-                            }
-                            eventHandlers={{
-                                click: () => {
-                                    haptics?.trigger("light")
-                                },
-                            }}
-                        >
-                            <Popup className='cafe-popup'>
-                                <div className='w-72 max-w-[70svw] flex flex-col rounded-xl overflow-hidden shadow-lg border border-secondary/20 bg-background'>
-                                    {/* Image with gradient overlay */}
-                                    <div className='relative w-full h-36 overflow-clip rounded-t-xl bg-linear-to-br from-secondary/30 to-secondary/10'>
-                                        {cafe.thumbnail && (
-                                            /* eslint-disable-next-line @next/next/no-img-element -- Leaflet popups don't support next/image */
-                                            <img
-                                                src={getCafeThumbnailUrl(
-                                                    cafe.thumbnail
-                                                )}
-                                                alt={cafe.name}
-                                                className='object-cover w-full h-full'
-                                            />
-                                        )}
-                                        {/* Gradient overlay for text readability */}
-                                        <div className='absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent' />
-
-                                        {/* Rating pill */}
-                                        <div className='absolute top-3 left-3 bg-primary px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-lg'>
-                                            <StarIcon className='w-3.5 h-3.5 fill-background text-background' />
-                                            <span className='text-xs font-bold text-background'>
-                                                {cafe.average_rating?.toFixed(
-                                                    1
-                                                ) || "N/A"}
-                                            </span>
-                                        </div>
-
-                                        {/* Cafe name overlaid on image */}
-                                        <div className='absolute bottom-0 left-0 right-0 p-3'>
-                                            <h3 className='font-serif font-bold text-white text-lg leading-tight drop-shadow-lg'>
-                                                {cafe.name}
-                                            </h3>
-                                        </div>
-                                    </div>
-
-                                    {/* Content section */}
-                                    <div className='p-4 flex flex-col gap-3 bg-linear-to-b from-background to-tertiary/50 rounded-b-xl'>
-                                        {/* Address with icon */}
-                                        <div className='flex items-start gap-2'>
-                                            <svg
-                                                className='w-4 h-4 text-secondary mt-0.5 shrink-0'
-                                                fill='none'
-                                                stroke='currentColor'
-                                                viewBox='0 0 24 24'
-                                            >
-                                                <path
-                                                    strokeLinecap='round'
-                                                    strokeLinejoin='round'
-                                                    strokeWidth={2}
-                                                    d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
-                                                />
-                                                <path
-                                                    strokeLinecap='round'
-                                                    strokeLinejoin='round'
-                                                    strokeWidth={2}
-                                                    d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
-                                                />
-                                            </svg>
-                                            <p className='text-text/70 text-sm leading-snug line-clamp-2'>
-                                                {cafe.address_display}
-                                            </p>
-                                        </div>
-
-                                        {/* Amenities icons */}
-                                        {(cafe.has_wifi ||
-                                            cafe.has_smoking ||
-                                            cafe.has_sockets ||
-                                            cafe.has_parking ||
-                                            cafe.has_aircon ||
-                                            cafe.is_pet_friendly ||
-                                            cafe.has_outdoor_seating ||
-                                            cafe.has_indoor_seating ||
-                                            cafe.has_restroom ||
-                                            cafe.has_bidet ||
-                                            cafe.has_non_dairy ||
-                                            cafe.has_decaf ||
-                                            cafe.serves_food ||
-                                            cafe.is_work_friendly) && (
-                                            <div className='flex flex-wrap gap-2'>
-                                                {cafe.has_wifi && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='WiFi'
-                                                    >
-                                                        <Wifi className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_smoking && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Smoking Area'
-                                                    >
-                                                        <Cigarette className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_sockets && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Power Outlets'
-                                                    >
-                                                        <Plug className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_parking && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Parking'
-                                                    >
-                                                        <Car className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_aircon && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Air Conditioning'
-                                                    >
-                                                        <Snowflake className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.is_pet_friendly && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Pet Friendly'
-                                                    >
-                                                        <PawPrint className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_outdoor_seating && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Outdoor Seating'
-                                                    >
-                                                        <Sun className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_indoor_seating && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Indoor Seating'
-                                                    >
-                                                        <Armchair className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_restroom && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Restroom'
-                                                    >
-                                                        <Toilet className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_bidet && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Bidet'
-                                                    >
-                                                        <Droplet className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_non_dairy && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Non-Dairy Milk'
-                                                    >
-                                                        <MilkOff className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.has_decaf && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Decaf Options'
-                                                    >
-                                                        <Coffee className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.serves_food && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Serves Food'
-                                                    >
-                                                        <Utensils className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.is_work_friendly && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-primary/10 text-primary'
-                                                        title='Work Friendly'
-                                                    >
-                                                        <Laptop className='w-3.5 h-3.5' />
-                                                    </div>
-                                                )}
-                                                {cafe.is_halal_certified && (
-                                                    <div
-                                                        className='p-1.5 rounded-lg bg-green-500/10 text-green-600'
-                                                        title='Halal Certified'
-                                                    >
-                                                        <span className="text-xs font-bold">H</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Divider */}
-                                        <div className='w-full h-px bg-linear-to-r from-transparent via-secondary/30 to-transparent' />
-
-                                        {/* Footer */}
-                                        <div className='flex items-center justify-between'>
-                                            <div className='flex items-center gap-1.5'>
-                                                <svg
-                                                    className='w-4 h-4 text-secondary'
-                                                    fill='none'
-                                                    stroke='currentColor'
-                                                    viewBox='0 0 24 24'
-                                                >
-                                                    <path
-                                                        strokeLinecap='round'
-                                                        strokeLinejoin='round'
-                                                        strokeWidth={2}
-                                                        d='M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'
-                                                    />
-                                                </svg>
-                                                <span className='text-text/60 text-xs font-medium'>
-                                                    {cafe.total_reviews || 0}{" "}
-                                                    reviews
-                                                </span>
-                                            </div>
-                                            <Link
-                                                href={`/cafes/${cafe.slug}`}
-                                                onClick={() => haptics?.trigger("light")}
-                                                className='group flex items-center gap-1.5 px-3 py-1.5 border border-primary/20 text-xs font-semibold rounded-full transition-all hover:gap-2 shadow-sm text-text!'
-                                            >
-                                                Explore
-                                                <svg
-                                                    className='w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5'
-                                                    fill='none'
-                                                    stroke='currentColor'
-                                                    viewBox='0 0 24 24'
-                                                >
-                                                    <path
-                                                        strokeLinecap='round'
-                                                        strokeLinejoin='round'
-                                                        strokeWidth={2.5}
-                                                        d='M9 5l7 7-7 7'
-                                                    />
-                                                </svg>
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Popup>
-                        </Marker>
-                    ))}
+                <ViewportMarkers
+                    cafes={cafes}
+                    regularIcon={regularIcon}
+                    premiumIcon={premiumIcon}
+                />
             </MarkerClusterGroup>
         </MapContainer>
     )
