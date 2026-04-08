@@ -20,6 +20,7 @@ import { featureFlags } from "./feature-flags"
 
 export { chatRateLimits, featureFlags }
 export { chatConversations, chatMessages, chatFeedback } from "./chat"
+export { menuItemSuggestions } from "./menu-suggestions"
 
 // Custom tsvector type for full-text search columns
 const tsvector = customType<{ data: string }>({
