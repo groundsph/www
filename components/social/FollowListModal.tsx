@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { X, Loader2, User, Search } from "lucide-react"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
@@ -48,8 +49,15 @@ export default function FollowListModal({
     const [isSearching, setIsSearching] = useState(false)
     const debouncedSearch = useDebounce(searchQuery, 500)
 
-    const listRef = useRef<HTMLDivElement>(null)
+    const parentRef = useRef<HTMLDivElement>(null)
     const LIMIT = 20
+
+    const virtualizer = useVirtualizer({
+        count: users.length + (hasMore ? 1 : 0),
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 64,
+        overscan: 3,
+    })
 
     // Reset state when modal opens or tab changes
     useEffect(() => {
@@ -159,30 +167,21 @@ export default function FollowListModal({
         [userId]
     )
 
-    const handleLoadMore = useCallback(() => {
+    // Virtualizer-driven loading
+    const lastItem = virtualizer.getVirtualItems().at(-1)
+    useEffect(() => {
         if (
-            activeTab !== "find" &&
+            lastItem &&
+            lastItem.index >= users.length - 3 &&
+            hasMore &&
             !isLoading &&
-            hasMore
+            activeTab !== "find"
         ) {
             const newOffset = offset + LIMIT
             setOffset(newOffset)
             loadUsers(newOffset, activeTab)
         }
-    }, [isLoading, hasMore, offset, activeTab, loadUsers])
-
-    const handleScroll = useCallback(() => {
-        if (listRef.current) {
-            const { scrollTop, scrollHeight, clientHeight } = listRef.current
-            if (
-                scrollHeight - scrollTop <= clientHeight * 1.5 &&
-                !isLoading &&
-                hasMore
-            ) {
-                handleLoadMore()
-            }
-        }
-    }, [isLoading, hasMore, handleLoadMore])
+    }, [lastItem, lastItem?.index, users.length, hasMore, isLoading, offset, activeTab, loadUsers])
 
     // Reset list when tab changes
     useEffect(() => {
@@ -287,9 +286,9 @@ export default function FollowListModal({
 
                 {/* List */}
                 <div
-                    ref={listRef}
-                    onScroll={handleScroll}
+                    ref={parentRef}
                     className='flex-1 overflow-y-auto min-h-[300px]'
+                    style={{ height: "100%", overflow: "auto" }}
                 >
                     {activeTab === "find" ? (
                         <>
@@ -387,82 +386,112 @@ export default function FollowListModal({
                                     </p>
                                 </div>
                             ) : (
-                                <div className='divide-y divide-text/5'>
-                                    {users.map((user) => (
-                                        <div
-                                            key={user.id}
-                                            className='flex items-center gap-3 p-4 hover:bg-text/5 transition-colors'
-                                        >
-                                            <Link
-                                                href={`/profile/${user.username}`}
-                                                onClick={onClose}
-                                                className='shrink-0'
-                                            >
-                                                {user.avatarUrl ? (
-                                                    <UserAvatar
-                                                        src={user.avatarUrl}
-                                                        alt={user.displayName}
-                                                        size={40}
-                                                        className='rounded-full bg-text/10 overflow-hidden relative'
-                                                    />
-                                                ) : (
-                                                    <div className='w-10 h-10 rounded-full bg-text/10 overflow-hidden relative flex items-center justify-center'>
-                                                        <span className='text-xs font-bold opacity-40'>
-                                                            {user.displayName.charAt(0)}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </Link>
-                                            <div className='flex-1 min-w-0'>
-                                                <Link
-                                                    href={`/profile/${user.username}`}
-                                                    onClick={onClose}
-                                                    className='font-semibold text-sm hover:underline truncate block'
-                                                >
-                                                    {user.displayName}
-                                                </Link>
-                                                <p className='text-xs text-text/50 truncate'>
-                                                    @{user.username}
-                                                </p>
-                                            </div>
-                                            {/* Hide follow button if it's the current user (rudimentary check by userId if available, or just render and let it handle) */}
-                                            {/* Since we don't have currentUserId prop easily, we rely on FollowButton handling its own business or just user check. 
-                                        Actually FollowButton doesn't hide itself if target===current. 
-                                        I should pass currentUserId from parent for best UX.
-                                    */}
-                                            <FollowButton
-                                                targetUserId={user.id}
-                                                initialIsFollowing={
-                                                    currentUserFollowing[
-                                                        user.id
-                                                    ] ?? false
-                                                }
-                                                size='sm'
-                                                onFollowChange={(
-                                                    isFollowing
-                                                ) => {
-                                                    setCurrentUserFollowing(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            [user.id]:
-                                                                isFollowing,
-                                                        })
-                                                    )
-                                                }}
-                                                className={
-                                                    currentUserId === user.id
-                                                        ? "invisible"
-                                                        : ""
-                                                }
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                <div
+                                    style={{
+                                        height: `${virtualizer.getTotalSize()}px`,
+                                        width: "100%",
+                                        position: "relative",
+                                    }}
+                                >
+                                    {virtualizer.getVirtualItems().map((virtualItem) => {
+                                        const isLoaderRow = virtualItem.index >= users.length
 
-                            {isLoading && (
-                                <div className='py-4 flex justify-center'>
-                                    <Loader2 className='w-6 h-6 animate-spin text-primary opacity-50' />
+                                        if (isLoaderRow) {
+                                            return (
+                                                <div
+                                                    key="loader"
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: "100%",
+                                                        height: `${virtualItem.size}px`,
+                                                        transform: `translateY(${virtualItem.start}px)`,
+                                                    }}
+                                                    className="flex items-center justify-center py-4"
+                                                >
+                                                    {isLoading && <Loader2 className="w-5 h-5 animate-spin text-text/60" />}
+                                                </div>
+                                            )
+                                        }
+
+                                        const user = users[virtualItem.index]
+                                        return (
+                                            <div
+                                                key={user.id}
+                                                ref={virtualizer.measureElement}
+                                                data-index={virtualItem.index}
+                                                style={{
+                                                    position: "absolute",
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: "100%",
+                                                    height: `${virtualItem.size}px`,
+                                                    transform: `translateY(${virtualItem.start}px)`,
+                                                }}
+                                            >
+                                                <div className='flex items-center gap-3 p-4 hover:bg-text/5 transition-colors h-full border-b border-text/5'>
+                                                    <Link
+                                                        href={`/profile/${user.username}`}
+                                                        onClick={onClose}
+                                                        className='shrink-0'
+                                                    >
+                                                        {user.avatarUrl ? (
+                                                            <UserAvatar
+                                                                src={user.avatarUrl}
+                                                                alt={user.displayName}
+                                                                size={40}
+                                                                className='rounded-full bg-text/10 overflow-hidden relative'
+                                                            />
+                                                        ) : (
+                                                            <div className='w-10 h-10 rounded-full bg-text/10 overflow-hidden relative flex items-center justify-center'>
+                                                                <span className='text-xs font-bold opacity-40'>
+                                                                    {user.displayName.charAt(0)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </Link>
+                                                    <div className='flex-1 min-w-0'>
+                                                        <Link
+                                                            href={`/profile/${user.username}`}
+                                                            onClick={onClose}
+                                                            className='font-semibold text-sm hover:underline truncate block'
+                                                        >
+                                                            {user.displayName}
+                                                        </Link>
+                                                        <p className='text-xs text-text/50 truncate'>
+                                                            @{user.username}
+                                                        </p>
+                                                    </div>
+                                                    <FollowButton
+                                                        targetUserId={user.id}
+                                                        initialIsFollowing={
+                                                            currentUserFollowing[
+                                                                user.id
+                                                            ] ?? false
+                                                        }
+                                                        size='sm'
+                                                        onFollowChange={(
+                                                            isFollowing
+                                                        ) => {
+                                                            setCurrentUserFollowing(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    [user.id]:
+                                                                        isFollowing,
+                                                                })
+                                                            )
+                                                        }}
+                                                        className={
+                                                            currentUserId === user.id
+                                                                ? "invisible"
+                                                                : ""
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                             )}
                         </>
