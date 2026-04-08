@@ -23,7 +23,7 @@ export default function PrivacyPage() {
                 Privacy Policy
             </h1>
             <p className='text-text/50 text-sm mb-8'>
-                Last updated: January 5, 2026
+                Last updated: April 9, 2026
             </p>
 
             <div className='prose prose-neutral max-w-none space-y-8'>
@@ -59,6 +59,9 @@ export default function PrivacyPage() {
                             Location data (only when you grant permission for
                             &quot;Near Me&quot; features)
                         </li>
+                        <li>AI chat messages and conversation history</li>
+                        <li>Chat session identifiers</li>
+                        <li>AI response feedback ratings</li>
                     </ul>
                 </section>
 
@@ -165,7 +168,42 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        6. Data Security
+                        6. AI Chat Feature
+                    </h2>
+                    <p className='text-text/80 leading-relaxed mb-4'>
+                        Our platform includes an AI-powered chat assistant to
+                        help you discover cafes and menu items. When you use the
+                        chat feature:
+                    </p>
+                    <ul className='list-disc list-inside text-text/80 space-y-2'>
+                        <li>
+                            Your messages and conversation history are stored to
+                            improve our services and may be used for AI model
+                            training and fine-tuning in the future.
+                        </li>
+                        <li>
+                            We store chat sessions linked to your account (if
+                            logged in) or anonymously via session identifiers.
+                        </li>
+                        <li>
+                            Your feedback on AI responses (thumbs up/down) is
+                            recorded to assess response quality.
+                        </li>
+                        <li>
+                            Chat data is processed through third-party AI
+                            providers (OpenAI-compatible APIs). Refer to their
+                            privacy policies for data handling practices.
+                        </li>
+                        <li>
+                            We do not sell or share your chat data with third
+                            parties for marketing purposes.
+                        </li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 className='text-2xl font-serif font-semibold mb-4'>
+                        7. Data Security
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         We implement reasonable security measures to protect
@@ -177,7 +215,7 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        7. Your Rights
+                        8. Your Rights
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         You have the right to:
@@ -201,7 +239,7 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        8. Children&apos;s Privacy
+                        9. Children&apos;s Privacy
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         The Service is not intended for users under 13 years of
@@ -212,7 +250,7 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        9. Changes to This Policy
+                        10. Changes to This Policy
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         We may update this Privacy Policy from time to time. We
@@ -224,7 +262,7 @@ export default function PrivacyPage() {
 
                 <section>
                     <h2 className='text-2xl font-serif font-semibold mb-4'>
-                        10. Contact
+                        11. Contact
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         For questions about this Privacy Policy, please contact
