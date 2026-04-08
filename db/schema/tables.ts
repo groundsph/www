@@ -19,6 +19,7 @@ import { chatRateLimits } from "./chat-rate-limit"
 import { featureFlags } from "./feature-flags"
 
 export { chatRateLimits, featureFlags }
+export { chatConversations, chatMessages, chatFeedback } from "./chat"
 
 // Custom tsvector type for full-text search columns
 const tsvector = customType<{ data: string }>({
