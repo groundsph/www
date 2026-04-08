@@ -6,6 +6,7 @@ import { eq, desc, or, sql, inArray, ilike, and, gt } from "drizzle-orm"
 import { getPublicCafeCrawls } from "@/app/api/actions/cafe-crawls"
 import { getPublishedBlogPosts } from "@/app/api/actions/blog"
 import { getEvents } from "@/app/api/actions/events"
+import { getCurrentUser } from "@/lib/auth"
 import { BlogPost } from "@/utils/types/blog"
 import { Crawl } from "@/utils/types/cafe-crawls"
 import { EventWithCafe } from "@/utils/types/extra"
@@ -155,6 +156,9 @@ export async function searchUsers(
     query: string,
     limit: number = 20
 ): Promise<UserSearchResult[]> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return []
+
     if (!query || query.length < 2) {
         return []
     }
