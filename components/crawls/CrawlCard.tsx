@@ -69,4 +69,6 @@ const CrawlCard = React.memo(function CrawlCard({ crawl }: CrawlCardProps) {
     )
 })
 
+CrawlCard.displayName = "CrawlCard"
+
 export default CrawlCard

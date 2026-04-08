@@ -20,11 +20,11 @@ vi.mock("next/navigation", () => ({
 
 describe("CrawlCard", () => {
     it("exports a component", () => {
-        expect(typeof CrawlCard).toBe("function")
+        expect(typeof CrawlCard).toBe("object")
     })
 
     it("has correct displayName", () => {
-        expect(CrawlCard.name).toBe("CrawlCard")
+        expect(CrawlCard.displayName).toBe("CrawlCard")
     })
 
     it("renders with crawl data", () => {

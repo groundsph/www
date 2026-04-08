@@ -37,6 +37,14 @@ describe("HeroLocationCheckIn", () => {
     useAuth: () => ({ user: { id: "user-1" } }),
   }))
 
+  mock.module("@/hooks/useHaptics", () => ({
+    useHaptics: () => ({
+      trigger: mock(() => {}),
+      cancel: mock(() => {}),
+      isSupported: false,
+    }),
+  }))
+
   mock.module("next/navigation", () => ({
     useRouter: () => ({ push: mock(() => {}) }),
   }))

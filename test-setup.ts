@@ -14,3 +14,10 @@ global.HTMLElement = dom.window.HTMLElement
 global.HTMLElement.prototype.scrollIntoView = function () {
     return null
 }
+
+global.requestAnimationFrame = (callback: FrameRequestCallback) => {
+    return setTimeout(callback, 0) as unknown as number
+}
+global.cancelAnimationFrame = (id: number) => {
+    clearTimeout(id)
+}
