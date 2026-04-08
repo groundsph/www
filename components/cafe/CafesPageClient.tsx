@@ -405,6 +405,35 @@ export default function CafesPageClient() {
         }
     }, [filteredCafes.length, cafes.length, filters.near_me])
 
+    // Load more cafes (used by infinite scroll and retry button)
+    const loadMore = useCallback(() => {
+        if (isLoadingMore || !hasMore) return
+        trigger("light")
+        const nextPage = currentPage + 1
+        setCurrentPage(nextPage)
+        setIsLoadingMore(true)
+
+        const version = fetchVersionRef.current
+
+        getAllCafes(nextPage, PAGE_SIZE, getFilterParams())
+            .then((fetchedCafes) => {
+                if (version !== fetchVersionRef.current) return
+                setCafes((prev) => [...prev, ...fetchedCafes])
+                setHasMore(fetchedCafes.length === PAGE_SIZE)
+            })
+            .catch((error) => {
+                if (version !== fetchVersionRef.current) return
+                console.error("Failed to fetch more cafes:", error)
+                setLoadError(true)
+                setHasMore(false)
+            })
+            .finally(() => {
+                if (version === fetchVersionRef.current) {
+                    setIsLoadingMore(false)
+                }
+            })
+    }, [currentPage, getFilterParams, hasMore, isLoadingMore, trigger])
+
     // Virtualizer-driven infinite scroll - trigger when last item is visible
     const lastItem = virtualizer.getVirtualItems().at(-1)
     useEffect(() => {
@@ -414,32 +443,9 @@ export default function CafesPageClient() {
             hasMore &&
             !isLoadingMore
         ) {
-            trigger("light")
-            const nextPage = currentPage + 1
-            setCurrentPage(nextPage)
-            setIsLoadingMore(true)
-
-            const version = fetchVersionRef.current
-
-            getAllCafes(nextPage, PAGE_SIZE, getFilterParams())
-                .then((fetchedCafes) => {
-                    if (version !== fetchVersionRef.current) return // Stale fetch
-                    setCafes((prev) => [...prev, ...fetchedCafes])
-                    setHasMore(fetchedCafes.length === PAGE_SIZE)
-                })
-                .catch((error) => {
-                    if (version !== fetchVersionRef.current) return
-                    console.error("Failed to fetch more cafes:", error)
-                    setLoadError(true)
-                    setHasMore(false) // Stop trying on error
-                })
-                .finally(() => {
-                    if (version === fetchVersionRef.current) {
-                        setIsLoadingMore(false)
-                    }
-                })
+            loadMore()
         }
-    }, [lastItem, lastItem?.index, filteredCafes.length, hasMore, isLoadingMore, currentPage, getFilterParams, trigger])
+    }, [lastItem, lastItem?.index, filteredCafes.length, hasMore, isLoadingMore, loadMore])
 
     const toggleFilter = (key: keyof typeof filters) => {
         trigger("selection")
@@ -983,6 +989,7 @@ export default function CafesPageClient() {
                                                             setLoadError(false)
                                                             setHasMore(true)
                                                             setIsLoadingMore(false)
+                                                            loadMore()
                                                         }}
                                                         className='text-sm text-accent hover:underline'
                                                     >
