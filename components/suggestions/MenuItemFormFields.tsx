@@ -18,6 +18,7 @@ export interface MenuItemFormData {
     isFood: boolean
     isHot: boolean
     isCold: boolean
+    isSignature: boolean
     isVegan: boolean
     isVegetarian: boolean
     calories: string
@@ -45,6 +46,7 @@ const typeToggles = [
     { key: "isFood", label: "Food" },
     { key: "isHot", label: "Hot" },
     { key: "isCold", label: "Cold" },
+    { key: "isSignature", label: "Signature" },
     { key: "isVegan", label: "Vegan" },
     { key: "isVegetarian", label: "Vegetarian" },
 ] as const
