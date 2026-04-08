@@ -4,7 +4,7 @@
  * Image types and their compression settings:
  * - Cover images (cafe thumbnails): WebP, 250KB, 1920px
  * - Gallery images: WebP, 200KB, 1920px
- * - Review images: WebP, 150KB, 1200px
+ * - Review images: WebP, 250KB, 1920px
  * - Blog/Event covers: JPEG, 200KB, 1920px (display in list cards)
  * - Collection covers: JPEG, 150KB, 1200px (for OG images)
  * - Profile avatars: JPEG, 100KB, 400px (for OG images)
@@ -66,15 +66,15 @@ export async function compressGalleryImage(file: File): Promise<File> {
 
 /**
  * Compress a review image.
- * @returns Compressed File (WebP, max 150KB, max 1200px)
+ * @returns Compressed File (WebP, max 250KB, max 1920px)
  */
 export async function compressReviewImage(file: File): Promise<File> {
     const compressed = await imageCompression(file, {
-        maxSizeMB: 0.15,
-        maxWidthOrHeight: 1200,
+        maxSizeMB: 0.25,
+        maxWidthOrHeight: 1920,
         useWebWorker: true,
         fileType: "image/webp",
-        initialQuality: 0.8,
+        initialQuality: 0.85,
     })
 
     return new File(
