@@ -3,6 +3,7 @@
 import { db } from "@/db"
 import { profiles, userFollows, cafeVisits, cafes, followRequests } from "@/db/schema"
 import { getCurrentUser } from "@/lib/auth"
+import { canViewProfile } from "@/app/api/actions/profile"
 import { and, eq, desc, inArray, ilike, or, count, ne } from "drizzle-orm"
 
 
@@ -377,7 +378,8 @@ export async function getFollowCounts(userId: string): Promise<{
 export async function getFollowers(
     userId: string,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
+    viewerId?: string
 ): Promise<{
     users: { id: string; username: string; displayName: string; avatarUrl: string | null }[]
 }> {
@@ -388,6 +390,7 @@ export async function getFollowers(
                 username: profiles.username,
                 displayName: profiles.displayName,
                 avatarUrl: profiles.avatarUrl,
+                isPrivate: profiles.isPrivate,
             })
             .from(userFollows)
             .innerJoin(profiles, eq(userFollows.followerId, profiles.id))
@@ -396,7 +399,24 @@ export async function getFollowers(
             .limit(limit)
             .offset(offset)
 
-        return { users: result }
+        const filtered: typeof result = []
+        for (const follower of result) {
+            if (!follower.isPrivate) {
+                filtered.push(follower)
+                continue
+            }
+            if (!viewerId) continue
+            if (viewerId === userId) {
+                filtered.push(follower)
+                continue
+            }
+            const canView = await canViewProfile(follower.id, viewerId)
+            if (canView.canView) {
+                filtered.push(follower)
+            }
+        }
+
+        return { users: filtered }
     } catch (error) {
         console.error("Error getting followers:", error)
         return { users: [] }
@@ -409,7 +429,8 @@ export async function getFollowers(
 export async function getFollowing(
     userId: string,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
+    viewerId?: string
 ): Promise<{
     users: { id: string; username: string; displayName: string; avatarUrl: string | null }[]
 }> {
@@ -420,6 +441,7 @@ export async function getFollowing(
                 username: profiles.username,
                 displayName: profiles.displayName,
                 avatarUrl: profiles.avatarUrl,
+                isPrivate: profiles.isPrivate,
             })
             .from(userFollows)
             .innerJoin(profiles, eq(userFollows.followingId, profiles.id))
@@ -428,7 +450,24 @@ export async function getFollowing(
             .limit(limit)
             .offset(offset)
 
-        return { users: result }
+        const filtered: typeof result = []
+        for (const following of result) {
+            if (!following.isPrivate) {
+                filtered.push(following)
+                continue
+            }
+            if (!viewerId) continue
+            if (viewerId === userId) {
+                filtered.push(following)
+                continue
+            }
+            const canView = await canViewProfile(following.id, viewerId)
+            if (canView.canView) {
+                filtered.push(following)
+            }
+        }
+
+        return { users: filtered }
     } catch (error) {
         console.error("Error getting following:", error)
         return { users: [] }
