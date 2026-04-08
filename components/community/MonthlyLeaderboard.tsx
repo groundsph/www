@@ -421,17 +421,7 @@ export default function MonthlyLeaderboard({
                                         </div>
 
                                         {/* Avatar */}
-                                        <div className='w-12 h-12 rounded-full overflow-hidden bg-secondary/20 shrink-0'>
-                                            {entry.avatarUrl ? (
-                                                <UserAvatar src={entry.avatarUrl} alt={entry.displayName} size={48} />
-                                            ) : (
-                                                <div className='w-full h-full flex items-center justify-center text-text/40 font-bold'>
-                                                    {entry.displayName
-                                                        .charAt(0)
-                                                        .toUpperCase()}
-                                                </div>
-                                            )}
-                                        </div>
+                                        <UserAvatar src={entry.avatarUrl} alt={entry.displayName} size={48} />
 
                                         {/* Name */}
                                         <div className='flex-1 min-w-0'>
