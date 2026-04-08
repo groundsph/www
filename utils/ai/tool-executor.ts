@@ -77,6 +77,63 @@ export async function executeTool(toolName: string, args: string): Promise<unkno
             const { getCafeStats } = await import("@/utils/ai/tools/cafe-stats")
             return getCafeStats(getArg(parsed, "city"))
         }
+        case "search_menu_items": {
+            const { searchMenuItemsForComparison } = await import("@/utils/menu-comparison")
+            return searchMenuItemsForComparison(getArg(parsed, "query") as string, (getArg(parsed, "limit") ?? 10) as number)
+        }
+        case "compare_menu_items": {
+            const { buildComparison } = await import("@/utils/menu-comparison")
+            const { db } = await import("@/db")
+            const { cafeMenuItems, cafes } = await import("@/db/schema/tables")
+            const { inArray, eq } = await import("drizzle-orm")
+
+            const itemIds = getArg(parsed, "itemIds") as string[]
+            const results = await db
+                .select({
+                    id: cafeMenuItems.id,
+                    cafeId: cafeMenuItems.cafeId,
+                    name: cafeMenuItems.name,
+                    category: cafeMenuItems.category,
+                    price: cafeMenuItems.price,
+                    description: cafeMenuItems.description,
+                    isAvailable: cafeMenuItems.isAvailable,
+                    isFood: cafeMenuItems.isFood,
+                    isHot: cafeMenuItems.isHot,
+                    isCold: cafeMenuItems.isCold,
+                    calories: cafeMenuItems.calories,
+                    isVegan: cafeMenuItems.isVegan,
+                    isVegetarian: cafeMenuItems.isVegetarian,
+                    sizeOptions: cafeMenuItems.sizeOptions,
+                    imageUrl: cafeMenuItems.imageUrl,
+                    cafeName: cafes.name,
+                    cafeSlug: cafes.slug,
+                })
+                .from(cafeMenuItems)
+                .innerJoin(cafes, eq(cafeMenuItems.cafeId, cafes.id))
+                .where(inArray(cafeMenuItems.id, itemIds))
+
+            const items = results.map((row) => ({
+                id: row.id,
+                cafeId: row.cafeId,
+                cafeName: row.cafeName,
+                cafeSlug: row.cafeSlug,
+                name: row.name,
+                category: row.category,
+                price: row.price,
+                description: row.description ?? null,
+                isAvailable: row.isAvailable ?? true,
+                isFood: row.isFood ?? false,
+                isHot: row.isHot ?? false,
+                isCold: row.isCold ?? false,
+                calories: row.calories ?? null,
+                isVegan: row.isVegan ?? false,
+                isVegetarian: row.isVegetarian ?? false,
+                sizeOptions: row.sizeOptions ?? null,
+                imageUrl: row.imageUrl ?? null,
+            }))
+
+            return buildComparison(items)
+        }
         default:
             throw new Error(`Unknown tool: ${toolName}`)
     }

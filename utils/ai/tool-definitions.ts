@@ -18,6 +18,8 @@ Available tools:
 - find_cafes_with_feature: Find cafes with specific combinations of amenities
 - get_grounds_info: Return general information about Grounds.ph features and how to use the platform
 - get_cafe_stats: Get aggregate statistics about cafes
+- search_menu_items: Search for menu items across all cafes by name
+- compare_menu_items: Compare specific menu items side by side
 
 Rules:
 1. Always use tools when the user asks for specific cafe information
@@ -30,7 +32,10 @@ Rules:
 8. If no cafes match the query, politely inform the user
 9. When you have enough data, respond with a final answer and do not call more tools.
 10. If the user refers to the previous list or says things like "from those" or "make a crawl from these", use the recent context rather than calling tools again.
-11. If you render tables, use proper Markdown tables with each row on its own line. If you cannot format a table, use bullet points instead.`
+11. If you render tables, use proper Markdown tables with each row on its own line. If you cannot format a table, use bullet points instead.
+12. Use search_menu_items when users ask about specific drinks or food items across cafes
+13. Use compare_menu_items to show side-by-side comparisons of specific items
+14. When comparing items, present results in a clear markdown table format`
 
 export interface ToolDefinition {
     type: "function"
@@ -264,6 +269,35 @@ export const CHAT_TOOLS: ToolDefinition[] = [
                 properties: {
                     city: { type: "string", description: "Get stats for a specific city (optional, defaults to all)" },
                 },
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "search_menu_items",
+            description: "Search for menu items across all cafes by name. Use when the user wants to find specific drinks or food items.",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: { type: "string", description: "Search query for menu item name (e.g., 'spanish latte', 'croissant')" },
+                    limit: { type: "number", description: "Max results (default 10, max 20)" },
+                },
+                required: ["query"],
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "compare_menu_items",
+            description: "Compare specific menu items side by side. Use when user asks to compare items from different cafes.",
+            parameters: {
+                type: "object",
+                properties: {
+                    itemIds: { type: "array", items: { type: "string" }, description: "Array of menu item IDs to compare (2-4 items)" },
+                },
+                required: ["itemIds"],
             },
         },
     },
