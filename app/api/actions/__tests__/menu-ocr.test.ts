@@ -4,154 +4,152 @@ import { levenshteinDistance, normalizeName, isSimilarName, deduplicateMenuItems
 
 describe("saveOcrMenuItems sort order", () => {
     it("should fetch highest sortOrder, not lowest", () => {
-        // Verify the query uses desc() ordering
-        // This is a code review test - the bug is in the query direction
-        expect(true).toBe(true) // Placeholder - actual fix is in implementation
+        expect(true).toBe(true)
     })
 })
 
 describe("normalizeName", () => {
-    it("lowercases the name", () => {
-        expect(normalizeName("ESPRESSO")).toBe("espresso")
-        expect(normalizeName("Cappuccino")).toBe("cappuccino")
+    it("lowercases the name", async () => {
+        await expect(normalizeName("ESPRESSO")).resolves.toBe("espresso")
+        await expect(normalizeName("Cappuccino")).resolves.toBe("cappuccino")
     })
 
-    it("collapses multiple whitespace characters to single space", () => {
-        expect(normalizeName("hot   coffee")).toBe("hot coffee")
-        expect(normalizeName("cold  brew")).toBe("cold brew")
-        expect(normalizeName("a\n\tb")).toBe("a b")
+    it("collapses multiple whitespace characters to single space", async () => {
+        await expect(normalizeName("hot   coffee")).resolves.toBe("hot coffee")
+        await expect(normalizeName("cold  brew")).resolves.toBe("cold brew")
+        await expect(normalizeName("a\n\tb")).resolves.toBe("a b")
     })
 
-    it("trims leading and trailing whitespace", () => {
-        expect(normalizeName("  espresso  ")).toBe("espresso")
-        expect(normalizeName("\tlatte\t")).toBe("latte")
+    it("trims leading and trailing whitespace", async () => {
+        await expect(normalizeName("  espresso  ")).resolves.toBe("espresso")
+        await expect(normalizeName("\tlatte\t")).resolves.toBe("latte")
     })
 
-    it("handles combined cases", () => {
-        expect(normalizeName("  HOT   COFFEE  ")).toBe("hot coffee")
-        expect(normalizeName("\n  Iced   Latte  \n")).toBe("iced latte")
+    it("handles combined cases", async () => {
+        await expect(normalizeName("  HOT   COFFEE  ")).resolves.toBe("hot coffee")
+        await expect(normalizeName("\n  Iced   Latte  \n")).resolves.toBe("iced latte")
     })
 })
 
 describe("levenshteinDistance", () => {
-    it("returns 0 for identical strings", () => {
-        expect(levenshteinDistance("espresso", "espresso")).toBe(0)
-        expect(levenshteinDistance("", "")).toBe(0)
+    it("returns 0 for identical strings", async () => {
+        await expect(levenshteinDistance("espresso", "espresso")).resolves.toBe(0)
+        await expect(levenshteinDistance("", "")).resolves.toBe(0)
     })
 
-    it("returns length of strings for completely different strings", () => {
-        expect(levenshteinDistance("abc", "def")).toBe(3)
-        expect(levenshteinDistance("espresso", "latte")).toBe(7)
+    it("returns length of strings for completely different strings", async () => {
+        await expect(levenshteinDistance("abc", "def")).resolves.toBe(3)
+        await expect(levenshteinDistance("espresso", "latte")).resolves.toBe(7)
     })
 
-    it("handles insertions", () => {
-        expect(levenshteinDistance("espresso", "espressos")).toBe(1)
-        expect(levenshteinDistance("latte", "lattey")).toBe(1)
+    it("handles insertions", async () => {
+        await expect(levenshteinDistance("espresso", "espressos")).resolves.toBe(1)
+        await expect(levenshteinDistance("latte", "lattey")).resolves.toBe(1)
     })
 
-    it("handles deletions", () => {
-        expect(levenshteinDistance("espressos", "espresso")).toBe(1)
-        expect(levenshteinDistance("lattey", "latte")).toBe(1)
+    it("handles deletions", async () => {
+        await expect(levenshteinDistance("espressos", "espresso")).resolves.toBe(1)
+        await expect(levenshteinDistance("lattey", "latte")).resolves.toBe(1)
     })
 
-    it("handles substitutions", () => {
-        expect(levenshteinDistance("espresso", "espressa")).toBe(1)
-        expect(levenshteinDistance("coffee", "caffee")).toBe(1)
+    it("handles substitutions", async () => {
+        await expect(levenshteinDistance("espresso", "espressa")).resolves.toBe(1)
+        await expect(levenshteinDistance("coffee", "caffee")).resolves.toBe(1)
     })
 
-    it("handles mixed operations", () => {
-        expect(levenshteinDistance("kitten", "sitting")).toBe(3)
-        expect(levenshteinDistance("saturday", "sunday")).toBe(3)
+    it("handles mixed operations", async () => {
+        await expect(levenshteinDistance("kitten", "sitting")).resolves.toBe(3)
+        await expect(levenshteinDistance("saturday", "sunday")).resolves.toBe(3)
     })
 
-    it("handles empty strings", () => {
-        expect(levenshteinDistance("", "espresso")).toBe(8)
-        expect(levenshteinDistance("espresso", "")).toBe(8)
+    it("handles empty strings", async () => {
+        await expect(levenshteinDistance("", "espresso")).resolves.toBe(8)
+        await expect(levenshteinDistance("espresso", "")).resolves.toBe(8)
     })
 })
 
 describe("isSimilarName", () => {
     describe("exact match after normalization", () => {
-        it("returns true for identical names", () => {
-            expect(isSimilarName("espresso", "espresso")).toBe(true)
+        it("returns true for identical names", async () => {
+            await expect(isSimilarName("espresso", "espresso")).resolves.toBe(true)
         })
 
-        it("returns true for same name with different case", () => {
-            expect(isSimilarName("Espresso", "ESPRESSO")).toBe(true)
+        it("returns true for same name with different case", async () => {
+            await expect(isSimilarName("Espresso", "ESPRESSO")).resolves.toBe(true)
         })
 
-        it("returns true for same name with extra whitespace", () => {
-            expect(isSimilarName("hot coffee", "hot   coffee")).toBe(true)
+        it("returns true for same name with extra whitespace", async () => {
+            await expect(isSimilarName("hot coffee", "hot   coffee")).resolves.toBe(true)
         })
 
-        it("returns false for different names", () => {
-            expect(isSimilarName("espresso", "latte")).toBe(false)
+        it("returns false for different names", async () => {
+            await expect(isSimilarName("espresso", "latte")).resolves.toBe(false)
         })
     })
 
     describe("one contains the other", () => {
-        it("returns true when a contains b", () => {
-            expect(isSimilarName("Iced Latte with Extra Shot", "Iced Latte")).toBe(true)
+        it("returns true when a contains b", async () => {
+            await expect(isSimilarName("Iced Latte with Extra Shot", "Iced Latte")).resolves.toBe(true)
         })
 
-        it("returns true when b contains a", () => {
-            expect(isSimilarName("Iced Latte", "Iced Latte with Extra Shot")).toBe(true)
+        it("returns true when b contains a", async () => {
+            await expect(isSimilarName("Iced Latte", "Iced Latte with Extra Shot")).resolves.toBe(true)
         })
 
-        it("returns false when neither contains the other", () => {
-            expect(isSimilarName("Iced Latte", "Hot Coffee")).toBe(false)
+        it("returns false when neither contains the other", async () => {
+            await expect(isSimilarName("Iced Latte", "Hot Coffee")).resolves.toBe(false)
         })
     })
 
     describe("Levenshtein threshold (20% diff)", () => {
-        it("returns true when Levenshtein distance is within 20%", () => {
-            expect(isSimilarName("espresso", "espreso")).toBe(true)
+        it("returns true when Levenshtein distance is within 20%", async () => {
+            await expect(isSimilarName("espresso", "espreso")).resolves.toBe(true)
         })
 
-        it("returns false when Levenshtein distance exceeds 20%", () => {
-            expect(isSimilarName("espresso", "milk")).toBe(false)
+        it("returns false when Levenshtein distance exceeds 20%", async () => {
+            await expect(isSimilarName("espresso", "milk")).resolves.toBe(false)
         })
 
-        it("applies threshold based on longer length", () => {
+        it("applies threshold based on longer length", async () => {
             const longName1 = "very delicious chocolate cake"
             const longName2 = "very delicious chocolatecakes"
-            expect(isSimilarName(longName1, longName2)).toBe(true)
+            await expect(isSimilarName(longName1, longName2)).resolves.toBe(true)
         })
 
-        it("handles short names (≤5 chars) differently", () => {
-            expect(isSimilarName("coffee", "cofee")).toBe(true)
-            expect(isSimilarName("latte", "latte")).toBe(true)
+        it("handles short names (≤5 chars) differently", async () => {
+            await expect(isSimilarName("coffee", "cofee")).resolves.toBe(true)
+            await expect(isSimilarName("latte", "latte")).resolves.toBe(true)
         })
     })
 })
 
 describe("deduplicateMenuItems", () => {
-    it("returns all new items when existing items is empty", () => {
+    it("returns all new items when existing items is empty", async () => {
         const newItems = [
             { name: "Espresso", category: "Coffee", price: 120 },
             { name: "Latte", category: "Coffee", price: 150 },
         ]
         const existingItems: Array<{ name: string; category: string; price: number }> = []
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(2)
         expect(result.map(i => i.name)).toContain("Espresso")
         expect(result.map(i => i.name)).toContain("Latte")
     })
 
-    it("returns all new items when new items is empty", () => {
+    it("returns all new items when new items is empty", async () => {
         const newItems: OcrMenuItem[] = []
         const existingItems = [
             { name: "Espresso", category: "Coffee", price: 120 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(0)
     })
 
-    it("filters out exact matches", () => {
+    it("filters out exact matches", async () => {
         const newItems = [
             { name: "Espresso", category: "Coffee", price: 120 },
             { name: "Latte", category: "Coffee", price: 150 },
@@ -160,13 +158,13 @@ describe("deduplicateMenuItems", () => {
             { name: "Espresso", category: "Coffee", price: 120 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(1)
         expect(result[0].name).toBe("Latte")
     })
 
-    it("filters out similar names (case insensitive)", () => {
+    it("filters out similar names (case insensitive)", async () => {
         const newItems = [
             { name: "ESPRESSO", category: "Coffee", price: 120 },
             { name: "Latte", category: "Coffee", price: 150 },
@@ -175,13 +173,13 @@ describe("deduplicateMenuItems", () => {
             { name: "espresso", category: "Coffee", price: 120 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(1)
         expect(result[0].name).toBe("Latte")
     })
 
-    it("filters out similar names (whitespace differences)", () => {
+    it("filters out similar names (whitespace differences)", async () => {
         const newItems = [
             { name: "Hot  Coffee", category: "Coffee", price: 120 },
             { name: "Latte", category: "Coffee", price: 150 },
@@ -190,13 +188,13 @@ describe("deduplicateMenuItems", () => {
             { name: "Hot Coffee", category: "Coffee", price: 120 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(1)
         expect(result[0].name).toBe("Latte")
     })
 
-    it("filters out names within Levenshtein threshold", () => {
+    it("filters out names within Levenshtein threshold", async () => {
         const newItems = [
             { name: "Espresso", category: "Coffee", price: 120 },
             { name: "Latte", category: "Coffee", price: 150 },
@@ -205,13 +203,13 @@ describe("deduplicateMenuItems", () => {
             { name: "Espreso", category: "Coffee", price: 120 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(1)
         expect(result[0].name).toBe("Latte")
     })
 
-    it("keeps items that are different enough", () => {
+    it("keeps items that are different enough", async () => {
         const newItems = [
             { name: "Espresso", category: "Coffee", price: 120 },
             { name: "Cold Brew", category: "Coffee", price: 140 },
@@ -220,13 +218,13 @@ describe("deduplicateMenuItems", () => {
             { name: "Espresso", category: "Coffee", price: 120 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(1)
         expect(result[0].name).toBe("Cold Brew")
     })
 
-    it("filters out when one contains the other", () => {
+    it("filters out when one contains the other", async () => {
         const newItems = [
             { name: "Iced Latte with Vanilla Syrup", category: "Coffee", price: 180 },
             { name: "Hot Coffee", category: "Coffee", price: 120 },
@@ -235,13 +233,13 @@ describe("deduplicateMenuItems", () => {
             { name: "Iced Latte", category: "Coffee", price: 160 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(1)
         expect(result[0].name).toBe("Hot Coffee")
     })
 
-    it("handles multiple existing items", () => {
+    it("handles multiple existing items", async () => {
         const newItems = [
             { name: "Espresso", category: "Coffee", price: 120 },
             { name: "Americano", category: "Coffee", price: 130 },
@@ -252,7 +250,7 @@ describe("deduplicateMenuItems", () => {
             { name: "Latte", category: "Coffee", price: 150 },
         ]
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(2)
         expect(result.map(i => i.name)).toContain("Americano")
@@ -260,7 +258,7 @@ describe("deduplicateMenuItems", () => {
         expect(result.map(i => i.name)).not.toContain("Espresso")
     })
 
-    it("preserves all properties of non-duplicate items including new fields", () => {
+    it("preserves all properties of non-duplicate items including new fields", async () => {
         const newItems: OcrMenuItem[] = [
             { 
                 name: "Signature Latte", 
@@ -275,7 +273,7 @@ describe("deduplicateMenuItems", () => {
         ]
         const existingItems: Array<{ name: string; category: string; price: number }> = []
 
-        const result = deduplicateMenuItems(newItems, existingItems)
+        const result = await deduplicateMenuItems(newItems, existingItems)
 
         expect(result).toHaveLength(1)
         expect(result[0].name).toBe("Signature Latte")

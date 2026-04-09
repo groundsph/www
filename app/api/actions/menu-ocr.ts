@@ -17,11 +17,11 @@ export interface OcrResult {
     error?: string
 }
 
-export function normalizeName(name: string): string {
+export async function normalizeName(name: string): Promise<string> {
     return name.toLowerCase().replace(/\s+/g, " ").trim()
 }
 
-export function levenshteinDistance(a: string, b: string): number {
+export async function levenshteinDistance(a: string, b: string): Promise<number> {
     const matrix: number[][] = []
 
     for (let i = 0; i <= b.length; i++) {
@@ -48,9 +48,9 @@ export function levenshteinDistance(a: string, b: string): number {
     return matrix[b.length][a.length]
 }
 
-export function isSimilarName(a: string, b: string): boolean {
-    const normalizedA = normalizeName(a)
-    const normalizedB = normalizeName(b)
+export async function isSimilarName(a: string, b: string): Promise<boolean> {
+    const normalizedA = await normalizeName(a)
+    const normalizedB = await normalizeName(b)
 
     if (normalizedA === normalizedB) {
         return true
@@ -65,34 +65,38 @@ export function isSimilarName(a: string, b: string): boolean {
     }
 
     const maxLength = Math.max(normalizedA.length, normalizedB.length)
-    const distance = levenshteinDistance(normalizedA, normalizedB)
+    const distance = await levenshteinDistance(normalizedA, normalizedB)
     const threshold = maxLength * 0.2
 
     return distance <= threshold
 }
 
-export function deduplicateMenuItems(
+export async function deduplicateMenuItems(
     newItems: OcrMenuItem[],
     existingItems: Array<{ name: string; category: string; price: number }>
-): OcrMenuItem[] {
-    const normalizedExisting = existingItems.map((item) => ({
-        ...item,
-        normalizedName: normalizeName(item.name),
-    }))
+): Promise<OcrMenuItem[]> {
+    const normalizedExisting = await Promise.all(
+        existingItems.map(async (item) => ({
+            ...item,
+            normalizedName: await normalizeName(item.name),
+        }))
+    )
 
     const results: OcrMenuItem[] = []
     for (const newItem of newItems) {
-        const newItemNormalized = normalizeName(newItem.name)
-        const isDuplicate = normalizedExisting.map((existing) => {
-            if (newItemNormalized === existing.normalizedName) return true
-            if (newItemNormalized.includes(existing.normalizedName) || existing.normalizedName.includes(newItemNormalized)) return true
-            if (newItemNormalized.length > 5 && existing.normalizedName.length > 5) {
-                const maxLength = Math.max(newItemNormalized.length, existing.normalizedName.length)
-                const distance = levenshteinDistance(newItemNormalized, existing.normalizedName)
-                return distance <= maxLength * 0.2
-            }
-            return false
-        })
+        const newItemNormalized = await normalizeName(newItem.name)
+        const isDuplicate = await Promise.all(
+            normalizedExisting.map(async (existing) => {
+                if (newItemNormalized === existing.normalizedName) return true
+                if (newItemNormalized.includes(existing.normalizedName) || existing.normalizedName.includes(newItemNormalized)) return true
+                if (newItemNormalized.length > 5 && existing.normalizedName.length > 5) {
+                    const maxLength = Math.max(newItemNormalized.length, existing.normalizedName.length)
+                    const distance = await levenshteinDistance(newItemNormalized, existing.normalizedName)
+                    return distance <= maxLength * 0.2
+                }
+                return false
+            })
+        )
         if (!isDuplicate.some(Boolean)) {
             results.push(newItem)
         }
@@ -138,7 +142,7 @@ export async function scanMenuImage(
         .from(cafeMenuItems)
         .where(eq(cafeMenuItems.cafeId, cafeId))
 
-    const deduplicated = deduplicateMenuItems(items, existingItems)
+    const deduplicated = await deduplicateMenuItems(items, existingItems)
     const duplicateNames = items
         .filter((item) => !deduplicated.some((d) => d.name === item.name))
         .map((item) => item.name)
