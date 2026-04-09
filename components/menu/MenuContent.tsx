@@ -533,6 +533,7 @@ export default function MenuContent({
                         is_food: editTarget.isFood ?? undefined,
                         is_hot: editTarget.isHot ?? undefined,
                         is_cold: editTarget.isCold ?? undefined,
+                        is_signature: editTarget.isSignature ?? undefined,
                         is_vegan: editTarget.isVegan ?? undefined,
                         is_vegetarian: editTarget.isVegetarian ?? undefined,
                         calories: editTarget.calories ?? undefined,
