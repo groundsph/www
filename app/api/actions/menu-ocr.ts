@@ -3,7 +3,7 @@
 import { getCurrentUser } from "@/lib/auth"
 import { db } from "@/db"
 import { cafeMenuItems, cafes } from "@/db/schema/tables"
-import { eq } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { recalculatePriceLevel } from "./price-level"
 import { extractMenuItemsFromImage } from "@/utils/ai/menu-ocr"
@@ -172,7 +172,7 @@ export async function saveOcrMenuItems(
         .select({ sortOrder: cafeMenuItems.sortOrder })
         .from(cafeMenuItems)
         .where(eq(cafeMenuItems.cafeId, cafeId))
-        .orderBy(cafeMenuItems.sortOrder)
+        .orderBy(desc(cafeMenuItems.sortOrder))
         .limit(1)
 
     const nextSortOrder = existingItems.length > 0 ? (existingItems[0].sortOrder ?? 0) + 1 : 0
