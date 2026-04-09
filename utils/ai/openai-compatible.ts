@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { ToolDefinition } from "@/utils/ai/tool-definitions"
 
 const blogCheckSchema = z.object({
     approved: z.boolean(),
@@ -165,15 +166,6 @@ export async function checkBlogPost(
 }
 
 // Tool definitions and types for tool calling
-export interface ToolDefinition {
-    type: "function"
-    function: {
-        name: string
-        description: string
-        parameters: object
-    }
-}
-
 interface ToolCall {
     id: string
     type: "function"
