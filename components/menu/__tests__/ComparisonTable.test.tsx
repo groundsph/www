@@ -72,7 +72,7 @@ describe("ComparisonTable", () => {
 		const item = createMockItem("1", { cafeName: "Test Cafe", cafeSlug: "test-cafe" })
 		const { container } = render(<ComparisonTable items={[item]} />)
 
-		const cafeLink = container.querySelector('a[href="/cafe/test-cafe"]')
+		const cafeLink = container.querySelector('a[href="/cafes/test-cafe"]')
 		expect(cafeLink).toBeTruthy()
 		expect(cafeLink?.textContent).toContain("Test Cafe")
 	})

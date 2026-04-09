@@ -135,7 +135,7 @@ export default function ComparisonTable({ items }: ComparisonTableProps) {
 			label: "Cafe",
 			getValue: (item: ComparableMenuItem) => (
 				<a
-					href={`/cafe/${item.cafeSlug}`}
+					href={`/cafes/${item.cafeSlug}`}
 					className="text-primary hover:underline font-medium"
 				>
 					{item.cafeName}
