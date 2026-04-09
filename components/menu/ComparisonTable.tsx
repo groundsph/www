@@ -26,7 +26,7 @@ export default function ComparisonTable({ items }: ComparisonTableProps) {
 		)
 	}
 
-	const formatPrice = (price: number) => `₱${price.toFixed(2)}`
+	const formatPrice = (price: number) => `₱${price.toFixed(0)}`
 
 	const getTypeLabel = (item: ComparableMenuItem) => {
 		if (item.isFood) return "Food"

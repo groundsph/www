@@ -106,7 +106,7 @@ export default function MenuComparisonSearch({
 	)
 
 	const formatPrice = (price: number) => {
-		return `₱${price.toFixed(2)}`
+		return `₱${price.toFixed(0)}`
 	}
 
 	return (

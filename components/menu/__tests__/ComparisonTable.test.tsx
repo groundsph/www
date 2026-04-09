@@ -81,7 +81,7 @@ describe("ComparisonTable", () => {
 		const item = createMockItem("1", { price: 199.99 })
 		const { container } = render(<ComparisonTable items={[item]} />)
 
-		expect(container.textContent).toContain("₱199.99")
+		expect(container.textContent).toContain("₱200")
 	})
 
 	it("displays food type with correct icon", () => {

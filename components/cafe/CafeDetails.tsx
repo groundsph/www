@@ -533,7 +533,7 @@ export default function CafeDetails({
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className='font-medium text-text/80 shrink-0'>
-                                                        ₱{item.price.toFixed(2)}
+                                                        ₱{item.price.toFixed(0)}
                                                     </span>
                                                     <button
                                                         onClick={() => toggleCompareItem(item.id)}
@@ -1013,7 +1013,7 @@ export default function CafeDetails({
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className='font-medium text-text/80 shrink-0'>
-                                                    ₱{item.price.toFixed(2)}
+                                                    ₱{item.price.toFixed(0)}
                                                 </span>
                                                 <button
                                                     onClick={() => toggleCompareItem(item.id)}
