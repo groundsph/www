@@ -47,8 +47,8 @@ function shouldForceCityQuery(text: string): string | null {
     const match = text.match(/\b(build|make|create|plan|design)?\s*(me\s*)?(a\s*)?(crawl|route|trail)\s*(for|in)\s+([A-Za-z\s]{3,})/i)
     if (match && match[6]) {
         const city = match[6].trim()
-        // Validate it looks like a city name (starts with capital, no small words)
-        if (city.length > 2 && /^[A-Z][a-z]+$/.test(city.split(/\s+/)[0])) {
+        // Validate it looks like a city name (starts with capital, allows multi-word)
+        if (city.length > 2 && /^[A-Z][a-z]+(\s+[A-Z]?[a-z]*)*$/.test(city)) {
             return city
         }
     }
