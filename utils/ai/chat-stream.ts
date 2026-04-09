@@ -218,14 +218,17 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                             await onMessage("tool", JSON.stringify(result), undefined, toolCall.id)
                         }
                     } catch (toolError) {
+                        const errorMessage = toolError instanceof Error ? toolError.message : "Unknown error"
                         console.error(`Tool execution error for ${toolCall.function.name}:`, toolError)
                         toolCallRecords.push({
                             toolName: toolCall.function.name,
                             params: JSON.parse(toolCall.function.arguments),
-                            result: { error: "Tool execution failed" },
+                            result: { error: `Tool ${toolCall.function.name} failed: ${errorMessage}` },
                         })
 
-                        const toolErrorContent = JSON.stringify({ error: "Tool execution failed" })
+                        const toolErrorContent = JSON.stringify({
+                            error: `Tool ${toolCall.function.name} failed: ${errorMessage}. Try a different approach or ask the user to clarify.`,
+                        })
                         messages.push({
                             role: "tool",
                             content: toolErrorContent,
