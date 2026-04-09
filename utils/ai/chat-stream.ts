@@ -4,7 +4,8 @@ import { runCafeQuery } from "@/utils/ai/tools/cafe-query-runner"
 import { chatCompletionWithTools } from "@/utils/ai/openai-compatible"
 import { buildChatCafeCards } from "@/utils/ai/chat-cafe-cards"
 import { buildChatCrawlDraft } from "@/utils/ai/chat-crawl-draft"
-import { CHAT_SYSTEM_PROMPT, CHAT_TOOLS } from "@/utils/ai/tool-definitions"
+import { CHAT_TOOLS, getChatSystemPrompt } from "@/utils/ai/tool-definitions"
+import { getChatModelDisplayName } from "@/utils/ai/openai-compatible"
 import { executeTool } from "@/utils/ai/tool-executor"
 import type { ChatStreamChunk, ChatContext } from "@/utils/types/chat"
 
@@ -69,8 +70,9 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
     await onChunk({ type: "progress", message: "Thinking...", step: 1 })
 
     // Build messages array with conversation history
+    const modelName = getChatModelDisplayName()
     const messages: ChatMessage[] = [
-        { role: "system", content: CHAT_SYSTEM_PROMPT },
+        { role: "system", content: getChatSystemPrompt(modelName) },
     ]
 
     // Add conversation history for multi-turn context

@@ -214,6 +214,18 @@ export function getExcerptModel(): string {
     return process.env.OPENAI_COMPATIBLE_EXCERPT_MODEL ?? DEFAULT_EXCERPT_MODEL
 }
 
+export function getChatModelDisplayName(): string {
+    const model = getChatModel()
+    // Map internal model names to user-friendly names
+    const displayNames: Record<string, string> = {
+        "qwen3.5:397b-cloud": "Qwen 3.5 (397B)",
+        "gemma4:31b-cloud": "Gemma 4 (31B)",
+        "gpt-4o-mini": "GPT-4o Mini",
+        "gpt-4o": "GPT-4o",
+    }
+    return displayNames[model] ?? model
+}
+
 /**
  * Make a chat completion request with tool support
  */

@@ -1,4 +1,9 @@
-export const CHAT_SYSTEM_PROMPT = `You are a helpful assistant for Grounds, a coffee discovery platform for the Philippines.
+export function getChatSystemPrompt(modelName?: string): string {
+    const modelLine = modelName
+        ? `\n\nYou are powered by the ${modelName} model.`
+        : ""
+
+    return `You are a helpful assistant for Grounds, a coffee discovery platform for the Philippines.${modelLine}
 
 You have access to tools for querying cafe information. When a user asks about cafes, use the appropriate tool.
 
@@ -36,6 +41,10 @@ Rules:
 12. Use search_menu_items when users ask about specific drinks or food items across cafes
 13. Use compare_menu_items to show side-by-side comparisons of specific items
 14. When comparing items, present results in a clear markdown table format`
+}
+
+// Keep existing constant for backward compatibility
+export const CHAT_SYSTEM_PROMPT = getChatSystemPrompt()
 
 export interface ToolDefinition {
     type: "function"
