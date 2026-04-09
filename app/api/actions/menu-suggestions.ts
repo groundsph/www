@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { menuItemSuggestions, cafeMenuItems } from "@/db/schema/tables"
+import { menuItemSuggestions, cafeMenuItems, cafes } from "@/db/schema/tables"
 import { getCurrentUser } from "@/lib/auth"
 import { eq, and, count } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -200,6 +200,16 @@ export async function approveMenuItemSuggestion(suggestionId: string) {
             })
             .where(eq(menuItemSuggestions.id, suggestionId))
 
+        const [cafe] = await db
+            .select({ slug: cafes.slug })
+            .from(cafes)
+            .where(eq(cafes.id, suggestion.cafeId))
+            .limit(1)
+
+        if (cafe?.slug) {
+            revalidatePath(`/cafes/${cafe.slug}`)
+            revalidatePath(`/cafes/${cafe.slug}/menu`)
+        }
         revalidatePath(`/cafes/`)
         return { success: true }
     } catch (error) {
