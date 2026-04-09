@@ -24,7 +24,7 @@ export default function MenuComparisonModal({
 	initialItems = [],
 }: MenuComparisonModalProps) {
 	const [selectedItems, setSelectedItems] = useState<ComparableMenuItem[]>(initialItems)
-	const [isLoading] = useState(false)
+	const [isLoading, setIsLoading] = useState(false)
 	const [isSharing, setIsSharing] = useState(false)
 	const [shareSuccess, setShareSuccess] = useState(false)
 	const searchParams = useSearchParams()
@@ -50,6 +50,8 @@ export default function MenuComparisonModal({
 			// Items will need to be fetched via search
 			// For now, we rely on the search functionality to add items
 			console.log("Items to load from IDs:", ids)
+			// Loading state ready for future item fetching implementation
+			setIsLoading(false)
 		}
 	}, [isOpen, searchParams, initialItemIds, initialItems])
 
