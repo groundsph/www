@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
@@ -51,6 +51,7 @@ interface MenuContentProps {
     cafeId: string
     cafeName: string
     cafeSlug: string
+    highlightItemId?: string
 }
 
 type FilterType = "all" | "coffee" | "food" | "cold" | "hot" | "vegan"
@@ -61,6 +62,7 @@ export default function MenuContent({
     cafeId,
     cafeName,
     cafeSlug,
+    highlightItemId,
 }: MenuContentProps) {
     const [lightboxImage, setLightboxImage] = useState<{
         url: string
@@ -73,6 +75,37 @@ export default function MenuContent({
     const [compareItemIds, setCompareItemIds] = useState<string[]>([])
     const [activeFilter, setActiveFilter] = useState<FilterType>("all")
     const [editTarget, setEditTarget] = useState<MenuItem | null>(null)
+    const [highlightedItemId, setHighlightedItemId] = useState<string | null>(highlightItemId || null)
+    const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+    // Handle scroll to highlighted item
+    useEffect(() => {
+        if (highlightedItemId) {
+            const timer = setTimeout(() => {
+                const element = itemRefs.current.get(highlightedItemId)
+                if (element) {
+                    // Expand the category containing this item
+                    const category = menuItems.find(item => item.id === highlightedItemId)?.category
+                    if (category && collapsedCategories.has(category)) {
+                        setCollapsedCategories(prev => {
+                            const newSet = new Set(prev)
+                            newSet.delete(category)
+                            return newSet
+                        })
+                    }
+                    
+                    // Scroll to the element
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    
+                    // Remove highlight after 3 seconds
+                    setTimeout(() => {
+                        setHighlightedItemId(null)
+                    }, 3000)
+                }
+            }, 100)
+            return () => clearTimeout(timer)
+        }
+    }, [highlightedItemId, menuItems, collapsedCategories])
 
     const { user: authUser } = useAuth()
 
@@ -313,7 +346,14 @@ export default function MenuContent({
                         return (
                             <div
                                 key={item.id}
-                                className="group bg-background rounded-xl border border-text/10 overflow-hidden hover:shadow-md hover:border-text/20 transition-all duration-200"
+                                ref={(el) => {
+                                    if (el) itemRefs.current.set(item.id, el)
+                                }}
+                                className={`group bg-background rounded-xl border overflow-hidden hover:shadow-md hover:border-text/20 transition-all duration-200 ${
+                                    highlightedItemId === item.id
+                                        ? 'border-primary ring-2 ring-primary/30 shadow-lg'
+                                        : 'border-text/10'
+                                }`}
                             >
                                 {/* Image Section */}
                                 <div className="relative aspect-[4/3] bg-secondary/20 overflow-hidden">

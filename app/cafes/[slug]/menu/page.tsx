@@ -11,6 +11,7 @@ import MenuContent from "@/components/menu/MenuContent"
 
 interface MenuPageProps {
     params: Promise<{ slug: string }>
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 // Generate metadata for SEO
@@ -59,8 +60,9 @@ export async function generateMetadata({
     }
 }
 
-export default async function MenuPage({ params }: MenuPageProps) {
+export default async function MenuPage({ params, searchParams }: MenuPageProps) {
     const { slug } = await params
+    const { item: highlightItemId } = await searchParams
 
     // Fetch cafe
     const cafeResult = await db
@@ -158,6 +160,7 @@ export default async function MenuPage({ params }: MenuPageProps) {
                         cafeId={cafe.id}
                         cafeName={cafe.name}
                         cafeSlug={cafe.slug}
+                        highlightItemId={typeof highlightItemId === 'string' ? highlightItemId : undefined}
                     />
                 )}
             </main>
