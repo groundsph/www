@@ -79,7 +79,7 @@ To prevent abuse and manage costs, the AI chat enforces rate limits per user ses
 
 ### Limits
 
-- **10 messages per session**
+- **30 messages per session**
 - **7-day rolling window** - After 7 days from the first message, the counter resets
 
 ### How It Works
