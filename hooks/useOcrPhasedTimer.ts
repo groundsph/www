@@ -44,6 +44,7 @@ export function useOcrPhasedTimer(): UseOcrPhasedTimerReturn {
     const [isRunning, setIsRunning] = useState(false)
     const [isPhaseTimedOut, setIsPhaseTimedOut] = useState(false)
     const phaseStartRef = useRef<number | null>(null)
+    const phaseRef = useRef<OcrPhase>("uploading")
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     const clearTimer = useCallback(() => {
@@ -55,6 +56,7 @@ export function useOcrPhasedTimer(): UseOcrPhasedTimerReturn {
 
     const setPhase = useCallback((newPhase: OcrPhase) => {
         setPhaseState(newPhase)
+        phaseRef.current = newPhase
         phaseStartRef.current = Date.now()
         setPhaseElapsedMs(0)
         setIsPhaseTimedOut(false)
@@ -68,6 +70,8 @@ export function useOcrPhasedTimer(): UseOcrPhasedTimerReturn {
 
     const start = useCallback(() => {
         phaseStartRef.current = Date.now()
+        phaseRef.current = "uploading"
+        setPhaseState("uploading")
         setPhaseElapsedMs(0)
         setIsPhaseTimedOut(false)
         setIsRunning(true)
@@ -88,14 +92,14 @@ export function useOcrPhasedTimer(): UseOcrPhasedTimerReturn {
             const elapsed = Date.now() - (phaseStartRef.current ?? Date.now())
             setPhaseElapsedMs(elapsed)
 
-            const timeout = OCR_PHASE_CONFIG[phase].timeoutMs
+            const timeout = OCR_PHASE_CONFIG[phaseRef.current].timeoutMs
             if (elapsed >= timeout) {
                 setIsPhaseTimedOut(true)
             }
         }, 100)
 
         return () => clearTimer()
-    }, [isRunning, phase, clearTimer])
+    }, [isRunning, clearTimer])
 
     return {
         phase,
