@@ -129,7 +129,6 @@ export default function MenuOcrScanModal({
 
     const {
         phase: ocrPhase,
-        phaseProgress,
         overallProgress,
         isPhaseTimedOut,
         setPhase: setOcrPhase,

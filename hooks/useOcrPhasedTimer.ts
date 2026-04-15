@@ -22,7 +22,6 @@ export function getOverallProgress(phase: OcrPhase, elapsedMs: number): number {
     const totalWeight = PHASE_ORDER.reduce(
         (sum, p) => sum + OCR_PHASE_CONFIG[p].timeoutMs, 0
     )
-    const phaseProgress = Math.min(elapsedMs / OCR_PHASE_CONFIG[phase].timeoutMs, 1)
     const overall = (completedWeight + elapsedMs) / totalWeight
     return Math.min(Math.floor(overall * 100), 100)
 }

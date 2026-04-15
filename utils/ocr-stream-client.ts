@@ -99,9 +99,7 @@ export async function streamOcrScan(
                         case "content":
                             callbacks.onContent(chunk.token)
                             streamedContent += chunk.token
-                            if (currentPhase !== "streaming") {
-                                emitPhase("streaming")
-                            }
+                            emitPhase("streaming")
                             const count = extractItemCountFromStreamedContent(streamedContent)
                             if (count > 0) {
                                 callbacks.onItemCount?.(count)

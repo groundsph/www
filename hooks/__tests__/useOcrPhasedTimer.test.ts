@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { getPhaseProgress, getOverallProgress, type OcrPhase, OCR_PHASE_CONFIG } from "@/hooks/useOcrPhasedTimer"
+import { getPhaseProgress, getOverallProgress, OCR_PHASE_CONFIG } from "@/hooks/useOcrPhasedTimer"
 
 describe("getPhaseProgress", () => {
     it("returns 0 at start of phase", () => {
