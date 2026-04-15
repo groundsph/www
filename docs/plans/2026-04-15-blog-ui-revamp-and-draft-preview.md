@@ -777,16 +777,862 @@ git commit -m "fix: resolve type comparison error in ocr-stream-client"
 | 4 | 11 | Fix ESLint errors and warnings |
 | 4 | 12 | Fix Next.js build type error |
 
-## Additional Recommendations
+## Phase 5: Shareable Preview Links
 
-1. **Preview URL sharing**: Consider adding a shareable preview link with a token, so authors can send a preview to collaborators without giving them full access. This would require a `preview_token` column in the `blog_posts` table and a new server action.
+Currently, only the author, admin, or cafe owner can view draft/pending posts by navigating to `/blog/[slug]`. Authors have no way to share a preview link with collaborators (e.g., co-authors, editors, stakeholders) without giving them full access. We'll add a `preview_token` column and a `/blog/preview/[token]` route that allows anyone with the token to view the post in Draft Preview mode (with analytics disabled).
 
-2. **Auto-save indicator in editor**: The RichBlogEditor has auto-save via `useAutoSave`, but there's no explicit "Last saved at X" timestamp shown. Consider adding one.
+### Task 13: Add preview_token column to blog_posts table
 
-3. **Draft/pending filter default in WriterDashboard**: Currently defaults to "all" status. Consider defaulting to "draft" since that's where authors spend most time.
+**Files:**
+- Modify: `db/schema/tables.ts`
+- Create: Migration file (via `bun db:generate`)
 
-4. **Redirect published post edits**: When editing a published post, consider showing a warning that changes will be visible immediately (or auto-save to draft first).
+**Step 1: Add previewToken column to blogPosts table**
 
-5. **Mobile nav in ManageLayout**: The current sidebar already has a mobile horizontal scroll. The new horizontal nav should also work well on mobile with overflow-x-auto.
+In `db/schema/tables.ts`, add a `previewToken` column to the `blogPosts` table definition:
 
-6. **Consistent "Write Blog" CTA**: The profile blogs page (`/profile/blogs`) and the community page both have entry points to create posts. Ensure they all route to the same unified editor experience.
+```typescript
+// Add after the `crawlId` line (around line 373):
+previewToken: text("preview_token").unique(),
+```
+
+The column should be nullable (existing posts won't have tokens), and unique (tokens must be globally unique for URL safety).
+
+**Step 2: Generate and run the migration**
+
+```bash
+bun db:generate
+bun db:push
+```
+
+**Step 3: Regenerate database types if needed**
+
+```bash
+# If using supabase gen types:
+bunx supabase gen types typescript --linked > utils/types/database.types.ts
+```
+
+**Step 4: Commit**
+
+```bash
+git add db/schema/tables.ts drizzle/migrations/
+git commit -m "feat(db): add preview_token column to blog_posts"
+```
+
+### Task 14: Add server actions for preview token generation and lookup
+
+**Files:**
+- Modify: `app/api/actions/blog.ts`
+
+**Step 1: Add generatePreviewToken server action**
+
+```typescript
+export async function generatePreviewToken(postId: string): Promise<{ success: boolean; token?: string; error?: string }> {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const post = await db.select({ id: blogPosts.id, authorId: blogPosts.authorId, status: blogPosts.status })
+        .from(blogPosts).where(eq(blogPosts.id, postId)).limit(1)
+
+    if (!post.length) return { success: false, error: "Post not found" }
+
+    const isAdmin = await isAdminOrModerator()
+    if (post[0].authorId !== user.id && !isAdmin) return { success: false, error: "Not authorized" }
+
+    // Generate a cryptographically secure token
+    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").substring(0, 8)
+
+    await db.update(blogPosts)
+        .set({ previewToken: token, updatedAt: new Date() })
+        .where(eq(blogPosts.id, postId))
+
+    revalidatePath(`/blog/${post[0].slug}`)
+    return { success: true, token }
+}
+
+export async function regeneratePreviewToken(postId: string): Promise<{ success: boolean; token?: string; error?: string }> {
+    // Invalidate old token and generate a new one
+    return generatePreviewToken(postId)
+}
+
+export async function revokePreviewToken(postId: string): Promise<{ success: boolean; error?: string }> {
+    const user = await getCurrentUser()
+    if (!user) return { success: false, error: "Not authenticated" }
+
+    const isAdmin = await isAdminOrModerator()
+    const post = await db.select({ id: blogPosts.id, authorId: blogPosts.authorId })
+        .from(blogPosts).where(eq(blogPosts.id, postId)).limit(1)
+
+    if (!post.length) return { success: false, error: "Post not found" }
+    if (post[0].authorId !== user.id && !isAdmin) return { success: false, error: "Not authorized" }
+
+    await db.update(blogPosts)
+        .set({ previewToken: null, updatedAt: new Date() })
+        .where(eq(blogPosts.id, postId))
+
+    return { success: true }
+}
+```
+
+**Step 2: Add getBlogPostByPreviewToken server action**
+
+```typescript
+export async function getBlogPostByPreviewToken(token: string): Promise<BlogPost | null> {
+    if (!token) return null
+
+    const result = await db.select({
+        id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
+        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
+        tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds,
+        crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
+        publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
+        previewToken: blogPosts.previewToken,
+    })
+        .from(blogPosts)
+        .where(eq(blogPosts.previewToken, token))
+        .limit(1)
+
+    const post = result[0]
+    if (!post) return null
+
+    const [authorResult, cafeResult] = await Promise.all([
+        post.authorId ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
+            .from(profiles).where(eq(profiles.id, post.authorId)).limit(1) : Promise.resolve([]),
+        post.cafeId ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
+            .from(cafes).where(eq(cafes.id, post.cafeId)).limit(1) : Promise.resolve([]),
+    ])
+
+    return mapBlogPost(post, authorResult[0], cafeResult[0])
+}
+```
+
+**Step 3: Update mapBlogPost signature to include previewToken**
+
+The `mapBlogPost` helper needs to know about `previewToken`. Add it to the select in `getBlogPostBySlug` and `getBlogPostById` as well, and include it in the `BlogPost` interface.
+
+In `utils/types/blog.ts`, add to the `BlogPost` interface:
+
+```typescript
+export interface BlogPost extends Omit<BlogPostRow, "search_vector"> {
+    // ... existing fields
+    preview_token?: string | null
+}
+```
+
+**Step 4: Auto-generate preview token on post creation**
+
+In the `createBlogPost` function, after creating the post, automatically generate a preview token for non-published statuses. When a post transitions to "published", clear the preview token:
+
+In `createBlogPost`, after the insert, if `status !== "published"`:
+```typescript
+const previewToken = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").substring(0, 8)
+await db.update(blogPosts).set({ previewToken }). .where(eq(blogPosts.id, postId))
+```
+
+**Step 5: Clear preview token on publish**
+
+In `approveBlogPost` and `updateBlogPost` when status changes to `"published"`, set `previewToken: null`.
+
+**Step 6: Commit**
+
+```bash
+git add app/api/actions/blog.ts utils/types/blog.ts
+git commit -m "feat(blog): add preview token server actions and auto-generation"
+```
+
+### Task 15: Create preview route and page
+
+**Files:**
+- Create: `app/blog/preview/[token]/page.tsx`
+
+**Step 1: Create the preview route page**
+
+```tsx
+// app/blog/preview/[token]/page.tsx
+import { getBlogPostByPreviewToken } from "@/app/api/actions/blog"
+import { notFound } from "next/navigation"
+import BlogPostContent from "@/components/blog/BlogPostContent"
+
+export const dynamic = "force-dynamic"
+
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }) {
+    const { token } = await params
+    const post = await getBlogPostByPreviewToken(token)
+    if (!post) return { title: "Preview Not Found" }
+    return { title: `[Preview] ${post.title}` }
+}
+
+export default async function PreviewPage({ params }: { params: Promise<{ token: string }> }) {
+    const { token } = await params
+    const post = await getBlogPostByPreviewToken(token)
+    if (!post) notFound()
+
+    // Preview pages never count views, never share, never report
+    return <BlogPostContent post={post} isPreview />
+}
+```
+
+**Step 2: Create extractable BlogPostContent component**
+
+Extract the blog post rendering from `app/blog/[slug]/page.tsx` into a shared `BlogPostContent` component that accepts an `isPreview` prop. When `isPreview` is true:
+- Show the `DraftPreviewBanner` at the top
+- Hide view count, share button, report button
+- Show a "Copy Preview Link" button
+- Show the post status badge prominently
+
+Create `components/blog/BlogPostContent.tsx` by extracting the JSX from `app/blog/[slug]/page.tsx` into a client component with the `isPreview` prop.
+
+**Step 3: Refactor blog/[slug]/page.tsx to use BlogPostContent**
+
+```tsx
+// app/blog/[slug]/page.tsx
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params
+    const post = await getBlogPostBySlug(slug)
+    if (!post) notFound()
+
+    const isPreview = post.status !== "published"
+    if (!isPreview) {
+        incrementViewCount(post.id)
+    }
+
+    return <BlogPostContent post={post} isPreview={isPreview} />
+}
+```
+
+**Step 4: Commit**
+
+```bash
+git add app/blog/preview/ app/blog/[slug]/page.tsx components/blog/BlogPostContent.tsx
+git commit -m "feat(blog): add preview route and extract BlogPostContent component"
+```
+
+### Task 16: Add "Copy Preview Link" UI to dashboard lists
+
+**Files:**
+- Modify: `components/blog/BlogPostCard.tsx`
+- Modify: `components/blog/DraftPreviewBanner.tsx`
+
+**Step 1: Add Copy Preview Link to BlogPostCard**
+
+For draft/pending posts that have a `preview_token`, add a "Copy Preview Link" button:
+
+```tsx
+{post.preview_token && (post.status === "draft" || post.status === "pending") && (
+    <button
+        onClick={async () => {
+            const url = `${window.location.origin}/blog/preview/${post.preview_token}`
+            await navigator.clipboard.writeText(url)
+            onCopyPreviewLink?.()
+        }}
+        className="p-2 text-text/40 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+        title="Copy preview link"
+    >
+        <LinkIcon className="w-4 h-4" />
+    </button>
+)}
+```
+
+Add `onCopyPreviewLink?: () => void` and `showCopyPreviewLink?: boolean` props to `BlogPostCard`.
+
+**Step 2: Add "Copy Preview Link" in DraftPreviewBanner**
+
+For the preview page itself, add a button to copy the shareable preview URL:
+
+```tsx
+<button
+    onClick={async () => {
+        const url = window.location.href
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }}
+    className="px-3 py-1 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 transition-colors"
+>
+    {copied ? "Copied!" : "Copy Preview Link"}
+</button>
+```
+
+**Step 3: Commit**
+
+```bash
+git add components/blog/BlogPostCard.tsx components/blog/DraftPreviewBanner.tsx
+git commit -m "feat(blog): add copy preview link buttons"
+```
+
+---
+
+## Phase 6: Auto-Save Indicator Enhancement
+
+The `useAutoSave` hook already tracks `AutoSaveState` with a `lastSaved` Date timestamp. The `RichBlogEditor` currently shows only "Saving...", "Saved", or "Save failed" text. We'll enhance this to show a formatted "Last saved at X" timestamp.
+
+### Task 17: Add "Last saved at" timestamp to RichBlogEditor
+
+**Files:**
+- Modify: `components/blog/editor/types.ts`
+- Modify: `components/blog/RichBlogEditor.tsx`
+
+**Step 1: Update AutoSaveState type (if needed)**
+
+The `AutoSaveState` already has `lastSaved?: Date` in `components/blog/editor/types.ts`. No change needed there.
+
+**Step 2: Update RichBlogEditor to show timestamp**
+
+In the editor header (around line 366-370 of `RichBlogEditor.tsx`), enhance the auto-save status display:
+
+Currently:
+```tsx
+{saveStatusText && (
+    <p className="text-xs text-text/40 mt-0.5">{saveStatusText}</p>
+)}
+```
+
+Replace with:
+
+```tsx
+{autoSaveState.status === "saving" && (
+    <p className="text-xs text-text/40 mt-0.5">Saving...</p>
+)}
+{autoSaveState.status === "saved" && autoSaveState.lastSaved && (
+    <p className="text-xs text-text/40 mt-0.5">
+        Saved at {autoSaveState.lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+    </p>
+)}
+{autoSaveState.status === "saved" && !autoSaveState.lastSaved && (
+    <p className="text-xs text-text/40 mt-0.5">Saved</p>
+)}
+{autoSaveState.status === "error" && (
+    <p className="text-xs text-red-500 mt-0.5">{autoSaveState.error || "Save failed"}</p>
+)}
+```
+
+Remove the previous `saveStatusText` computed variable and replace all references.
+
+**Step 3: Commit**
+
+```bash
+git add components/blog/RichBlogEditor.tsx
+git commit -m "feat(blog): show auto-save timestamp in editor header"
+```
+
+---
+
+## Phase 7: UX Improvements
+
+### Task 18: Change WriterDashboard default filter to "draft"
+
+**Files:**
+- Modify: `components/writer/WriterDashboard.tsx`
+
+**Step 1: Change default filter from "all" to "draft"**
+
+In `WriterDashboard.tsx`, line 30:
+```typescript
+// Change from:
+const [filterStatus, setFilterStatus] = useState<BlogStatus | "all">("all")
+// To:
+const [filterStatus, setFilterStatus] = useState<BlogStatus | "all">("draft")
+```
+
+Also update `loadPosts` to only fetch when the filter or search changes. Add a `useEffect` that triggers `loadPosts` when `filterStatus` changes:
+
+```typescript
+useEffect(() => {
+    loadPosts()
+}, [filterStatus])
+```
+
+**Step 2: Commit**
+
+```bash
+git add components/writer/WriterDashboard.tsx
+git commit -m "feat(blog): default writer dashboard filter to draft status"
+```
+
+### Task 19: Add published post edit warning in RichBlogEditor
+
+**Files:**
+- Modify: `components/blog/RichBlogEditor.tsx`
+
+**Step 1: Add warning banner for published posts**
+
+When editing a post that has `status === "published"`, show a prominent warning at the top of the editor (below the header bar):
+
+```tsx
+{post?.status === "published" && (
+    <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-3">
+        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+        <div>
+            <p className="text-sm font-medium text-amber-800">
+                This post is already published
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+                Any changes you save will be visible to readers immediately. Consider saving as a draft first.
+            </p>
+        </div>
+    </div>
+)}
+```
+
+Import `AlertTriangle` from `lucide-react` at the top of the file (it's already imported in `DraftPreviewBanner.tsx` but needs to be added to `RichBlogEditor.tsx`'s imports if not already there — check first, it's not).
+
+**Step 2: Add "Revert to Draft" button for published posts**
+
+When editing a published post, add a "Revert to Draft" option alongside the "Publish Post" button:
+
+```tsx
+{post?.status === "published" && (
+    <button
+        onClick={() => handleSubmit("draft")}
+        disabled={isSubmitting}
+        className="w-full px-4 py-2.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 font-medium hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
+    >
+        <ArrowDownToLine className="w-4 h-4" />
+        Revert to Draft
+    </button>
+)}
+```
+
+Import `ArrowDownToLine` from `lucide-react`.
+
+**Step 3: Commit**
+
+```bash
+git add components/blog/RichBlogEditor.tsx
+git commit -m "feat(blog): add published post edit warning and revert-to-draft option"
+```
+
+### Task 20: Ensure mobile-friendly horizontal navigation in ManageLayout
+
+**Files:**
+- Modify: `components/manage/ManageLayout.tsx`
+
+**Step 1: Add mobile-friendly styles**
+
+The new horizontal nav from Task 5 already includes `overflow-x-auto`. Enhance it with:
+- `scrollbar-hide` class (needs Tailwind plugin or custom CSS)
+- Touch-friendly tap targets (minimum 44px height)
+- Active indicator that scrolls into view on page load
+
+Add a scroll-into-view effect for the active nav item:
+
+```tsx
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useEffect, useRef } from "react"
+// ... existing imports
+
+export default function ManageLayout({ children, userRole }: ManageLayoutProps) {
+    const pathname = usePathname()
+    const activeRef = useRef<HTMLAnchorElement>(null)
+
+    useEffect(() => {
+        // Scroll active item into view on mount
+        activeRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
+    }, [])
+
+    // ... rest of component
+
+    return (
+        // In the nav item map:
+        <Link
+            key={item.href}
+            href={item.href}
+            ref={(isActive || isCafePreview) ? activeRef : undefined}
+            // ... rest of props
+        >
+```
+
+Also add this to `globals.css` or the component's styling to hide scrollbars:
+
+```css
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+```
+
+(This may already exist in the project. Check `app/globals.css` first.)
+
+**Step 2: Commit**
+
+```bash
+git add components/manage/ManageLayout.tsx
+git commit -m "feat(manage): add mobile-friendly scroll-into-view for nav"
+```
+
+### Task 21: Unify "Write Blog" CTAs across all entry points
+
+**Files:**
+- Modify: `components/blog/UserBlogsList.tsx`
+- Modify: `components/blog/CommunityBlogsTab.tsx`
+- Modify: `components/manage/ContentManagement.tsx`
+
+Currently:
+- `/profile/blogs` → "Write Blog" links to `/blog/new`
+- `/community` (blogs tab) → No write CTA
+- `/manage/content` → "New Blog Post" opens inline modal
+
+**Step 1: Determine the correct routing for each role**
+
+For consistency:
+- **Regular users** → `/blog/new` (community post, restricted categories)
+- **Writers** → `/writer/new` (writer post, writer categories)
+- **Admins** → `/manage/content` with inline editor (all categories)
+
+This routing already works correctly. The change needed is to:
+1. Ensure `/profile/blogs` always routes to `/blog/new` (already does ✅)
+2. Add a "Write Blog" CTA to the CommunityBlogsTab for authenticated users
+3. In the manage content modal, keep the inline editor as-is (it provides all categories) ✅
+
+**Step 2: Add "Write Blog" CTA to CommunityBlogsTab**
+
+In `components/blog/CommunityBlogsTab.tsx`, add a conditional "Write Blog" button at the top of the blogs section that routes to `/blog/new` (the system already handles role-based access).
+
+```tsx
+import Link from "next/link"
+import { Plus } from "lucide-react"
+
+// Inside the component, before the "Latest Posts" section:
+<Link
+    href="/blog/new"
+    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors mb-6"
+>
+    <Plus className="w-4 h-4" />
+    Write a Post
+</Link>
+```
+
+**Step 3: Commit**
+
+```bash
+git add components/blog/CommunityBlogsTab.tsx
+git commit -m "feat(blog): add write post CTA to community blogs tab"
+```
+
+---
+
+## Phase 8: Image Download in Manage Preview
+
+The `/manage/preview/[id]` page (CafeEditor) shows images for the cover thumbnail and gallery, but there's no way to download them. This is also relevant for the blog post preview — when previewing a draft, images in the cover and gallery should be downloadable. We'll add a download button to both the cafe ImageSection and the blog BlogImageGallery lightbox.
+
+### Task 22: Add download functionality to cafe ImageSection gallery images
+
+**Files:**
+- Modify: `components/cafe-editor/ImageSection.tsx`
+
+**Step 1: Add download button to gallery images**
+
+In the `ImageSection` component, each gallery image (`Reorder.Item`) already has a hover overlay with move controls and a delete button. Add a download button next to the existing controls.
+
+Add a `handleDownloadImage` helper function at the top of the component:
+
+```typescript
+const handleDownloadImage = async (url: string, filename: string) => {
+    try {
+        const response = await fetch(url)
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = blobUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(blobUrl)
+    } catch {
+        // Fallback: open in new tab if fetch fails (CORS)
+        window.open(url, "_blank")
+    }
+}
+```
+
+Import `Download` from `lucide-react`.
+
+In each gallery `Reorder.Item`, add a download button in the hover overlay (alongside the move controls):
+
+```tsx
+<button
+    type="button"
+    onClick={(e) => {
+        e.stopPropagation()
+        handleDownloadImage(url, `${cafeName.replace(/\s+/g, "-").toLowerCase()}-gallery-${idx + 1}`)
+    }}
+    className="p-1 text-white hover:text-white/80 transition"
+    title="Download image"
+>
+    <Download className="w-4 h-4" />
+</button>
+```
+
+Place this inside the bottom control bar (`<div className="absolute bottom-2 left-2 right-2...">`) alongside the move left/right buttons. Use a flex layout with `justify-between` items: left arrow, download + right arrow.
+
+Actually, better placement: add a download icon button next to the delete button in the top-right overlay area, since the bottom bar is for reorder controls. Add it just before the delete `<button>`:
+
+```tsx
+{/* Download Button */}
+<button
+    type="button"
+    onClick={(e) => {
+        e.stopPropagation()
+        handleDownloadImage(url, `${cafeName.replace(/\s+/g, "-").toLowerCase()}-gallery-${idx + 1}`)
+    }}
+    className="absolute top-2 left-2 p-2 bg-white/80 text-text rounded-full md:opacity-0 group-hover:opacity-100 transition hover:bg-white z-10"
+    title="Download image"
+>
+    <Download className="w-4 h-4" />
+</button>
+```
+
+**Step 2: Add download button to cover image overlay**
+
+In the cover image section, the hover overlay already has "Change" and delete buttons. Add a "Download" button there too:
+
+```tsx
+{thumbnail && (
+    <a
+        href={getCafeThumbnailUrl(thumbnail)}
+        download={`${cafeName.replace(/\s+/g, "-").toLowerCase()}-cover`}
+        className="flex items-center gap-2 px-4 py-2 bg-white/80 text-text rounded-lg hover:bg-white transition"
+        onClick={(e) => e.stopPropagation()}
+    >
+        <Download className="w-4 h-4" />
+        Download
+    </a>
+)}
+```
+
+**Step 3: Commit**
+
+```bash
+git add components/cafe-editor/ImageSection.tsx
+git commit -m "feat(manage): add image download buttons to cafe preview gallery"
+```
+
+### Task 23: Add download button to blog BlogImageGallery lightbox
+
+**Files:**
+- Modify: `components/blog/BlogImageGallery.tsx`
+
+**Step 1: Add download button in the lightbox**
+
+The `BlogImageGallery` component has a lightbox overlay (opened when clicking an image) with close, previous/next navigation, and a counter. Add a download button in the top bar of the lightbox.
+
+Import `Download` from `lucide-react`.
+
+Add a download handler inside the component:
+
+```typescript
+const handleDownload = async (url: string, filename: string) => {
+    try {
+        const response = await fetch(url)
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = blobUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(blobUrl)
+    } catch {
+        window.open(url, "_blank")
+    }
+}
+```
+
+Add a download button next to the close button in the lightbox:
+
+```tsx
+{/* Close and Download buttons */}
+<div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+    <button
+        className="p-2 text-white/80 hover:text-white transition-colors"
+        onClick={() => handleDownload(images[selectedIndex], `blog-gallery-${selectedIndex + 1}`)}
+        title="Download image"
+    >
+        <Download className="w-6 h-6" />
+    </button>
+    <button
+        className="p-2 text-white/80 hover:text-white transition-colors"
+        onClick={closeLightbox}
+    >
+        <X className="w-8 h-8" />
+    </button>
+</div>
+```
+
+**Step 2: Add individual download button on gallery grid thumbnails**
+
+Also add a small download icon on hover for each thumbnail in the grid, similar to the zoom icon. This gives a quick way to download without opening the lightbox:
+
+```tsx
+{/* Download overlay on hover */}
+<div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+    <button
+        onClick={(e) => {
+            e.stopPropagation()
+            handleDownload(image, `blog-gallery-${index + 1}`)
+        }}
+        className="p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition"
+        title="Download"
+    >
+        <Download className="w-3.5 h-3.5" />
+    </button>
+</div>
+```
+
+**Step 3: Commit**
+
+```bash
+git add components/blog/BlogImageGallery.tsx
+git commit -m "feat(blog): add download buttons to image gallery and lightbox"
+```
+
+### Task 24: Add download to admin ContentManagement blog post preview modal
+
+**Files:**
+- Modify: `components/manage/PostPreviewModal.tsx`
+
+**Step 1: Read PostPreviewModal to understand its current structure**
+
+The `PostPreviewModal` is used in the moderation queue to preview blog posts. Check its structure and add download buttons for any cover images or gallery images shown in the preview.
+
+**Step 2: Add download functionality**
+
+If `PostPreviewModal` shows images (cover image, gallery), add download buttons similar to the pattern above. Import `Download` from `lucide-react`, add a `handleDownload` helper, and place download buttons on image overlays.
+
+For the cover image in the preview:
+
+```tsx
+{post.cover_image && (
+    <div className="relative group">
+        <Image src={post.cover_image} alt={post.title} fill className="object-cover" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+        <button
+            onClick={() => handleDownload(post.cover_image!, `${post.slug}-cover`)}
+            className="absolute top-3 right-3 p-2 bg-white/80 text-text rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-white"
+            title="Download cover image"
+        >
+            <Download className="w-4 h-4" />
+        </button>
+    </div>
+)}
+```
+
+**Step 3: Commit**
+
+```bash
+git add components/manage/PostPreviewModal.tsx
+git commit -m "feat(manage): add image download buttons to blog post preview modal"
+```
+
+### Task 25: Create shared useImageDownload hook to DRY download logic
+
+**Files:**
+- Create: `hooks/useImageDownload.ts`
+- Modify: `components/cafe-editor/ImageSection.tsx`
+- Modify: `components/blog/BlogImageGallery.tsx`
+- Modify: `components/manage/PostPreviewModal.tsx`
+
+**Step 1: Create the shared hook**
+
+Extract the download logic from Tasks 22-24 into a reusable hook:
+
+```typescript
+// hooks/useImageDownload.ts
+"use client"
+
+/**
+ * Hook to download images by URL.
+ * Attempts fetch+blob first (for same-origin images),
+ * falls back to opening in a new tab (for CORS scenarios).
+ */
+export function useImageDownload() {
+    const download = async (url: string, filename: string) => {
+        try {
+            const response = await fetch(url)
+            const blob = await response.blob()
+            const blobUrl = URL.createObjectURL(blob)
+            const link = document.createElement("a")
+            link.href = blobUrl
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(blobUrl)
+        } catch {
+            // Fallback: open in new tab if fetch fails (CORS)
+            window.open(url, "_blank")
+        }
+    }
+
+    return { download }
+}
+```
+
+**Step 2: Refactor ImageSection to use the hook**
+
+Remove the inline `handleDownloadImage` function from `ImageSection.tsx` and use:
+
+```typescript
+import { useImageDownload } from "@/hooks/useImageDownload"
+
+// In the component:
+const { download: downloadImage } = useImageDownload()
+```
+
+**Step 3: Refactor BlogImageGallery to use the hook**
+
+Same pattern:
+
+```typescript
+import { useImageDownload } from "@/hooks/useImageDownload"
+
+// In the component:
+const { download: downloadImage } = useImageDownload()
+```
+
+**Step 4: Refactor PostPreviewModal to use the hook**
+
+Same pattern.
+
+**Step 5: Commit**
+
+```bash
+git add hooks/useImageDownload.ts components/cafe-editor/ImageSection.tsx components/blog/BlogImageGallery.tsx components/manage/PostPreviewModal.tsx
+git commit -m "refactor: extract shared useImageDownload hook"
+```
+
+---
+
+## Updated Summary
+
+| Phase | Task | Description |
+|-------|------|-------------|
+| 1 | 1 | Remove `mode` prop from RichBlogEditor, use feature flags |
+| 1 | 2 | Update `/blog/new` to use feature flags |
+| 1 | 3 | Update `/blog/edit/[id]` to use feature flags |
+| 1 | 4 | Remove EditStory.tsx, inline into writer edit page |
+| 2 | 5 | Replace ManageLayout sidebar with full-width horizontal nav |
+| 2 | 6 | Remove max-width constraints across blog/community pages |
+| 2 | 7 | Extract shared BlogPostCard, unify post list UI |
+| 3 | 8 | Add draft preview banner and disable analytics for non-published posts |
+| 3 | 9 | Add preview button to draft/pending posts in dashboards |
+| 3 | 10 | Verify draft access control (already works) |
+| 4 | 11 | Fix ESLint errors and warnings |
+| 4 | 12 | Fix Next.js build type error |
+| 5 | 13 | Add `preview_token` column to blog_posts table |
+| 5 | 14 | Add server actions for preview token generation and lookup |
+| 5 | 15 | Create `/blog/preview/[token]` route and extract BlogPostContent component |
+| 5 | 16 | Add "Copy Preview Link" buttons to dashboards and banner |
+| 6 | 17 | Show "Last saved at" timestamp in editor header |
+| 7 | 18 | Default WriterDashboard filter to "draft" status |
+| 7 | 19 | Add published post edit warning and revert-to-draft option |
+| 7 | 20 | Add mobile-friendly scroll-into-view for manage nav |
+| 7 | 21 | Unify "Write Blog" CTAs across all entry points |
+| 8 | 22 | Add download buttons to cafe preview ImageSection |
+| 8 | 23 | Add download buttons to BlogImageGallery lightbox and grid |
+| 8 | 24 | Add download buttons to admin PostPreviewModal |
+| 8 | 25 | Extract shared `useImageDownload` hook to DRY download logic |
