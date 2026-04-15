@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Discover and explore the best cafes in the Philippines',
         start_url: '/',
         display: 'standalone',
-        background_color: '#ffffff',
+        background_color: '#AF8F6F',
         theme_color: '#8B4513',
         icons: [
             {

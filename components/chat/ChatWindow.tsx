@@ -16,7 +16,15 @@ import {
 } from "@/utils/chat-history"
 import { subscribeChatEvents } from "@/utils/chat-events"
 import { sendChatMessageStream } from "@/utils/chat-stream-client"
-import type { ChatCafeCard, ChatCardContext, ChatCrawlDraft, ChatMessage as ChatMessageType, ChatStreamChunk } from "@/utils/types/chat"
+import type {
+    ChatCafeCard,
+    ChatCardContext,
+    ChatCrawlDraft,
+    ChatMessage as ChatMessageType,
+    ChatStreamChunk,
+} from "@/utils/types/chat"
+import Image from "next/image"
+import logo from '@/public/icon.png'
 
 interface ChatWindowProps {
     remainingMessages: number
@@ -54,14 +62,14 @@ function TypingIndicator() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="flex justify-start"
+            className='flex justify-start'
         >
-            <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-background border border-primary/10">
-                <div className="flex items-center gap-1.5">
+            <div className='px-4 py-3 rounded-2xl rounded-bl-md bg-background border border-primary/10'>
+                <div className='flex items-center gap-1.5'>
                     {[0, 1, 2].map((i) => (
                         <motion.span
                             key={i}
-                            className="w-2 h-2 rounded-full bg-text/40"
+                            className='w-2 h-2 rounded-full bg-text/40'
                             animate={{
                                 opacity: [0.3, 1, 0.3],
                                 scale: [0.8, 1, 0.8],
@@ -102,7 +110,8 @@ export default function ChatWindow({
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [currentRemaining, setCurrentRemaining] = useState(remainingMessages)
-    const [pendingMessage, setPendingMessage] = useState<ChatMessageType | null>(null)
+    const [pendingMessage, setPendingMessage] =
+        useState<ChatMessageType | null>(null)
     const [streamState, setStreamState] = useState<StreamState>({
         isStreaming: false,
         progressMessage: null,
@@ -189,16 +198,57 @@ export default function ChatWindow({
     const isCafeRelatedMessage = (text: string): boolean => {
         const query = text.toLowerCase()
         const cafeKeywords = [
-            "cafe", "cafes", "coffee", "coffee shop", "espresso", "latte",
-            "brew", "roast", "barista", "near me", "nearby", "closest",
-            "recommend", "rated", "review", "menu", "price", "hours",
-            "wifi", "socket", "aircon", "pet friendly", "work friendly",
-            "outdoor", "food", "crawl", "route", "trail", "itinerary",
-            "manila", "cebu", "davao", "quezon", "makati", "bgc", "bonifacio",
-            "compare", "versus", "vs", "between", "best", "top", "good",
-            "where", "find", "search", "list", "show", "grounds"
+            "cafe",
+            "cafes",
+            "coffee",
+            "coffee shop",
+            "espresso",
+            "latte",
+            "brew",
+            "roast",
+            "barista",
+            "near me",
+            "nearby",
+            "closest",
+            "recommend",
+            "rated",
+            "review",
+            "menu",
+            "price",
+            "hours",
+            "wifi",
+            "socket",
+            "aircon",
+            "pet friendly",
+            "work friendly",
+            "outdoor",
+            "food",
+            "crawl",
+            "route",
+            "trail",
+            "itinerary",
+            "manila",
+            "cebu",
+            "davao",
+            "quezon",
+            "makati",
+            "bgc",
+            "bonifacio",
+            "compare",
+            "versus",
+            "vs",
+            "between",
+            "best",
+            "top",
+            "good",
+            "where",
+            "find",
+            "search",
+            "list",
+            "show",
+            "grounds",
         ]
-        return cafeKeywords.some(kw => query.includes(kw))
+        return cafeKeywords.some((kw) => query.includes(kw))
     }
 
     const scrollToBottom = useCallback(() => {
@@ -273,72 +323,92 @@ export default function ChatWindow({
     }, [messages])
 
     // Shared helper to process stream response
-    const processStreamResponse = useCallback(async (
-        content: string,
-        locationHint: string
-    ): Promise<StreamResult> => {
-        const cafes: ChatCafeCard[] = []
-        let cardContext: ChatCardContext | undefined
-        let crawlDraft: ChatCrawlDraft | undefined
-        let finalMessage = ""
-        let finalRemaining = currentRemaining
+    const processStreamResponse = useCallback(
+        async (
+            content: string,
+            locationHint: string,
+        ): Promise<StreamResult> => {
+            const cafes: ChatCafeCard[] = []
+            let cardContext: ChatCardContext | undefined
+            let crawlDraft: ChatCrawlDraft | undefined
+            let finalMessage = ""
+            let finalRemaining = currentRemaining
 
-        await sendChatMessageStream(
-            `${content}${locationHint}`,
-            (chunk: ChatStreamChunk) => {
-                switch (chunk.type) {
-                    case "progress":
-                        setStreamState({
-                            isStreaming: true,
-                            progressMessage: chunk.message,
-                            progressStep: chunk.step ?? 0,
-                        })
-                        trigger("selection")
-                        setTimeout(scrollToBottom, 50)
-                        break
-                    case "tool":
-                        setStreamState((prev) => ({
-                            isStreaming: true,
-                            progressMessage: `Searching ${chunk.toolName}...`,
-                            progressStep: prev.progressStep + 1,
-                        }))
-                        setRecentToolCalls((prev) => [
-                            ...prev,
-                            { toolName: chunk.toolName, params: chunk.params, result: {} },
-                        ])
-                        setTimeout(scrollToBottom, 50)
-                        break
-                    case "cafes":
-                        cafes.push(...chunk.cafes)
-                        cardContext = chunk.cardContext
-                        setRecentCafes((prev) => [...prev, ...chunk.cafes])
-                        setTimeout(scrollToBottom, 50)
-                        break
-                    case "crawlDraft":
-                        crawlDraft = chunk.crawlDraft
-                        setTimeout(scrollToBottom, 50)
-                        break
-                    case "complete":
-                        finalMessage = chunk.message
-                        break
-                    case "remaining":
-                        finalRemaining = chunk.remaining
-                        break
-                    case "error":
-                        throw new Error(chunk.error)
-                }
-            },
-            {
-                recentCafes,
-                recentToolCalls,
-                pathname: window.location.pathname,
-                pageTitle: document.title,
-            },
-            buildHistory()
-        )
+            await sendChatMessageStream(
+                `${content}${locationHint}`,
+                (chunk: ChatStreamChunk) => {
+                    switch (chunk.type) {
+                        case "progress":
+                            setStreamState({
+                                isStreaming: true,
+                                progressMessage: chunk.message,
+                                progressStep: chunk.step ?? 0,
+                            })
+                            trigger("selection")
+                            setTimeout(scrollToBottom, 50)
+                            break
+                        case "tool":
+                            setStreamState((prev) => ({
+                                isStreaming: true,
+                                progressMessage: `Searching ${chunk.toolName}...`,
+                                progressStep: prev.progressStep + 1,
+                            }))
+                            setRecentToolCalls((prev) => [
+                                ...prev,
+                                {
+                                    toolName: chunk.toolName,
+                                    params: chunk.params,
+                                    result: {},
+                                },
+                            ])
+                            setTimeout(scrollToBottom, 50)
+                            break
+                        case "cafes":
+                            cafes.push(...chunk.cafes)
+                            cardContext = chunk.cardContext
+                            setRecentCafes((prev) => [...prev, ...chunk.cafes])
+                            setTimeout(scrollToBottom, 50)
+                            break
+                        case "crawlDraft":
+                            crawlDraft = chunk.crawlDraft
+                            setTimeout(scrollToBottom, 50)
+                            break
+                        case "complete":
+                            finalMessage = chunk.message
+                            break
+                        case "remaining":
+                            finalRemaining = chunk.remaining
+                            break
+                        case "error":
+                            throw new Error(chunk.error)
+                    }
+                },
+                {
+                    recentCafes,
+                    recentToolCalls,
+                    pathname: window.location.pathname,
+                    pageTitle: document.title,
+                },
+                buildHistory(),
+            )
 
-        return { cafes, cardContext, crawlDraft, finalMessage, finalRemaining }
-    }, [currentRemaining, recentCafes, recentToolCalls, scrollToBottom, trigger, buildHistory])
+            return {
+                cafes,
+                cardContext,
+                crawlDraft,
+                finalMessage,
+                finalRemaining,
+            }
+        },
+        [
+            currentRemaining,
+            recentCafes,
+            recentToolCalls,
+            scrollToBottom,
+            trigger,
+            buildHistory,
+        ],
+    )
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -356,7 +426,11 @@ export default function ChatWindow({
         setInput("")
         setIsLoading(true)
         setError(null)
-        setStreamState({ isStreaming: false, progressMessage: null, progressStep: 0 })
+        setStreamState({
+            isStreaming: false,
+            progressMessage: null,
+            progressStep: 0,
+        })
 
         // For near-me queries, queue message if location is still loading
         if (shouldRequestLocation(userMessage.content) && locationLoading) {
@@ -367,17 +441,24 @@ export default function ChatWindow({
         }
 
         try {
-            const shouldIncludeLocation = isCafeRelatedMessage(userMessage.content) && (location.lat || locationSummary)
+            const shouldIncludeLocation =
+                isCafeRelatedMessage(userMessage.content) &&
+                (location.lat || locationSummary)
             const locationHint = shouldIncludeLocation
                 ? location.lat && location.lng
                     ? `\n\nUser location: ${location.lat}, ${location.lng}.`
                     : locationSummary
-                        ? `\n\nUser location context: ${locationSummary}.`
-                        : ""
+                      ? `\n\nUser location context: ${locationSummary}.`
+                      : ""
                 : ""
 
-            const { cafes, cardContext, crawlDraft, finalMessage, finalRemaining } =
-                await processStreamResponse(userMessage.content, locationHint)
+            const {
+                cafes,
+                cardContext,
+                crawlDraft,
+                finalMessage,
+                finalRemaining,
+            } = await processStreamResponse(userMessage.content, locationHint)
 
             const assistantMessage: ChatMessageType = {
                 id: crypto.randomUUID(),
@@ -394,10 +475,20 @@ export default function ChatWindow({
             trigger("success")
             setCurrentRemaining(finalRemaining)
         } catch (err) {
-            setError(mapLocationError(err instanceof Error ? err.message : "An unexpected error occurred"))
+            setError(
+                mapLocationError(
+                    err instanceof Error
+                        ? err.message
+                        : "An unexpected error occurred",
+                ),
+            )
         } finally {
             setIsLoading(false)
-            setStreamState({ isStreaming: false, progressMessage: null, progressStep: 0 })
+            setStreamState({
+                isStreaming: false,
+                progressMessage: null,
+                progressStep: 0,
+            })
             setTimeout(scrollToBottom, 100)
         }
     }
@@ -406,21 +497,37 @@ export default function ChatWindow({
     useEffect(() => {
         if (!pendingMessage) return
         if (locationLoading) return
-        if (!locationSummary && !location.lat && !location.lng && !locationError) return
+        if (
+            !locationSummary &&
+            !location.lat &&
+            !location.lng &&
+            !locationError
+        )
+            return
 
         void (async () => {
             try {
-                const shouldIncludeLocation = isCafeRelatedMessage(pendingMessage.content) && (location.lat || locationSummary)
+                const shouldIncludeLocation =
+                    isCafeRelatedMessage(pendingMessage.content) &&
+                    (location.lat || locationSummary)
                 const locationHint = shouldIncludeLocation
                     ? location.lat && location.lng
                         ? `\n\nUser location: ${location.lat}, ${location.lng}.`
                         : locationSummary
-                            ? `\n\nUser location context: ${locationSummary}.`
-                            : ""
+                          ? `\n\nUser location context: ${locationSummary}.`
+                          : ""
                     : ""
 
-                const { cafes, cardContext, crawlDraft, finalMessage, finalRemaining } =
-                    await processStreamResponse(pendingMessage.content, locationHint)
+                const {
+                    cafes,
+                    cardContext,
+                    crawlDraft,
+                    finalMessage,
+                    finalRemaining,
+                } = await processStreamResponse(
+                    pendingMessage.content,
+                    locationHint,
+                )
 
                 const assistantMessage: ChatMessageType = {
                     id: crypto.randomUUID(),
@@ -437,15 +544,36 @@ export default function ChatWindow({
                 trigger("success")
                 setCurrentRemaining(finalRemaining)
             } catch (err) {
-                setError(mapLocationError(err instanceof Error ? err.message : "An unexpected error occurred"))
+                setError(
+                    mapLocationError(
+                        err instanceof Error
+                            ? err.message
+                            : "An unexpected error occurred",
+                    ),
+                )
             } finally {
                 setIsLoading(false)
                 setPendingMessage(null)
-                setStreamState({ isStreaming: false, progressMessage: null, progressStep: 0 })
+                setStreamState({
+                    isStreaming: false,
+                    progressMessage: null,
+                    progressStep: 0,
+                })
                 setTimeout(scrollToBottom, 100)
             }
         })()
-    }, [pendingMessage, locationLoading, locationSummary, location.lat, location.lng, locationError, mapLocationError, scrollToBottom, processStreamResponse, trigger])
+    }, [
+        pendingMessage,
+        locationLoading,
+        locationSummary,
+        location.lat,
+        location.lng,
+        locationError,
+        mapLocationError,
+        scrollToBottom,
+        processStreamResponse,
+        trigger,
+    ])
 
     useEffect(() => {
         if (locationError) {
@@ -464,7 +592,7 @@ export default function ChatWindow({
             <div className='flex items-center justify-between px-4 py-3.5 border-b border-primary/10 bg-linear-to-r from-secondary/5 to-transparent'>
                 <div className='flex items-center gap-3'>
                     <motion.div
-                        className='p-2 bg-secondary/20 rounded-xl'
+                        className='bg-secondary/20 rounded-xl p-1'
                         animate={{
                             scale: [1, 1.05, 1],
                         }}
@@ -475,7 +603,13 @@ export default function ChatWindow({
                             ease: "easeInOut",
                         }}
                     >
-                        <Sparkles className='w-4 h-4 text-secondary' />
+                        <Image
+                            src={logo}
+                            alt=''
+                            width={24}
+                            height={24}
+                            className='rounded-full'
+                        />
                     </motion.div>
                     <div>
                         <h3 className='font-semibold text-sm'>
@@ -496,9 +630,9 @@ export default function ChatWindow({
                 <div className='flex items-center gap-2'>
                     {isDev && (
                         <button
-                            type="button"
+                            type='button'
                             onClick={handleClearHistory}
-                            className="text-xs text-text/60 hover:text-text transition-colors"
+                            className='text-xs text-text/60 hover:text-text transition-colors'
                         >
                             Clear history
                         </button>
@@ -523,7 +657,7 @@ export default function ChatWindow({
                 <AnimatePresence mode='popLayout'>
                     {messages.length === 0 && (
                         <motion.div
-                            key="messages-entry"
+                            key='messages-entry'
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
@@ -531,14 +665,26 @@ export default function ChatWindow({
                         >
                             <motion.div
                                 className='p-4 bg-secondary/10 rounded-2xl'
-                                animate={{ y: [0, -5, 0], rotate: [0, 2, -2, 0] }}
-                                transition={{ duration: 4, repeat: Infinity, repeatType: "loop", ease: "easeInOut" }}
+                                animate={{
+                                    y: [0, -5, 0],
+                                    rotate: [0, 2, -2, 0],
+                                }}
+                                transition={{
+                                    duration: 4,
+                                    repeat: Infinity,
+                                    repeatType: "loop",
+                                    ease: "easeInOut",
+                                }}
                             >
                                 <Sparkles className='w-8 h-8 text-secondary' />
                             </motion.div>
                             <div className='space-y-1'>
-                                <p className='text-sm font-medium'>Ask me anything about cafes!</p>
-                                <p className='text-xs text-text/50'>Locations, recommendations, amenities...</p>
+                                <p className='text-sm font-medium'>
+                                    Ask me anything about cafes!
+                                </p>
+                                <p className='text-xs text-text/50'>
+                                    Locations, recommendations, amenities...
+                                </p>
                             </div>
                             <div className='flex flex-wrap gap-2 justify-center pt-2'>
                                 {SUGGESTED_PROMPTS.map((prompt, i) => (
@@ -552,13 +698,16 @@ export default function ChatWindow({
                                         onClick={() => setInput(prompt.label)}
                                         className='px-3 py-2 text-xs rounded-full border border-primary/15 bg-primary/5 hover:bg-primary/10 transition-colors text-left'
                                     >
-                                        <span className='mr-1'>{prompt.icon}</span>
+                                        <span className='mr-1'>
+                                            {prompt.icon}
+                                        </span>
                                         {prompt.label}
                                     </motion.button>
                                 ))}
                             </div>
-                            <div className="text-xs text-text/40 text-center mt-2">
-                                AI responses may not always be accurate. Menu data is community-contributed.
+                            <div className='text-xs text-text/40 text-center mt-2'>
+                                AI responses may not always be accurate. Menu
+                                data is community-contributed.
                             </div>
                         </motion.div>
                     )}
@@ -578,18 +727,17 @@ export default function ChatWindow({
                         </motion.div>
                     ))}
                     {isLoading && !streamState.progressMessage && (
-                        <TypingIndicator key="typing-indicator" />
+                        <TypingIndicator key='typing-indicator' />
                     )}
                     {isLoading && streamState.progressMessage && (
                         <motion.div
-                            key="stream-progress"
+                            key='stream-progress'
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             className='flex items-center gap-3 p-3 bg-secondary/5 rounded-xl w-fit'
                         >
-                            <motion.div
-                            >
+                            <motion.div>
                                 <Loader2 className='w-4 h-4 text-secondary animate-spin' />
                             </motion.div>
                             <div className='flex flex-col'>
@@ -606,7 +754,7 @@ export default function ChatWindow({
                     )}
                     {error && (
                         <motion.div
-                            key="error-message"
+                            key='error-message'
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
@@ -618,19 +766,21 @@ export default function ChatWindow({
                     )}
                     {locationLoading && (
                         <motion.div
-                            key="location-loading"
+                            key='location-loading'
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             className='flex items-center gap-2 p-3 bg-secondary/10 rounded-xl text-secondary'
                         >
                             <Loader2 className='w-4 h-4 animate-spin' />
-                            <span className='text-sm'>Requesting your location...</span>
+                            <span className='text-sm'>
+                                Requesting your location...
+                            </span>
                         </motion.div>
                     )}
                     {!locationLoading && isEstimate && locationSummary && (
                         <motion.div
-                            key="location-estimate"
+                            key='location-estimate'
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             className='text-xs text-text/60'
@@ -649,9 +799,14 @@ export default function ChatWindow({
                 className='p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-primary/10 bg-background/80 backdrop-blur-sm'
             >
                 {messages.length === 0 && (
-                    <p className="text-[10px] text-text/50 text-center px-4 pb-2">
-                        Conversations are stored to improve our AI. By chatting, you agree to our{" "}
-                        <a href="/legal/privacy" target="_blank" className="underline hover:text-text/80">
+                    <p className='text-[10px] text-text/50 text-center px-4 pb-2'>
+                        Conversations are stored to improve our AI. By chatting,
+                        you agree to our{" "}
+                        <a
+                            href='/legal/privacy'
+                            target='_blank'
+                            className='underline hover:text-text/80'
+                        >
                             Privacy Policy
                         </a>
                         .
@@ -665,7 +820,9 @@ export default function ChatWindow({
                             onChange={(e) => setInput(e.target.value)}
                             onFocus={() => {
                                 setTimeout(() => {
-                                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+                                    messagesEndRef.current?.scrollIntoView({
+                                        behavior: "smooth",
+                                    })
                                 }, 300)
                             }}
                             placeholder={
@@ -690,7 +847,9 @@ export default function ChatWindow({
                         <span
                             className={cn(
                                 "absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-text/30 font-medium transition-all duration-200",
-                                input.trim() ? "opacity-100 scale-100" : "opacity-0 scale-80 pointer-events-none"
+                                input.trim()
+                                    ? "opacity-100 scale-100"
+                                    : "opacity-0 scale-80 pointer-events-none",
                             )}
                         >
                             {input.length}/2000

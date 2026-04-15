@@ -91,7 +91,7 @@ export default function CafeLeaderboardSection({
                 >
                     <Link
                         href={`/cafes/${firstPlace.slug}`}
-                        className='block w-full h-full'
+                        className='block w-full h-full relative'
                     >
                         <div className='absolute left-2 top-4 z-10 bg-background px-3 py-1 pl-12 rounded-full text-xs md:text-sm font-semibold shadow-md'>
                             <div className='w-10 h-10 p-2 absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-linear-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-sm'>
@@ -158,7 +158,7 @@ export default function CafeLeaderboardSection({
                         >
                             <Link
                                 href={`/cafes/${secondPlace.slug}`}
-                                className='flex flex-row gap-3 w-full'
+                                className='flex flex-row gap-3 w-full relative'
                             >
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image
@@ -224,7 +224,7 @@ export default function CafeLeaderboardSection({
                         >
                             <Link
                                 href={`/cafes/${thirdPlace.slug}`}
-                                className='flex flex-row gap-3 w-full'
+                                className='flex flex-row gap-3 w-full relative'
                             >
                                 <div className='relative h-24 w-24 min-w-24 aspect-square rounded-lg overflow-clip'>
                                     <Image

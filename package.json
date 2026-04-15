@@ -1,6 +1,6 @@
 {
   "name": "grounds-website",
-  "version": "2026.16.4",
+  "version": "2026.17.0",
   "private": true,
   "scripts": {
     "dev": "next dev --experimental-https",
