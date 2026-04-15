@@ -2,7 +2,6 @@ import { describe, it, expect, jest } from "bun:test"
 import { render } from "@testing-library/react"
 import ShrinkwrapBubble from "@/components/chat/ShrinkwrapBubble"
 
-// Mock pretext module with realistic segment widths
 jest.mock("@chenglou/pretext", () => ({
     prepareWithSegments: (text: string) => ({
         widths: text.split("").map((char) => (char === " " ? 5 : 8)),
@@ -13,7 +12,6 @@ jest.mock("@chenglou/pretext", () => ({
         end: { segmentIndex: number; graphemeIndex: number }
         width: number
     }) => void) => {
-        // Simple line breaking: accumulate width until maxWidth
         const charWidth = 8
         const charsPerLine = Math.floor(maxWidth / charWidth)
         let lineCount = 0
@@ -44,7 +42,6 @@ describe("ShrinkwrapBubble", () => {
                 <div>Test content</div>
             </ShrinkwrapBubble>
         )
-
         expect(getByText("Test content")).toBeTruthy()
     })
 
@@ -59,7 +56,6 @@ describe("ShrinkwrapBubble", () => {
                 <div>Test content</div>
             </ShrinkwrapBubble>
         )
-
         expect(container.querySelector(".custom-class")).toBeTruthy()
     })
 
@@ -73,7 +69,6 @@ describe("ShrinkwrapBubble", () => {
                 <div>Test content</div>
             </ShrinkwrapBubble>
         )
-
         expect(getByText("Test content")).toBeTruthy()
     })
 
@@ -87,7 +82,34 @@ describe("ShrinkwrapBubble", () => {
                 <div>Test content</div>
             </ShrinkwrapBubble>
         )
-
         expect(getByText("Test content")).toBeTruthy()
+    })
+
+    it("renders with custom paddingX", () => {
+        const { getByText } = render(
+            <ShrinkwrapBubble
+                text="OK"
+                font="14px system-ui"
+                maxWidth={300}
+                paddingX={48}
+            >
+                <div>Short</div>
+            </ShrinkwrapBubble>
+        )
+        expect(getByText("Short")).toBeTruthy()
+    })
+
+    it("renders with custom minWidth", () => {
+        const { getByText } = render(
+            <ShrinkwrapBubble
+                text="Hi"
+                font="14px system-ui"
+                maxWidth={300}
+                minWidth={40}
+            >
+                <div>Tiny</div>
+            </ShrinkwrapBubble>
+        )
+        expect(getByText("Tiny")).toBeTruthy()
     })
 })
