@@ -2,6 +2,15 @@
 
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
 
+export type OcrPhase = "uploading" | "ai-processing" | "streaming" | "processing-results"
+
+export const OCR_PHASE_CONFIG: Record<OcrPhase, { timeoutMs: number; label: string }> = {
+    "uploading": { timeoutMs: 15_000, label: "Uploading image..." },
+    "ai-processing": { timeoutMs: 30_000, label: "AI analyzing menu..." },
+    "streaming": { timeoutMs: 120_000, label: "Extracting items..." },
+    "processing-results": { timeoutMs: 10_000, label: "Processing results..." },
+}
+
 export interface OcrStreamCallbacks {
     onStatus: (message: string) => void
     onContent: (token: string) => void
