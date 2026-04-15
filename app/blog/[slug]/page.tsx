@@ -8,7 +8,7 @@ import MarkdownRender from "@/components/ui/MarkdownRender"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Calendar, Clock, ArrowLeft, Eye, Coffee } from "lucide-react"
+import { Calendar, Clock, ArrowLeft, Eye, Coffee, Pencil } from "lucide-react"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import ShareButton from "@/components/blog/ShareButton"
 import ReportButton from "@/components/blog/ReportButton"
@@ -20,6 +20,7 @@ import BlogImageGallery from "@/components/blog/BlogImageGallery"
 import BlogCafeHighlights from "@/components/blog/BlogCafeHighlights"
 import BlogCrawlEmbed from "@/components/blog/BlogCrawlEmbed"
 import { buildPageMetadata } from "@/utils/seo/metadata"
+import { getCurrentUser } from "@/lib/auth"
 
 // Dynamic rendering for Dokploy build
 export const dynamic = "force-dynamic"
@@ -39,6 +40,15 @@ export async function generateMetadata({
     }
 
     const ogImagePath = post.cover_image ? post.cover_image : "/og-image.jpg"
+    const isPublished = post.status === "published"
+
+    if (!isPublished) {
+        return {
+            ...buildPageMetadata({ title: `[Draft] ${post.title}`, description: post.excerpt || post.content.substring(0, 160), urlPath: `/blog/${post.slug}`, ogImagePath }),
+            robots: { index: false, follow: false },
+        }
+    }
+
     return buildPageMetadata({
         title: post.title,
         description: post.excerpt || post.content.substring(0, 160),
@@ -53,14 +63,24 @@ export default async function BlogPostPage({
     params: Promise<{ slug: string }>
 }) {
     const { slug } = await params
-    const post = await getBlogPostBySlug(slug)
+    const [post, currentUser] = await Promise.all([
+        getBlogPostBySlug(slug),
+        getCurrentUser(),
+    ])
 
     if (!post) {
         notFound()
     }
 
-    // Increment view count (fire and forget)
-    incrementViewCount(post.id)
+    const isDraft = post.status === "draft"
+    const isPending = post.status === "pending"
+    const isPublished = post.status === "published"
+    const isAuthor = currentUser?.id === post.author_id
+
+    // Skip view count increment for non-published posts
+    if (isPublished) {
+        incrementViewCount(post.id)
+    }
 
     // Extract cafe slugs from content
     const detectedSlugs = extractCafeSlugsFromContent(post.content)
@@ -106,6 +126,24 @@ export default async function BlogPostPage({
 
     return (
         <main className='w-full min-h-screen bg-background [&_button]:cursor-pointer'>
+            {/* Draft Banner */}
+            {(isDraft || isPending) && (
+                <div className='sticky top-0 z-30 bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-4'>
+                    <span>
+                        {isDraft ? "Draft Preview" : "Pending Review"} — {isDraft ? "Not visible to the public" : "Awaiting approval"}
+                    </span>
+                    {isAuthor && isDraft && (
+                        <Link
+                            href={`/blog/edit/${post.id}`}
+                            className='inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md transition-colors text-xs'
+                        >
+                            <Pencil className='w-3 h-3' />
+                            Edit Draft
+                        </Link>
+                    )}
+                </div>
+            )}
+
             {/* Cover Image Section */}
             {post.cover_image && (
                 <div className='relative w-full aspect-21/9 md:aspect-3/1 bg-text/5'>
@@ -205,10 +243,12 @@ export default async function BlogPostPage({
                                     </span>
                                 </div>
                             )}
-                            <div className='flex items-center gap-1.5'>
-                                <Eye className='w-4 h-4' />
-                                <span>{post.views_count || 0} views</span>
-                            </div>
+                            {isPublished && (
+                                <div className='flex items-center gap-1.5'>
+                                    <Eye className='w-4 h-4' />
+                                    <span>{post.views_count || 0} views</span>
+                                </div>
+                            )}
                             <div className='border-l border-text/10 pl-4 ml-2'>
                                 <ReportButton
                                     postId={post.id}
@@ -249,13 +289,14 @@ export default async function BlogPostPage({
                     </div>
                 )}
 
-                {/* Share Section */}
-                <div className='flex items-center justify-center gap-4 py-8 border-y border-text/10 mb-12'>
-                    <span className='text-text/60 text-sm'>
-                        Share this article
-                    </span>
-                    <ShareButton title={post.title} />
-                </div>
+                {isPublished && (
+                    <div className='flex items-center justify-center gap-4 py-8 border-y border-text/10 mb-12'>
+                        <span className='text-text/60 text-sm'>
+                            Share this article
+                        </span>
+                        <ShareButton title={post.title} />
+                    </div>
+                )}
 
                 {/* Related Posts */}
                 {filteredRelated.length > 0 && (
