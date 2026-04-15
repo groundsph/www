@@ -12,6 +12,11 @@ export default function CommunityBlogCreateClient() {
         <div className="min-h-screen bg-background">
             <RichBlogEditor
                 mode="community"
+                allowedCategories={["community", "events"]}
+                showCafePicker={false}
+                showCrawlPicker={false}
+                showFeatured={false}
+                showSlug={false}
                 onSuccess={() => {
                     addNotification("Your post has been submitted for review.", "success", { title: "Post Submitted", duration: 5000 })
                     router.push("/profile/blogs")

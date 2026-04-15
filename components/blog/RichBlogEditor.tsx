@@ -381,7 +381,7 @@ export default function RichBlogEditor({
                             <span className="hidden sm:inline">Save Draft</span>
                         </button>
                     )}
-                    {mode === "full" && (
+                    {(mode === "full" || mode === "community") && (
                         <button
                             onClick={() => handleSubmit("published")}
                             disabled={isSubmitting}

@@ -16,6 +16,11 @@ export default function CommunityBlogEditClient({ post }: CommunityBlogEditClien
             <RichBlogEditor
                 post={post}
                 mode="community"
+                allowedCategories={["community", "events"]}
+                showCafePicker={false}
+                showCrawlPicker={false}
+                showFeatured={false}
+                showSlug={false}
                 onSuccess={() => router.push("/profile/blogs")}
                 onCancel={() => router.push("/profile/blogs")}
             />
