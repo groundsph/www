@@ -48,12 +48,11 @@ export default function RichBlogEditor({
     mode = "full",
 }: RichBlogEditorProps) {
     const { addNotification } = useNotification()
-    const isFullMode = mode === "full"
-    const showTags = showTagsProp ?? isFullMode
-    const showCafePicker = showCafePickerProp ?? isFullMode
-    const showCrawlPicker = showCrawlPickerProp ?? isFullMode
-    const showFeatured = showFeaturedProp ?? isFullMode
-    const showSlug = showSlugProp ?? isFullMode
+    const showTags = showTagsProp ?? true
+    const showCafePicker = showCafePickerProp ?? true
+    const showCrawlPicker = showCrawlPickerProp ?? true
+    const showFeatured = showFeaturedProp ?? true
+    const showSlug = showSlugProp ?? true
 
     const [title, setTitle] = useState(post?.title || "")
     const [slug, setSlug] = useState(post?.slug || "")
@@ -85,7 +84,7 @@ export default function RichBlogEditor({
         content: post?.content || "",
         immediatelyRender: false,
         editorProps: {
-            attributes: { class: "prose prose-stone max-w-none min-h-[400px] p-6 outline-none" },
+            attributes: { class: "prose prose-stone p-6 outline-none" },
             handleDrop: (view, event, _slice, moved) => {
                 if (!moved && event.dataTransfer?.files?.length) {
                     const file = event.dataTransfer.files[0]
@@ -368,6 +367,34 @@ export default function RichBlogEditor({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
+                    {(mode === "full" || mode === "community") && (
+                        <button
+                            onClick={() => handleSubmit("draft")}
+                            disabled={isSubmitting}
+                            className="px-4 py-2 rounded-xl border border-text/10 bg-white text-text/70 font-medium hover:bg-text/5 transition-colors disabled:opacity-50 flex items-center gap-2 active:scale-95"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Save className="w-4 h-4" />
+                            )}
+                            <span className="hidden sm:inline">Save Draft</span>
+                        </button>
+                    )}
+                    {mode === "full" && (
+                        <button
+                            onClick={() => handleSubmit("published")}
+                            disabled={isSubmitting}
+                            className="px-4 py-2 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Send className="w-4 h-4" />
+                            )}
+                            <span className="hidden sm:inline">Publish</span>
+                        </button>
+                    )}
                     {onCancel && (
                         <button
                             onClick={onCancel}
@@ -395,12 +422,8 @@ export default function RichBlogEditor({
                 )}
             </AnimatePresence>
 
-            <div className={`${isFullMode ? "grid lg:grid-cols-3" : ""} flex-1 overflow-visible`}>
-                <div
-                    className={`${isFullMode ? "lg:col-span-2" : ""} p-6 space-y-6 ${
-                        isFullMode ? "lg:border-r border-text/10" : ""
-                    } overflow-y-auto custom-scrollbar`}
-                >
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="p-6 space-y-6 max-w-4xl mx-auto">
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-text">
                             Cover Image
@@ -603,7 +626,7 @@ export default function RichBlogEditor({
                         </div>
                     </div>
 
-                    <div className="flex-1 space-y-2">
+                    <div className="space-y-2">
                         <label className="text-sm font-medium text-text">
                             Content <span className="text-red-500">*</span>
                         </label>
@@ -623,10 +646,7 @@ export default function RichBlogEditor({
                                     input.click()
                                 }}
                             />
-                            <EditorContent
-                                editor={editor}
-                                className="min-h-[400px]"
-                            />
+                            <EditorContent editor={editor} className="flex-1 min-h-[400px]" />
                         </div>
                         <p className="text-xs text-text/50 flex items-center gap-1.5 justify-end mt-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary/40" />
@@ -636,217 +656,150 @@ export default function RichBlogEditor({
                             </span>
                         </p>
                     </div>
-                </div>
 
-                {isFullMode && (
-                    <div className="p-6 space-y-8 bg-tertiary/20 overflow-y-auto custom-scrollbar h-full border-t lg:border-t-0 border-text/10">
-                        <div className="bg-background p-4 rounded-xl shadow-sm border border-text/5 space-y-3">
-                            <label className="text-xs font-bold text-text/40 uppercase tracking-wider block mb-1">
-                                Publishing
-                            </label>
-                            <button
-                                onClick={() => handleSubmit("published")}
-                                disabled={isSubmitting}
-                                className="w-full px-4 py-2.5 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
-                            >
-                                {isSubmitting ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Send className="w-4 h-4" />
-                                )}{" "}
-                                Publish Post
-                            </button>
-                            <button
-                                onClick={() => handleSubmit("draft")}
-                                disabled={isSubmitting}
-                                className="w-full px-4 py-2.5 rounded-lg border border-text/10 bg-white text-text/70 font-medium hover:bg-text/5 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
-                            >
-                                {isSubmitting ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Save className="w-4 h-4" />
-                                )}{" "}
-                                Save to Drafts
-                            </button>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="text-xs font-bold text-text/40 uppercase tracking-wider block">
-                                Classification
-                            </label>
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-text">
-                                    Category
-                                </label>
-                                <select
-                                    value={category}
-                                    onChange={(e) =>
-                                        setCategory(e.target.value as BlogCategory)
-                                    }
-                                    className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all"
-                                >
-                                    {categories.map((cat) => (
-                                        <option key={cat.value} value={cat.value}>
-                                            {cat.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className="text-xs text-text/50 px-1">
-                                    {categories.find((c) => c.value === category)?.description}
-                                </p>
-                            </div>
-                        </div>
-
-                        {showTags && (
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-text">
-                                    Tags
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={tagInput}
-                                        onChange={(e) => setTagInput(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (
-                                                e.key === "Enter" ||
-                                                e.key === ","
-                                            ) {
-                                                e.preventDefault()
-                                                handleAddTag()
-                                            }
-                                        }}
-                                        placeholder="Add a tag..."
-                                        className="flex-1 px-3 py-2 rounded-lg border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all"
-                                    />
-                                    <button
-                                        onClick={handleAddTag}
-                                        disabled={
-                                            !tagInput.trim() || tags.length >= 10
-                                        }
-                                        className="px-3 bg-text/5 text-text border border-text/10 rounded-lg hover:bg-text/10 transition-colors disabled:opacity-50 font-medium text-sm"
-                                    >
-                                        Add
-                                    </button>
-                                </div>
-                                <div className="flex flex-wrap gap-2 pt-1">
-                                    {tags.map((tag) => (
-                                        <span
-                                            key={tag}
-                                            className="flex items-center gap-1.5 pl-2 pr-1 py-1 bg-white border border-text/10 text-text/70 text-xs font-medium rounded-full shadow-sm"
+                    <details className="group rounded-xl border border-text/10 bg-tertiary/20 overflow-hidden">
+                        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none text-sm font-medium text-text hover:bg-text/5 transition-colors">
+                            <span className="flex items-center gap-2">
+                                <Images className="w-4 h-4 text-text/50" />
+                                Gallery Images
+                                {galleryImages.length > 0 && (
+                                    <span className="text-xs text-text/40">
+                                        ({galleryImages.length})
+                                    </span>
+                                )}
+                            </span>
+                            <span className="text-text/30 group-open:rotate-180 transition-transform">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </span>
+                        </summary>
+                        <div className="p-4 space-y-3 border-t border-text/10">
+                            {galleryImages.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {galleryImages.map((image, index) => (
+                                        <div
+                                            key={image}
+                                            className="relative aspect-square rounded-lg overflow-hidden bg-text/5 group"
                                         >
-                                            #{tag}
+                                            <Image
+                                                src={image}
+                                                alt={`Gallery ${index + 1}`}
+                                                fill
+                                                className="object-cover"
+                                            />
                                             <button
-                                                onClick={() => handleRemoveTag(tag)}
-                                                className="p-0.5 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
+                                                onClick={() =>
+                                                    handleRemoveGalleryImage(index)
+                                                }
+                                                className="absolute top-1 right-1 p-1.5 bg-white/90 text-red-500 rounded-md hover:bg-white shadow-sm transition-all opacity-0 group-hover:opacity-100"
                                             >
                                                 <X className="w-3 h-3" />
                                             </button>
-                                        </span>
+                                        </div>
                                     ))}
                                 </div>
-                                <p className="text-xs text-text/40 text-right">
-                                    {tags.length}/10 tags
-                                </p>
-                            </div>
-                        )}
-
-                        {showTags && (
-                            <div className="space-y-3">
-                                <label className="flex items-center gap-2 text-sm font-medium text-text">
-                                    <Images className="w-4 h-4 text-text opacity-50" />
-                                    Gallery Images
-                                </label>
-                                {galleryImages.length > 0 && (
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {galleryImages.map((image, index) => (
-                                            <div
-                                                key={image}
-                                                className="relative aspect-square rounded-lg overflow-hidden bg-text/5 group"
-                                            >
-                                                <Image
-                                                    src={image}
-                                                    alt={`Gallery ${index + 1}`}
-                                                    fill
-                                                    className="object-cover"
-                                                />
-                                                <button
-                                                    onClick={() =>
-                                                        handleRemoveGalleryImage(index)
-                                                    }
-                                                    className="absolute top-1 right-1 p-1.5 bg-white/90 text-red-500 rounded-md hover:bg-white shadow-sm transition-all opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
+                            )}
+                            <button
+                                onClick={() => galleryInputRef.current?.click()}
+                                disabled={
+                                    isUploadingGallery || galleryImages.length >= 10
+                                }
+                                className="w-full py-2.5 rounded-xl border-2 border-dashed border-text/10 hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-text/50 hover:text-primary disabled:opacity-50"
+                            >
+                                {isUploadingGallery ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span className="text-sm">Uploading...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ImageIcon className="w-4 h-4" />
+                                        <span className="text-sm">
+                                            Add Images ({galleryImages.length}/10)
+                                        </span>
+                                    </>
                                 )}
-                                <button
-                                    onClick={() => galleryInputRef.current?.click()}
-                                    disabled={
-                                        isUploadingGallery || galleryImages.length >= 10
-                                    }
-                                    className="w-full py-2.5 rounded-xl border-2 border-dashed border-text/10 hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-text/50 hover:text-primary disabled:opacity-50"
-                                >
-                                    {isUploadingGallery ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            <span className="text-sm">Uploading...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ImageIcon className="w-4 h-4" />
-                                            <span className="text-sm">
-                                                Add Images ({galleryImages.length}/10)
-                                            </span>
-                                        </>
-                                    )}
-                                </button>
-                                <input
-                                    ref={galleryInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={handleGalleryUpload}
-                                    className="hidden"
-                                />
-                            </div>
-                        )}
+                            </button>
+                            <input
+                                ref={galleryInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleGalleryUpload}
+                                className="hidden"
+                            />
+                        </div>
+                    </details>
 
-                        {showCafePicker && (
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-sm font-medium text-text">
-                                    <MapPin className="w-4 h-4 text-text opacity-50" />
+                    {showCafePicker && (
+                        <details className="group rounded-xl border border-text/10 bg-tertiary/20 overflow-hidden">
+                            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none text-sm font-medium text-text hover:bg-text/5 transition-colors">
+                                <span className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-text/50" />
                                     Tagged Cafes
-                                </label>
+                                    {taggedCafeIds.length > 0 && (
+                                        <span className="text-xs text-text/40">
+                                            ({taggedCafeIds.length})
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="text-text/30 group-open:rotate-180 transition-transform">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </span>
+                            </summary>
+                            <div className="p-4 border-t border-text/10">
                                 <BlogCafePicker
                                     selectedCafeIds={taggedCafeIds}
                                     onChange={setTaggedCafeIds}
                                     maxCafes={5}
                                 />
                             </div>
-                        )}
+                        </details>
+                    )}
 
-                        {showCrawlPicker && (
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-sm font-medium text-text">
-                                    <Route className="w-4 h-4 text-text opacity-50" />
+                    {showCrawlPicker && (
+                        <details className="group rounded-xl border border-text/10 bg-tertiary/20 overflow-hidden">
+                            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none text-sm font-medium text-text hover:bg-text/5 transition-colors">
+                                <span className="flex items-center gap-2">
+                                    <Route className="w-4 h-4 text-text/50" />
                                     Linked Crawl
-                                </label>
+                                </span>
+                                <span className="text-text/30 group-open:rotate-180 transition-transform">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </span>
+                            </summary>
+                            <div className="p-4 border-t border-text/10">
                                 <BlogCrawlPicker
                                     selectedCrawlId={linkedCrawlId}
                                     onChange={setLinkedCrawlId}
                                 />
                             </div>
-                        )}
+                        </details>
+                    )}
 
-                        {showFeatured && !cafeId && (
-                            <div className="bg-background p-4 rounded-xl border border-text/5 flex items-center justify-between">
+                    {showFeatured && !cafeId && (
+                        <details className="group rounded-xl border border-text/10 bg-tertiary/20 overflow-hidden">
+                            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none text-sm font-medium text-text hover:bg-text/5 transition-colors">
+                                <span className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-text/50" />
+                                    Featured Post
+                                </span>
+                                <span className="text-text/30 group-open:rotate-180 transition-transform">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </span>
+                            </summary>
+                            <div className="p-4 border-t border-text/10 flex items-center justify-between">
                                 <div>
-                                    <label className="text-sm font-medium text-text block">
-                                        Featured Post
-                                    </label>
+                                    <span className="text-sm font-medium text-text block">
+                                        Mark as Featured
+                                    </span>
                                     <span className="text-xs text-text/50">
                                         Pin to top of blog
                                     </span>
@@ -864,9 +817,102 @@ export default function RichBlogEditor({
                                     />
                                 </button>
                             </div>
-                        )}
-                    </div>
-                )}
+                        </details>
+                    )}
+
+                    {(mode === "full" || mode === "community") && (
+                        <details className="group rounded-xl border border-text/10 bg-tertiary/20 overflow-hidden">
+                            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none text-sm font-medium text-text hover:bg-text/5 transition-colors">
+                                <span className="flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-text/50" />
+                                    Classification
+                                </span>
+                                <span className="text-text/30 group-open:rotate-180 transition-transform">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </span>
+                            </summary>
+                            <div className="p-4 space-y-4 border-t border-text/10">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-text">
+                                        Category
+                                    </label>
+                                    <select
+                                        value={category}
+                                        onChange={(e) =>
+                                            setCategory(e.target.value as BlogCategory)
+                                        }
+                                        className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all"
+                                    >
+                                        {categories.map((cat) => (
+                                            <option key={cat.value} value={cat.value}>
+                                                {cat.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-text/50 px-1">
+                                        {categories.find((c) => c.value === category)?.description}
+                                    </p>
+                                </div>
+
+                                {showTags && (
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-text">
+                                            Tags
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={tagInput}
+                                                onChange={(e) => setTagInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (
+                                                        e.key === "Enter" ||
+                                                        e.key === ","
+                                                    ) {
+                                                        e.preventDefault()
+                                                        handleAddTag()
+                                                    }
+                                                }}
+                                                placeholder="Add a tag..."
+                                                className="flex-1 px-3 py-2 rounded-lg border border-text/15 bg-background focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-sm transition-all"
+                                            />
+                                            <button
+                                                onClick={handleAddTag}
+                                                disabled={
+                                                    !tagInput.trim() || tags.length >= 10
+                                                }
+                                                className="px-3 bg-text/5 text-text border border-text/10 rounded-lg hover:bg-text/10 transition-colors disabled:opacity-50 font-medium text-sm"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            {tags.map((tag) => (
+                                                <span
+                                                    key={tag}
+                                                    className="flex items-center gap-1.5 pl-2 pr-1 py-1 bg-white border border-text/10 text-text/70 text-xs font-medium rounded-full shadow-sm"
+                                                >
+                                                    #{tag}
+                                                    <button
+                                                        onClick={() => handleRemoveTag(tag)}
+                                                        className="p-0.5 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-text/40 text-right">
+                                            {tags.length}/10 tags
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+                    )}
+                </div>
             </div>
         </div>
     )
