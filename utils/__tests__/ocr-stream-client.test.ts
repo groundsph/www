@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { OCR_PHASE_CONFIG, type OcrPhase, type OcrStreamCallbacks } from "@/utils/ocr-stream-client"
+import { OCR_PHASE_CONFIG, type OcrPhase, type OcrStreamCallbacks, extractItemCountFromStreamedContent } from "@/utils/ocr-stream-client"
 
 describe("OCR Phase Configuration", () => {
     it("has config for all phases", () => {
@@ -54,5 +54,30 @@ describe("streamOcrScan phase tracking", () => {
             onPhaseChange: (phase: OcrPhase) => { phaseChanges.push(phase) },
         }
         expect(callbacks.onPhaseChange).toBeDefined()
+    })
+})
+
+describe("extractItemCountFromStreamedContent", () => {
+    it("returns 0 for empty content", () => {
+        expect(extractItemCountFromStreamedContent("")).toBe(0)
+    })
+
+    it("returns 0 for content with no items", () => {
+        expect(extractItemCountFromStreamedContent("Here is the menu analysis")).toBe(0)
+    })
+
+    it("counts items by name fields", () => {
+        const content = '[{"name":"Espresso","price":120},{"name":"Latte","price":150}]'
+        expect(extractItemCountFromStreamedContent(content)).toBe(2)
+    })
+
+    it("counts partial streaming content", () => {
+        const content = '[{"name":"Espresso","price":120},{"name":'
+        expect(extractItemCountFromStreamedContent(content)).toBe(2)
+    })
+
+    it("counts items with whitespace variations", () => {
+        const content = '[{ "name" : "Cappuccino" }]'
+        expect(extractItemCountFromStreamedContent(content)).toBe(1)
     })
 })

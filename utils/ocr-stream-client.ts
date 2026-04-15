@@ -24,7 +24,7 @@ export interface OcrStreamCallbacks {
     onItemCount?: (count: number) => void
 }
 
-function extractItemCountFromStreamedContent(content: string): number {
+export function extractItemCountFromStreamedContent(content: string): number {
     const matches = content.match(/"name"\s*:/g)
     return matches ? matches.length : 0
 }
