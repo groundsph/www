@@ -18,6 +18,7 @@ import {
     ChevronLeft,
     ChevronRight,
     X,
+    Download,
 } from "lucide-react"
 import {
     type ColorScheme,
@@ -29,6 +30,7 @@ import { compressGalleryImage } from "@/utils/image-processing"
 import { uploadCafeImage, uploadCafeBadgeStamp } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { getOptimizedImageUrl, getResponsiveSrcSet } from "@/utils/cloudflare-image"
+import { downloadImage } from "@/utils/image-download"
 import ImageCropper from "@/components/ui/ImageCropper"
 
 interface ImageSectionProps {
@@ -177,6 +179,20 @@ export default function ImageSection({
         }
     }
 
+    const handleDownloadThumbnail = () => {
+        if (thumbnail) {
+            downloadImage(thumbnail, `${cafeName}-thumbnail`).catch((error) => {
+                console.error("Failed to download thumbnail:", error)
+            })
+        }
+    }
+
+    const handleDownloadGalleryImage = (url: string, index: number) => {
+        downloadImage(url, `${cafeName}-gallery-${index + 1}`).catch((error) => {
+            console.error("Failed to download gallery image:", error)
+        })
+    }
+
     return (
         <div className='space-y-8'>
             {/* Cover Image */}
@@ -227,13 +243,23 @@ export default function ImageSection({
                             </label>
 
                             {thumbnail && (
-                                <button
-                                    type='button'
-                                    onClick={handleRemoveCover}
-                                    className='p-2 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition'
-                                >
-                                    <Trash2 className='w-4 h-4' />
-                                </button>
+                                <>
+                                    <button
+                                        type='button'
+                                        onClick={handleDownloadThumbnail}
+                                        className='p-2 bg-blue-500/80 text-white rounded-lg hover:bg-blue-600 transition'
+                                        title='Download image'
+                                    >
+                                        <Download className='w-4 h-4' />
+                                    </button>
+                                    <button
+                                        type='button'
+                                        onClick={handleRemoveCover}
+                                        className='p-2 bg-red-500/80 text-white rounded-lg hover:bg-red-600 transition'
+                                    >
+                                        <Trash2 className='w-4 h-4' />
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
@@ -324,6 +350,18 @@ export default function ImageSection({
                                     title='Remove image'
                                 >
                                     <X className='w-4 h-4' />
+                                </button>
+
+                                {/* Download Button */}
+                                <button
+                                    type='button'
+                                    onClick={() =>
+                                        handleDownloadGalleryImage(url, idx)
+                                    }
+                                    className='absolute top-2 left-2 p-2 bg-blue-500 text-white rounded-full md:opacity-0 group-hover:opacity-100 transition hover:bg-blue-600 z-10'
+                                    title='Download image'
+                                >
+                                    <Download className='w-4 h-4' />
                                 </button>
                             </Reorder.Item>
                         ))}
