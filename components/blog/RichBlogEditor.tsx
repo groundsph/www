@@ -6,7 +6,7 @@ import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
 import {
     X, Save, Send, Loader2, ImageIcon, Trash2,
-    Images, MapPin, Route, Sparkles,
+    Images, MapPin, Route, Sparkles, Eye,
 } from "lucide-react"
 import { getEditorExtensions } from "./editor/extensions"
 import EditorToolbar from "./editor/EditorToolbar"
@@ -367,6 +367,17 @@ export default function RichBlogEditor({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
+                    {post?.id && (
+                        <a
+                            href={`/blog/${post.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 rounded-xl border border-text/10 bg-white text-text/70 font-medium hover:bg-text/5 transition-colors flex items-center gap-2 active:scale-95"
+                        >
+                            <Eye className="w-4 h-4" />
+                            <span className="hidden sm:inline">Preview</span>
+                        </a>
+                    )}
                     {(mode === "full" || mode === "community") && (
                         <button
                             onClick={() => handleSubmit("draft")}

@@ -146,14 +146,16 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
 
                                 {/* Actions */}
                                 <div className="flex items-center gap-2">
-                                    {post.status === "published" && (
-                                        <Link
-                                            href={`/community/blog/${post.slug}`}
+                                    {(post.status === "published" || post.status === "draft" || post.status === "pending") && (
+                                        <a
+                                            href={`/blog/${post.slug}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             className="p-2 text-text/60 hover:text-primary transition-colors"
-                                            title="View"
+                                            title="Preview"
                                         >
                                             <Eye className="w-4 h-4" />
-                                        </Link>
+                                        </a>
                                     )}
                                     <Link
                                         href={`/blog/edit/${post.id}`}
