@@ -20,6 +20,8 @@ export interface OcrStreamCallbacks {
         duplicates: string[]
     }) => void
     onError: (error: string) => void
+    onPhaseChange?: (phase: OcrPhase) => void
+    onItemCount?: (count: number) => void
 }
 
 export async function streamOcrScan(

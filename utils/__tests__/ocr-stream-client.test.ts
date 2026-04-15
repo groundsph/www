@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { OCR_PHASE_CONFIG, type OcrPhase } from "@/utils/ocr-stream-client"
+import { OCR_PHASE_CONFIG, type OcrPhase, type OcrStreamCallbacks } from "@/utils/ocr-stream-client"
 
 describe("OCR Phase Configuration", () => {
     it("has config for all phases", () => {
@@ -25,5 +25,20 @@ describe("OCR Phase Configuration", () => {
             .toBeGreaterThan(OCR_PHASE_CONFIG["ai-processing"].timeoutMs)
         expect(OCR_PHASE_CONFIG["streaming"].timeoutMs)
             .toBeGreaterThan(OCR_PHASE_CONFIG["processing-results"].timeoutMs)
+    })
+})
+
+describe("OcrStreamCallbacks", () => {
+    it("includes onPhaseChange callback", () => {
+        const callbacks: OcrStreamCallbacks = {
+            onStatus: (_msg: string) => {},
+            onContent: (_token: string) => {},
+            onComplete: (_data: { items: unknown[]; deduplicated: unknown[]; duplicates: string[] }) => {},
+            onError: (_error: string) => {},
+            onPhaseChange: (_phase: OcrPhase) => {},
+            onItemCount: (_count: number) => {},
+        }
+        expect(callbacks.onPhaseChange).toBeDefined()
+        expect(callbacks.onItemCount).toBeDefined()
     })
 })
