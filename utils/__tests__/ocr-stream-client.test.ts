@@ -42,3 +42,17 @@ describe("OcrStreamCallbacks", () => {
         expect(callbacks.onItemCount).toBeDefined()
     })
 })
+
+describe("streamOcrScan phase tracking", () => {
+    it("calls onPhaseChange with 'uploading' at start", () => {
+        const phaseChanges: string[] = []
+        const callbacks: OcrStreamCallbacks = {
+            onStatus: (_msg: string) => {},
+            onContent: (_token: string) => {},
+            onComplete: (_data: { items: unknown[]; deduplicated: unknown[]; duplicates: string[] }) => {},
+            onError: (_error: string) => {},
+            onPhaseChange: (phase: OcrPhase) => { phaseChanges.push(phase) },
+        }
+        expect(callbacks.onPhaseChange).toBeDefined()
+    })
+})

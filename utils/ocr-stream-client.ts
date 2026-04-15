@@ -24,11 +24,28 @@ export interface OcrStreamCallbacks {
     onItemCount?: (count: number) => void
 }
 
+function extractItemCountFromStreamedContent(content: string): number {
+    const matches = content.match(/"name"\s*:/g)
+    return matches ? matches.length : 0
+}
+
 export async function streamOcrScan(
     cafeId: string,
     imageBase64: string,
     callbacks: OcrStreamCallbacks
 ): Promise<void> {
+    let currentPhase: OcrPhase = "uploading"
+    let streamedContent = ""
+
+    const emitPhase = (phase: OcrPhase) => {
+        if (phase !== currentPhase) {
+            currentPhase = phase
+            callbacks.onPhaseChange?.(phase)
+        }
+    }
+
+    emitPhase("uploading")
+
     const response = await fetch("/api/ocr/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -44,6 +61,9 @@ export async function streamOcrScan(
         }
         return
     }
+
+    emitPhase("ai-processing")
+    callbacks.onStatus("AI analyzing menu...")
 
     const reader = response.body?.getReader()
     if (!reader) {
@@ -70,9 +90,22 @@ export async function streamOcrScan(
                     switch (chunk.type) {
                         case "status":
                             callbacks.onStatus(chunk.message)
+                            if (chunk.message === "Extracting items...") {
+                                emitPhase("streaming")
+                            } else if (chunk.message === "Processing results...") {
+                                emitPhase("processing-results")
+                            }
                             break
                         case "content":
                             callbacks.onContent(chunk.token)
+                            streamedContent += chunk.token
+                            if (currentPhase !== "streaming") {
+                                emitPhase("streaming")
+                            }
+                            const count = extractItemCountFromStreamedContent(streamedContent)
+                            if (count > 0) {
+                                callbacks.onItemCount?.(count)
+                            }
                             break
                         case "complete":
                             callbacks.onComplete({
