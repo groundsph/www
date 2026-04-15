@@ -2,6 +2,7 @@
 
 import { X, CheckCircle, Loader2, Calendar } from "lucide-react"
 import { UserAvatar } from "@/components/ui/UserAvatar"
+import MarkdownRender from "@/components/ui/MarkdownRender"
 
 interface PendingBlogPost {
     id: string
@@ -144,13 +145,7 @@ export default function PostPreviewModal({
                         <h3 className="text-sm font-medium text-text/60 mb-2">
                             Content
                         </h3>
-                        <div className="prose prose-sm max-w-none text-text/90">
-                            {post.content.split("\n").map((paragraph, idx) => (
-                                <p key={idx} className="mb-4">
-                                    {paragraph}
-                                </p>
-                            ))}
-                        </div>
+                        <MarkdownRender content={post.content} />
                     </div>
 
                     {/* LLM Review */}
