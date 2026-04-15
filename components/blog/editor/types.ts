@@ -9,6 +9,7 @@ export interface RichBlogEditorProps {
         excerpt?: string | null
         cover_image?: string | null
         category: BlogCategory
+        status?: string | null
         tags?: string[] | null
         featured?: boolean | null
         images?: string[] | null
