@@ -84,25 +84,37 @@ function CustomCheckbox({
     )
 }
 
-function formatStreamedContent(raw: string): string {
+const MAX_STREAM_PREVIEW_ITEMS = 8
+
+function formatStreamedContent(raw: string, maxItems: number = MAX_STREAM_PREVIEW_ITEMS): string {
     try {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
-            return parsed
+            const items = parsed
+                .slice(0, maxItems)
                 .map((item: { name?: string }, i: number) => `${i + 1}. ${item.name ?? "..."}`)
                 .join("\n")
+            if (parsed.length > maxItems) {
+                return items + `\n... and ${parsed.length - maxItems} more`
+            }
+            return items
         }
     } catch {
-        // Not complete JSON yet — fall back to extracting names from partial content
+        // Not complete JSON yet
     }
     const nameMatches = raw.match(/"name"\s*:\s*"([^"]+)"/g)
     if (nameMatches && nameMatches.length > 0) {
-        return nameMatches
+        const items = nameMatches
+            .slice(0, maxItems)
             .map((m, i) => {
                 const val = m.match(/"name"\s*:\s*"([^"]+)"/)
                 return `${i + 1}. ${val?.[1] ?? "..."}`
             })
             .join("\n")
+        if (nameMatches.length > maxItems) {
+            return items + `\n... and ${nameMatches.length - maxItems} more`
+        }
+        return items
     }
     return raw.slice(-200)
 }
