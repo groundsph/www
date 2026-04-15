@@ -57,7 +57,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                         text={message.content}
                         font="14px Inter, ui-sans-serif, system-ui, sans-serif"
                         maxWidth={380}
-                        minWidth={80}
+                        minWidth={40}
                         className={cn(
                             "px-4 py-2.5 rounded-2xl border text-sm leading-relaxed",
                             isUser

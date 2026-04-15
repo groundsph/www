@@ -8,6 +8,7 @@ interface ShrinkwrapBubbleProps {
     font: string
     maxWidth: number
     minWidth?: number
+    paddingX?: number
     children: ReactNode
     className?: string
 }
@@ -16,33 +17,26 @@ function measureShrinkwrapWidth(
     text: string,
     font: string,
     maxWidth: number,
-    minWidth: number
+    minWidth: number,
+    paddingX: number
 ): number {
     if (!text.trim()) return maxWidth
 
     const prepared = prepareWithSegments(text, font, { whiteSpace: "pre-wrap" })
 
-    // Count lines at maxWidth
     let maxLines = 0
     walkLineRanges(prepared, maxWidth, () => { maxLines++ })
+
     if (maxLines <= 1) {
-        // Single line: measure natural width + small padding
-        const naturalWidth = Math.ceil(
-            // Walk segments to get total width for single line
-            (() => {
-                let w = 0
-                walkLineRanges(prepared, maxWidth, (range) => {
-                    for (let i = range.start.segmentIndex; i < range.end.segmentIndex; i++) {
-                        w += prepared.widths[i]
-                    }
-                })
-                return w
-            })()
-        )
-        return Math.min(naturalWidth + 1, maxWidth)
+        let naturalWidth = 0
+        walkLineRanges(prepared, maxWidth, (range) => {
+            for (let i = range.start.segmentIndex; i < range.end.segmentIndex; i++) {
+                naturalWidth += prepared.widths[i]
+            }
+        })
+        return Math.max(Math.min(Math.ceil(naturalWidth) + paddingX, maxWidth), minWidth)
     }
 
-    // Binary search for tightest width that keeps same line count
     let low = minWidth
     let high = maxWidth
 
@@ -65,7 +59,8 @@ export default function ShrinkwrapBubble({
     text,
     font,
     maxWidth,
-    minWidth = 80,
+    minWidth = 40,
+    paddingX = 32,
     children,
     className,
 }: ShrinkwrapBubbleProps) {
@@ -74,10 +69,10 @@ export default function ShrinkwrapBubble({
     useLayoutEffect(() => {
         if (!text) return
 
-        const width = measureShrinkwrapWidth(text, font, maxWidth, minWidth)
+        const width = measureShrinkwrapWidth(text, font, maxWidth, minWidth, paddingX)
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Layout measurement required before paint
         setCalculatedMaxWidth(width)
-    }, [text, font, maxWidth, minWidth])
+    }, [text, font, maxWidth, minWidth, paddingX])
 
     return (
         <div
