@@ -541,7 +541,7 @@ export default function MenuOcrScanModal({
                                                         width: `${overallProgress}%`,
                                                         backgroundColor: isPhaseTimedOut
                                                             ? ["#ef4444", "#f97316", "#ef4444"]
-                                                            : "#3b82f6"
+                                                            : OCR_PHASE_CONFIG[ocrPhase].color
                                                     }}
                                                     transition={{
                                                         width: { duration: 0.3 },

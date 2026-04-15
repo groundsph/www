@@ -4,11 +4,11 @@ import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
 
 export type OcrPhase = "uploading" | "ai-processing" | "streaming" | "processing-results"
 
-export const OCR_PHASE_CONFIG: Record<OcrPhase, { timeoutMs: number; label: string }> = {
-    "uploading": { timeoutMs: 15_000, label: "Uploading image..." },
-    "ai-processing": { timeoutMs: 30_000, label: "AI analyzing menu..." },
-    "streaming": { timeoutMs: 120_000, label: "Extracting items..." },
-    "processing-results": { timeoutMs: 10_000, label: "Processing results..." },
+export const OCR_PHASE_CONFIG: Record<OcrPhase, { timeoutMs: number; label: string; color: string }> = {
+    "uploading": { timeoutMs: 15_000, label: "Uploading image...", color: "#3b82f6" },
+    "ai-processing": { timeoutMs: 30_000, label: "AI analyzing menu...", color: "#06b6d4" },
+    "streaming": { timeoutMs: 120_000, label: "Extracting items...", color: "#10b981" },
+    "processing-results": { timeoutMs: 10_000, label: "Processing results...", color: "#22c55e" },
 }
 
 export interface OcrStreamCallbacks {
