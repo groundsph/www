@@ -84,6 +84,29 @@ function CustomCheckbox({
     )
 }
 
+function formatStreamedContent(raw: string): string {
+    try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+            return parsed
+                .map((item: { name?: string }, i: number) => `${i + 1}. ${item.name ?? "..."}`)
+                .join("\n")
+        }
+    } catch {
+        // Not complete JSON yet — fall back to extracting names from partial content
+    }
+    const nameMatches = raw.match(/"name"\s*:\s*"([^"]+)"/g)
+    if (nameMatches && nameMatches.length > 0) {
+        return nameMatches
+            .map((m, i) => {
+                const val = m.match(/"name"\s*:\s*"([^"]+)"/)
+                return `${i + 1}. ${val?.[1] ?? "..."}`
+            })
+            .join("\n")
+    }
+    return raw.slice(-200)
+}
+
 export default function MenuOcrScanModal({
     isOpen,
     onClose,
@@ -478,8 +501,8 @@ export default function MenuOcrScanModal({
                                                 animate={{ opacity: 1, height: "auto" }}
                                                 className="max-h-28 overflow-y-auto bg-text/5 rounded-xl p-3 border border-text/10"
                                             >
-                                                <p className="text-xs text-text/50 font-mono leading-relaxed break-words whitespace-pre-wrap">
-                                                    {streamedContent}
+                                                <p className="text-xs text-text/50 font-mono leading-relaxed whitespace-pre-wrap">
+                                                    {formatStreamedContent(streamedContent)}
                                                     <motion.span
                                                         animate={{ opacity: [1, 0] }}
                                                         transition={{ duration: 0.5, repeat: Infinity }}
