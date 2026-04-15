@@ -31,12 +31,12 @@ describe("OCR Phase Configuration", () => {
 describe("OcrStreamCallbacks", () => {
     it("includes onPhaseChange callback", () => {
         const callbacks: OcrStreamCallbacks = {
-            onStatus: (_msg: string) => {},
-            onContent: (_token: string) => {},
-            onComplete: (_data: { items: unknown[]; deduplicated: unknown[]; duplicates: string[] }) => {},
-            onError: (_error: string) => {},
-            onPhaseChange: (_phase: OcrPhase) => {},
-            onItemCount: (_count: number) => {},
+            onStatus: (() => { return }) as (msg: string) => void,
+            onContent: (() => { return }) as (token: string) => void,
+            onComplete: (() => { return }) as (data: { items: unknown[]; deduplicated: unknown[]; duplicates: string[] }) => void,
+            onError: (() => { return }) as (error: string) => void,
+            onPhaseChange: (() => { return }) as (phase: OcrPhase) => void,
+            onItemCount: (() => { return }) as (count: number) => void,
         }
         expect(callbacks.onPhaseChange).toBeDefined()
         expect(callbacks.onItemCount).toBeDefined()
@@ -47,10 +47,10 @@ describe("streamOcrScan phase tracking", () => {
     it("calls onPhaseChange with 'uploading' at start", () => {
         const phaseChanges: string[] = []
         const callbacks: OcrStreamCallbacks = {
-            onStatus: (_msg: string) => {},
-            onContent: (_token: string) => {},
-            onComplete: (_data: { items: unknown[]; deduplicated: unknown[]; duplicates: string[] }) => {},
-            onError: (_error: string) => {},
+            onStatus: (() => { return }) as (msg: string) => void,
+            onContent: (() => { return }) as (token: string) => void,
+            onComplete: (() => { return }) as (data: { items: unknown[]; deduplicated: unknown[]; duplicates: string[] }) => void,
+            onError: (() => { return }) as (error: string) => void,
             onPhaseChange: (phase: OcrPhase) => { phaseChanges.push(phase) },
         }
         expect(callbacks.onPhaseChange).toBeDefined()
