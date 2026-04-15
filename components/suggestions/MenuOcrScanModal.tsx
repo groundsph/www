@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "motion/react"
 import { X as XIcon, Camera, Loader2, Check, Trash2, ScanLine, AlertCircle, ChevronDown, Plus } from "lucide-react"
 import imageCompression from "browser-image-compression"
 import { saveOcrMenuItems } from "@/app/api/actions/menu-ocr"
-import { streamOcrScan } from "@/utils/ocr-stream-client"
+import { OCR_PHASE_CONFIG, streamOcrScan, type OcrPhase } from "@/utils/ocr-stream-client"
 import { MENU_CATEGORIES } from "@/utils/types/owner"
 import { cn } from "@/utils/cn"
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
+import { useOcrPhasedTimer } from "@/hooks/useOcrPhasedTimer"
 import Link from "next/link"
 
 interface MenuOcrScanModalProps {
@@ -96,12 +97,23 @@ export default function MenuOcrScanModal({
     const [duplicates, setDuplicates] = useState<string[]>([])
     const [error, setError] = useState<string | null>(null)
     const [savedCount, setSavedCount] = useState(0)
-    const [scanElapsed, setScanElapsed] = useState(0)
+    const [streamedItemCount, setStreamedItemCount] = useState(0)
     const [statusMessage, setStatusMessage] = useState("Preparing...")
     const [streamedContent, setStreamedContent] = useState("")
     const streamedContentRef = useRef("")
     const fileInputRef = useRef<HTMLInputElement>(null)
     const shouldResetRef = useRef(false)
+
+    const {
+        phase: ocrPhase,
+        phaseProgress,
+        overallProgress,
+        isPhaseTimedOut,
+        setPhase: setOcrPhase,
+        resetPhaseTimer,
+        start: startTimer,
+        stop: stopTimer,
+    } = useOcrPhasedTimer()
 
     const resetState = useCallback(() => {
         setStep("upload")
@@ -110,7 +122,7 @@ export default function MenuOcrScanModal({
         setDuplicates([])
         setError(null)
         setSavedCount(0)
-        setScanElapsed(0)
+        setStreamedItemCount(0)
         setStatusMessage("Preparing...")
         setStreamedContent("")
         streamedContentRef.current = ""
@@ -130,9 +142,9 @@ export default function MenuOcrScanModal({
             setError(null)
              
             setSavedCount(0)
-             
-            setScanElapsed(0)
-             
+              
+            setStreamedItemCount(0)
+              
             setStatusMessage("Preparing...")
              
             setStreamedContent("")
@@ -144,21 +156,6 @@ export default function MenuOcrScanModal({
             shouldResetRef.current = true
         }
     }, [isOpen])
-
-    // Elapsed time counter during scanning
-    useEffect(() => {
-        if (step === "scanning") {
-            const startTime = Date.now()
-            const interval = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - startTime) / 1000)
-                setScanElapsed(elapsed)
-            }, 1000)
-            return () => clearInterval(interval)
-        } else {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setScanElapsed(0)
-        }
-    }, [step])
 
     const handleClose = useCallback(() => {
         resetState()
@@ -190,6 +187,7 @@ export default function MenuOcrScanModal({
 
             setImagePreview(URL.createObjectURL(compressed))
             setStep("scanning")
+            startTimer()
             setError(null)
             setStreamedContent("")
             streamedContentRef.current = ""
@@ -203,7 +201,15 @@ export default function MenuOcrScanModal({
                     streamedContentRef.current += token
                     setStreamedContent(streamedContentRef.current)
                 },
+                onPhaseChange: (newPhase: OcrPhase) => {
+                    setOcrPhase(newPhase)
+                    resetPhaseTimer()
+                },
+                onItemCount: (count: number) => {
+                    setStreamedItemCount(count)
+                },
                 onComplete: (data) => {
+                    stopTimer()
                     const editableItems: EditableItem[] = (data.deduplicated ?? []).map(
                         (item, index) => ({
                             id: index,
@@ -228,11 +234,13 @@ export default function MenuOcrScanModal({
                     setTimeout(() => setStep("review"), 300)
                 },
                 onError: (errorMsg) => {
+                    stopTimer()
                     setError(errorMsg)
                     setStep("upload")
                 },
             })
         } catch (e) {
+            stopTimer()
             setError(e instanceof Error ? e.message : "Failed to process image")
             setStep("upload")
         }
@@ -483,34 +491,46 @@ export default function MenuOcrScanModal({
 
                                         <div className="w-full max-w-sm space-y-2">
                                             <div className="flex items-center justify-between text-xs text-text/50">
-                                                <span>Elapsed time</span>
+                                                <span>{OCR_PHASE_CONFIG[ocrPhase].label}</span>
                                                 <motion.span
                                                     animate={{
-                                                        color: scanElapsed > 120 
-                                                            ? ["#ef4444", "#f97316", "#ef4444"] 
+                                                        color: isPhaseTimedOut
+                                                            ? ["#ef4444", "#f97316", "#ef4444"]
                                                             : "#6b7280"
                                                     }}
-                                                    transition={{ duration: 1, repeat: scanElapsed > 120 ? Infinity : 0 }}
+                                                    transition={{ duration: 1, repeat: isPhaseTimedOut ? Infinity : 0 }}
                                                     className="font-mono font-medium"
                                                 >
-                                                    {Math.floor(scanElapsed / 60)}:{String(scanElapsed % 60).padStart(2, "0")}
+                                                    {overallProgress}%
                                                 </motion.span>
                                             </div>
                                             <div className="h-1.5 bg-text/10 rounded-full overflow-hidden">
                                                 <motion.div
                                                     className="h-full rounded-full"
                                                     initial={{ width: "0%" }}
-                                                    animate={{ 
-                                                        width: `${Math.min((scanElapsed / 180) * 100, 100)}%`,
-                                                        backgroundColor: scanElapsed > 120 
-                                                            ? ["#ef4444", "#f97316", "#ef4444"] 
+                                                    animate={{
+                                                        width: `${overallProgress}%`,
+                                                        backgroundColor: isPhaseTimedOut
+                                                            ? ["#ef4444", "#f97316", "#ef4444"]
                                                             : "#3b82f6"
                                                     }}
-                                                    transition={{ width: { duration: 1 }, backgroundColor: { duration: 1, repeat: scanElapsed > 120 ? Infinity : 0 } }}
+                                                    transition={{
+                                                        width: { duration: 0.3 },
+                                                        backgroundColor: { duration: 1, repeat: isPhaseTimedOut ? Infinity : 0 }
+                                                    }}
                                                 />
                                             </div>
-                                            {scanElapsed > 120 && (
-                                                <motion.p 
+                                            {streamedItemCount > 0 && ocrPhase === "streaming" && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="text-xs text-primary/80 text-center font-medium"
+                                                >
+                                                    {streamedItemCount} item{streamedItemCount !== 1 ? "s" : ""} found...
+                                                </motion.p>
+                                            )}
+                                            {isPhaseTimedOut && (
+                                                <motion.p
                                                     initial={{ opacity: 0, height: 0 }}
                                                     animate={{ opacity: 1, height: "auto" }}
                                                     className="text-xs text-amber-500 text-center"

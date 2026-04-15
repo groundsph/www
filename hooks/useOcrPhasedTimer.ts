@@ -44,7 +44,7 @@ export function useOcrPhasedTimer(): UseOcrPhasedTimerReturn {
     const [phaseElapsedMs, setPhaseElapsedMs] = useState(0)
     const [isRunning, setIsRunning] = useState(false)
     const [isPhaseTimedOut, setIsPhaseTimedOut] = useState(false)
-    const phaseStartRef = useRef(Date.now())
+    const phaseStartRef = useRef<number | null>(null)
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     const clearTimer = useCallback(() => {
@@ -86,7 +86,7 @@ export function useOcrPhasedTimer(): UseOcrPhasedTimerReturn {
         }
 
         intervalRef.current = setInterval(() => {
-            const elapsed = Date.now() - phaseStartRef.current
+            const elapsed = Date.now() - (phaseStartRef.current ?? Date.now())
             setPhaseElapsedMs(elapsed)
 
             const timeout = OCR_PHASE_CONFIG[phase].timeoutMs
@@ -97,13 +97,6 @@ export function useOcrPhasedTimer(): UseOcrPhasedTimerReturn {
 
         return () => clearTimer()
     }, [isRunning, phase, clearTimer])
-
-    useEffect(() => {
-        if (isRunning) {
-            phaseStartRef.current = Date.now()
-            setPhaseElapsedMs(0)
-        }
-    }, [phase, isRunning])
 
     return {
         phase,
