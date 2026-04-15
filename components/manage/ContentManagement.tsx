@@ -12,7 +12,7 @@ import {
     Flag,
     CheckCircle,
 } from "lucide-react"
-import { BlogPost } from "@/utils/types/blog"
+import { BlogPost, BlogStatus } from "@/utils/types/blog"
 import { EventWithCafe } from "@/utils/types/extra"
 import RichBlogEditor from "@/components/blog/RichBlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"
@@ -35,6 +35,7 @@ export default function ContentManagement({
     const [activeTab, setActiveTab] = useState<TabType>("blog")
     const [blogPosts, setBlogPosts] = useState(initialBlogPosts)
     const [events] = useState(initialEvents)
+    const [statusFilter, setStatusFilter] = useState<BlogStatus | "all">("all")
 
     const [showBlogEditor, setShowBlogEditor] = useState(false)
     const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(
@@ -52,6 +53,10 @@ export default function ContentManagement({
         const result = await getAdminBlogPosts({ pageSize: 50 })
         setBlogPosts(result.posts)
     }
+
+    const filteredPosts = statusFilter === "all"
+        ? blogPosts
+        : blogPosts.filter(p => p.status === statusFilter)
 
     const openBlogEditor = (post?: BlogPost) => {
         setEditingBlogPost(post || null)
@@ -206,20 +211,42 @@ export default function ContentManagement({
                         New Blog Post
                     </button>
 
+                    {/* Status Filter Tabs */}
+                    <div className='flex gap-2 overflow-x-auto py-1'>
+                        {(["all", "published", "pending", "draft", "archived"] as const).map((status) => (
+                            <button
+                                key={status}
+                                onClick={() => setStatusFilter(status)}
+                                className={`px-3 py-1.5 rounded-lg transition text-sm font-medium whitespace-nowrap ${
+                                    statusFilter === status
+                                        ? "bg-primary text-white"
+                                        : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
+                                }`}
+                            >
+                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                {status !== "all" && ` (${blogPosts.filter(p => p.status === status).length})`}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Blog Posts List */}
-                    {blogPosts.length === 0 ? (
+                    {filteredPosts.length === 0 ? (
                         <div className='text-center py-16'>
                             <FileText className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
                             <p className='text-text/60 text-lg'>
-                                No blog posts yet
+                                {statusFilter === "all"
+                                    ? "No blog posts yet"
+                                    : `No ${statusFilter} posts`}
                             </p>
                             <p className='text-text/40 text-sm mt-1'>
-                                Create your first blog post to get started.
+                                {statusFilter === "all"
+                                    ? "Create your first blog post to get started."
+                                    : "Try selecting a different filter."}
                             </p>
                         </div>
                     ) : (
                         <div className='space-y-3'>
-                            {blogPosts.map((post) => (
+                            {filteredPosts.map((post) => (
                                 <div
                                     key={post.id}
                                     className='flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-background rounded-xl shadow-sm border border-tertiary/50'
