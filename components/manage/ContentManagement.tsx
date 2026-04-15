@@ -318,26 +318,23 @@ export default function ContentManagement({
             {/* Reports Tab */}
             {activeTab === "reports" && <BlogReportsPanel />}
 
-            {/* Blog Editor Modal */}
+            {/* Blog Editor Full-Screen Overlay */}
             {showBlogEditor && (
-                <div className='fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6'>
+                <div className='fixed inset-0 z-50'>
                     {/* Backdrop */}
                     <div
                         className='absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200'
                         onClick={closeBlogEditor}
                     />
 
-                    {/* Modal Container */}
-                    <div className='relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-text/10 animate-in zoom-in-95 fade-in duration-200'>
-                        {/* Scrollable content */}
-                        <div className='max-h-[90vh] overflow-y-auto'>
-                            <RichBlogEditor
-                                post={editingBlogPost ?? undefined}
-                                mode="full"
-                                onSuccess={handleBlogSuccess}
-                                onCancel={closeBlogEditor}
-                            />
-                        </div>
+                    {/* Full-Screen Container */}
+                    <div className='absolute inset-0 bg-background'>
+                        <RichBlogEditor
+                            post={editingBlogPost ?? undefined}
+                            mode="full"
+                            onSuccess={handleBlogSuccess}
+                            onCancel={closeBlogEditor}
+                        />
                     </div>
                 </div>
             )}
