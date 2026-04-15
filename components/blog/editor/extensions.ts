@@ -56,7 +56,7 @@ export function getEditorExtensions(placeholder?: string) {
             },
         }),
         Markdown.configure({
-            html: false,
+            html: true,
             transformCopiedText: true,
             transformPastedText: true,
         }),
