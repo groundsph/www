@@ -223,6 +223,7 @@ export default function MenuOcrScanModal({
                 onContent: (token) => {
                     streamedContentRef.current += token
                     setStreamedContent(streamedContentRef.current)
+                    resetPhaseTimer()
                 },
                 onPhaseChange: (newPhase: OcrPhase) => {
                     setOcrPhase(newPhase)
