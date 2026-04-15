@@ -126,6 +126,7 @@ export default function MenuOcrScanModal({
     const streamedContentRef = useRef("")
     const fileInputRef = useRef<HTMLInputElement>(null)
     const shouldResetRef = useRef(false)
+    const abortControllerRef = useRef<AbortController | null>(null)
 
     const {
         phase: ocrPhase,
@@ -215,6 +216,8 @@ export default function MenuOcrScanModal({
             streamedContentRef.current = ""
             setStatusMessage("Uploading image...")
 
+            abortControllerRef.current = new AbortController()
+
             await streamOcrScan(cafeId, base64, {
                 onStatus: (message) => {
                     setStatusMessage(message)
@@ -233,6 +236,7 @@ export default function MenuOcrScanModal({
                 },
                 onComplete: (data) => {
                     stopTimer()
+                    abortControllerRef.current = null
                     const editableItems: EditableItem[] = (data.deduplicated ?? []).map(
                         (item, index) => ({
                             id: index,
@@ -258,12 +262,14 @@ export default function MenuOcrScanModal({
                 },
                 onError: (errorMsg) => {
                     stopTimer()
+                    abortControllerRef.current = null
                     setError(errorMsg)
                     setStep("upload")
                 },
-            })
+            }, abortControllerRef.current.signal)
         } catch (e) {
             stopTimer()
+            abortControllerRef.current = null
             setError(e instanceof Error ? e.message : "Failed to process image")
             setStep("upload")
         }
@@ -561,6 +567,21 @@ export default function MenuOcrScanModal({
                                                     Taking longer than expected... if it fails, try a smaller image
                                                 </motion.p>
                                             )}
+                                            <motion.button
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                type="button"
+                                                onClick={() => {
+                                                    abortControllerRef.current?.abort()
+                                                    abortControllerRef.current = null
+                                                    stopTimer()
+                                                    setStep("upload")
+                                                    setError(null)
+                                                }}
+                                                className="text-xs text-text/40 hover:text-text transition-colors mt-2 cursor-pointer"
+                                            >
+                                                Cancel scan
+                                            </motion.button>
                                         </div>
                                     </div>
                                 </motion.div>

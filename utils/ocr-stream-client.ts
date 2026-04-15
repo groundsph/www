@@ -32,7 +32,8 @@ export function extractItemCountFromStreamedContent(content: string): number {
 export async function streamOcrScan(
     cafeId: string,
     imageBase64: string,
-    callbacks: OcrStreamCallbacks
+    callbacks: OcrStreamCallbacks,
+    signal?: AbortSignal
 ): Promise<void> {
     let currentPhase: OcrPhase = "uploading"
     let streamedContent = ""
@@ -50,6 +51,7 @@ export async function streamOcrScan(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cafeId, imageBase64 }),
+        signal,
     })
 
     if (!response.ok) {
@@ -75,6 +77,10 @@ export async function streamOcrScan(
     let buffer = ""
 
     while (true) {
+        if (signal?.aborted) {
+            callbacks.onError("Scan cancelled")
+            return
+        }
         const { done, value } = await reader.read()
         if (done) break
 
