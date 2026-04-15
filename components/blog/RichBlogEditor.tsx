@@ -84,7 +84,7 @@ export default function RichBlogEditor({
         content: post?.content || "",
         immediatelyRender: false,
         editorProps: {
-            attributes: { class: "prose prose-stone p-6 outline-none" },
+            attributes: { class: "prose prose-lg prose-stone max-w-none outline-none" },
             handleDrop: (view, event, _slice, moved) => {
                 if (!moved && event.dataTransfer?.files?.length) {
                     const file = event.dataTransfer.files[0]
@@ -657,7 +657,7 @@ export default function RichBlogEditor({
                                     input.click()
                                 }}
                             />
-                            <EditorContent editor={editor} className="flex-1 min-h-[400px]" />
+                            <EditorContent editor={editor} className="min-h-[500px] p-6" />
                         </div>
                         <p className="text-xs text-text/50 flex items-center gap-1.5 justify-end mt-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary/40" />
