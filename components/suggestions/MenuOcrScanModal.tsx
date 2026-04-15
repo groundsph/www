@@ -559,13 +559,26 @@ export default function MenuOcrScanModal({
                                                 </motion.p>
                                             )}
                                             {isPhaseTimedOut && (
-                                                <motion.p
+                                                <motion.div
                                                     initial={{ opacity: 0, height: 0 }}
                                                     animate={{ opacity: 1, height: "auto" }}
-                                                    className="text-xs text-amber-500 text-center"
+                                                    className="flex flex-col items-center gap-2"
                                                 >
-                                                    Taking longer than expected... if it fails, try a smaller image
-                                                </motion.p>
+                                                    <p className="text-xs text-amber-500 text-center">
+                                                        Taking longer than expected... if it fails, try a smaller image
+                                                    </p>
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.02 }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            resetState()
+                                                        }}
+                                                        className="text-xs px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                                                    >
+                                                        Try again
+                                                    </motion.button>
+                                                </motion.div>
                                             )}
                                             <motion.button
                                                 whileHover={{ scale: 1.02 }}
