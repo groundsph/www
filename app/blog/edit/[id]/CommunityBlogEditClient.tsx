@@ -12,7 +12,7 @@ export default function CommunityBlogEditClient({ post }: CommunityBlogEditClien
     const router = useRouter()
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen w-full bg-background">
             <RichBlogEditor
                 post={post}
                 mode="community"

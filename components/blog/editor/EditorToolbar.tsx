@@ -6,7 +6,7 @@ import {
     Bold, Italic, Strikethrough, Code,
     List, ListOrdered, ListChecks, Quote, CodeSquare, LinkIcon,
     ImageIcon, Minus, HelpCircle, ChevronDown,
-    Table2, Rows3, Columns3, Trash2,
+    Table2,
 } from "lucide-react"
 import ShortcutHelpModal from "./ShortcutHelpModal"
 
@@ -22,17 +22,20 @@ const ToolbarButton = ({
     isActive,
     title,
     children,
+    disabled = false,
 }: {
     onClick: () => void
     isActive?: boolean
     title: string
     children: React.ReactNode
+    disabled?: boolean
 }) => (
     <button
         type="button"
         onClick={onClick}
+        disabled={disabled}
         title={title}
-        className={`p-1.5 rounded-lg transition-colors ${
+        className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
             isActive
                 ? "bg-primary/10 text-primary"
                 : "text-text/60 hover:bg-text/5 hover:text-text"
@@ -159,35 +162,9 @@ export default function EditorToolbar({ editor, onImageUpload }: EditorToolbarPr
                 <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
                     <Minus className="w-4 h-4" />
                 </ToolbarButton>
-
-                {/* Table Controls (shown when inside a table) */}
-                {editor.isActive("table") && (
-                    <>
-                        <div className="w-px h-5 bg-text/10 mx-1" />
-                        <ToolbarButton onClick={() => editor.chain().focus().addRowBefore().run()} title="Add Row Before">
-                            <Rows3 className="w-4 h-4 rotate-180" />
-                        </ToolbarButton>
-                        <ToolbarButton onClick={() => editor.chain().focus().addRowAfter().run()} title="Add Row After">
-                            <Rows3 className="w-4 h-4" />
-                        </ToolbarButton>
-                        <ToolbarButton onClick={() => editor.chain().focus().addColumnBefore().run()} title="Add Column Before">
-                            <Columns3 className="w-4 h-4 rotate-180" />
-                        </ToolbarButton>
-                        <ToolbarButton onClick={() => editor.chain().focus().addColumnAfter().run()} title="Add Column After">
-                            <Columns3 className="w-4 h-4" />
-                        </ToolbarButton>
-                        <div className="w-px h-5 bg-text/10 mx-1" />
-                        <ToolbarButton onClick={() => editor.chain().focus().deleteRow().run()} title="Delete Row">
-                            <Trash2 className="w-4 h-4 rotate-180" />
-                        </ToolbarButton>
-                        <ToolbarButton onClick={() => editor.chain().focus().deleteColumn().run()} title="Delete Column">
-                            <Trash2 className="w-4 h-4 rotate-90" />
-                        </ToolbarButton>
-                        <ToolbarButton onClick={() => editor.chain().focus().deleteTable().run()} title="Delete Table">
-                            <Table2 className="w-4 h-4" />
-                        </ToolbarButton>
-                    </>
-                )}
+                <ToolbarButton onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert Table">
+                    <Table2 className="w-4 h-4" />
+                </ToolbarButton>
 
                 {/* Spacer */}
                 <div className="flex-1" />

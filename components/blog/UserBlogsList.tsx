@@ -146,16 +146,27 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
 
                                 {/* Actions */}
                                 <div className="flex items-center gap-2">
-                                    {(post.status === "published" || post.status === "draft" || post.status === "pending") && (
+                                    {/* Published posts can be previewed publicly */}
+                                    {post.status === "published" && (
                                         <a
                                             href={`/blog/${post.slug}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="p-2 text-text/60 hover:text-primary transition-colors"
-                                            title="Preview"
+                                            title="View"
                                         >
                                             <Eye className="w-4 h-4" />
                                         </a>
+                                    )}
+                                    {/* Drafts and pending posts - preview goes to edit page with preview capability */}
+                                    {(post.status === "draft" || post.status === "pending") && (
+                                        <Link
+                                            href={`/blog/edit/${post.id}?preview=true`}
+                                            className="p-2 text-text/60 hover:text-primary transition-colors"
+                                            title="Edit / Preview"
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                        </Link>
                                     )}
                                     <Link
                                         href={`/blog/edit/${post.id}`}
