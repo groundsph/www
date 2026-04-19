@@ -2,7 +2,6 @@ import StarterKit from "@tiptap/starter-kit"
 import Link from "@tiptap/extension-link"
 import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
-import { Extension } from "@tiptap/core"
 import TaskList from "@tiptap/extension-task-list"
 import TaskItem from "@tiptap/extension-task-item"
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
@@ -42,6 +41,7 @@ export function getEditorExtensions(
         starterKitConfig.heading = false
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const extensions: any[] = [
         StarterKit.configure(starterKitConfig),
         Link.configure({

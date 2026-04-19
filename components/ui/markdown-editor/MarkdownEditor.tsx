@@ -5,7 +5,7 @@ import { useEditor, EditorContent } from "@tiptap/react"
 import { getEditorExtensions, type EditorMode } from "./extensions"
 import MarkdownToolbar, { TOOLBAR_PRESETS, type ToolbarFeature } from "./MarkdownToolbar"
 import MarkdownRender from "@/components/ui/MarkdownRender"
-import { Eye, Edit3 } from "lucide-react"
+import { Edit3 } from "lucide-react"
 
 interface MarkdownEditorProps {
     /** Editor mode preset */
@@ -56,7 +56,6 @@ export default function MarkdownEditor({
     autoSave,
     onImageUpload,
     isPreviewMode: isPreviewModeProp,
-    colorScheme = "primary",
     className = "",
     minHeight = 200,
     autoFocus = false,
@@ -128,7 +127,7 @@ export default function MarkdownEditor({
         }, interval)
 
         return () => clearInterval(timer)
-    }, [editor, autoSave])
+    }, [editor, autoSave]) // eslint-disable-line react-hooks/exhaustive-deps -- intentional: only sync on autoSave changes
 
     const features = toolbarFeatures ?? TOOLBAR_PRESETS[mode]
 

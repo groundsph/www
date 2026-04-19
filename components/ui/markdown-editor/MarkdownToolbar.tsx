@@ -5,9 +5,9 @@ import {
     Bold, Italic, Strikethrough, Code,
     List, ListOrdered, ListChecks, Quote, CodeSquare, LinkIcon,
     ImageIcon, Minus, HelpCircle, ChevronDown,
-    Table2, Heading1, Heading2, Heading3, Type, Eye,
+    Table2, Type, Eye,
 } from "lucide-react"
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import ShortcutHelpModal from "@/components/blog/editor/ShortcutHelpModal"
 
 export type ToolbarFeature =
@@ -355,18 +355,6 @@ export default function MarkdownToolbar({
 }: MarkdownToolbarProps) {
     const [showHeadingDropdown, setShowHeadingDropdown] = useState(false)
     const [showShortcutHelp, setShowShortcutHelp] = useState(false)
-
-    const setLink = useCallback(() => {
-        if (!editor) return
-        const previousUrl = editor.getAttributes("link").href as string
-        const url = window.prompt("URL", previousUrl)
-        if (url === null) return
-        if (url === "") {
-            editor.chain().focus().extendMarkRange("link").unsetLink().run()
-            return
-        }
-        editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
-    }, [editor])
 
     if (!editor) return null
 

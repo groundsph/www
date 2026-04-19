@@ -42,6 +42,7 @@ import ReportCafeModal from "@/components/modal/ReportCafeModal"
 import Link from "next/link"
 import { motion } from "motion/react"
 import { getCafeVisitStats, getTodayVisitors } from "@/app/api/actions/profile"
+import MarkdownRender from "@/components/ui/MarkdownRender"
 
 const ImageLightbox = dynamic(
     () => import("@/components/modal/ImageLightbox"),
@@ -126,10 +127,9 @@ export function AboutTabContent({ cafe }: CafeMobileContentProps) {
     return (
         <div className='flex flex-col gap-4'>
             {/* Description */}
-
-            <p className='flex items-center gap-2 p-3 bg-text/5 rounded-xl transition-colors text-justify font-medium text-sm'>
-                {getCafeDescription(cafe)}
-            </p>
+            <div className='p-3 bg-text/5 rounded-xl'>
+                <MarkdownRender content={getCafeDescription(cafe)} compact />
+            </div>
 
             {/* Gallery - Horizontal Scroll */}
             {gallery.length > 0 && (

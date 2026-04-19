@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Save, Trash2, Loader2 } from "lucide-react"
 import { type ColorScheme, getColorClasses } from "@/utils/hooks/cafe-form"
 import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
