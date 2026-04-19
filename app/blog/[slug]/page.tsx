@@ -265,7 +265,7 @@ export default async function BlogPostPage({
                 )}
 
                 {/* Content */}
-                <div className='prose prose-lg prose-stone max-w-none mb-12'>
+                <div className='max-w-none mb-12'>
                     <MarkdownRender content={post.content} />
                 </div>
 
