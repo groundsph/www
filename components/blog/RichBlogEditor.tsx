@@ -85,7 +85,7 @@ export default function RichBlogEditor({
     const galleryInputRef = useRef<HTMLInputElement>(null)
 
     const editor = useEditor({
-        extensions: getEditorExtensions("Start writing... Type / for commands"),
+        extensions: getEditorExtensions("full", "Start writing your post... Type / for commands"),
         content: post?.content || "",
         immediatelyRender: false,
         editorProps: {
