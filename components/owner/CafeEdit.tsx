@@ -33,6 +33,7 @@ import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { Database } from "@/utils/types/database.types"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
 import {
     ContactSection,
     StorySection,
@@ -347,27 +348,22 @@ export default function CafeEdit({
                                     <label className='block text-sm font-medium text-text/60 mb-2'>
                                         Description
                                     </label>
-                                    <textarea
+                                    <MarkdownEditor
+                                        mode="description"
                                         value={cafe.description || ""}
-                                        onChange={(e) => {
-                                            if (e.target.value.length <= 300) {
+                                        onChange={(value) => {
+                                            if (value.length <= 300) {
                                                 updateField(
                                                     "description",
-                                                    e.target.value
+                                                    value
                                                 )
                                             }
                                         }}
                                         maxLength={300}
-                                        rows={4}
-                                        className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none'
-                                        placeholder='Tell us about this cafe...'
+                                        showCharCount
+                                        placeholder="Tell us about this cafe..."
+                                        minHeight={80}
                                     />
-                                    <p
-                                        className={`text-xs mt-1 ${(cafe.description?.length || 0) >= 270 ? "text-orange-500" : "text-text/40"}`}
-                                    >
-                                        {300 - (cafe.description?.length || 0)}{" "}
-                                        characters remaining
-                                    </p>
                                 </div>
 
                                 <div>
