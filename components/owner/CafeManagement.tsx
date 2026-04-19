@@ -51,6 +51,8 @@ import {
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import RichBlogEditor from "@/components/blog/RichBlogEditor"
+import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
+import MarkdownRender from "@/components/ui/MarkdownRender"
 import EventsManagement from "@/components/events/EventsManagement"
 import MenuItemModal from "@/components/cafe-editor/MenuItemModal"
 import { EventWithCafe } from "@/utils/types/extra"
@@ -1343,9 +1345,9 @@ export default function CafeManagement({
                                         </div>
 
                                         {/* Review Content */}
-                                        <p className='mt-3 text-text/80'>
-                                            {review.comment}
-                                        </p>
+                                        <div className='mt-3 text-text/80'>
+                                            <MarkdownRender content={review.comment} compact />
+                                        </div>
 
                                         {/* Owner Response */}
                                         {review.owner_response ? (
@@ -1368,12 +1370,9 @@ export default function CafeManagement({
                                                         <Trash2 className='w-4 h-4' />
                                                     </button>
                                                 </div>
-                                                <p className='text-sm text-text/80 mt-1'>
-                                                    {
-                                                        review.owner_response
-                                                            .response
-                                                    }
-                                                </p>
+                                                <div className='text-sm text-text/80 mt-1'>
+                                                    <MarkdownRender content={review.owner_response.response} compact />
+                                                </div>
                                                 {review.owner_response
                                                     .is_edited && (
                                                     <p className='text-xs text-text/40 mt-1'>
@@ -1383,23 +1382,16 @@ export default function CafeManagement({
                                             </div>
                                         ) : respondingTo === review.id ? (
                                             <div className='mt-4'>
-                                                <textarea
+                                                <MarkdownEditor
+                                                    mode="minimal"
                                                     value={responseText}
-                                                    onChange={(e) =>
-                                                        setResponseText(
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder='Write your response...'
-                                                    className='w-full p-3 bg-background border border-text/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none'
-                                                    rows={3}
-                                                    maxLength={1000}
+                                                    onChange={setResponseText}
+                                                    placeholder="Write your response..."
+                                                    showCharCount
+                                                    className="border-text/20"
                                                 />
                                                 <div className='flex items-center justify-between mt-2'>
-                                                    <span className='text-xs text-text/40'>
-                                                        {responseText.length}
-                                                        /1000
-                                                    </span>
+                                                    <div />
                                                     <div className='flex gap-2'>
                                                         <button
                                                             onClick={() => {

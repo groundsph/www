@@ -315,9 +315,9 @@ const ReviewItem = React.memo(function ReviewItem({
                                 : ""}
                         </span>
                     </div>
-                    <p className='text-sm text-text/70 leading-relaxed'>
-                        {review.owner_response.response_text}
-                    </p>
+                    <div className='text-sm text-text/70 leading-relaxed'>
+                        <MarkdownRender content={review.owner_response.response_text} compact />
+                    </div>
                 </div>
             )}
 
