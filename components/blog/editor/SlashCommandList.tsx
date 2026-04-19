@@ -1,5 +1,16 @@
 "use client"
 
+/**
+ * Slash Command Extension for TipTap editor.
+ *
+ * NOTE: This extension is currently disconnected and not integrated into the
+ * blog editor. It requires additional work to implement the suggestion UI and
+ * filtering logic before it can be used. The blog editor currently uses a
+ * toolbar-based approach for inserting content blocks.
+ *
+ * TODO: Implement slash command suggestion UI or remove this extension.
+ */
+
 import { useState, useEffect, useRef, useCallback } from "react"
 import {
     Heading1,
