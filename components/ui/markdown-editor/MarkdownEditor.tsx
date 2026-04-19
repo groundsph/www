@@ -33,7 +33,7 @@ interface MarkdownEditorProps {
     /** Callback for image upload */
     onImageUpload?: () => void
     /** Show preview toggle (for modes that support it) */
-    showPreview?: boolean
+    isPreviewMode?: boolean
     /** Color scheme for theming */
     colorScheme?: "primary" | "secondary" | "tertiary"
     /** Additional CSS classes */
@@ -55,14 +55,14 @@ export default function MarkdownEditor({
     toolbarFeatures,
     autoSave,
     onImageUpload,
-    showPreview: showPreviewProp,
+    isPreviewMode: isPreviewModeProp,
     colorScheme = "primary",
     className = "",
     minHeight = 200,
     autoFocus = false,
 }: MarkdownEditorProps) {
-    const shouldShowPreview = showPreviewProp ?? (mode === "light" || mode === "minimal" || mode === "description")
-    const [showPreview, setShowPreview] = useState(false)
+    const shouldShowPreview = isPreviewModeProp ?? (mode === "light" || mode === "minimal" || mode === "description")
+    const [isPreviewMode, setIsPreviewMode] = useState(false)
     const [charCount, setCharCount] = useState(0)
 
     const extensions = getEditorExtensions(mode, placeholder)
@@ -112,9 +112,9 @@ export default function MarkdownEditor({
         const interval = autoSave.interval ?? 30000
         const key = `md-editor-draft-${autoSave.key}`
 
-        // Load draft on mount
+        // Load draft on mount only if there's no initial value
         const draft = localStorage.getItem(key)
-        if (draft && editor) {
+        if (draft && editor && !value) {
             editor.commands.setContent(draft)
         }
 
@@ -133,22 +133,22 @@ export default function MarkdownEditor({
     const features = toolbarFeatures ?? TOOLBAR_PRESETS[mode]
 
     const handlePreviewToggle = useCallback(() => {
-        setShowPreview((prev) => !prev)
+        setIsPreviewMode((prev) => !prev)
     }, [])
 
     return (
         <div className={`border border-text/10 rounded-lg overflow-hidden ${className}`}>
-            {(shouldShowPreview || features.length > 0) && !showPreview && (
+            {(shouldShowPreview || features.length > 0) && !isPreviewMode && (
                 <MarkdownToolbar
                     editor={editor}
                     features={features}
                     onImageUpload={onImageUpload}
                     onPreviewToggle={shouldShowPreview ? handlePreviewToggle : undefined}
-                    isPreviewing={showPreview}
+                    isPreviewing={isPreviewMode}
                 />
             )}
 
-            {showPreview ? (
+            {isPreviewMode ? (
                 <div className="p-4 min-h-[200px] prose prose-sm max-w-none">
                     <MarkdownRender content={value} compact={mode !== "full"} />
                 </div>
@@ -159,7 +159,7 @@ export default function MarkdownEditor({
                 />
             )}
 
-            {showPreview && (
+            {isPreviewMode && (
                 <button
                     type="button"
                     onClick={handlePreviewToggle}
