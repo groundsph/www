@@ -89,13 +89,13 @@ export async function runCafeQuery(
         switch (params.sortBy) {
             case "rating":
                 query = query.orderBy(
-                    desc(cafes.membershipTier),
+                    desc(cafes.isVerified),
                     desc(cafeRatingStats.averageRating)
                 ) as typeof query
                 break
             case "reviews":
                 query = query.orderBy(
-                    desc(cafes.membershipTier),
+                    desc(cafes.isVerified),
                     desc(cafeRatingStats.totalReviews)
                 ) as typeof query
                 break
@@ -103,9 +103,9 @@ export async function runCafeQuery(
                 query = query.orderBy(desc(cafes.createdAt)) as typeof query
                 break
             default:
-                // Default: by membership tier then created
+                // Default: by verified status then created
                 query = query.orderBy(
-                    desc(cafes.membershipTier),
+                    desc(cafes.isVerified),
                     desc(cafes.createdAt)
                 ) as typeof query
         }
@@ -226,10 +226,6 @@ function buildConditions(params: CafeQueryInput) {
 
     if (params.coffeeStyle) {
         conditions.push(eq(cafes.coffeeStyle, params.coffeeStyle))
-    }
-
-    if (params.membershipTier) {
-        conditions.push(eq(cafes.membershipTier, params.membershipTier))
     }
 
     // Status

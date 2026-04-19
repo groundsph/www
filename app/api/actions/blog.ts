@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { blogPosts, profiles, cafes, cafeSubscriptions } from "@/db/schema"
+import { blogPosts, profiles, cafes } from "@/db/schema"
 import { eq, and, desc, count, sql, ne, inArray, or, ilike } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { headers } from "next/headers"
@@ -597,19 +597,6 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
     if (userRole === "user") {
         finalCategory = "community"
         finalStatus = "pending" // Force pending for users
-    }
-
-    // Tier check for cafe owners (requires cafe_id)
-    if (!isAdminMod && input.cafe_id) {
-        const subResult = await db
-            .select({ tier: cafeSubscriptions.tier })
-            .from(cafeSubscriptions)
-            .where(eq(cafeSubscriptions.cafeId, input.cafe_id))
-            .limit(1)
-        const tier = subResult[0]?.tier || "free"
-        if (tier === "free") {
-            return { success: false, error: "Blog posting requires a Pro subscription or higher. Upgrade to start sharing your cafe's story." }
-        }
     }
 
     // Generate unique slug

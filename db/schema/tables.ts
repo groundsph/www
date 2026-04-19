@@ -111,7 +111,6 @@ export const cafes = pgTable(
         lng: real("lng"),
         priceLevel: enums.priceLevelEnum("price_level").notNull(),
         coffeeStyle: enums.coffeeStyleEnum("coffee_style"),
-        membershipTier: enums.membershipTierEnum("membership_tier").default("free"),
         roaster: text("roaster"),
         brewMethods: text("brew_methods").array(),
         specialty: text("specialty").array(),
@@ -207,24 +206,6 @@ export const cafeStories = pgTable("cafe_stories", {
         .notNull()
         .references(() => cafes.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-})
-
-export const cafeSubscriptions = pgTable("cafe_subscriptions", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    cafeId: uuid("cafe_id")
-        .notNull()
-        .unique()
-        .references(() => cafes.id, { onDelete: "cascade" }),
-    tier: enums.membershipTierEnum("tier").default("free"),
-    status: enums.subscriptionStatusEnum("status").default("active"),
-    helixSubscriptionId: text("helix_subscription_id"),
-    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
-    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-    isManualPayment: boolean("is_manual_payment").default(false),
-    paymentVerified: boolean("payment_verified").default(false),
-    proofOfPaymentUrl: text("proof_of_payment_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 })
@@ -460,21 +441,6 @@ export const featuredSchedules = pgTable("featured_schedules", {
     isActive: boolean("is_active").default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 })
-
-export const featuredSlotRequests = pgTable("featured_slot_requests", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    cafeId: uuid("cafe_id").references(() => cafes.id, { onDelete: "cascade" }),
-    ownerId: uuid("owner_id").references(() => profiles.id),
-    requestedMonth: text("requested_month").notNull(),
-    status: text("status").default("pending"),
-    adminNotes: text("admin_notes"),
-    processedAt: timestamp("processed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-})
-
-// ============================================================================
-// CONTRIBUTION TABLES
-// ============================================================================
 
 export const contributionLogs = pgTable("contribution_logs", {
     id: uuid("id").primaryKey().defaultRandom(),

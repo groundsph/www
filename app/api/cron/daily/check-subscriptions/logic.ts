@@ -1,13 +1,9 @@
 import { db } from "@/db"
-import { cafes, cafeSubscriptions, profiles, badgeDefinitions, userBadges } from "@/db/schema"
+import { profiles, badgeDefinitions, userBadges } from "@/db/schema"
 import { eq, lt, and, isNotNull } from "drizzle-orm"
 
 export interface CheckSubscriptionsResult {
     success: boolean
-    cafeSubscriptions: {
-        processed: number
-        total: number
-    }
     supporters: {
         expired: number
         total: number
@@ -22,60 +18,6 @@ export interface CheckSubscriptionsResult {
 export async function checkSubscriptions(): Promise<CheckSubscriptionsResult> {
     const now = new Date()
     const errors: string[] = []
-
-    // Find all active subscriptions that have expired
-    const expiredSubscriptions = await db
-        .select({
-            id: cafeSubscriptions.id,
-            cafeId: cafeSubscriptions.cafeId,
-            tier: cafeSubscriptions.tier,
-            currentPeriodEnd: cafeSubscriptions.currentPeriodEnd,
-            cafeName: cafes.name,
-            cafeSlug: cafes.slug,
-        })
-        .from(cafeSubscriptions)
-        .leftJoin(cafes, eq(cafeSubscriptions.cafeId, cafes.id))
-        .where(
-            and(
-                eq(cafeSubscriptions.status, "active"),
-                lt(cafeSubscriptions.currentPeriodEnd, now)
-            )
-        )
-
-    console.log(`Found ${expiredSubscriptions.length} expired subscription(s)`)
-
-    let processedCount = 0
-
-    // Process each expired subscription
-    for (const subscription of expiredSubscriptions) {
-        try {
-            // Update subscription status to cancelled
-            await db
-                .update(cafeSubscriptions)
-                .set({
-                    status: "cancelled",
-                    updatedAt: new Date(),
-                })
-                .where(eq(cafeSubscriptions.id, subscription.id))
-
-            // Downgrade cafe to free tier and remove verified badge
-            await db
-                .update(cafes)
-                .set({
-                    membershipTier: "free",
-                    isVerified: false,
-                    updatedAt: new Date(),
-                })
-                .where(eq(cafes.id, subscription.cafeId))
-
-            console.log(`Expired subscription processed for cafe: ${subscription.cafeName || subscription.cafeId}`)
-            processedCount++
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Unknown error"
-            errors.push(`Subscription ${subscription.id}: ${errorMessage}`)
-            console.error(`Error processing subscription ${subscription.id}:`, err)
-        }
-    }
 
     // ============================================
     // Check for expired supporters
@@ -143,10 +85,6 @@ export async function checkSubscriptions(): Promise<CheckSubscriptionsResult> {
 
     return {
         success: true,
-        cafeSubscriptions: {
-            processed: processedCount,
-            total: expiredSubscriptions.length,
-        },
         supporters: {
             expired: expiredSupportersCount,
             total: expiredSupporters?.length ?? 0,

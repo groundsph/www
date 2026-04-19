@@ -3,26 +3,16 @@
 import { CafeWithRatings } from "@/utils/types/extra"
 import {
     CafeMenuItem,
-    CafeSubscription,
     MenuItemForm,
     OwnerReviewResponse,
-    SUBSCRIPTION_TIERS,
-    SubscriptionTier,
-    canAccessFeature,
-    BETA_FREE_FEATURES,
-    getBetaNoticeText,
 } from "@/utils/types/owner"
 import { motion, AnimatePresence } from "motion/react"
 import {
     ArrowLeft,
     BarChart3,
     Building2,
-    Check,
-    ChevronRight,
-    Crown,
     Edit2,
     ExternalLink,
-    Headphones,
     Loader2,
     MessageSquare,
     Pin,
@@ -33,13 +23,10 @@ import {
     Star,
     Trash2,
     UtensilsCrossed,
-    Verified,
     FileText,
-    Calendar,
     CalendarIcon,
     Download,
     Copy,
-    Gift,
     Package,
     Upload,
     X,
@@ -51,7 +38,7 @@ import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
     respondToReview,
     deleteReviewResponse,
@@ -60,9 +47,6 @@ import {
     deleteMenuItem,
     pinReview,
     unpinReview,
-    requestFeaturedSlot,
-    getFeaturedSlotRequests,
-    FeaturedSlotRequest,
 } from "@/app/api/actions/owner"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
@@ -88,7 +72,6 @@ import {
 
 interface CafeManagementProps {
     cafe: CafeWithRatings
-    subscription: CafeSubscription | null
     reviews: {
         id: string
         rating: number
@@ -107,28 +90,6 @@ interface CafeManagementProps {
     menuItems: CafeMenuItem[]
 }
 
-// Tier badge colors
-const tierColors: Record<
-    SubscriptionTier,
-    { bg: string; text: string; border: string }
-> = {
-    free: {
-        bg: "bg-gray-100",
-        text: "text-gray-600",
-        border: "border-gray-200",
-    },
-    pro: {
-        bg: "bg-blue-100",
-        text: "text-blue-700",
-        border: "border-blue-200",
-    },
-    premium: {
-        bg: "bg-amber-100",
-        text: "text-amber-700",
-        border: "border-amber-200",
-    },
-}
-
 type Tab =
     | "overview"
     | "reviews"
@@ -141,14 +102,9 @@ type Tab =
 
 export default function CafeManagement({
     cafe,
-    subscription,
     reviews: initialReviews,
     menuItems: initialMenuItems,
 }: CafeManagementProps) {
-    const tier = subscription?.tier || "free"
-    const tierConfig = SUBSCRIPTION_TIERS[tier]
-    const colors = tierColors[tier]
-
     const { addNotification } = useNotification()
     const [activeTab, setActiveTab] = useState<Tab>("overview")
     const [reviews, setReviews] = useState(initialReviews)
@@ -192,12 +148,6 @@ export default function CafeManagement({
         topReferrers: { referrer: string; count: number }[]
     } | null>(null)
 
-    // Featured Slot Requests state
-    const [featuredRequests, setFeaturedRequests] = useState<
-        FeaturedSlotRequest[]
-    >([])
-    const [, setIsLoadingRequests] = useState(false)
-
     // Inventory state
     const [inventoryStats, setInventoryStats] = useState<InventoryStats | null>(
         null,
@@ -215,23 +165,6 @@ export default function CafeManagement({
     const [pendingMenuSuggestions, setPendingMenuSuggestions] = useState(0)
     const [menuFilter, setMenuFilter] = useState<"all" | "coffee" | "food" | "cold" | "hot" | "vegan">("all")
 
-    // Fetch featured requests on load
-    useEffect(() => {
-        const fetchRequests = async () => {
-            if (tier === "premium") {
-                setIsLoadingRequests(true)
-                try {
-                    const reqs = await getFeaturedSlotRequests(cafe.id)
-                    setFeaturedRequests(reqs)
-                } catch (e) {
-                    console.error("Failed to fetch featured requests", e)
-                } finally {
-                    setIsLoadingRequests(false)
-                }
-            }
-        }
-        fetchRequests()
-    }, [tier, cafe.id])
     const [analyticsLoading, setAnalyticsLoading] = useState(false)
     const [analyticsPeriod, setAnalyticsPeriod] = useState<7 | 30 | 90>(30)
 
@@ -572,40 +505,11 @@ export default function CafeManagement({
             icon: MessageSquare,
             badge: reviews.filter((r) => !r.owner_response).length,
         },
-        {
-            id: "menu" as Tab,
-            label: "Menu",
-            icon: UtensilsCrossed,
-            locked: !canAccessFeature(tier, "menu"),
-        },
-        {
-            id: "analytics" as Tab,
-            label: "Analytics",
-            icon: BarChart3,
-            locked: !canAccessFeature(tier, "analytics"),
-            requiredTier: "Pro",
-        },
-        {
-            id: "blog" as Tab,
-            label: "Blog",
-            icon: FileText,
-            locked: !canAccessFeature(tier, "blog"),
-            requiredTier: "Pro",
-        },
-        {
-            id: "events" as Tab,
-            label: "Events",
-            icon: CalendarIcon,
-            locked: !canAccessFeature(tier, "events"),
-            requiredTier: "Premium",
-        },
-        {
-            id: "inventory" as Tab,
-            label: "Inventory",
-            icon: Package,
-            locked: !canAccessFeature(tier, "inventory"),
-            requiredTier: "Pro",
-        },
+        { id: "menu" as Tab, label: "Menu", icon: UtensilsCrossed },
+        { id: "analytics" as Tab, label: "Analytics", icon: BarChart3 },
+        { id: "blog" as Tab, label: "Blog", icon: FileText },
+        { id: "events" as Tab, label: "Events", icon: CalendarIcon },
+        { id: "inventory" as Tab, label: "Inventory", icon: Package },
         { id: "settings" as Tab, label: "Settings", icon: Settings },
     ]
 
@@ -650,17 +554,6 @@ export default function CafeManagement({
                                     <h1 className='text-2xl font-serif font-bold'>
                                         {cafe.name}
                                     </h1>
-                                    <span
-                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text} border ${colors.border}`}
-                                    >
-                                        {tier === "premium" && (
-                                            <Crown className='w-3 h-3' />
-                                        )}
-                                        {tier === "pro" && (
-                                            <Verified className='w-3 h-3' />
-                                        )}
-                                        {tierConfig.name}
-                                    </span>
                                 </div>
                                 <p className='text-text/60 mt-1'>
                                     {cafe.city_municipality}, {cafe.region}
@@ -697,21 +590,15 @@ export default function CafeManagement({
                         {tabs.map((tab) => {
                             const Icon = tab.icon
                             const isActive = activeTab === tab.id
-                            const isLocked = tab.locked
 
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() =>
-                                        !isLocked && handleTabChange(tab.id)
-                                    }
-                                    disabled={isLocked}
+                                    onClick={() => handleTabChange(tab.id)}
                                     className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                                         isActive
                                             ? "border-primary text-primary"
-                                            : isLocked
-                                              ? "border-transparent text-text/30 cursor-not-allowed"
-                                              : "border-transparent text-text/60 hover:text-text hover:border-text/20"
+                                            : "border-transparent text-text/60 hover:text-text hover:border-text/20"
                                     }`}
                                 >
                                     <Icon className='w-4 h-4' />
@@ -719,11 +606,6 @@ export default function CafeManagement({
                                     {tab.badge && tab.badge > 0 && (
                                         <span className='ml-1 px-1.5 py-0.5 text-xs bg-amber-500 text-white rounded-full'>
                                             {tab.badge}
-                                        </span>
-                                    )}
-                                    {isLocked && (
-                                        <span className='ml-1 text-xs bg-text/10 px-1.5 py-0.5 rounded'>
-                                            {tab.requiredTier}
                                         </span>
                                     )}
                                 </button>
@@ -743,62 +625,6 @@ export default function CafeManagement({
                             className='space-y-6'
                         >
                             {/* Subscription Status */}
-                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
-                                <h3 className='font-semibold mb-4 flex items-center gap-2'>
-                                    <Crown className='w-5 h-5 text-amber-500' />
-                                    Subscription
-                                </h3>
-                                <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
-                                    <div>
-                                        <p className='text-lg font-medium'>
-                                            {tierConfig.name} Plan
-                                        </p>
-                                        <p className='text-text/60 text-sm'>
-                                            {tierConfig.priceDisplay}
-                                        </p>
-                                        <ul className='mt-3 space-y-1 text-sm text-text/80'>
-                                            {tierConfig.features.map(
-                                                (feature, i) => (
-                                                    <li
-                                                        key={i}
-                                                        className='flex items-center gap-2'
-                                                    >
-                                                        <Check className='w-4 h-4 text-green-500' />
-                                                        {feature}
-                                                    </li>
-                                                ),
-                                            )}
-                                        </ul>
-                                    </div>
-                                    {tier !== "premium" && (
-                                        <Link
-                                            href={`/owner/subscriptions?cafe=${cafe.slug}`}
-                                            className='inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors'
-                                        >
-                                            Upgrade
-                                            <ChevronRight className='w-4 h-4' />
-                                        </Link>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Beta Access Notice */}
-                            {BETA_FREE_FEATURES.length > 0 && (
-                                <div className='p-4 bg-amber-50 border border-amber-200 rounded-xl'>
-                                    <div className='flex items-start gap-3'>
-                                        <Gift className='w-5 h-5 text-amber-600 shrink-0 mt-0.5' />
-                                        <div>
-                                            <p className='font-medium text-amber-800'>
-                                                🎉 Beta Access
-                                            </p>
-                                            <p className='text-sm text-amber-700 mt-1'>
-                                                {getBetaNoticeText()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
                             {/* Badge Stamp */}
                             <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
                                 <div className='flex items-center gap-2 mb-4'>
@@ -1127,10 +953,9 @@ export default function CafeManagement({
                                 </div>
                             </div>
 
-                            {/* QR Code to Menu (Pro/Premium only) */}
-                            {canAccessFeature(tier, "qr_menu") &&
-                                menuItems.length > 0 && (
-                                    <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                            {/* QR Code to Menu */}
+                            {menuItems.length > 0 && (
+                                <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
                                         <h3 className='font-semibold mb-4 flex items-center gap-2'>
                                             <QrCode className='w-5 h-5 text-primary' />
                                             QR Code Menu
@@ -1362,21 +1187,13 @@ export default function CafeManagement({
                                     </p>
                                 </button>
                                 <button
-                                    onClick={() =>
-                                        canAccessFeature(tier, "menu") &&
-                                        setActiveTab("menu")
-                                    }
-                                    disabled={!canAccessFeature(tier, "menu")}
-                                    className={`p-4 bg-text/5 rounded-xl border border-text/10 text-left ${
-                                        !canAccessFeature(tier, "menu")
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "hover:border-primary/30 transition-colors"
-                                    }`}
+                                    onClick={() => setActiveTab("menu")}
+                                    className='p-4 bg-text/5 rounded-xl border border-text/10 hover:border-primary/30 transition-colors text-left'
                                 >
                                     <UtensilsCrossed className='w-6 h-6 text-primary mb-2' />
                                     <p className='font-medium'>Manage Menu</p>
                                     <p className='text-sm text-text/60'>
-                                        {`${menuItems.length} / ${tierConfig.menuLimit === Infinity ? "∞" : tierConfig.menuLimit} items`}
+                                        {`${menuItems.length} items`}
                                     </p>
                                 </button>
                                 <button
@@ -1390,168 +1207,6 @@ export default function CafeManagement({
                                     </p>
                                 </button>
                             </div>
-
-                            {/* Premium Support - Premium only */}
-                            {tier === "premium" && (
-                                <div className='mt-6 p-4 bg-linear-to-r from-amber-50 to-amber-100/50 rounded-xl border border-amber-200'>
-                                    <div className='flex items-start gap-3'>
-                                        <div className='p-2 bg-amber-500 rounded-lg'>
-                                            <Headphones className='w-5 h-5 text-white' />
-                                        </div>
-                                        <div className='flex-1'>
-                                            <h3 className='font-semibold text-amber-900'>
-                                                Premium Support
-                                            </h3>
-                                            <p className='text-sm text-amber-800/70 mt-1'>
-                                                As a Premium member, you have
-                                                priority access to our support
-                                                team.
-                                            </p>
-                                            <div className='flex flex-wrap gap-3 mt-3'>
-                                                <a
-                                                    href='mailto:support@grounds.ph?subject=Premium%20Support%20Request'
-                                                    className='inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors'
-                                                >
-                                                    <Send className='w-4 h-4' />
-                                                    Email Support
-                                                </a>
-                                                <a
-                                                    href='https://discord.gg/grounds'
-                                                    target='_blank'
-                                                    rel='noopener noreferrer'
-                                                    className='inline-flex items-center gap-2 px-4 py-2 bg-white text-amber-700 border border-amber-300 rounded-lg text-sm font-medium hover:bg-amber-50 transition-colors'
-                                                >
-                                                    <ExternalLink className='w-4 h-4' />
-                                                    Discord Channel
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Featured Slot Requests - Premium only */}
-                            {tier === "premium" && (
-                                <div className='mt-6 p-4 bg-linear-to-r from-purple-50 to-purple-100/50 rounded-xl border border-purple-200'>
-                                    <div className='flex items-start gap-3'>
-                                        <div className='p-2 bg-purple-500 rounded-lg'>
-                                            <Calendar className='w-5 h-5 text-white' />
-                                        </div>
-                                        <div className='flex-1'>
-                                            <div className='flex justify-between items-start'>
-                                                <div>
-                                                    <h3 className='font-semibold text-purple-900'>
-                                                        Featured Slot Request
-                                                    </h3>
-                                                    <p className='text-sm text-purple-800/70 mt-1'>
-                                                        Request to be featured
-                                                        on the home page for a
-                                                        specific month.
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={async () => {
-                                                        // Calculate next month
-                                                        const now = new Date()
-                                                        let year =
-                                                            now.getFullYear()
-                                                        let month =
-                                                            now.getMonth() + 1 // Next month (0-indexed current month + 1)
-                                                        if (month > 11) {
-                                                            month = 0
-                                                            year++
-                                                        }
-                                                        const nextMonthDate =
-                                                            new Date(
-                                                                year,
-                                                                month,
-                                                                1,
-                                                            )
-                                                        const formattedMonth = `${year}-${String(month + 1).padStart(2, "0")}-01`
-
-                                                        // Confirm dialog
-                                                        if (
-                                                            !confirm(
-                                                                `Request featured slot for ${nextMonthDate.toLocaleString("default", { month: "long", year: "numeric" })}?`,
-                                                            )
-                                                        )
-                                                            return
-
-                                                        const result =
-                                                            await requestFeaturedSlot(
-                                                                cafe.id,
-                                                                formattedMonth,
-                                                            )
-                                                        if (result.success) {
-                                                            addNotification(
-                                                                "Request submitted successfully!",
-                                                                "success",
-                                                            )
-                                                            // Refresh requests
-                                                            const reqs =
-                                                                await getFeaturedSlotRequests(
-                                                                    cafe.id,
-                                                                )
-                                                            setFeaturedRequests(
-                                                                reqs,
-                                                            )
-                                                        } else {
-                                                            addNotification(
-                                                                result.error ||
-                                                                    "Failed to submit request",
-                                                                "error",
-                                                            )
-                                                        }
-                                                    }}
-                                                    className='px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors'
-                                                >
-                                                    Request Next Month
-                                                </button>
-                                            </div>
-
-                                            {/* Requests List */}
-                                            {featuredRequests.length > 0 && (
-                                                <div className='mt-4 space-y-2'>
-                                                    {featuredRequests.map(
-                                                        (req) => (
-                                                            <div
-                                                                key={req.id}
-                                                                className='flex justify-between items-center p-2 bg-white/60 rounded-lg border border-purple-100 text-sm'
-                                                            >
-                                                                <span className='font-medium text-purple-900'>
-                                                                    {new Date(
-                                                                        req.requested_month,
-                                                                    ).toLocaleString(
-                                                                        "default",
-                                                                        {
-                                                                            month: "long",
-                                                                            year: "numeric",
-                                                                        },
-                                                                    )}
-                                                                </span>
-                                                                <span
-                                                                    className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize 
-                                                                ${
-                                                                    req.status ===
-                                                                    "approved"
-                                                                        ? "bg-green-100 text-green-700"
-                                                                        : req.status ===
-                                                                            "rejected"
-                                                                          ? "bg-red-100 text-red-700"
-                                                                          : "bg-yellow-100 text-yellow-700"
-                                                                }`}
-                                                                >
-                                                                    {req.status}
-                                                                </span>
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </motion.div>
                     )}
 
@@ -1621,72 +1276,70 @@ export default function CafeManagement({
                                                     </div>
                                                 </div>
                                             </div>
-                                            {/* Pin button - Premium only */}
-                                            {tier === "premium" && (
-                                                <button
-                                                    onClick={async () => {
+                                            {/* Pin button */}
+                                            <button
+                                                onClick={async () => {
+                                                    if (
+                                                        review.is_pinned_by_owner
+                                                    ) {
+                                                        const result =
+                                                            await unpinReview(
+                                                                review.id,
+                                                                cafe.id,
+                                                            )
                                                         if (
-                                                            review.is_pinned_by_owner
+                                                            result.success
                                                         ) {
-                                                            const result =
-                                                                await unpinReview(
-                                                                    review.id,
-                                                                    cafe.id,
-                                                                )
-                                                            if (
-                                                                result.success
-                                                            ) {
-                                                                addNotification(
-                                                                    "Review unpinned",
-                                                                    "success",
-                                                                )
-                                                                window.location.reload()
-                                                            } else {
-                                                                addNotification(
-                                                                    result.error ||
-                                                                        "Failed to unpin",
-                                                                    "error",
-                                                                )
-                                                            }
+                                                            addNotification(
+                                                                "Review unpinned",
+                                                                "success",
+                                                            )
+                                                            window.location.reload()
                                                         } else {
-                                                            const result =
-                                                                await pinReview(
-                                                                    review.id,
-                                                                    cafe.id,
-                                                                )
-                                                            if (
-                                                                result.success
-                                                            ) {
-                                                                addNotification(
-                                                                    "Review pinned!",
-                                                                    "success",
-                                                                )
-                                                                window.location.reload()
-                                                            } else {
-                                                                addNotification(
-                                                                    result.error ||
-                                                                        "Failed to pin",
-                                                                    "error",
-                                                                )
-                                                            }
+                                                            addNotification(
+                                                                result.error ||
+                                                                    "Failed to unpin",
+                                                                "error",
+                                                            )
                                                         }
-                                                    }}
-                                                    className={`p-2 rounded-lg transition-colors ${
-                                                        review.is_pinned_by_owner
-                                                            ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
-                                                            : "bg-text/5 text-text/40 hover:bg-text/10 hover:text-text/60"
-                                                    }`}
-                                                    title={
-                                                        review.is_pinned_by_owner
-                                                            ? "Unpin review"
-                                                            : "Pin review (max 3)"
+                                                    } else {
+                                                        const result =
+                                                            await pinReview(
+                                                                review.id,
+                                                                cafe.id,
+                                                            )
+                                                        if (
+                                                            result.success
+                                                        ) {
+                                                            addNotification(
+                                                                "Review pinned!",
+                                                                "success",
+                                                            )
+                                                            window.location.reload()
+                                                        } else {
+                                                            addNotification(
+                                                                result.error ||
+                                                                    "Failed to pin",
+                                                                "error",
+                                                            )
+                                                        }
                                                     }
-                                                >
-                                                    <Pin
-                                                        className={`w-4 h-4 ${review.is_pinned_by_owner ? "fill-amber-600" : ""}`}
-                                                    />
-                                                </button>
-                                            )}
+                                                }}
+                                                className={`p-2 rounded-lg transition-colors ${
+                                                    review.is_pinned_by_owner
+                                                        ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
+                                                        : "bg-text/5 text-text/40 hover:bg-text/10 hover:text-text/60"
+                                                }`}
+                                                title={
+                                                    review.is_pinned_by_owner
+                                                        ? "Unpin review"
+                                                        : "Pin review (max 3)"
+                                                }
+                                            >
+                                                <Pin
+                                                    className={`w-4 h-4 ${review.is_pinned_by_owner ? "fill-amber-600" : ""}`}
+                                                />
+                                            </button>
                                         </div>
 
                                         {/* Review Content */}
@@ -1800,7 +1453,7 @@ export default function CafeManagement({
                         </motion.div>
                     )}
 
-                    {activeTab === "menu" && canAccessFeature(tier, "menu") && (
+                    {activeTab === "menu" && (
                         <motion.div
                             key='menu'
                             initial={{ opacity: 0, y: 10 }}
@@ -1850,19 +1503,12 @@ export default function CafeManagement({
                             <div className='flex items-center justify-between'>
                                 <div>
                                     <p className='text-text/60'>
-                                        {menuItems.length} /{" "}
-                                        {tierConfig.menuLimit === Infinity
-                                            ? "∞"
-                                            : tierConfig.menuLimit}{" "}
-                                        items
+                                        {menuItems.length} items
                                     </p>
                                 </div>
                                 <button
                                     onClick={openAddMenu}
-                                    disabled={
-                                        menuItems.length >= tierConfig.menuLimit
-                                    }
-                                    className='inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors'
+                                    className='inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors'
                                 >
                                     <Plus className='w-4 h-4' />
                                     Add Item
@@ -2549,8 +2195,7 @@ export default function CafeManagement({
                         </motion.div>
                     )}
 
-                    {activeTab === "events" &&
-                        canAccessFeature(tier, "events") && (
+                    {activeTab === "events" && (
                             <motion.div
                                 key='events'
                                 initial={{ opacity: 0, y: 10 }}

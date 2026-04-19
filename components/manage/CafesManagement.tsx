@@ -44,7 +44,6 @@ import {
     unpublishCafe,
     deleteCafe,
     getPaginatedCafes,
-    getManualSubscriptions,
     type CafeFilterOptions,
 } from "@/app/api/actions/admin"
 import ActionConfirmationModal from "@/components/ui/ActionConfirmationModal"
@@ -78,7 +77,7 @@ import { EditSuggestion } from "@/utils/types/suggestions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
 import dynamic from "next/dynamic"
-import SubscriptionsTable from "@/components/manage/SubscriptionsTable"
+
 
 const ImageLightbox = dynamic(
     () => import("@/components/modal/ImageLightbox"),
@@ -86,7 +85,7 @@ const ImageLightbox = dynamic(
 )
 import RejectCafeModal from "@/components/admin/RejectCafeModal"
 import FeaturedScheduleManager from "@/components/manage/FeaturedScheduleManager"
-import { CreditCard, Star, UtensilsCrossed } from "lucide-react"
+import { Star, UtensilsCrossed } from "lucide-react"
 import { type FeaturedSchedule } from "@/app/api/actions/admin"
 import type { menuItemSuggestions } from "@/db/schema/tables"
 
@@ -105,8 +104,6 @@ interface CafesManagementProps {
     filterOptions: CafeFilterOptions
     suggestions: EditSuggestion[]
     pendingClaims?: CafeClaim[]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    manualSubscriptions: any[]
     featuredSchedules: FeaturedSchedule[]
     menuSuggestions: MenuItemSuggestion[]
 }
@@ -116,7 +113,6 @@ type TabType =
     | "published"
     | "suggestions"
     | "claims"
-    | "subscriptions"
     | "featured"
     | "mall-verifications"
     | "menu-suggestions"
@@ -131,7 +127,6 @@ export default function CafesManagement({
     filterOptions,
     suggestions: initialSuggestions,
     pendingClaims: initialClaims = [],
-    manualSubscriptions,
     featuredSchedules: initialFeaturedSchedules,
     menuSuggestions: initialMenuSuggestions,
 }: CafesManagementProps) {
@@ -151,7 +146,6 @@ export default function CafesManagement({
     const [loadingMore, setLoadingMore] = useState(false)
     const [isFiltering, setIsFiltering] = useState(false)
     const [isRefreshing, setIsRefreshing] = useState(false)
-    const [refreshKey, setRefreshKey] = useState(0)
 
     const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [claims, setClaims] = useState<CafeClaim[]>(initialClaims)
@@ -160,7 +154,6 @@ export default function CafesManagement({
 
     // Action confirmation hook
     const { requestConfirmation, isModalOpen, pendingAction, closeModal, handleConfirmed } = useActionConfirmation()
-    const [subscriptions, setSubscriptions] = useState(manualSubscriptions)
     const [featuredSchedules] = useState(initialFeaturedSchedules)
     const [expandedCafe, setExpandedCafe] = useState<string | null>(null)
     const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(
@@ -286,10 +279,6 @@ export default function CafesManagement({
             } else if (activeTab === "claims") {
                 const data = await getPendingClaims()
                 setClaims(data)
-            } else if (activeTab === "subscriptions") {
-                const data = await getManualSubscriptions()
-                setSubscriptions(data)
-                setRefreshKey((prev) => prev + 1)
             } else if (activeTab === "mall-verifications") {
                 const result = await getPendingMallVerifications()
                 if (result.success && result.verifications) {
@@ -680,17 +669,6 @@ cafeName: string) => {
                     Claims ({claims.length})
                 </button>
                 <button
-                    onClick={() => setActiveTab("subscriptions")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "subscriptions"
-                            ? "bg-primary text-white"
-                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <CreditCard className='w-4 h-4' />
-                    Subscriptions
-                </button>
-                <button
                     onClick={() => setActiveTab("featured")}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
                         activeTab === "featured"
@@ -728,14 +706,6 @@ cafeName: string) => {
                     Menu ({menuSuggestions.length})
                 </button>
             </div>
-
-            {/* Subscriptions Tab */}
-            {activeTab === "subscriptions" && (
-                <SubscriptionsTable
-                    key={refreshKey}
-                    initialSubscriptions={subscriptions}
-                />
-            )}
 
             {/* Featured Tab */}
             {activeTab === "featured" && (

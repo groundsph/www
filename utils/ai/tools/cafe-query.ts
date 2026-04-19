@@ -36,7 +36,6 @@ export const cafeQuerySchema = z.object({
     // Pricing
     priceLevel: z.enum(["budget", "mid", "premium", "luxury"]).optional(),
     coffeeStyle: z.enum(["classic", "artisan"]).optional(),
-    membershipTier: z.enum(["free", "basic", "premium"]).optional(),
 
     // Status
     isPublished: z.boolean().optional(),

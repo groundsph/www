@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { events, cafes, profiles, cafeSubscriptions, user } from "@/db/schema"
+import { events, cafes, profiles, user } from "@/db/schema"
 import { eq, and, gte, lt, lte, desc, asc, count, inArray, or, ilike, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { logSystemAction } from "./system-logs"
@@ -447,24 +447,6 @@ export async function createEvent(input: EventInput): Promise<EventActionResult>
 
     if (!canCreate) {
         return { success: false, error: "You don't have permission to create events" }
-    }
-
-    // Cafe owners need Premium tier
-    if (!isAdmin && input.cafe_id) {
-        const isOwner = await isCafeOwner(input.cafe_id)
-        if (!isOwner) {
-            return { success: false, error: "You can only create events for cafes you own" }
-        }
-
-        const subResult = await db.select({ tier: cafeSubscriptions.tier })
-            .from(cafeSubscriptions)
-            .where(eq(cafeSubscriptions.cafeId, input.cafe_id))
-            .limit(1)
-
-        const tier = subResult[0]?.tier || "free"
-        if (tier !== "premium") {
-            return { success: false, error: "Event creation is an exclusive Feature for Premium subscribers. Upgrade to host events!" }
-        }
     }
 
     const [inserted] = await db.insert(events).values({

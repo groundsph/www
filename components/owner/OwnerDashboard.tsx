@@ -1,25 +1,16 @@
 "use client"
 
-import {
-    OwnedCafe,
-    SUBSCRIPTION_TIERS,
-    SubscriptionTier,
-    BETA_FREE_FEATURES,
-    getBetaNoticeText,
-} from "@/utils/types/owner"
+import { OwnedCafe } from "@/utils/types/owner"
 import { motion } from "motion/react"
 import {
     ArrowRight,
     Building2,
-    ChevronRight,
-    Crown,
     MessageSquare,
     Plus,
     Settings,
     Star,
     TrendingUp,
     Verified,
-    Gift,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -27,43 +18,6 @@ import { getCafeThumbnailUrl } from "@/utils/extras"
 
 interface OwnerDashboardProps {
     cafes: OwnedCafe[]
-}
-
-// Tier badge colors
-const tierColors: Record<
-    SubscriptionTier,
-    { bg: string; text: string; border: string }
-> = {
-    free: {
-        bg: "bg-gray-100",
-        text: "text-gray-600",
-        border: "border-gray-200",
-    },
-    pro: {
-        bg: "bg-blue-100",
-        text: "text-blue-700",
-        border: "border-blue-200",
-    },
-    premium: {
-        bg: "bg-amber-100",
-        text: "text-amber-700",
-        border: "border-amber-200",
-    },
-}
-
-function getTierBadge(tier: SubscriptionTier) {
-    const colors = tierColors[tier]
-    const config = SUBSCRIPTION_TIERS[tier]
-
-    return (
-        <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text} border ${colors.border}`}
-        >
-            {tier === "premium" && <Crown className='w-3 h-3' />}
-            {tier === "pro" && <Verified className='w-3 h-3' />}
-            {config.name}
-        </span>
-    )
 }
 
 // Animation variants
@@ -241,26 +195,6 @@ export default function OwnerDashboard({
                 </motion.div>
             </div>
 
-            {/* Beta Access Notice */}
-            {BETA_FREE_FEATURES.length > 0 && (
-                <motion.div
-                    variants={item}
-                    className='p-4 bg-amber-50 border border-amber-200 rounded-xl'
-                >
-                    <div className='flex items-start gap-3'>
-                        <Gift className='w-5 h-5 text-amber-600 shrink-0 mt-0.5' />
-                        <div>
-                            <p className='font-medium text-amber-800'>
-                                🎉 Beta Access
-                            </p>
-                            <p className='text-sm text-amber-700 mt-1'>
-                                {getBetaNoticeText()}
-                            </p>
-                        </div>
-                    </div>
-                </motion.div>
-            )}
-
             {/* Cafes List */}
             <div className='space-y-4'>
                 <motion.h2
@@ -304,10 +238,6 @@ export default function OwnerDashboard({
                                                 <h3 className='font-semibold text-lg'>
                                                     {cafe.name}
                                                 </h3>
-                                                {getTierBadge(
-                                                    cafe.subscription?.tier ||
-                                                        "free"
-                                                )}
                                                 {cafe.is_verified && (
                                                     <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200'>
                                                         <Verified className='w-3 h-3' />
@@ -372,38 +302,6 @@ export default function OwnerDashboard({
                     ))}
                 </div>
             </div>
-
-            {/* Subscription Upgrade CTA */}
-            {cafes.some(
-                (c) => !c.subscription || c.subscription.tier === "free"
-            ) && (
-                <motion.div
-                    variants={item}
-                    className='p-6 bg-linear-to-r from-primary/10 via-amber-500/10 to-primary/5 rounded-xl border border-primary/20 shadow-sm'
-                >
-                    <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-4'>
-                        <div>
-                            <h3 className='font-semibold text-lg flex items-center gap-2'>
-                                <div className='p-2 bg-amber-100 rounded-lg'>
-                                    <Crown className='w-5 h-5 text-amber-600' />
-                                </div>
-                                Upgrade Your Cafes
-                            </h3>
-                            <p className='text-text/60 mt-2'>
-                                Get verified badges, analytics, menu management,
-                                and more with Pro or Premium subscriptions.
-                            </p>
-                        </div>
-                        <Link
-                            href='/owner/subscriptions'
-                            className='inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all whitespace-nowrap shadow-sm hover:shadow-md group'
-                        >
-                            View Plans
-                            <ChevronRight className='w-4 h-4 group-hover:translate-x-0.5 transition-transform' />
-                        </Link>
-                    </div>
-                </motion.div>
-            )}
         </motion.div>
     )
 }

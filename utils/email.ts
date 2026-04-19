@@ -4,8 +4,6 @@ import CafeApprovedEmail from "@/emails/CafeApprovedEmail"
 import CafeRejectedEmail from "@/emails/CafeRejectedEmail"
 import SuggestionApprovedEmail from "@/emails/SuggestionApprovedEmail"
 import SuggestionRejectedEmail from "@/emails/SuggestionRejectedEmail"
-import SubscriptionApprovedEmail from "@/emails/SubscriptionApprovedEmail"
-import SubscriptionRejectedEmail from "@/emails/SubscriptionRejectedEmail"
 import EventApprovedEmail from "@/emails/EventApprovedEmail"
 import EventRejectedEmail from "@/emails/EventRejectedEmail"
 
@@ -163,72 +161,6 @@ export async function sendSuggestionRejectedEmail(
         return { success: true, messageId: data?.id }
     } catch (err) {
         console.error("Error sending suggestion rejected email:", err)
-        return {
-            success: false,
-            error: err instanceof Error ? err.message : "Unknown error",
-        }
-    }
-}
-
-/**
- * Send a subscription approval notification email
- */
-export async function sendSubscriptionApprovedEmail(
-    to: string,
-    cafeName: string,
-    cafeSlug: string,
-    tier: "Pro" | "Premium",
-    ownerName?: string
-) {
-    try {
-        const { data, error } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to,
-            subject: `🎉 Your ${tier} subscription for "${cafeName}" is active!`,
-            react: SubscriptionApprovedEmail({ cafeName, cafeSlug, tier, ownerName }),
-        })
-
-        if (error) {
-            console.error("Failed to send subscription approved email:", error)
-            return { success: false, error: error.message }
-        }
-
-        return { success: true, messageId: data?.id }
-    } catch (err) {
-        console.error("Error sending subscription approved email:", err)
-        return {
-            success: false,
-            error: err instanceof Error ? err.message : "Unknown error",
-        }
-    }
-}
-
-/**
- * Send a subscription rejection notification email
- */
-export async function sendSubscriptionRejectedEmail(
-    to: string,
-    cafeName: string,
-    tier: "Pro" | "Premium",
-    ownerName?: string,
-    reason?: string
-) {
-    try {
-        const { data, error } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to,
-            subject: `Update on your ${tier} subscription for "${cafeName}"`,
-            react: SubscriptionRejectedEmail({ cafeName, tier, ownerName, reason }),
-        })
-
-        if (error) {
-            console.error("Failed to send subscription rejected email:", error)
-            return { success: false, error: error.message }
-        }
-
-        return { success: true, messageId: data?.id }
-    } catch (err) {
-        console.error("Error sending subscription rejected email:", err)
         return {
             success: false,
             error: err instanceof Error ? err.message : "Unknown error",

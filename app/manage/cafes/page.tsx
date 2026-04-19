@@ -4,7 +4,6 @@ import {
     getUserRole,
     getPaginatedCafes,
     getCafeFilterOptions,
-    getManualSubscriptions,
     getFeaturedSchedules,
 } from "@/app/api/actions/admin"
 import { getPendingSuggestions } from "@/app/api/actions/suggestions"
@@ -31,7 +30,6 @@ export default async function ManageCafesPage() {
         filterOptions,
         suggestions,
         pendingClaims,
-        manualSubscriptions,
         featuredSchedules,
         menuSuggestions,
     ] = await Promise.all([
@@ -50,7 +48,6 @@ export default async function ManageCafesPage() {
         getCafeFilterOptions(),
         getPendingSuggestions(),
         getPendingClaims(),
-        getManualSubscriptions(),
         getFeaturedSchedules(),
         getPendingMenuItemSuggestions(),
     ])
@@ -67,7 +64,6 @@ export default async function ManageCafesPage() {
             filterOptions={filterOptions}
             suggestions={suggestions}
             pendingClaims={pendingClaims}
-            manualSubscriptions={manualSubscriptions}
             featuredSchedules={featuredSchedules}
             menuSuggestions={menuSuggestions}
         />

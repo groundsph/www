@@ -3,7 +3,6 @@ import { redirect, notFound } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
 import {
     getCafeForOwnerManagement,
-    getCafeSubscription,
     getCafeReviewsForOwner,
     getCafeMenuItems,
     getCafeIdBySlug,
@@ -41,8 +40,7 @@ export default async function CafeManagementPage({ params }: Props) {
     }
 
     // Fetch additional data
-    const [subscription, reviews, menuItems] = await Promise.all([
-        getCafeSubscription(cafeId),
+    const [reviews, menuItems] = await Promise.all([
         getCafeReviewsForOwner(cafeId),
         getCafeMenuItems(cafeId),
     ])
@@ -52,7 +50,6 @@ export default async function CafeManagementPage({ params }: Props) {
             <div className='w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                 <CafeManagement
                     cafe={cafe}
-                    subscription={subscription}
                     reviews={reviews}
                     menuItems={menuItems}
                 />

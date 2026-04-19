@@ -545,66 +545,6 @@ export type Database = {
           },
         ]
       }
-      cafe_subscriptions: {
-        Row: {
-          cafe_id: string
-          created_at: string | null
-          current_period_end: string | null
-          current_period_start: string | null
-          helix_subscription_id: string | null
-          id: string
-          is_manual_payment: boolean | null
-          payment_verified: boolean | null
-          proof_of_payment_url: string | null
-          status: Database["public"]["Enums"]["subscription_status"]
-          tier: Database["public"]["Enums"]["membership_tier"]
-          updated_at: string | null
-        }
-        Insert: {
-          cafe_id: string
-          created_at?: string | null
-          current_period_end?: string | null
-          current_period_start?: string | null
-          helix_subscription_id?: string | null
-          id?: string
-          is_manual_payment?: boolean | null
-          payment_verified?: boolean | null
-          proof_of_payment_url?: string | null
-          status?: Database["public"]["Enums"]["subscription_status"]
-          tier?: Database["public"]["Enums"]["membership_tier"]
-          updated_at?: string | null
-        }
-        Update: {
-          cafe_id?: string
-          created_at?: string | null
-          current_period_end?: string | null
-          current_period_start?: string | null
-          helix_subscription_id?: string | null
-          id?: string
-          is_manual_payment?: boolean | null
-          payment_verified?: boolean | null
-          proof_of_payment_url?: string | null
-          status?: Database["public"]["Enums"]["subscription_status"]
-          tier?: Database["public"]["Enums"]["membership_tier"]
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cafe_subscriptions_cafe_id_fkey"
-            columns: ["cafe_id"]
-            isOneToOne: true
-            referencedRelation: "cafe_with_ratings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cafe_subscriptions_cafe_id_fkey"
-            columns: ["cafe_id"]
-            isOneToOne: true
-            referencedRelation: "cafes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       cafes: {
         Row: {
           address_display: string
@@ -644,7 +584,7 @@ export type Database = {
           badge_stamp_url: string | null
           lat: number | null
           lng: number | null
-          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+
           milk_options: string[] | null
           name: string
           operating_hours: Json | null
@@ -703,9 +643,6 @@ export type Database = {
           badge_stamp_url?: string | null
           lat?: number | null
           lng?: number | null
-          membership_tier?:
-          | Database["public"]["Enums"]["membership_tier"]
-          | null
           milk_options?: string[] | null
           name: string
           operating_hours?: Json | null
@@ -764,9 +701,6 @@ export type Database = {
           badge_stamp_url?: string | null
           lat?: number | null
           lng?: number | null
-          membership_tier?:
-          | Database["public"]["Enums"]["membership_tier"]
-          | null
           milk_options?: string[] | null
           name?: string
           operating_hours?: Json | null
@@ -1443,7 +1377,7 @@ export type Database = {
           is_work_friendly: boolean | null
           lat: number | null
           lng: number | null
-          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+
           name: string | null
           owner_ids: string[] | null
           price_level: Database["public"]["Enums"]["price_level"] | null
@@ -1477,10 +1411,6 @@ export type Database = {
       can_add_menu_item: { Args: { p_cafe_id: string }; Returns: boolean }
       count_cafe_menu_items: { Args: { p_cafe_id: string }; Returns: number }
       get_admin_stats: { Args: never; Returns: Json }
-      get_cafe_tier: {
-        Args: { p_cafe_id: string }
-        Returns: Database["public"]["Enums"]["membership_tier"]
-      }
       get_cafes_in_bounds: {
         Args: { ne_lat: number; ne_lng: number; sw_lat: number; sw_lng: number }
         Returns: {
@@ -1513,7 +1443,7 @@ export type Database = {
           is_work_friendly: boolean | null
           lat: number
           lng: number
-          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+
           milk_options: string[] | null
           name: string
           operating_hours: Json | null
@@ -1577,7 +1507,7 @@ export type Database = {
           is_work_friendly: boolean | null
           lat: number
           lng: number
-          membership_tier: Database["public"]["Enums"]["membership_tier"] | null
+
           milk_options: string[] | null
           name: string
           operating_hours: Json | null
@@ -1626,12 +1556,11 @@ export type Database = {
       | "SUGGEST"
       event_status: "draft" | "published" | "cancelled"
       interaction_type: "like" | "report"
-      membership_tier: "free" | "basic" | "premium"
+
       price_level: "budget" | "mid" | "premium" | "luxury"
       review_status: "published" | "hidden" | "flagged"
       scout_rank: "novice" | "scout" | "explorer" | "expert" | "vanguard" | "legend"
       slot_type: "hero" | "sidebar" | "collection" | "regional_spotlight"
-      subscription_status: "active" | "cancelled" | "past_due" | "trialing"
       user_role: "user" | "writer" | "moderator" | "admin"
       verification_status: "pending" | "approved" | "rejected"
     }
@@ -1782,12 +1711,10 @@ export const Constants = {
       ],
       event_status: ["draft", "published", "cancelled"],
       interaction_type: ["like", "report"],
-      membership_tier: ["free", "basic", "premium"],
       price_level: ["budget", "mid", "premium", "luxury"],
       review_status: ["published", "hidden", "flagged"],
       scout_rank: ["novice", "scout", "explorer", "expert", "vanguard", "legend"],
       slot_type: ["hero", "sidebar", "collection", "regional_spotlight"],
-      subscription_status: ["active", "cancelled", "past_due", "trialing"],
       user_role: ["user", "writer", "moderator", "admin"],
       verification_status: ["pending", "approved", "rejected"],
     },

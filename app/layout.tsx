@@ -73,9 +73,9 @@ export const metadata: Metadata = {
         "cafe guide Philippines",
         "coffee community",
     ],
-    authors: [{ name: "Grounds PH" }],
-    creator: "Grounds PH",
-    publisher: "Grounds PH",
+    authors: [{ name: "GroundsPH" }],
+    creator: "GroundsPH",
+    publisher: "GroundsPH",
     formatDetection: {
         email: false,
         address: false,
@@ -90,8 +90,8 @@ export const metadata: Metadata = {
         type: "website",
         locale: "en_PH",
         url: "https://grounds.ph",
-        siteName: "Grounds PH",
-        title: "Grounds PH",
+        siteName: "GroundsPH",
+        title: "GroundsPH",
         description:
             "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
         images: [
@@ -99,13 +99,13 @@ export const metadata: Metadata = {
                 url: "/og-image.jpg",
                 width: 1200,
                 height: 630,
-                alt: "Grounds PH - Discover the Philippines' Best Cafes",
+                alt: "GroundsPH - Discover the Philippines' Best Cafes",
             },
         ],
     },
     twitter: {
         card: "summary_large_image",
-        title: "Grounds PH",
+        title: "GroundsPH",
         description:
             "Discover and explore the best cafes in the Philippines. Community-driven cafe database featuring daily highlights, reviews, and more.",
         images: ["/og-image.jpg"],

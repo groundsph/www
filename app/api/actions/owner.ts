@@ -3,7 +3,6 @@
 import { db } from "@/db"
 import {
     cafes,
-    cafeSubscriptions,
     cafeStories,
     cafeMenuItems,
     cafeRatingStats,
@@ -11,7 +10,6 @@ import {
     profiles,
     ownerReviewResponses,
     ownerVerificationRequests,
-    featuredSlotRequests,
 } from "@/db/schema"
 import { eq, and, desc, inArray, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
@@ -25,9 +23,6 @@ import {
     ReviewResponseForm,
     MenuItemForm,
     MenuItemResult,
-    CafeSubscription,
-    toDisplayTier,
-    SUBSCRIPTION_TIERS,
 } from "@/utils/types/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
@@ -120,14 +115,6 @@ export async function getOwnedCafes(): Promise<OwnedCafe[]> {
 
     const ratingsMap = new Map(ratingsResult.map(r => [r.cafeId, r]))
 
-    // Get subscriptions for these cafes
-    const subscriptionsResult = await db
-        .select()
-        .from(cafeSubscriptions)
-        .where(inArray(cafeSubscriptions.cafeId, cafeIds))
-
-    const subscriptionMap = new Map(subscriptionsResult.map(s => [s.cafeId, s]))
-
     // Get reviews without owner responses (pending reviews)
     const reviewsWithResponsesResult = await db
         .select({ reviewId: ownerReviewResponses.reviewId })
@@ -149,7 +136,6 @@ export async function getOwnedCafes(): Promise<OwnedCafe[]> {
     }
 
     return cafesResult.map(cafe => {
-        const sub = subscriptionMap.get(cafe.id)
         const ratings = ratingsMap.get(cafe.id)
         return {
             id: cafe.id,
@@ -162,17 +148,6 @@ export async function getOwnedCafes(): Promise<OwnedCafe[]> {
             is_published: cafe.isPublished ?? false,
             average_rating: ratings?.averageRating ?? null,
             total_reviews: ratings?.totalReviews ?? 0,
-            subscription: sub ? {
-                id: sub.id,
-                cafe_id: sub.cafeId,
-                tier: toDisplayTier(sub.tier ?? 'free'),
-                helix_subscription_id: sub.helixSubscriptionId,
-                status: sub.status ?? 'active',
-                current_period_start: sub.currentPeriodStart?.toISOString() ?? null,
-                current_period_end: sub.currentPeriodEnd?.toISOString() ?? null,
-                created_at: sub.createdAt?.toISOString() ?? null,
-                updated_at: sub.updatedAt?.toISOString() ?? null,
-            } : null,
             pending_reviews: pendingReviewMap.get(cafe.id) || 0,
         }
     })
@@ -220,7 +195,6 @@ export async function getCafeForOwnerManagement(cafeId: string): Promise<CafeWit
         lng: cafe.lng,
         price_level: cafe.priceLevel,
         coffee_style: cafe.coffeeStyle,
-        membership_tier: cafe.membershipTier,
         roaster: cafe.roaster,
         brew_methods: cafe.brewMethods,
         specialty: cafe.specialty,
@@ -272,44 +246,7 @@ export async function getCafeForOwnerManagement(cafeId: string): Promise<CafeWit
 /**
  * Get subscription details for a cafe
  */
-export async function getCafeSubscription(cafeId: string): Promise<CafeSubscription | null> {
-    const isOwner = await isOwnerOfCafe(cafeId)
-    if (!isOwner) return null
-
-    const result = await db
-        .select()
-        .from(cafeSubscriptions)
-        .where(eq(cafeSubscriptions.cafeId, cafeId))
-        .limit(1)
-
-    const sub = result[0]
-    if (!sub) {
-        // Return default free subscription if none exists
-        return {
-            id: '',
-            cafe_id: cafeId,
-            tier: 'free',
-            helix_subscription_id: null,
-            status: 'active',
-            current_period_start: null,
-            current_period_end: null,
-            created_at: null,
-            updated_at: null,
-        }
-    }
-
-    return {
-        id: sub.id,
-        cafe_id: sub.cafeId,
-        tier: toDisplayTier(sub.tier ?? 'free'),
-        helix_subscription_id: sub.helixSubscriptionId,
-        status: sub.status ?? 'active',
-        current_period_start: sub.currentPeriodStart?.toISOString() ?? null,
-        current_period_end: sub.currentPeriodEnd?.toISOString() ?? null,
-        created_at: sub.createdAt?.toISOString() ?? null,
-        updated_at: sub.updatedAt?.toISOString() ?? null,
-    }
-}
+// REMOVED: getCafeSubscription function
 
 // ============================================
 // Cafe Updates (Owner-level)
@@ -809,18 +746,6 @@ export async function pinReview(
         return { success: false, error: 'Not authorized' }
     }
 
-    // Check tier - review pinning is Premium only
-    const subResult = await db
-        .select({ tier: cafeSubscriptions.tier })
-        .from(cafeSubscriptions)
-        .where(eq(cafeSubscriptions.cafeId, cafeId))
-        .limit(1)
-
-    const tier = subResult[0]?.tier || 'free'
-    if (tier !== 'premium') {
-        return { success: false, error: 'Review pinning is a Premium feature' }
-    }
-
     // Check count of currently pinned reviews (max 3)
     const countResult = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -956,29 +881,6 @@ export async function addMenuItem(
         const isOwner = await isOwnerOfCafe(cafeId)
         if (!isOwner) {
             return { success: false, error: 'Not authorized to manage this cafe\'s menu' }
-        }
-    }
-
-    // Only check tier limits for non-admins
-    if (!isAdmin) {
-        const subscription = await getCafeSubscription(cafeId)
-        const tier = subscription?.tier || 'free'
-        const tierConfig = SUBSCRIPTION_TIERS[tier]
-
-        // Count current items
-        const countResult = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(cafeMenuItems)
-            .where(eq(cafeMenuItems.cafeId, cafeId))
-
-        const currentCount = countResult[0]?.count || 0
-
-        if (tierConfig.menuLimit !== Infinity && currentCount >= tierConfig.menuLimit) {
-            return {
-                success: false,
-                error: `You've reached the ${tierConfig.menuLimit} item limit. Upgrade to add more items.`,
-                remaining_slots: 0,
-            }
         }
     }
 
@@ -1273,122 +1175,6 @@ export async function getOwnerResponsesForCafe(
             } : undefined,
         } as OwnerReviewResponse])
     )
-}
-
-// ============================================
-// Featured Slot Requests (Premium Feature)
-// ============================================
-
-export interface FeaturedSlotRequest {
-    id: string
-    cafe_id: string
-    owner_id: string
-    requested_month: string
-    status: 'pending' | 'approved' | 'rejected'
-    admin_notes: string | null
-    created_at: string
-    processed_at: string | null
-}
-
-/**
- * Request a featured slot for a specific month (Premium only, 1 per month)
- */
-export async function requestFeaturedSlot(
-    cafeId: string,
-    requestedMonth: string // Format: YYYY-MM-01
-): Promise<OwnerActionResult> {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-        return { success: false, error: 'Not authenticated' }
-    }
-
-    // Check ownership
-    const isOwner = await isOwnerOfCafe(cafeId)
-    if (!isOwner) {
-        return { success: false, error: 'Not authorized' }
-    }
-
-    // Check tier - featured slot requests are Premium only
-    const subResult = await db
-        .select({ tier: cafeSubscriptions.tier })
-        .from(cafeSubscriptions)
-        .where(eq(cafeSubscriptions.cafeId, cafeId))
-        .limit(1)
-
-    const tier = subResult[0]?.tier || 'free'
-    if (tier !== 'premium') {
-        return { success: false, error: 'Featured slot requests are a Premium feature' }
-    }
-
-    // Check if cafe is a chain - chains cannot be featured
-    const cafeResult = await db
-        .select({ isChain: cafes.isChain })
-        .from(cafes)
-        .where(eq(cafes.id, cafeId))
-        .limit(1)
-
-    if (cafeResult[0]?.isChain === true) {
-        return { success: false, error: 'Chain cafes cannot be featured. Please contact support if you believe this is an error.' }
-    }
-
-    // Check if already requested for this month
-    const existingResult = await db
-        .select({ id: featuredSlotRequests.id, status: featuredSlotRequests.status })
-        .from(featuredSlotRequests)
-        .where(and(
-            eq(featuredSlotRequests.cafeId, cafeId),
-            eq(featuredSlotRequests.requestedMonth, requestedMonth)
-        ))
-        .limit(1)
-
-    if (existingResult[0]) {
-        return {
-            success: false,
-            error: `You already have a ${existingResult[0].status} request for this month`
-        }
-    }
-
-    // Submit the request
-    try {
-        await db.insert(featuredSlotRequests).values({
-            cafeId,
-            ownerId: userId,
-            requestedMonth,
-            status: 'pending',
-        })
-    } catch (error) {
-        console.error('Error submitting featured slot request:', error)
-        return { success: false, error: 'Failed to submit request' }
-    }
-
-    return { success: true }
-}
-
-/**
- * Get featured slot requests for a cafe
- */
-export async function getFeaturedSlotRequests(
-    cafeId: string
-): Promise<FeaturedSlotRequest[]> {
-    const isOwner = await isOwnerOfCafe(cafeId)
-    if (!isOwner) return []
-
-    const result = await db
-        .select()
-        .from(featuredSlotRequests)
-        .where(eq(featuredSlotRequests.cafeId, cafeId))
-        .orderBy(desc(featuredSlotRequests.requestedMonth))
-
-    return result.map(r => ({
-        id: r.id,
-        cafe_id: r.cafeId!,
-        owner_id: r.ownerId!,
-        requested_month: r.requestedMonth,
-        status: r.status as 'pending' | 'approved' | 'rejected',
-        admin_notes: r.adminNotes,
-        created_at: r.createdAt?.toISOString() ?? '',
-        processed_at: r.processedAt?.toISOString() ?? null,
-    }))
 }
 
 // ============================================

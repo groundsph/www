@@ -38,7 +38,6 @@ function mapCafeToSnakeCase(c: {
     lng: number | null
     priceLevel: string | null
     coffeeStyle: string | null
-    membershipTier: string | null
     roaster: string | null
     brewMethods: string[] | null
     specialty: string[] | null
@@ -97,7 +96,6 @@ function mapCafeToSnakeCase(c: {
         lng: c.lng,
         price_level: c.priceLevel,
         coffee_style: c.coffeeStyle,
-        membership_tier: c.membershipTier,
         roaster: c.roaster,
         brew_methods: c.brewMethods,
         specialty: c.specialty,
@@ -169,7 +167,6 @@ export async function getCafeBySlug(slug: string) {
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -283,9 +280,8 @@ export async function getDailyFeatured() {
                 lat: cafes.lat,
                 lng: cafes.lng,
                 priceLevel: cafes.priceLevel,
-                coffeeStyle: cafes.coffeeStyle,
-                membershipTier: cafes.membershipTier,
-                roaster: cafes.roaster,
+            coffeeStyle: cafes.coffeeStyle,
+            roaster: cafes.roaster,
                 brewMethods: cafes.brewMethods,
                 specialty: cafes.specialty,
                 milkOptions: cafes.milkOptions,
@@ -351,7 +347,6 @@ export async function getDailyFeatured() {
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -446,7 +441,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                     description: cafes.description, addressDisplay: cafes.addressDisplay, area: cafes.area,
                     cityMunicipality: cafes.cityMunicipality, province: cafes.province, region: cafes.region,
                     lat: cafes.lat, lng: cafes.lng, priceLevel: cafes.priceLevel, coffeeStyle: cafes.coffeeStyle,
-                    membershipTier: cafes.membershipTier, roaster: cafes.roaster, brewMethods: cafes.brewMethods,
+                    roaster: cafes.roaster, brewMethods: cafes.brewMethods,
                     specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
                     operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
                     email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
@@ -477,7 +472,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 description: cafes.description, addressDisplay: cafes.addressDisplay, area: cafes.area,
                 cityMunicipality: cafes.cityMunicipality, province: cafes.province, region: cafes.region,
                 lat: cafes.lat, lng: cafes.lng, priceLevel: cafes.priceLevel, coffeeStyle: cafes.coffeeStyle,
-                membershipTier: cafes.membershipTier, roaster: cafes.roaster, brewMethods: cafes.brewMethods,
+                roaster: cafes.roaster, brewMethods: cafes.brewMethods,
                 specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
                 operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
                 email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
@@ -509,7 +504,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 description: cafes.description, addressDisplay: cafes.addressDisplay, area: cafes.area,
                 cityMunicipality: cafes.cityMunicipality, province: cafes.province, region: cafes.region,
                 lat: cafes.lat, lng: cafes.lng, priceLevel: cafes.priceLevel, coffeeStyle: cafes.coffeeStyle,
-                membershipTier: cafes.membershipTier, roaster: cafes.roaster, brewMethods: cafes.brewMethods,
+                roaster: cafes.roaster, brewMethods: cafes.brewMethods,
                 specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
                 operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
                 email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
@@ -577,7 +572,7 @@ export async function getAllCafes(
                     description: cafes.description, addressDisplay: cafes.addressDisplay, area: cafes.area,
                     cityMunicipality: cafes.cityMunicipality, province: cafes.province, region: cafes.region,
                     lat: cafes.lat, lng: cafes.lng, priceLevel: cafes.priceLevel, coffeeStyle: cafes.coffeeStyle,
-                    membershipTier: cafes.membershipTier, roaster: cafes.roaster, brewMethods: cafes.brewMethods,
+                    roaster: cafes.roaster, brewMethods: cafes.brewMethods,
                     specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
                     operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
                     email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
@@ -596,7 +591,7 @@ export async function getAllCafes(
                 .from(cafes)
                 .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
                 .where(and(...ilikConditions))
-                .orderBy(desc(cafes.membershipTier), desc(cafes.createdAt))
+                .orderBy(desc(cafes.createdAt))
                 .limit(limit)
                 .offset(offset)
 
@@ -628,7 +623,6 @@ export async function getAllCafes(
             lng: row.lng as number | null,
             price_level: row.price_level as string | null,
             coffee_style: row.coffee_style as string | null,
-            membership_tier: row.membership_tier as string | null,
             roaster: row.roaster as string | null,
             brew_methods: row.brew_methods as string[] | null,
             specialty: row.specialty as string[] | null,
@@ -734,13 +728,13 @@ export async function getAllCafes(
     let orderBy
     switch (filters.sortBy) {
         case "rating":
-            orderBy = [desc(cafes.membershipTier), desc(cafeRatingStats.averageRating)]
+            orderBy = [desc(cafeRatingStats.averageRating)]
             break
         case "reviews":
-            orderBy = [desc(cafes.membershipTier), desc(cafeRatingStats.totalReviews)]
+            orderBy = [desc(cafeRatingStats.totalReviews)]
             break
         default:
-            orderBy = [desc(cafes.membershipTier), desc(cafes.createdAt)]
+            orderBy = [desc(cafes.createdAt)]
     }
 
     const cafesResult = await db
@@ -749,7 +743,7 @@ export async function getAllCafes(
             description: cafes.description, addressDisplay: cafes.addressDisplay, area: cafes.area,
             cityMunicipality: cafes.cityMunicipality, province: cafes.province, region: cafes.region,
             lat: cafes.lat, lng: cafes.lng, priceLevel: cafes.priceLevel, coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier, roaster: cafes.roaster, brewMethods: cafes.brewMethods,
+            roaster: cafes.roaster, brewMethods: cafes.brewMethods,
             specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
             operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
             email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
@@ -1033,7 +1027,6 @@ export async function getCafesByIds(ids: string[]) {
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -1106,7 +1099,6 @@ export async function getCafesBySlugs(slugs: string[]) {
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -1179,7 +1171,6 @@ export async function getAllPublishedCafes(): Promise<CafeWithRatings[]> {
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -1231,7 +1222,7 @@ export async function getAllPublishedCafes(): Promise<CafeWithRatings[]> {
                 eq(cafes.isHiddenGem, false),
             )
         )
-        .orderBy(desc(cafes.membershipTier), desc(cafes.createdAt))
+        .orderBy(desc(cafes.createdAt))
 
     return results.map(c => mapCafeToSnakeCase(c)) as CafeWithRatings[]
 }

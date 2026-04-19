@@ -61,7 +61,6 @@ export async function getCafeBySlug(slug: string): Promise<CafeWithRatings | nul
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -151,7 +150,6 @@ export async function getNearbyCafes(
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -240,7 +238,6 @@ export async function getTopRatedCafes(
             lng: cafes.lng,
             priceLevel: cafes.priceLevel,
             coffeeStyle: cafes.coffeeStyle,
-            membershipTier: cafes.membershipTier,
             roaster: cafes.roaster,
             brewMethods: cafes.brewMethods,
             specialty: cafes.specialty,
@@ -314,7 +311,6 @@ function mapToCafeWithRatings(c: {
     lng: number | null
     priceLevel: string | null
     coffeeStyle: string | null
-    membershipTier: string | null
     roaster: string | null
     brewMethods: string[] | null
     specialty: string[] | null
@@ -373,7 +369,6 @@ function mapToCafeWithRatings(c: {
         lng: c.lng,
         price_level: c.priceLevel,
         coffee_style: c.coffeeStyle,
-        membership_tier: c.membershipTier,
         roaster: c.roaster,
         brew_methods: c.brewMethods,
         specialty: c.specialty,

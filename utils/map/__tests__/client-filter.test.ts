@@ -20,7 +20,6 @@ function makeCafe(overrides: Partial<CafeWithRatings> = {}): CafeWithRatings {
 		lng: 121.0,
 		price_level: null,
 		coffee_style: null,
-		membership_tier: null,
 		roaster: null,
 		brew_methods: null,
 		specialty: null,

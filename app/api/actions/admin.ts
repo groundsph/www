@@ -10,12 +10,13 @@ import {
     profiles,
     user,
     monthlyLeaderboardSnapshots,
+    cafeStories,
 } from "@/db/schema"
 import { PH_REGIONS } from "@/utils/ph-regions"
 import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull, inArray } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
-import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendSubscriptionApprovedEmail, sendSubscriptionRejectedEmail } from "@/utils/email"
+import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
@@ -311,7 +312,6 @@ function mapCafeToCafeWithRatings(cafe: any, contributor?: any, ratings?: any): 
         lng: cafe.lng,
         price_level: cafe.priceLevel,
         coffee_style: cafe.coffeeStyle,
-        membership_tier: cafe.membershipTier,
         roaster: cafe.roaster,
         brew_methods: cafe.brewMethods,
         specialty: cafe.specialty,
@@ -1376,314 +1376,6 @@ export async function getCafeFilterOptions(): Promise<CafeFilterOptions> {
         totalPublished: publishedCountResult[0]?.count ?? 0,
         totalPending: pendingCountResult[0]?.count ?? 0,
     }
-}
-
-// ============================================
-// Manual Payments / Subscriptions
-// ============================================
-
-import { cafeSubscriptions, cafeStories } from "@/db/schema"
-
-/**
- * Get all manual subscriptions (pending and verified)
- */
-export async function getManualSubscriptions(): Promise<any[]> {
-    const currentUser = await getCurrentUser()
-    if (!currentUser) return []
-
-    const profileResult = await db
-        .select({ role: profiles.role })
-        .from(profiles)
-        .where(eq(profiles.id, currentUser.id))
-        .limit(1)
-
-    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
-        return []
-    }
-
-    // Fetch subscriptions with cafe details
-    const subscriptionsResult = await db
-        .select({
-            id: cafeSubscriptions.id,
-            cafeId: cafeSubscriptions.cafeId,
-            tier: cafeSubscriptions.tier,
-            status: cafeSubscriptions.status,
-            helixSubscriptionId: cafeSubscriptions.helixSubscriptionId,
-            currentPeriodStart: cafeSubscriptions.currentPeriodStart,
-            currentPeriodEnd: cafeSubscriptions.currentPeriodEnd,
-            isManualPayment: cafeSubscriptions.isManualPayment,
-            paymentVerified: cafeSubscriptions.paymentVerified,
-            proofOfPaymentUrl: cafeSubscriptions.proofOfPaymentUrl,
-            createdAt: cafeSubscriptions.createdAt,
-            updatedAt: cafeSubscriptions.updatedAt,
-            cafeName: cafes.name,
-            cafeSlug: cafes.slug,
-        })
-        .from(cafeSubscriptions)
-        .leftJoin(cafes, eq(cafeSubscriptions.cafeId, cafes.id))
-        .where(eq(cafeSubscriptions.isManualPayment, true))
-        .orderBy(desc(cafeSubscriptions.createdAt))
-
-    return subscriptionsResult.map(sub => ({
-        id: sub.id,
-        cafe_id: sub.cafeId,
-        tier: sub.tier,
-        status: sub.status,
-        helix_subscription_id: sub.helixSubscriptionId,
-        current_period_start: sub.currentPeriodStart?.toISOString() ?? null,
-        current_period_end: sub.currentPeriodEnd?.toISOString() ?? null,
-        is_manual_payment: sub.isManualPayment,
-        payment_verified: sub.paymentVerified,
-        proof_of_payment_url: sub.proofOfPaymentUrl,
-        created_at: sub.createdAt?.toISOString() ?? null,
-        updated_at: sub.updatedAt?.toISOString() ?? null,
-        cafes: sub.cafeName ? {
-            id: sub.cafeId,
-            name: sub.cafeName,
-            slug: sub.cafeSlug,
-        } : null,
-    }))
-}
-
-/**
- * Verify a manual payment
- * Returns proof info so client can download before deletion
- */
-export async function verifyManualPayment(cafeId: string, subscriptionId: string): Promise<AdminActionResult & {
-    proofInfo?: {
-        url: string
-        filename: string
-    }
-}> {
-    const currentUser = await getCurrentUser()
-    if (!currentUser) return { success: false, error: "Not authenticated" }
-
-    const profileResult = await db
-        .select({ role: profiles.role })
-        .from(profiles)
-        .where(eq(profiles.id, currentUser.id))
-        .limit(1)
-
-    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
-        return { success: false, error: "Unauthorized" }
-    }
-
-    // 1. Get subscription with proof and cafe info
-    const subResult = await db
-        .select({
-            tier: cafeSubscriptions.tier,
-            proofOfPaymentUrl: cafeSubscriptions.proofOfPaymentUrl,
-            createdAt: cafeSubscriptions.createdAt,
-            cafeName: cafes.name,
-            cafeSlug: cafes.slug,
-            ownerIds: cafes.ownerIds,
-        })
-        .from(cafeSubscriptions)
-        .leftJoin(cafes, eq(cafeSubscriptions.cafeId, cafes.id))
-        .where(and(
-            eq(cafeSubscriptions.id, subscriptionId),
-            eq(cafeSubscriptions.cafeId, cafeId)
-        ))
-        .limit(1)
-
-    const sub = subResult[0]
-    if (!sub) {
-        return { success: false, error: "Subscription not found" }
-    }
-
-    // 2. Update subscription status
-    try {
-        await db.update(cafeSubscriptions)
-            .set({
-                paymentVerified: true,
-                status: 'active',
-                proofOfPaymentUrl: null,
-                updatedAt: new Date(),
-            })
-            .where(and(
-                eq(cafeSubscriptions.id, subscriptionId),
-                eq(cafeSubscriptions.cafeId, cafeId)
-            ))
-    } catch (error) {
-        console.error("Error verifying subscription:", error)
-        return { success: false, error: "Failed to verify subscription" }
-    }
-
-    // 3. Update cafe tier and verification status
-    await db.update(cafes)
-        .set({
-            membershipTier: sub.tier,
-            isVerified: true,
-            updatedAt: new Date(),
-        })
-        .where(eq(cafes.id, cafeId))
-
-    // 4. Prepare proof info for client download
-    let proofInfo: { url: string; filename: string } | undefined
-    const cafeName = sub.cafeName || 'cafe'
-    const cafeSlug = sub.cafeSlug || ''
-    if (sub.proofOfPaymentUrl) {
-        const uploadDate = sub.createdAt ? sub.createdAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-        const ext = sub.proofOfPaymentUrl.split('.').pop()?.split('?')[0] || 'jpg'
-        const sanitizedCafeName = cafeName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
-        const filename = `${sanitizedCafeName}_${uploadDate}.${ext}`
-
-        proofInfo = {
-            url: sub.proofOfPaymentUrl,
-            filename
-        }
-    }
-
-    // 5. Send email notification to cafe owner
-    const ownerIds = sub.ownerIds
-    if (ownerIds && ownerIds.length > 0) {
-        try {
-            const [userResult, profileResultOwner] = await Promise.all([
-                db.select({ email: user.email }).from(user).where(eq(user.id, ownerIds[0])).limit(1),
-                db.select({ displayName: profiles.displayName }).from(profiles).where(eq(profiles.id, ownerIds[0])).limit(1)
-            ])
-
-            const ownerEmail = userResult[0]?.email
-            if (ownerEmail) {
-                const displayTier = sub.tier === 'basic' ? 'Pro' : 'Premium'
-                await sendSubscriptionApprovedEmail(
-                    ownerEmail,
-                    cafeName,
-                    cafeSlug,
-                    displayTier,
-                    profileResultOwner[0]?.displayName || undefined
-                )
-            }
-        } catch (emailError) {
-            console.error("Error sending subscription approval email:", emailError)
-        }
-    }
-
-    // Log the subscription verification
-    await logSystemAction(
-        "approve",
-        "cafe",
-        cafeId,
-        { paymentVerified: false, status: "pending" },
-        { paymentVerified: true, status: "active", tier: sub.tier },
-        { reason: "Manual payment verified by admin", cafeName, tier: sub.tier, subscriptionId }
-    )
-
-    return { success: true, proofInfo }
-}
-
-/**
- * Delete a subscription proof of payment file from storage
- */
-export async function deleteSubscriptionProof(proofUrl: string): Promise<AdminActionResult> {
-    const currentUser = await getCurrentUser()
-    if (!currentUser) return { success: false, error: "Not authenticated" }
-
-    const profileResult = await db
-        .select({ role: profiles.role })
-        .from(profiles)
-        .where(eq(profiles.id, currentUser.id))
-        .limit(1)
-
-    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
-        return { success: false, error: "Unauthorized" }
-    }
-
-    await deleteSingleCafeImageAction(proofUrl)
-    return { success: true }
-}
-
-/**
- * Reject a manual payment
- */
-export async function rejectManualPayment(cafeId: string, subscriptionId: string, reason?: string): Promise<AdminActionResult> {
-    const currentUser = await getCurrentUser()
-    if (!currentUser) return { success: false, error: "Not authenticated" }
-
-    const profileResult = await db
-        .select({ role: profiles.role })
-        .from(profiles)
-        .where(eq(profiles.id, currentUser.id))
-        .limit(1)
-
-    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
-        return { success: false, error: "Unauthorized" }
-    }
-
-    // Get subscription with cafe info before deleting
-    const subResult = await db
-        .select({
-            tier: cafeSubscriptions.tier,
-            proofOfPaymentUrl: cafeSubscriptions.proofOfPaymentUrl,
-            cafeName: cafes.name,
-            ownerIds: cafes.ownerIds,
-        })
-        .from(cafeSubscriptions)
-        .leftJoin(cafes, eq(cafeSubscriptions.cafeId, cafes.id))
-        .where(and(
-            eq(cafeSubscriptions.id, subscriptionId),
-            eq(cafeSubscriptions.cafeId, cafeId)
-        ))
-        .limit(1)
-
-    const sub = subResult[0]
-
-    // Delete the subscription record
-    try {
-        await db.delete(cafeSubscriptions)
-            .where(and(
-                eq(cafeSubscriptions.id, subscriptionId),
-                eq(cafeSubscriptions.cafeId, cafeId)
-            ))
-    } catch (error) {
-        console.error("Error rejecting subscription:", error)
-        return { success: false, error: "Failed to reject subscription" }
-    }
-
-    // Delete proof file
-    if (sub?.proofOfPaymentUrl) {
-        await deleteSingleCafeImageAction(sub.proofOfPaymentUrl)
-    }
-
-    // Downgrade cafe
-    await db.update(cafes)
-        .set({ membershipTier: 'free', isVerified: false, updatedAt: new Date() })
-        .where(eq(cafes.id, cafeId))
-
-    // Send rejection email
-    if (sub?.ownerIds && sub.ownerIds.length > 0 && sub.tier) {
-        try {
-            const [userResult, ownerProfileResult] = await Promise.all([
-                db.select({ email: user.email }).from(user).where(eq(user.id, sub.ownerIds[0])).limit(1),
-                db.select({ displayName: profiles.displayName }).from(profiles).where(eq(profiles.id, sub.ownerIds[0])).limit(1)
-            ])
-
-            if (userResult[0]?.email) {
-                const displayTier = sub.tier === 'basic' ? 'Pro' : 'Premium'
-                await sendSubscriptionRejectedEmail(
-                    userResult[0].email,
-                    sub.cafeName || 'cafe',
-                    displayTier,
-                    ownerProfileResult[0]?.displayName || undefined,
-                    reason
-                )
-            }
-        } catch (emailError) {
-            console.error("Error sending rejection email:", emailError)
-        }
-    }
-
-    // Log the subscription rejection
-    await logSystemAction(
-        "reject",
-        "cafe",
-        cafeId,
-        { tier: sub?.tier },
-        { membershipTier: "free", isVerified: false },
-        { reason: reason || "Manual payment rejected by admin", cafeName: sub?.cafeName || "cafe", subscriptionId }
-    )
-
-    return { success: true }
 }
 
 /**
@@ -3368,7 +3060,7 @@ export async function searchCafesForFeatured(query: string): Promise<{
 // Owner Verification Management Functions
 // ============================================
 
-import { ownerVerificationRequests, featuredSlotRequests } from "@/db/schema"
+import { ownerVerificationRequests } from "@/db/schema"
 
 export interface OwnerVerificationForAdmin {
     id: string
@@ -3605,21 +3297,6 @@ export async function approveVerification(requestId: string): Promise<AdminActio
     } catch (error) {
         console.error("Error updating verification status:", error)
         return { success: false, error: "Failed to update verification status" }
-    }
-
-    // Create a free subscription for the cafe if one doesn't exist
-    const existingSubResult = await db
-        .select({ id: cafeSubscriptions.id })
-        .from(cafeSubscriptions)
-        .where(eq(cafeSubscriptions.cafeId, request.cafeId))
-        .limit(1)
-
-    if (!existingSubResult[0]) {
-        await db.insert(cafeSubscriptions).values({
-            cafeId: request.cafeId,
-            tier: 'free',
-            status: 'active',
-        })
     }
 
     // Log the verification approval
@@ -3958,112 +3635,6 @@ export async function getAdminsAndModerators(): Promise<TeamMember[]> {
         created_at: u.createdAt?.toISOString() ?? null,
         moderator_regions: u.moderatorRegions ?? null,
     }))
-}
-
-// ============================================
-// Featured Slot Requests (Admin)
-// ============================================
-
-/**
- * Get all featured slot requests (optionally filtered by status)
- */
-export async function adminGetFeaturedRequests(status?: 'pending' | 'approved' | 'rejected') {
-    const isAdminUser = await isAdmin()
-    if (!isAdminUser) return []
-
-    const conditions = status ? [eq(featuredSlotRequests.status, status)] : []
-
-    const result = await db
-        .select({
-            id: featuredSlotRequests.id,
-            ownerId: featuredSlotRequests.ownerId,
-            cafeId: featuredSlotRequests.cafeId,
-            requestedMonth: featuredSlotRequests.requestedMonth,
-            status: featuredSlotRequests.status,
-            adminNotes: featuredSlotRequests.adminNotes,
-            processedAt: featuredSlotRequests.processedAt,
-            createdAt: featuredSlotRequests.createdAt,
-            cafeName: cafes.name,
-            cafeSlug: cafes.slug,
-            cafeThumbnail: cafes.thumbnail,
-            cafeCity: cafes.cityMunicipality,
-            cafeRegion: cafes.region,
-            ownerUsername: profiles.username,
-            ownerDisplayName: profiles.displayName,
-        })
-        .from(featuredSlotRequests)
-        .leftJoin(cafes, eq(featuredSlotRequests.cafeId, cafes.id))
-        .leftJoin(profiles, eq(featuredSlotRequests.ownerId, profiles.id))
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(desc(featuredSlotRequests.createdAt))
-
-    return result.map(r => ({
-        id: r.id,
-        owner_id: r.ownerId,
-        cafe_id: r.cafeId,
-        requested_month: r.requestedMonth,
-        status: r.status,
-        admin_notes: r.adminNotes,
-        processed_at: r.processedAt?.toISOString() ?? null,
-        created_at: r.createdAt?.toISOString() ?? null,
-        cafe: r.cafeName && r.cafeId ? {
-            id: r.cafeId,
-            name: r.cafeName,
-            slug: r.cafeSlug!,
-            thumbnail: r.cafeThumbnail ?? '',
-            city_municipality: r.cafeCity ?? '',
-            region: r.cafeRegion ?? '',
-        } : null,
-        owner: r.ownerUsername && r.ownerId ? {
-            id: r.ownerId,
-            username: r.ownerUsername,
-            display_name: r.ownerDisplayName ?? '',
-        } : null,
-    }))
-}
-
-/**
- * Update featured slot request status
- */
-export async function adminUpdateFeaturedRequestStatus(
-    requestId: string,
-    status: 'approved' | 'rejected',
-    adminNotes?: string
-): Promise<AdminActionResult> {
-    const isAdminUser = await isAdmin()
-    if (!isAdminUser) {
-        return { success: false, error: 'Not authorized' }
-    }
-
-    const updates: Record<string, unknown> = {
-        status,
-        processedAt: new Date(),
-    }
-
-    if (adminNotes !== undefined) {
-        updates.adminNotes = adminNotes
-    }
-
-    try {
-        await db.update(featuredSlotRequests)
-            .set(updates)
-            .where(eq(featuredSlotRequests.id, requestId))
-    } catch (error) {
-        console.error('Error updating featured request:', error)
-        return { success: false, error: 'Failed to update request' }
-    }
-
-    // Log the featured request status update
-    await logSystemAction(
-        status === "approved" ? "approve" : "reject",
-        "featured",
-        requestId,
-        null,
-        { status, adminNotes },
-        { reason: `Featured slot request ${status} by admin` }
-    )
-
-    return { success: true }
 }
 
 // ============================================

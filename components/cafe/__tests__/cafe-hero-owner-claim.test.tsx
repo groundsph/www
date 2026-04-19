@@ -73,7 +73,6 @@ const baseCafe: CafeWithRatings = {
     updated_at: null,
     email: null,
     featured_until: null,
-    membership_tier: null,
     milk_options: null,
     payment_methods: null,
     phone: null,

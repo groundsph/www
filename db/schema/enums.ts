@@ -31,18 +31,7 @@ export const blogStatusEnum = pgEnum("blog_status", [
 
 // Cafe
 export const coffeeStyleEnum = pgEnum("coffee_style", ["classic", "artisan"])
-export const membershipTierEnum = pgEnum("membership_tier", [
-    "free",
-    "basic",
-    "premium",
-])
 export const priceLevelEnum = pgEnum("price_level", ["budget", "mid", "premium", "luxury"])
-export const subscriptionStatusEnum = pgEnum("subscription_status", [
-    "active",
-    "cancelled",
-    "past_due",
-    "trialing",
-])
 
 // Contribution
 export const contributionActionTypeEnum = pgEnum("contribution_action_type", [
