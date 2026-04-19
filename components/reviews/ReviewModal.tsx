@@ -11,6 +11,7 @@ import ImageUpload from "./ImageUpload"
 import { uploadReviewImage } from "@/utils/storage/client"
 import { compressReviewImage } from "@/utils/image-processing"
 import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
+import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
 
 interface ReviewModalProps {
     isOpen: boolean
@@ -202,20 +203,19 @@ export default function ReviewModal({
                                     <label className='text-sm font-medium text-text/60'>
                                         Your Review
                                     </label>
-                                    <div className='my-2'>
-                                        <textarea
-                                            value={comment}
-                                            onChange={(e) =>
-                                                setComment(e.target.value)
-                                            }
-                                            placeholder='Share your experience...'
-                                            className='w-full min-h-40 bg-text/5 text-base leading-relaxed placeholder:text-text/30 focus:outline-none p-4 resize-none rounded-xl border border-text/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all text-text'
-                                        />
-                                    </div>
-
-                                    <div className='text-xs text-text/60 w-full text-right'>
-                                        {comment.length} characters
-                                    </div>
+                                    <MarkdownEditor
+                                        mode='light'
+                                        value={comment}
+                                        onChange={setComment}
+                                        placeholder='Share your experience...'
+                                        showCharCount
+                                        className='border-0'
+                                    />
+                                    {comment.length < 10 && comment.length > 0 && (
+                                        <p className='text-xs text-text/40'>
+                                            {10 - comment.length} more characters needed
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Photos */}
