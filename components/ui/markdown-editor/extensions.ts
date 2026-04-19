@@ -2,6 +2,7 @@ import StarterKit from "@tiptap/starter-kit"
 import Link from "@tiptap/extension-link"
 import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
+import { Extension } from "@tiptap/core"
 import TaskList from "@tiptap/extension-task-list"
 import TaskItem from "@tiptap/extension-task-item"
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight"
@@ -23,8 +24,6 @@ const imageExtension = Image.configure({
     },
 })
 
-type EditorExtension = ReturnType<typeof StarterKit.configure> | ReturnType<typeof Link.configure> | ReturnType<typeof Image.configure> | ReturnType<typeof Placeholder.configure> | typeof TaskList | ReturnType<typeof TaskItem.configure> | ReturnType<typeof CodeBlockLowlight.configure> | ReturnType<typeof Table.configure> | typeof TableRow | typeof TableCell | typeof TableHeader | ReturnType<typeof Youtube.configure> | ReturnType<typeof Markdown.configure>
-
 export function getEditorExtensions(
     mode: EditorMode,
     placeholder?: string,
@@ -43,7 +42,7 @@ export function getEditorExtensions(
         starterKitConfig.heading = false
     }
 
-    const extensions: EditorExtension[] = [
+    const extensions: any[] = [
         StarterKit.configure(starterKitConfig),
         Link.configure({
             openOnClick: false,
@@ -58,7 +57,13 @@ export function getEditorExtensions(
         }),
     ]
 
-    if (placeholder) {
+    if (mode === "medium" || mode === "full") {
+        extensions.push(
+            Placeholder.configure({
+                placeholder: placeholder || "Start writing...",
+            }),
+        )
+    } else if (placeholder) {
         extensions.push(Placeholder.configure({ placeholder }))
     }
 
@@ -83,12 +88,6 @@ export function getEditorExtensions(
             imageExtension,
             TaskList,
             TaskItem.configure({ nested: true }),
-        )
-    }
-
-    if (mode === "medium" || mode === "full") {
-        extensions.push(
-            Placeholder.configure({ placeholder: placeholder || "Start writing..." }),
         )
     }
 
