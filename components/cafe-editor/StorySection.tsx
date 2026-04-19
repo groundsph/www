@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Save, Trash2, Loader2 } from "lucide-react"
 import { type ColorScheme, getColorClasses } from "@/utils/hooks/cafe-form"
-import MarkdownRender from "@/components/ui/MarkdownRender"
 import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
 
 interface StorySectionProps {
@@ -73,7 +72,6 @@ export default function StorySection({
                     onChange={onChange}
                     placeholder="Write your cafe's story... Use the toolbar for formatting."
                     minHeight={300}
-                    colorScheme={colorScheme as "primary" | "secondary" | "tertiary"}
                 />
             </div>
         </div>
