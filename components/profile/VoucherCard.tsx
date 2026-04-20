@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "motion/react"
+import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
 import Link from "next/link"
+import { QRCodeSVG } from "qrcode.react"
 import {
   Ticket,
   Copy,
@@ -15,6 +16,8 @@ import {
   Clock,
   MapPin,
   ExternalLink,
+  QrCode,
+  X,
 } from "lucide-react"
 import { UserVoucher } from "@/utils/types/discount"
 import { cn } from "@/utils/cn"
@@ -85,6 +88,7 @@ function isExpired(expiresAt: string | null): boolean {
 
 export default function VoucherCard({ voucher }: VoucherCardProps) {
   const [copied, setCopied] = useState(false)
+  const [showQR, setShowQR] = useState(false)
   const config = discountTypeConfig[voucher.campaign.discountType]
   const DiscountIcon = config.icon
 
@@ -187,22 +191,65 @@ export default function VoucherCard({ voucher }: VoucherCardProps) {
                 </span>
               </div>
               {isActive && (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleCopyCode}
-                  className="p-1.5 rounded-lg hover:bg-text/10 transition-colors"
-                  title="Copy code"
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-text/40" />
-                  )}
-                </motion.button>
+                <>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleCopyCode}
+                    className="p-1.5 rounded-lg hover:bg-text/10 transition-colors"
+                    title="Copy code"
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-text/40" />
+                    )}
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowQR(!showQR)}
+                    className={cn(
+                      "p-1.5 rounded-lg transition-colors",
+                      showQR ? "bg-text/20" : "hover:bg-text/10"
+                    )}
+                    title={showQR ? "Hide QR" : "Show QR"}
+                  >
+                    {showQR ? (
+                      <X className="w-4 h-4 text-text/60" />
+                    ) : (
+                      <QrCode className="w-4 h-4 text-text/40" />
+                    )}
+                  </motion.button>
+                </>
               )}
             </div>
           </div>
         </div>
+
+        {/* QR Code Display */}
+        <AnimatePresence>
+          {showQR && isActive && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="py-4 flex flex-col items-center gap-3">
+                <div className="bg-white p-3 rounded-xl shadow-sm">
+                  <QRCodeSVG
+                    value={voucher.code}
+                    size={160}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </div>
+                <p className="text-xs text-text/50 text-center">
+                  Show this QR code to the cafe staff to redeem
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Divider */}
         <div className="border-t border-text/10 my-4" />
