@@ -30,6 +30,7 @@ import {
     Shield,
     Sparkles,
     Store,
+    Ticket,
     Trophy,
     User,
     Users,
@@ -861,6 +862,13 @@ export default function Profile() {
                             >
                                 <Users className='w-4 h-4' />
                                 Activity Feed
+                            </Link>
+                            <Link
+                                href='/profile/vouchers'
+                                className='flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors text-sm font-medium'
+                            >
+                                <Ticket className='w-4 h-4' />
+                                Vouchers
                             </Link>
                         </div>
                     </div>

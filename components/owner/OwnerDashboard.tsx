@@ -9,6 +9,7 @@ import {
     Plus,
     Settings,
     Star,
+    Ticket,
     TrendingUp,
     Verified,
 } from "lucide-react"
@@ -286,6 +287,13 @@ export default function OwnerDashboard({
                                             >
                                                 <Settings className='w-4 h-4' />
                                                 Manage
+                                            </Link>
+                                            <Link
+                                                href={`/owner/cafes/${cafe.slug}/discounts`}
+                                                className='inline-flex items-center gap-1 px-3 py-2 bg-text/10 rounded-lg text-sm font-medium hover:bg-text/20 transition-colors'
+                                            >
+                                                <Ticket className='w-4 h-4' />
+                                                Discounts
                                             </Link>
                                             <Link
                                                 href={`/cafes/${cafe.slug}`}
