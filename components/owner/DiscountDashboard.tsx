@@ -182,7 +182,7 @@ export default function DiscountDashboard({
           </p>
         </div>
         <Link
-          href={`/owner/cafes/${cafeSlug}/discounts/new`}
+          href={`/owner/cafes/${cafeSlug}/discounts/create`}
           className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors shadow-sm hover:shadow-md"
         >
           <Plus className="w-4 h-4" />
@@ -261,7 +261,7 @@ export default function DiscountDashboard({
             </p>
             {campaigns.length === 0 && (
               <Link
-                href={`/owner/cafes/${cafeSlug}/discounts/new`}
+                href={`/owner/cafes/${cafeSlug}/discounts/create`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-5 h-5" />
