@@ -100,3 +100,26 @@ export const mallVerificationStatusEnum = pgEnum("mall_verification_status", [
     "verified",
     "rejected",
 ])
+
+// Discount
+export const discountTypeEnum = pgEnum("discount_type", [
+    "percentage",
+    "fixed_amount",
+    "free_item",
+])
+
+export const discountCampaignStatusEnum = pgEnum("discount_campaign_status", [
+    "draft",
+    "active",
+    "paused",
+    "expired",
+    "archived",
+])
+
+export const voucherStatusEnum = pgEnum("voucher_status", [
+    "available",
+    "claimed",
+    "redeemed",
+    "expired",
+    "cancelled",
+])
