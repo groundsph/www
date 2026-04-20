@@ -3,6 +3,7 @@ import { checkSubscriptions } from "./check-subscriptions/logic"
 import { updateHiddenGems } from "./hidden-gems/logic"
 import { runLeaderboardSnapshots } from "./leaderboard-snapshots/logic"
 import { cleanupSystemLogs } from "./system-logs-cleanup/logic"
+import { expireVouchers } from "./expire-vouchers/logic"
 
 /**
  * Unified Daily Cron Job
@@ -12,9 +13,10 @@ import { cleanupSystemLogs } from "./system-logs-cleanup/logic"
  *
  * It runs the following jobs sequentially:
  * 1. Check expired subscriptions (cafe and supporter)
- * 2. Evaluate hidden gem cafes
- * 3. Snapshot monthly leaderboards
- * 4. Clean up old system logs (based on retention_days setting)
+ * 2. Expire discount campaigns and vouchers
+ * 3. Evaluate hidden gem cafes
+ * 4. Snapshot monthly leaderboards
+ * 5. Clean up old system logs (based on retention_days setting)
  *
  * Security: Requires CRON_SECRET to be passed in Authorization header
  *
@@ -60,6 +62,17 @@ export async function GET(req: NextRequest) {
         console.error("[Daily Cron] check-subscriptions failed:", errorMessage)
         results.subscriptions = { error: errorMessage }
         errors.push(`subscriptions: ${errorMessage}`)
+    }
+
+    try {
+        console.log("[Daily Cron] Running expire-vouchers...")
+        results.vouchers = await expireVouchers()
+        console.log("[Daily Cron] expire-vouchers completed")
+    } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : String(e)
+        console.error("[Daily Cron] expire-vouchers failed:", errorMessage)
+        results.vouchers = { error: errorMessage }
+        errors.push(`vouchers: ${errorMessage}`)
     }
 
     try {
