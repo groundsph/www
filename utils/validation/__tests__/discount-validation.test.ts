@@ -1,11 +1,8 @@
 import { describe, it, expect } from "bun:test"
 import {
   createCampaignSchema,
-  updateCampaignSchema,
   generateVouchersSchema,
-  claimVoucherSchema,
   redeemVoucherSchema,
-  issueVoucherToUserSchema,
 } from "../discount"
 
 describe("createCampaignSchema", () => {

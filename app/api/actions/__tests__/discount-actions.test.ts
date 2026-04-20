@@ -571,7 +571,7 @@ async function cancelVoucher(
   return { success: true }
 }
 
-async function getUserVouchers(
+async function _unusedGetUserVouchers(
   userId: string
 ): Promise<{ success: boolean; error?: string; data?: { vouchers: Array<typeof mockVouchersDb[string] & { campaignName: string }> } }> {
   const currentUser = await mockGetCurrentUser.getCurrentUser()
@@ -1457,7 +1457,7 @@ describe("Discount Actions", () => {
   describe("edge cases", () => {
     it("handles free_item discount type correctly", async () => {
       const owner = await createTestUser("Cafe Owner")
-      const user = await createTestUser("Test User")
+      const _unusedUser = await createTestUser("Test User")
       mockGetCurrentUser.setCurrentUser(owner)
 
       const cafe = await createTestCafe(owner.id)
@@ -1510,7 +1510,7 @@ describe("Discount Actions", () => {
       const cafe = await createTestCafe(owner.id)
 
       const now = new Date()
-      const yesterday = new Date(now.getTime() - 86400000)
+      const _unusedYesterday = new Date(now.getTime() - 86400000)
       const tomorrow = new Date(now.getTime() + 86400000)
 
       // Campaign starting tomorrow - not yet active

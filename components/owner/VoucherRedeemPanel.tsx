@@ -26,7 +26,7 @@ interface VoucherRedeemPanelProps {
 }
 
 export default function VoucherRedeemPanel({
-  campaignId: _campaignId,
+  campaignId: _unusedCampaignId,
 }: VoucherRedeemPanelProps) {
   const { addNotification } = useNotification()
   const [code, setCode] = useState("")

@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { discountCampaigns, discountVouchers, voucherRedemptionLogs, cafes, profiles } from "@/db/schema"
-import { eq, and, desc, sql, inArray, isNull, lt, gt } from "drizzle-orm"
+import { eq, and, desc, sql, inArray, lt, gt } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import {
@@ -13,7 +13,6 @@ import {
   claimVoucherByCodeSchema,
   redeemVoucherSchema,
   issueVoucherToUserSchema,
-  campaignFiltersSchema,
   type CreateCampaignInput,
   type UpdateCampaignInput,
   type GenerateVouchersInput,
@@ -115,7 +114,7 @@ export async function getCampaignsForCafe(
   if (!isOwner) return { success: false, error: "Not authorized" }
 
   try {
-    let conditions = [eq(discountCampaigns.cafeId, cafeId)]
+    const conditions = [eq(discountCampaigns.cafeId, cafeId)]
 
     if (filters?.status) {
       conditions.push(eq(discountCampaigns.status, filters.status))

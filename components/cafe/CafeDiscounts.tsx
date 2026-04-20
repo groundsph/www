@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "motion/react"
-import { Ticket, Percent, Gift, Clock, ArrowRight } from "lucide-react"
+import { Ticket, Percent, Gift, Clock } from "lucide-react"
 import { getPublicCampaignsForCafe } from "@/app/api/actions/discount"
 import type { DiscountCampaign } from "@/utils/types/discount"
 
@@ -11,7 +11,7 @@ interface CafeDiscountsProps {
   cafeSlug: string
 }
 
-export default function CafeDiscounts({ cafeId, cafeSlug }: CafeDiscountsProps) {
+export default function CafeDiscounts({ cafeId }: CafeDiscountsProps) {
   const [campaigns, setCampaigns] = useState<DiscountCampaign[]>([])
   const [loading, setLoading] = useState(true)
 

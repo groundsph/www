@@ -59,7 +59,7 @@ const item = {
 export default function CampaignDetail({
   campaign: initialCampaign,
   stats,
-  cafeId: _cafeId,
+  cafeId: _unusedCafeId,
   cafeName,
   cafeSlug,
 }: CampaignDetailProps) {

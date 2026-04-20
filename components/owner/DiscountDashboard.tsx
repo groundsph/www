@@ -44,7 +44,7 @@ const item = {
 type StatusFilter = "all" | "active" | "draft" | "paused" | "expired" | "archived"
 
 export default function DiscountDashboard({
-  cafeId,
+  cafeId: _unusedCafeId,
   cafeName,
   cafeSlug,
   campaigns,
