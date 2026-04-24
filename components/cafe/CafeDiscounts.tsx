@@ -1,19 +1,26 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "motion/react"
 import { Ticket, Percent, Gift, Clock } from "lucide-react"
-import { getPublicCampaignsForCafe } from "@/app/api/actions/discount"
+import { getPublicCampaignsForCafe, claimVoucherFromCampaign } from "@/app/api/actions/discount"
+import { useAuth } from "@/components/layout/AuthProvider"
+import { useNotification } from "@/components/layout/NotificationProvider"
+import { useRouter } from "next/navigation"
 import type { DiscountCampaign } from "@/utils/types/discount"
 
 interface CafeDiscountsProps {
   cafeId: string
-  cafeSlug: string
 }
 
 export default function CafeDiscounts({ cafeId }: CafeDiscountsProps) {
   const [campaigns, setCampaigns] = useState<DiscountCampaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [claimingId, setClaimingId] = useState<string | null>(null)
+  const [claimedIds, setClaimedIds] = useState<Set<string>>(new Set())
+  const { user, isLoading: isAuthLoading } = useAuth()
+  const { addNotification } = useNotification()
+  const router = useRouter()
 
   useEffect(() => {
     getPublicCampaignsForCafe(cafeId).then((result) => {
@@ -23,6 +30,18 @@ export default function CafeDiscounts({ cafeId }: CafeDiscountsProps) {
       setLoading(false)
     })
   }, [cafeId])
+
+  const handleClaim = useCallback(async (campaignId: string) => {
+    setClaimingId(campaignId)
+    const result = await claimVoucherFromCampaign({ campaignId })
+    if (result.success) {
+      setClaimedIds((prev) => new Set(prev).add(campaignId))
+      router.refresh()
+    } else {
+      addNotification(result.error ?? "Failed to claim voucher", "error")
+    }
+    setClaimingId(null)
+  }, [router, addNotification])
 
   if (loading) return null
   if (campaigns.length === 0) return null
@@ -75,6 +94,19 @@ export default function CafeDiscounts({ cafeId }: CafeDiscountsProps) {
                   <Clock className="w-3 h-3" />
                   Valid until {new Date(campaign.endDate).toLocaleDateString()}
                 </div>
+                {user && !isAuthLoading && (
+                  <button
+                    onClick={() => handleClaim(campaign.id)}
+                    disabled={claimingId === campaign.id || claimedIds.has(campaign.id)}
+                    className="mt-3 w-full py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {claimedIds.has(campaign.id)
+                      ? "Claimed!"
+                      : claimingId === campaign.id
+                        ? "Claiming..."
+                        : "Claim Voucher"}
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

@@ -446,7 +446,7 @@ export default function CafeDetails({
             {/* Mobile Layout (< md) */}
             <section className='md:hidden py-4 w-full'>
                 <section className='px-4 pb-4'>
-                    <CafeDiscounts cafeId={cafe.id} cafeSlug={cafe.slug} />
+                        <CafeDiscounts cafeId={cafe.id} />
                 </section>
                 <CafeTabs
                     reviewCount={allReviews.length}
@@ -1103,7 +1103,7 @@ export default function CafeDetails({
 
                     {/* Discounts Section */}
                     <section className='w-full'>
-                        <CafeDiscounts cafeId={cafe.id} cafeSlug={cafe.slug} />
+                    <CafeDiscounts cafeId={cafe.id} />
                     </section>
 
                     {/* Reviews Section */}
