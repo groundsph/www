@@ -39,7 +39,7 @@ export default async function CampaignDetailPage({
 
   return (
     <main className="min-h-screen w-full bg-background pt-6 pb-12">
-      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <CampaignDetail
           campaign={result.data.campaign}
           stats={result.data.stats}

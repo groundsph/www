@@ -62,7 +62,7 @@ export default function DiscountStatsCards({ stats, campaignCount }: DiscountSta
         <motion.div
           key={card.label}
           variants={item}
-          className="bg-card rounded-xl p-4 border border-border"
+          className="bg-card rounded-xl p-4 border border-border shadow-sm"
         >
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-lg ${card.bg} flex items-center justify-center`}>

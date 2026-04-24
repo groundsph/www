@@ -33,7 +33,7 @@ export default async function CreateCampaignPage({
 
   return (
     <main className="min-h-screen w-full bg-background pt-6 pb-12">
-      <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <CreateCampaignForm cafeId={cafe.id} cafeName={cafe.name} cafeSlug={slug} />
       </div>
     </main>

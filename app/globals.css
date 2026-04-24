@@ -9,6 +9,7 @@
     --color-accent: #bc6c25;
     --color-background: #f8f4e1;
     --color-text: #543310;
+    --color-border: color-mix(in srgb, var(--color-text) 10%, transparent);
     /* Defaults */
     --default-transition-duration: 300ms;
     /* Animations */

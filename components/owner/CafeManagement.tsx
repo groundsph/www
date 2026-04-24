@@ -582,6 +582,13 @@ export default function CafeManagement({
                                 <ExternalLink className='w-4 h-4' />
                                 View Page
                             </Link>
+                            <Link
+                                href={`/owner/cafes/${cafe.slug}/discounts`}
+                                className='inline-flex items-center gap-1 px-3 py-2 bg-text/10 rounded-lg text-sm font-medium hover:bg-text/20 transition-colors'
+                            >
+                                <QrCode className='w-4 h-4' />
+                                Discounts
+                            </Link>
                         </div>
                     </div>
                 </div>
