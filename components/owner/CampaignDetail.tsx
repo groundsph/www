@@ -22,6 +22,7 @@ import {
   List,
   ScanLine,
   ChevronRight,
+  QrCode,
 } from "lucide-react"
 import type { DiscountCampaign, CampaignStats } from "@/utils/types/discount"
 import { cn } from "@/utils/cn"
@@ -30,6 +31,7 @@ import { updateCampaign, deleteCampaign } from "@/app/api/actions/discount"
 import GenerateVouchersModal from "./GenerateVouchersModal"
 import VoucherRedeemPanel from "./VoucherRedeemPanel"
 import VoucherTable from "./VoucherTable"
+import CampaignQRModal from "./CampaignQRModal"
 
 interface CampaignDetailProps {
   campaign: DiscountCampaign
@@ -59,7 +61,6 @@ const item = {
 export default function CampaignDetail({
   campaign: initialCampaign,
   stats,
-  cafeId: _unusedCafeId,
   cafeName,
   cafeSlug,
 }: CampaignDetailProps) {
@@ -70,6 +71,7 @@ export default function CampaignDetail({
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
   const [isTogglingStatus, setIsTogglingStatus] = useState(false)
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false)
 
   const isArchived = campaign.status === "archived"
   const isActive = campaign.status === "active"
@@ -354,6 +356,17 @@ export default function CampaignDetail({
             </button>
           )}
 
+          {/* QR Code Button */}
+          {campaign.qrCodeEnabled && (
+            <button
+              onClick={() => setIsQRModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-text/10 rounded-lg text-sm font-medium hover:bg-text/20 transition-colors"
+            >
+              <QrCode className="w-4 h-4" />
+              QR Code
+            </button>
+          )}
+
           {/* Archive Button */}
           {!isArchived && (
             <button
@@ -546,6 +559,15 @@ export default function CampaignDetail({
         campaignId={campaign.id}
         maxVouchers={campaign.maxRedemptions}
         existingVouchers={stats.totalVouchers}
+      />
+
+      {/* Campaign QR Modal */}
+      <CampaignQRModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        campaignId={campaign.id}
+        campaignName={campaign.name}
+        baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
       />
     </motion.div>
   )
