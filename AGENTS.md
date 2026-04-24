@@ -1,162 +1,92 @@
 # Grounds Website - Agent Guide
 
-This document is for coding agents working in this repo.
-Follow project rules first; if something conflicts, ask a human.
+## Commands
 
-## Quick Commands
+```bash
+bun dev              # HTTPS dev server (self-signed cert; accept browser warning)
+bun build            # Production build
+bun start            # Production server
+bun lint             # ESLint (flat config in eslint.config.mjs)
+bun test             # All tests (Bun runner, JSDOM preloaded via bunfig.toml)
+bun test <file>      # Single test file, e.g. bun test utils/data/__tests__/location-matcher.test.ts
+bun db:push          # Push schema to DB (dev)
+bun db:generate      # Generate migration files
+bun db:migrate       # Run migrations (prod)
+bun db:studio        # Drizzle Studio
+bun merge            # Checkout prod, merge dev, push, checkout back to dev
+```
 
-### Dev/Build
-- `bun dev` - Start local dev server (HTTPS).
-- `bun build` - Production build.
-- `bun start` - Start production server.
+- `bun lint` runs ESLint 9 with `eslint-config-next`. No Prettier is configured.
+- Self-signed certs live in `certificates/`. Dev server starts via `next dev --experimental-https`.
 
-### Lint
-- `bun lint` - Run ESLint (Next.js rules).
+## Environment
 
-### Tests
-- `bun test` - Run all tests (Bun test runner).
-- `bun test <file-path>` - Run a single test file.
-  Example: `bun test utils/data/__tests__/location-matcher.test.ts`.
+- Copy `.env.example` → `.env.local`. Never commit `.env.local`.
+- `drizzle.config.ts` loads `.env.local` explicitly via `dotenv`.
+- `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, and `NEXT_PUBLIC_APP_URL` must all use `https://localhost:3000` locally.
+- AI features are optional—leave `OPENAI_COMPATIBLE_*` empty to disable.
 
-### Database
-- `bun db:generate` - Generate migration files.
-- `bun db:push` - Push schema changes (dev).
-- `bun db:migrate` - Run migrations (prod).
-- `bun db:studio` - Open Drizzle Studio.
+## Architecture
 
-### Command Notes
-- Scripts live in `package.json`; use `bun <script>` or `bun run <script>`.
-- No Prettier config detected; keep existing formatting style.
-- Tests run with JSDOM (browser env) preloaded via `bunfig.toml` → `test-setup.ts`.
+- **Next.js 16 App Router**, React 19, TypeScript strict.
+- **DB**: PostgreSQL + Drizzle ORM. Schemas in `db/schema/`, migrations in `drizzle/migrations/`.
+- **Auth**: Better Auth with Drizzle-backed sessions. Route at `app/api/auth/[...all]/route.ts`.
+- **Storage**: Cloudflare R2 via presigned URLs. Upload flow: client requests presigned URL → uploads directly to R2.
+- **Email**: Resend + React Email templates in `emails/`.
+- **Maps**: Leaflet + react-leaflet.
+- **Rich text**: Tiptap editor (blog writer at `app/writer/`).
+- **Animations**: `motion/react` (not `framer-motion`).
+- **Zod v4** for validation (`zod: ^4.2.1`).
 
-## Code Style Guidelines
+### Key directories
 
-### Imports
-- Use absolute imports with `@/` for internal modules.
-- Group imports: third-party, then internal, then relative.
-- Sort named imports alphabetically when convenient.
-- Add `"use server"` at the very top of server actions.
-- Add `"use client"` at the very top of client components.
-- Example:
-  ```ts
-  import { useState } from "react"
-  import { motion } from "motion/react"
-  import { getCafeBySlug } from "@/app/api/actions/cafe"
-  ```
+| Directory | Purpose |
+|---|---|
+| `app/api/actions/` | Server actions (`"use server"`). Never put these in components or pages. |
+| `app/api/` | API routes, webhooks, cron endpoints |
+| `components/<domain>/` | All React components. Never place reusable components in `app/`. |
+| `db/schema/` | Drizzle table schemas |
+| `utils/` | Shared utilities, data helpers, types, validation |
+| `utils/types/` | Shared TypeScript types |
+| `hooks/` | Custom React hooks |
+| `lib/` | Auth setup (`auth.ts`, `auth-client.ts`) |
+| `emails/` | React Email templates |
 
-### Formatting
-- Keep existing style (no Prettier).
-- Prefer double quotes in TS/TSX and JSON.
-- Use trailing commas where existing code does.
-- Avoid overly long lines in JSX; wrap props for readability.
+### Component domains
 
-### TypeScript and Types
-- Strict mode is enabled; always provide proper types.
-- Avoid `any`; use `unknown` when needed.
-- Prefer explicit return types for server actions and utilities.
-- Define shared types in `utils/types/`.
-- Use Drizzle ORM generated types for DB ops.
-- Use Zod for runtime validation.
-- Prefer discriminated unions for action results when helpful.
+`admin/`, `auth/`, `blog/`, `cafe/`, `cafe-editor/`, `chat/`, `collections/`, `events/`, `landing/`, `layout/`, `manage/`, `map/`, `modal/`, `owner/`, `profile/`, `reviews/`, `search/`, `submit/`, `ui/`
 
-### Naming
-- Components: PascalCase (e.g., `CafeMap`).
-- Files: kebab-case for utilities, PascalCase for components.
-- Functions/variables: camelCase.
-- Constants: UPPER_SNAKE_CASE (only for true constants).
-- DB tables: snake_case.
-- DB columns: camelCase.
-- API routes: lowercase with hyphens.
-- Boolean flags: `is`, `has`, `should` prefixes.
+Add new components to the matching domain folder. Create a new domain only if none fit.
 
-### Server Actions
-- Return structured objects: `{ success: boolean, error?: string, data?: T }`.
-- Check auth at the start (use `getCurrentUser()` from `@/lib/auth`).
-- After mutations, call `revalidatePath()`.
-- Wrap DB ops in try/catch; return user-safe messages.
-- Do not throw raw errors to clients.
+## Code conventions
 
-### Database
-- Use Drizzle ORM for all queries.
-- Select specific columns; avoid `*`.
-- Use `eq()`, `and()`, `or()` for conditions.
-- Use `desc()` for descending order.
-- Prefer `leftJoin()` for optional relations.
-- Use `Promise.all()` for independent queries.
-- Store timestamps as ISO strings for client use.
+- **Imports**: absolute `@/` paths (maps to project root via `tsconfig.json`). Group: third-party → internal → relative.
+- **Quotes**: double quotes in TS/TSX.
+- **Server actions**: return `{ success, error?, data? }`. Check auth with `getCurrentUser()` from `@/lib/auth`. Call `revalidatePath()` after mutations. Wrap DB ops in try/catch.
+- **Client components**: `"use client"` at top. Prefer Server Components by default.
+- **Naming**: PascalCase components, camelCase functions/vars, kebab-case utility files, snake_case DB tables, `is`/`has`/`should` prefix for booleans.
+- **Styling**: Tailwind CSS v4 (PostCSS plugin `@tailwindcss/postcss`, no `tailwind.config.js`). Use `cn()` from `@/utils/cn` for conditional classes.
+- **DB**: Drizzle ORM only. Select specific columns, never `*`. Use `eq()`, `and()`, `or()` for conditions.
 
-### React Components
-- Prefer Server Components; use `"use client"` only when needed.
-- Functional components with hooks.
-- Destructure props in the signature.
-- Use interfaces for props.
-- Motion: use `motion/react`.
-- Use `useCallback`/`useMemo` when justified.
+## Testing
 
-### Styling
-- Tailwind CSS v4 (no separate config file).
-- Favor utility classes over custom CSS.
-- Use semantic tokens: `primary`, `secondary`, `tertiary`, `background`, `text`.
-- Mobile-first responsive design.
-- Use `cn()` from `@/utils/cn` for conditional classes.
+- Tests live in `__tests__/` next to source files.
+- JSDOM environment is preloaded via `bunfig.toml` → `test-setup.ts` (provides `document`, `window`, `navigator`, `requestAnimationFrame`, `scrollIntoView`).
+- Test files are excluded from `tsconfig.json` compilation.
 
-### Error Handling
-- Server actions: return `{ error: "message" }` objects.
-- Client: show user-friendly error messages.
-- Use try/catch for async flows.
-- Log errors with `console.error()`.
-- Validate user input before processing.
+## Branching
 
-### Tests
-- Place tests in `__tests__/` next to source.
-- Use `describe()` for groupings.
-- Use `it()`/`test()` for cases.
-- Use `expect()` for assertions.
-- Name test cases descriptively.
+- `dev` = active development. `prod` = production (deployed).
+- Feature branches: `feature/<name>` off `dev`.
+- Merge to prod: `bun merge`.
+- Commits: Conventional Commits format. Types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`. Scopes (optional): `cafe`, `blog`, `auth`, `map`, `owner`, `manage`, `ai`, etc.
 
-## Project Structure
+## Gotchas
 
-- `app/` - App Router pages and routes only.
-  - Allowed: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`,
-    `not-found.tsx`, `route.ts`, `opengraph-image.tsx`.
-  - Server actions live in `app/api/actions/`.
-  - Do not place reusable components in `app/`.
-- `components/` - All React components by domain.
-- `db/schema/` - Drizzle schemas.
-- `utils/` - Utilities.
-- `utils/types/` - Shared types.
-- `hooks/` - Custom hooks.
-- `lib/` - Config and setup.
-
-### Component Organization (selected)
-- `components/admin/`, `components/auth/`, `components/blog/`.
-- `components/cafe/`, `components/cafe-editor/`.
-- `components/layout/`, `components/map/`, `components/modal/`.
-- `components/reviews/`, `components/search/`, `components/ui/`.
-- Follow existing domain folders before adding new ones.
-
-## Performance Notes
-
-- Use `revalidatePath()` after mutations.
-- Lazy load heavy components when needed.
-- Optimize images (see `utils/image-processing.ts`).
-- Avoid unnecessary re-renders in hot paths.
-
-## Tooling/Platform
-
-- Package manager: Bun.
-- Database: Postgres + Drizzle.
-- Auth: Better Auth.
-- Maps: Leaflet + react-leaflet.
-- Versioning: `YEAR.FEATURE_NUM.FIXES`.
-
-## Cursor/Copilot Rules
-
-- No `.cursor/rules/`, `.cursorrules`, or `.github/copilot-instructions.md`
-  found in this repo at the time of writing.
-
-## Git Hygiene for Agents
-
-- Never commit or push unless explicitly asked.
-- Do not amend commits unless asked.
-- Do not use destructive commands (e.g., `git reset --hard`).
+- Dev server uses `--experimental-https`. Browsers will warn about the self-signed cert—accept it.
+- `next.config.ts` sets `images.unoptimized: true` and allows remote images from `images.unsplash.com` and `cdn.grounds.ph`.
+- Server actions body size limit is 10MB (`experimental.serverActions.bodySizeLimit`).
+- Versioning: `YEAR.FEATURE_NUM.FIXES` (e.g., `2026.17.0`).
+- `bun db:push` for dev schema sync; `bun db:migrate` for prod. Don't mix them up.
+- **No destructive SQL.** The prod database is always in use—never run `DROP TABLE`, `TRUNCATE`, `DELETE` without a `WHERE`, or any irreversible migration. Schema changes must be additive (new columns, new tables). Renaming or dropping requires a multi-step migration with a human-approved plan.
+- Never commit or push unless explicitly asked. Never use destructive git commands.

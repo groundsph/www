@@ -1,7 +1,7 @@
 import { Metadata } from "next"
-import { redirect } from "next/navigation"
+import { redirect, notFound } from "next/navigation"
 import { getCurrentUser } from "@/lib/auth"
-import { getCafeForOwnerManagement } from "@/app/api/actions/owner"
+import { getCafeForOwnerManagement, getCafeIdBySlug } from "@/app/api/actions/owner"
 import { getCampaignById } from "@/app/api/actions/discount"
 import EditCampaignForm from "@/components/owner/EditCampaignForm"
 
@@ -22,7 +22,12 @@ export default async function EditCampaignPage({
     redirect("/auth?redirect=/owner")
   }
 
-  const cafe = await getCafeForOwnerManagement(slug)
+  const cafeId = await getCafeIdBySlug(slug)
+  if (!cafeId) {
+    notFound()
+  }
+
+  const cafe = await getCafeForOwnerManagement(cafeId)
   if (!cafe) {
     redirect("/owner")
   }

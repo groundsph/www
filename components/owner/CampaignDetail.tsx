@@ -37,7 +37,6 @@ import RedemptionLogsTable from "./RedemptionLogsTable"
 interface CampaignDetailProps {
   campaign: DiscountCampaign
   stats: CampaignStats
-  cafeId: string
   cafeName: string
   cafeSlug: string
 }
