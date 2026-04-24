@@ -21,13 +21,7 @@ import {
 } from "@/app/api/actions/discount"
 import type { RedeemableVoucher } from "@/utils/types/discount"
 
-interface VoucherRedeemPanelProps {
-  campaignId: string
-}
-
-export default function VoucherRedeemPanel({
-  campaignId: _unusedCampaignId,
-}: VoucherRedeemPanelProps) {
+export default function VoucherRedeemPanel() {
   const { addNotification } = useNotification()
   const [code, setCode] = useState("")
   const [isLookingUp, setIsLookingUp] = useState(false)

@@ -48,6 +48,7 @@ import MilestoneCelebration from "@/components/ui/MilestoneCelebration"
 import GroupCheckInModal from "@/components/checkin/GroupCheckInModal"
 import SuggestMenuItemButton from "@/components/suggestions/SuggestMenuItemButton"
 import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
+import CafeDiscounts from "@/components/cafe/CafeDiscounts"
 
 const ImageLightbox = dynamic(
     () => import("@/components/modal/ImageLightbox"),
@@ -444,6 +445,9 @@ export default function CafeDetails({
 
             {/* Mobile Layout (< md) */}
             <section className='md:hidden py-4 w-full'>
+                <section className='px-4 pb-4'>
+                        <CafeDiscounts cafeId={cafe.id} />
+                </section>
                 <CafeTabs
                     reviewCount={allReviews.length}
                     menuCount={menuItems.length}
@@ -1096,6 +1100,11 @@ export default function CafeDetails({
                             </div>
                         </section>
                     )}
+
+                    {/* Discounts Section */}
+                    <section className='w-full'>
+                    <CafeDiscounts cafeId={cafe.id} />
+                    </section>
 
                     {/* Reviews Section */}
                     <section className='w-full mt-6'>

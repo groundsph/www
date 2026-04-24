@@ -23,8 +23,9 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/utils/cn"
-import { createCampaign } from "@/app/api/actions/discount"
-import { createCampaignSchema } from "@/utils/validation/discount"
+import { updateCampaign } from "@/app/api/actions/discount"
+import { updateCampaignSchema } from "@/utils/validation/discount"
+import type { DiscountCampaign } from "@/utils/types/discount"
 
 type FormData = {
   name: string
@@ -44,69 +45,52 @@ type FormData = {
   termsAndConditions: string
 }
 
-const DEFAULT_FORM: FormData = {
-  name: "",
-  description: "",
-  discountType: "percentage",
-  discountValue: 10,
-  freeItemName: "",
-  freeItemDescription: "",
-  maxRedemptions: 100,
-  maxPerUser: 1,
-  minPurchaseAmount: null,
-  codePrefix: "GROUNDS",
-  startDate: "",
-  endDate: "",
-  isPublic: true,
-  qrCodeEnabled: true,
-  termsAndConditions: "",
-}
-
-interface CreateCampaignFormProps {
-  cafeId: string
+interface EditCampaignFormProps {
+  campaign: DiscountCampaign
   cafeName: string
   cafeSlug: string
 }
 
-export default function CreateCampaignForm({
-  cafeId,
+const formatDateTimeLocal = (dateString: string) => {
+  const date = new Date(dateString)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+export default function EditCampaignForm({
+  campaign,
   cafeName,
   cafeSlug,
-}: CreateCampaignFormProps) {
+}: EditCampaignFormProps) {
   const router = useRouter()
-  const [form, setForm] = useState<FormData>(DEFAULT_FORM)
+  const [form, setForm] = useState<FormData>({
+    name: campaign.name,
+    description: campaign.description ?? "",
+    discountType: campaign.discountType,
+    discountValue: campaign.discountValue,
+    freeItemName: campaign.freeItemName ?? "",
+    freeItemDescription: campaign.freeItemDescription ?? "",
+    maxRedemptions: campaign.maxRedemptions,
+    maxPerUser: campaign.maxPerUser ?? 1,
+    minPurchaseAmount: campaign.minPurchaseAmount,
+    codePrefix: campaign.codePrefix ?? "GROUNDS",
+    startDate: formatDateTimeLocal(campaign.startDate),
+    endDate: formatDateTimeLocal(campaign.endDate),
+    isPublic: campaign.isPublic,
+    qrCodeEnabled: campaign.qrCodeEnabled,
+    termsAndConditions: campaign.termsAndConditions ?? "",
+  })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Set default dates on mount
-  useState(() => {
-    const now = new Date()
-    const tomorrow = new Date(now)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const nextMonth = new Date(now)
-    nextMonth.setMonth(nextMonth.getMonth() + 1)
-
-    const formatDateTimeLocal = (date: Date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, "0")
-      const day = String(date.getDate()).padStart(2, "0")
-      const hours = String(date.getHours()).padStart(2, "0")
-      const minutes = String(date.getMinutes()).padStart(2, "0")
-      return `${year}-${month}-${day}T${hours}:${minutes}`
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      startDate: formatDateTimeLocal(tomorrow),
-      endDate: formatDateTimeLocal(nextMonth),
-    }))
-  })
-
   const handleInputChange = useCallback(
     (field: keyof FormData, value: string | number | boolean | null) => {
       setForm((prev) => ({ ...prev, [field]: value }))
-      // Clear error for this field when user types
       if (errors[field]) {
         setErrors((prev) => {
           const newErrors = { ...prev }
@@ -122,10 +106,20 @@ export default function CreateCampaignForm({
     const newErrors: Record<string, string> = {}
 
     try {
-      // Prepare data for validation
+      if (!form.name.trim()) {
+        newErrors.name = "Campaign name is required"
+      }
+
       const validationData = {
-        ...form,
+        name: form.name,
+        description: form.description || undefined,
         discountValue: Number(form.discountValue),
+        freeItemName:
+          form.discountType === "free_item" ? form.freeItemName : undefined,
+        freeItemDescription:
+          form.discountType === "free_item"
+            ? form.freeItemDescription
+            : undefined,
         maxRedemptions: Number(form.maxRedemptions),
         maxPerUser: Number(form.maxPerUser),
         minPurchaseAmount:
@@ -134,15 +128,41 @@ export default function CreateCampaignForm({
             : undefined,
         startDate: new Date(form.startDate).toISOString(),
         endDate: new Date(form.endDate).toISOString(),
+        isPublic: form.isPublic,
+        qrCodeEnabled: form.qrCodeEnabled,
+        termsAndConditions: form.termsAndConditions || undefined,
       }
 
-      const result = createCampaignSchema.safeParse(validationData)
+      const result = updateCampaignSchema.safeParse(validationData)
 
       if (!result.success) {
         result.error.issues.forEach((err) => {
           const field = String(err.path[0])
-          newErrors[field] = err.message
+          if (!newErrors[field]) {
+            newErrors[field] = err.message
+          }
         })
+      }
+
+      const start = new Date(form.startDate)
+      const end = new Date(form.endDate)
+      if (end <= start) {
+        newErrors.endDate = "End date must be after start date"
+      }
+
+      if (form.discountType === "percentage") {
+        const val = Number(form.discountValue)
+        if (val <= 0 || val > 100) {
+          newErrors.discountValue = "Percentage must be between 1 and 100"
+        }
+      }
+
+      if (
+        form.discountType === "free_item" &&
+        !form.freeItemName.trim()
+      ) {
+        newErrors.freeItemName =
+          "Free item name is required for free item discounts"
       }
     } catch {
       newErrors.general = "Validation error occurred"
@@ -162,20 +182,22 @@ export default function CreateCampaignForm({
       setSubmitting(true)
 
       try {
-        const result = await createCampaign(cafeId, {
+        const result = await updateCampaign(campaign.id, {
           name: form.name,
           description: form.description || undefined,
-          discountType: form.discountType,
           discountValue: Number(form.discountValue),
-          freeItemName: form.discountType === "free_item" ? form.freeItemName : undefined,
-          freeItemDescription: form.discountType === "free_item" ? form.freeItemDescription : undefined,
+          freeItemName:
+            form.discountType === "free_item" ? form.freeItemName : undefined,
+          freeItemDescription:
+            form.discountType === "free_item"
+              ? form.freeItemDescription
+              : undefined,
           maxRedemptions: Number(form.maxRedemptions),
           maxPerUser: Number(form.maxPerUser),
           minPurchaseAmount:
             form.minPurchaseAmount !== null && form.minPurchaseAmount !== undefined
               ? Number(form.minPurchaseAmount)
               : undefined,
-          codePrefix: form.codePrefix,
           startDate: new Date(form.startDate).toISOString(),
           endDate: new Date(form.endDate).toISOString(),
           isPublic: form.isPublic,
@@ -184,23 +206,25 @@ export default function CreateCampaignForm({
         })
 
         if (result.success) {
-          router.push(`/owner/cafes/${cafeSlug}/discounts`)
+          router.push(
+            `/owner/cafes/${cafeSlug}/discounts/${campaign.id}`
+          )
         } else {
-          setSubmitError(result.error || "Failed to create campaign")
+          setSubmitError(result.error || "Failed to update campaign")
         }
       } catch (error) {
-        console.error("Error creating campaign:", error)
+        console.error("Error updating campaign:", error)
         setSubmitError("An unexpected error occurred. Please try again.")
       } finally {
         setSubmitting(false)
       }
     },
-    [form, cafeId, cafeSlug, validate, router]
+    [form, campaign.id, cafeSlug, validate, router]
   )
 
   const handleCancel = useCallback(() => {
-    router.push(`/owner/cafes/${cafeSlug}/discounts`)
-  }, [router, cafeSlug])
+    router.push(`/owner/cafes/${cafeSlug}/discounts/${campaign.id}`)
+  }, [router, cafeSlug, campaign.id])
 
   const discountTypes = [
     {
@@ -233,7 +257,7 @@ export default function CreateCampaignForm({
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link
-          href={`/owner/cafes/${cafeSlug}/discounts`}
+          href={`/owner/cafes/${cafeSlug}/discounts/${campaign.id}`}
           className="p-2 hover:bg-text/10 rounded-lg transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -253,8 +277,15 @@ export default function CreateCampaignForm({
             >
               Discounts
             </Link>
+            {" / "}
+            <Link
+              href={`/owner/cafes/${cafeSlug}/discounts/${campaign.id}`}
+              className="hover:text-primary transition-colors"
+            >
+              {campaign.name}
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold">Create Campaign</h1>
+          <h1 className="text-2xl font-bold">Edit Campaign</h1>
         </div>
       </div>
 
@@ -300,10 +331,14 @@ export default function CreateCampaignForm({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Description</label>
+            <label className="block text-sm font-medium mb-1.5">
+              Description
+            </label>
             <textarea
               value={form.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("description", e.target.value)
+              }
               placeholder="Describe the campaign (optional)"
               rows={3}
               className="w-full px-3 py-2.5 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all resize-none"
@@ -317,18 +352,19 @@ export default function CreateCampaignForm({
             <Percent className="w-5 h-5 text-primary" />
             Discount Type
           </h2>
+          <p className="text-sm text-text/60">
+            Discount type cannot be changed after creation.
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {discountTypes.map((type) => (
-              <button
+              <div
                 key={type.value}
-                type="button"
-                onClick={() => handleInputChange("discountType", type.value)}
                 className={cn(
                   "p-4 border rounded-xl text-left transition-all",
                   form.discountType === type.value
                     ? "border-primary bg-primary/5 ring-1 ring-primary"
-                    : "border-text/10 hover:border-text/20"
+                    : "border-text/10 opacity-50"
                 )}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -339,7 +375,7 @@ export default function CreateCampaignForm({
                   )}
                 </div>
                 <p className="text-xs text-text/60">{type.description}</p>
-              </button>
+              </div>
             ))}
           </div>
 
@@ -358,10 +394,14 @@ export default function CreateCampaignForm({
                   onChange={(e) =>
                     handleInputChange("discountValue", e.target.value)
                   }
-                  placeholder={form.discountType === "percentage" ? "20" : "100"}
+                  placeholder={
+                    form.discountType === "percentage" ? "20" : "100"
+                  }
                   className={cn(
                     "w-full px-3 py-2.5 bg-text/5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all",
-                    errors.discountValue ? "border-red-300" : "border-text/10"
+                    errors.discountValue
+                      ? "border-red-300"
+                      : "border-text/10"
                   )}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text/40 text-sm">
@@ -369,7 +409,9 @@ export default function CreateCampaignForm({
                 </span>
               </div>
               {errors.discountValue && (
-                <p className="text-sm text-red-500 mt-1">{errors.discountValue}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.discountValue}
+                </p>
               )}
               {form.discountType === "percentage" && (
                 <p className="text-xs text-text/60 mt-1">
@@ -394,15 +436,21 @@ export default function CreateCampaignForm({
                 <input
                   type="text"
                   value={form.freeItemName}
-                  onChange={(e) => handleInputChange("freeItemName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("freeItemName", e.target.value)
+                  }
                   placeholder="e.g., Chocolate Croissant"
                   className={cn(
                     "w-full px-3 py-2.5 bg-text/5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all",
-                    errors.freeItemName ? "border-red-300" : "border-text/10"
+                    errors.freeItemName
+                      ? "border-red-300"
+                      : "border-text/10"
                   )}
                 />
                 {errors.freeItemName && (
-                  <p className="text-sm text-red-500 mt-1">{errors.freeItemName}</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.freeItemName}
+                  </p>
                 )}
               </div>
 
@@ -448,12 +496,16 @@ export default function CreateCampaignForm({
                   }
                   className={cn(
                     "w-full pl-10 pr-3 py-2.5 bg-text/5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all",
-                    errors.maxRedemptions ? "border-red-300" : "border-text/10"
+                    errors.maxRedemptions
+                      ? "border-red-300"
+                      : "border-text/10"
                   )}
                 />
               </div>
               {errors.maxRedemptions && (
-                <p className="text-sm text-red-500 mt-1">{errors.maxRedemptions}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.maxRedemptions}
+                </p>
               )}
             </div>
 
@@ -468,7 +520,9 @@ export default function CreateCampaignForm({
                   type="number"
                   min="1"
                   value={form.maxPerUser}
-                  onChange={(e) => handleInputChange("maxPerUser", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("maxPerUser", e.target.value)
+                  }
                   className="w-full pl-10 pr-3 py-2.5 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                 />
               </div>
@@ -525,14 +579,18 @@ export default function CreateCampaignForm({
               <input
                 type="datetime-local"
                 value={form.startDate}
-                onChange={(e) => handleInputChange("startDate", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("startDate", e.target.value)
+                }
                 className={cn(
                   "w-full px-3 py-2.5 bg-text/5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all",
                   errors.startDate ? "border-red-300" : "border-text/10"
                 )}
               />
               {errors.startDate && (
-                <p className="text-sm text-red-500 mt-1">{errors.startDate}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.startDate}
+                </p>
               )}
             </div>
 
@@ -566,19 +624,24 @@ export default function CreateCampaignForm({
 
           {/* Code Prefix */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Code Prefix</label>
+            <label className="block text-sm font-medium mb-1.5">
+              Code Prefix
+            </label>
             <div className="relative">
               <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
               <input
                 type="text"
                 value={form.codePrefix}
-                onChange={(e) => handleInputChange("codePrefix", e.target.value)}
-                placeholder="GROUNDS"
-                className="w-full pl-10 pr-3 py-2.5 bg-text/5 border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                readOnly
+                className="w-full pl-10 pr-3 py-2.5 bg-text/5 border border-text/10 rounded-lg text-text/60 cursor-not-allowed"
               />
             </div>
             <p className="text-xs text-text/60 mt-1">
-              Generated codes will look like: {form.codePrefix || "GROUNDS"}-XXXX-XXXX
+              Generated codes will look like:{" "}
+              {form.codePrefix || "GROUNDS"}-XXXX-XXXX
+            </p>
+            <p className="text-xs text-text/40 mt-0.5">
+              Code prefix cannot be changed after creation.
             </p>
           </div>
 
@@ -590,7 +653,9 @@ export default function CreateCampaignForm({
                 <input
                   type="checkbox"
                   checked={form.isPublic}
-                  onChange={(e) => handleInputChange("isPublic", e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("isPublic", e.target.checked)
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-text/20 rounded-full peer peer-checked:bg-primary transition-colors" />
@@ -602,7 +667,8 @@ export default function CreateCampaignForm({
                   <span className="font-medium">Public Campaign</span>
                 </div>
                 <p className="text-sm text-text/60 mt-0.5">
-                  Allow customers to discover and claim vouchers from this campaign
+                  Allow customers to discover and claim vouchers from this
+                  campaign
                 </p>
               </div>
             </label>
@@ -672,12 +738,12 @@ export default function CreateCampaignForm({
             {submitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Creating Campaign...
+                Saving Changes...
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Create Campaign
+                Save Changes
               </>
             )}
           </button>

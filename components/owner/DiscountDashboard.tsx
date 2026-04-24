@@ -20,10 +20,10 @@ import DiscountStatsCards from "./DiscountStatsCards"
 import { cn } from "@/utils/cn"
 
 interface DiscountDashboardProps {
-  cafeId: string
   cafeName: string
   cafeSlug: string
   campaigns: DiscountCampaign[]
+  stats?: CampaignStats
 }
 
 const container = {
@@ -44,16 +44,18 @@ const item = {
 type StatusFilter = "all" | "active" | "draft" | "paused" | "expired" | "archived"
 
 export default function DiscountDashboard({
-  cafeId: _unusedCafeId,
   cafeName,
   cafeSlug,
   campaigns,
+  stats: serverStats,
 }: DiscountDashboardProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
 
-  // Calculate stats from campaigns
+  // Use server-provided stats if available, otherwise calculate from campaigns
   const stats: CampaignStats = useMemo(() => {
+    if (serverStats) return serverStats
+
     return campaigns.reduce(
       (acc, campaign) => ({
         totalVouchers: acc.totalVouchers + campaign.maxRedemptions,
@@ -72,7 +74,7 @@ export default function DiscountDashboard({
         expiredVouchers: 0,
       }
     )
-  }, [campaigns])
+  }, [campaigns, serverStats])
 
   // Filter campaigns
   const filteredCampaigns = useMemo(() => {

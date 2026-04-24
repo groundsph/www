@@ -27,6 +27,7 @@ import type {
   CampaignStats,
   UserVoucher,
   RedeemableVoucher,
+  VoucherRedemptionLog,
 } from "@/utils/types/discount"
 
 // Helper: Check if user owns the cafe
@@ -106,7 +107,7 @@ interface ActionResult<T = unknown> {
 export async function getCampaignsForCafe(
   cafeId: string,
   filters?: CampaignFiltersInput
-): Promise<ActionResult<{ campaigns: DiscountCampaign[] }>> {
+): Promise<ActionResult<{ campaigns: DiscountCampaign[]; stats: CampaignStats }>> {
   const currentUser = await getCurrentUser()
   if (!currentUser) return { success: false, error: "Not authenticated" }
 
@@ -141,7 +142,38 @@ export async function getCampaignsForCafe(
       serializeCampaign(c)
     )
 
-    return { success: true, data: { campaigns: serialized } }
+    // Aggregate voucher stats across all campaigns
+    const campaignIds = filteredCampaigns.map((c) => c.id)
+    let stats: CampaignStats = {
+      totalVouchers: 0,
+      claimedVouchers: 0,
+      redeemedVouchers: 0,
+      availableVouchers: 0,
+      expiredVouchers: 0,
+    }
+
+    if (campaignIds.length > 0) {
+      const [statsResult] = await db
+        .select({
+          total: sql<number>`count(*)::int`,
+          claimed: sql<number>`count(*) filter (where ${discountVouchers.status} = 'claimed')::int`,
+          redeemed: sql<number>`count(*) filter (where ${discountVouchers.status} = 'redeemed')::int`,
+          available: sql<number>`count(*) filter (where ${discountVouchers.status} = 'available')::int`,
+          expired: sql<number>`count(*) filter (where ${discountVouchers.status} = 'expired')::int`,
+        })
+        .from(discountVouchers)
+        .where(inArray(discountVouchers.campaignId, campaignIds))
+
+      stats = {
+        totalVouchers: statsResult?.total ?? 0,
+        claimedVouchers: statsResult?.claimed ?? 0,
+        redeemedVouchers: statsResult?.redeemed ?? 0,
+        availableVouchers: statsResult?.available ?? 0,
+        expiredVouchers: statsResult?.expired ?? 0,
+      }
+    }
+
+    return { success: true, data: { campaigns: serialized, stats } }
   } catch (error) {
     console.error("[getCampaignsForCafe] Error:", error)
     return { success: false, error: "Failed to fetch campaigns" }
@@ -1164,7 +1196,7 @@ export async function getRedemptionLogs(
   campaignId: string,
   page: number = 1,
   pageSize: number = 20
-): Promise<ActionResult<{ logs: typeof voucherRedemptionLogs.$inferSelect[]; total: number }>> {
+): Promise<ActionResult<{ logs: VoucherRedemptionLog[]; total: number }>> {
   const currentUser = await getCurrentUser()
   if (!currentUser) return { success: false, error: "Not authenticated" }
 
@@ -1197,7 +1229,13 @@ export async function getRedemptionLogs(
 
     return {
       success: true,
-      data: { logs, total: countResult?.count ?? 0 },
+      data: {
+        logs: logs.map((log) => ({
+          ...log,
+          createdAt: log.createdAt ? log.createdAt.toISOString() : "",
+        })),
+        total: countResult?.count ?? 0,
+      },
     }
   } catch (error) {
     console.error("[getRedemptionLogs] Error:", error)

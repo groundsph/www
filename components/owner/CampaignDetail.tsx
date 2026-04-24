@@ -22,6 +22,7 @@ import {
   List,
   ScanLine,
   ChevronRight,
+  QrCode,
 } from "lucide-react"
 import type { DiscountCampaign, CampaignStats } from "@/utils/types/discount"
 import { cn } from "@/utils/cn"
@@ -30,6 +31,8 @@ import { updateCampaign, deleteCampaign } from "@/app/api/actions/discount"
 import GenerateVouchersModal from "./GenerateVouchersModal"
 import VoucherRedeemPanel from "./VoucherRedeemPanel"
 import VoucherTable from "./VoucherTable"
+import CampaignQRModal from "./CampaignQRModal"
+import RedemptionLogsTable from "./RedemptionLogsTable"
 
 interface CampaignDetailProps {
   campaign: DiscountCampaign
@@ -59,7 +62,6 @@ const item = {
 export default function CampaignDetail({
   campaign: initialCampaign,
   stats,
-  cafeId: _unusedCafeId,
   cafeName,
   cafeSlug,
 }: CampaignDetailProps) {
@@ -70,6 +72,7 @@ export default function CampaignDetail({
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
   const [isTogglingStatus, setIsTogglingStatus] = useState(false)
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false)
 
   const isArchived = campaign.status === "archived"
   const isActive = campaign.status === "active"
@@ -306,13 +309,13 @@ export default function CampaignDetail({
         <div className="flex flex-wrap items-center gap-2">
           {/* Edit Button */}
           {!isArchived && (
-            <button
-              onClick={() => addNotification("Edit feature coming soon", "info")}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-text/10 rounded-lg font-medium hover:bg-text/20 transition-colors"
+            <Link
+              href={`/owner/cafes/${cafeSlug}/discounts/${campaign.id}/edit`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-text/10 rounded-lg text-sm font-medium hover:bg-text/20 transition-colors"
             >
               <Edit className="w-4 h-4" />
               Edit
-            </button>
+            </Link>
           )}
 
           {/* Pause/Resume Button */}
@@ -351,6 +354,17 @@ export default function CampaignDetail({
             >
               <Plus className="w-4 h-4" />
               Generate Vouchers
+            </button>
+          )}
+
+          {/* QR Code Button */}
+          {campaign.qrCodeEnabled && (
+            <button
+              onClick={() => setIsQRModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-text/10 rounded-lg text-sm font-medium hover:bg-text/20 transition-colors"
+            >
+              <QrCode className="w-4 h-4" />
+              QR Code
             </button>
           )}
 
@@ -440,7 +454,7 @@ export default function CampaignDetail({
               className="space-y-6"
             >
               {/* Redeem Panel */}
-              {!isArchived && <VoucherRedeemPanel campaignId={campaign.id} />}
+              {!isArchived && <VoucherRedeemPanel />}
 
               {/* Campaign Details */}
               <div className="bg-background rounded-xl border border-text/10 p-6">
@@ -525,15 +539,8 @@ export default function CampaignDetail({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="text-center py-12"
             >
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-text/5 flex items-center justify-center">
-                <ScanLine className="w-8 h-8 text-text/30" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Redemption Logs</h3>
-              <p className="text-text/60 max-w-md mx-auto">
-                Redemption logs will be available in a future update.
-              </p>
+              <RedemptionLogsTable campaignId={campaign.id} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -546,6 +553,15 @@ export default function CampaignDetail({
         campaignId={campaign.id}
         maxVouchers={campaign.maxRedemptions}
         existingVouchers={stats.totalVouchers}
+      />
+
+      {/* Campaign QR Modal */}
+      <CampaignQRModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        campaignId={campaign.id}
+        campaignName={campaign.name}
+        baseUrl={typeof window !== "undefined" ? window.location.origin : ""}
       />
     </motion.div>
   )
