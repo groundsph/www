@@ -308,13 +308,13 @@ export default function CampaignDetail({
         <div className="flex flex-wrap items-center gap-2">
           {/* Edit Button */}
           {!isArchived && (
-            <button
-              onClick={() => addNotification("Edit feature coming soon", "info")}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-text/10 rounded-lg font-medium hover:bg-text/20 transition-colors"
+            <Link
+              href={`/owner/cafes/${cafeSlug}/discounts/${campaign.id}/edit`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-text/10 rounded-lg text-sm font-medium hover:bg-text/20 transition-colors"
             >
               <Edit className="w-4 h-4" />
               Edit
-            </button>
+            </Link>
           )}
 
           {/* Pause/Resume Button */}
