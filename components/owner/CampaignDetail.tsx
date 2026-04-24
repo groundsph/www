@@ -454,7 +454,7 @@ export default function CampaignDetail({
               className="space-y-6"
             >
               {/* Redeem Panel */}
-              {!isArchived && <VoucherRedeemPanel campaignId={campaign.id} />}
+              {!isArchived && <VoucherRedeemPanel />}
 
               {/* Campaign Details */}
               <div className="bg-background rounded-xl border border-text/10 p-6">
