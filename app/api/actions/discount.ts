@@ -27,6 +27,7 @@ import type {
   CampaignStats,
   UserVoucher,
   RedeemableVoucher,
+  VoucherRedemptionLog,
 } from "@/utils/types/discount"
 
 // Helper: Check if user owns the cafe
@@ -1195,7 +1196,7 @@ export async function getRedemptionLogs(
   campaignId: string,
   page: number = 1,
   pageSize: number = 20
-): Promise<ActionResult<{ logs: typeof voucherRedemptionLogs.$inferSelect[]; total: number }>> {
+): Promise<ActionResult<{ logs: VoucherRedemptionLog[]; total: number }>> {
   const currentUser = await getCurrentUser()
   if (!currentUser) return { success: false, error: "Not authenticated" }
 
@@ -1228,7 +1229,13 @@ export async function getRedemptionLogs(
 
     return {
       success: true,
-      data: { logs, total: countResult?.count ?? 0 },
+      data: {
+        logs: logs.map((log) => ({
+          ...log,
+          createdAt: log.createdAt ? log.createdAt.toISOString() : "",
+        })),
+        total: countResult?.count ?? 0,
+      },
     }
   } catch (error) {
     console.error("[getRedemptionLogs] Error:", error)
