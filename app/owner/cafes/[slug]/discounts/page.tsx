@@ -33,10 +33,10 @@ export default async function DiscountsPage({
     <main className="min-h-screen w-full bg-background pt-6 pb-12">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <DiscountDashboard
-          cafeId={cafe.id}
           cafeName={cafe.name}
           cafeSlug={slug}
           campaigns={campaignsResult.data?.campaigns ?? []}
+          stats={campaignsResult.data?.stats}
         />
       </div>
     </main>
