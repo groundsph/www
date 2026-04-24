@@ -122,9 +122,10 @@ export default function EditCampaignForm({
             : undefined,
         maxRedemptions: Number(form.maxRedemptions),
         maxPerUser: Number(form.maxPerUser),
-        minPurchaseAmount: form.minPurchaseAmount
-          ? Number(form.minPurchaseAmount)
-          : undefined,
+        minPurchaseAmount:
+          form.minPurchaseAmount !== null && form.minPurchaseAmount !== undefined
+            ? Number(form.minPurchaseAmount)
+            : undefined,
         startDate: new Date(form.startDate).toISOString(),
         endDate: new Date(form.endDate).toISOString(),
         isPublic: form.isPublic,
@@ -193,9 +194,10 @@ export default function EditCampaignForm({
               : undefined,
           maxRedemptions: Number(form.maxRedemptions),
           maxPerUser: Number(form.maxPerUser),
-          minPurchaseAmount: form.minPurchaseAmount
-            ? Number(form.minPurchaseAmount)
-            : undefined,
+          minPurchaseAmount:
+            form.minPurchaseAmount !== null && form.minPurchaseAmount !== undefined
+              ? Number(form.minPurchaseAmount)
+              : undefined,
           startDate: new Date(form.startDate).toISOString(),
           endDate: new Date(form.endDate).toISOString(),
           isPublic: form.isPublic,

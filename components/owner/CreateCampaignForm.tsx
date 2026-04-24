@@ -128,7 +128,12 @@ export default function CreateCampaignForm({
         discountValue: Number(form.discountValue),
         maxRedemptions: Number(form.maxRedemptions),
         maxPerUser: Number(form.maxPerUser),
-        minPurchaseAmount: form.minPurchaseAmount ? Number(form.minPurchaseAmount) : undefined,
+        minPurchaseAmount:
+          form.minPurchaseAmount !== null && form.minPurchaseAmount !== undefined
+            ? Number(form.minPurchaseAmount)
+            : undefined,
+        startDate: new Date(form.startDate).toISOString(),
+        endDate: new Date(form.endDate).toISOString(),
       }
 
       const result = createCampaignSchema.safeParse(validationData)
@@ -166,10 +171,13 @@ export default function CreateCampaignForm({
           freeItemDescription: form.discountType === "free_item" ? form.freeItemDescription : undefined,
           maxRedemptions: Number(form.maxRedemptions),
           maxPerUser: Number(form.maxPerUser),
-          minPurchaseAmount: form.minPurchaseAmount ? Number(form.minPurchaseAmount) : undefined,
+          minPurchaseAmount:
+            form.minPurchaseAmount !== null && form.minPurchaseAmount !== undefined
+              ? Number(form.minPurchaseAmount)
+              : undefined,
           codePrefix: form.codePrefix,
-          startDate: form.startDate,
-          endDate: form.endDate,
+          startDate: new Date(form.startDate).toISOString(),
+          endDate: new Date(form.endDate).toISOString(),
           isPublic: form.isPublic,
           qrCodeEnabled: form.qrCodeEnabled,
           termsAndConditions: form.termsAndConditions || undefined,
