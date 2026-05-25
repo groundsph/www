@@ -464,3 +464,89 @@ export async function notifyDiscordEventSubmission(
         }
     }
 }
+
+// Module-level rate limiter
+let lastCriticalNotification = 0
+const CRITICAL_COOLDOWN_MS = 5000 // 5 seconds
+
+/**
+ * Notify Discord about a critical error that needs immediate attention.
+ * Uses the same DISCORD_WEBHOOK_URL but with red embed + ⚠️ prefix.
+ * FIRE-AND-FORGET: failures here must NOT cascade to the caller.
+ * Rate-limited: at most one notification per 5 seconds.
+ */
+export async function notifyDiscordCritical(
+    title: string,
+    description: string,
+    errorContext: {
+        cafeName?: string
+        submitterId?: string
+        errorMessage: string
+        errorStack?: string
+        failedStep: string
+    }
+): Promise<void> {
+    const now = Date.now()
+    if (now - lastCriticalNotification < CRITICAL_COOLDOWN_MS) {
+        console.warn("[Critical] Rate limited — skipping duplicate notification")
+        return
+    }
+    lastCriticalNotification = now
+
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn("[Critical] Discord webhook URL not configured")
+        return
+    }
+
+    const stackSnippet = errorContext.errorStack
+        ? errorContext.errorStack.slice(0, 1000)
+        : "No stack trace"
+
+    try {
+        await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                embeds: [{
+                    title: `⚠️ CRITICAL: ${title}`,
+                    description: description,
+                    color: 0xef4444,
+                    fields: [
+                        {
+                            name: "Error Message",
+                            value: errorContext.errorMessage.slice(0, 1024),
+                            inline: false,
+                        },
+                        {
+                            name: "Failed Step",
+                            value: errorContext.failedStep,
+                            inline: true,
+                        },
+                        {
+                            name: "Cafe Name",
+                            value: errorContext.cafeName || "N/A",
+                            inline: true,
+                        },
+                        {
+                            name: "Submitter ID",
+                            value: errorContext.submitterId || "N/A",
+                            inline: true,
+                        },
+                        {
+                            name: "Stack Trace",
+                            value: `\`\`\`${stackSnippet}\`\`\``.slice(0, 1024),
+                            inline: false,
+                        },
+                    ],
+                    footer: {
+                        text: "Grounds • Critical Alert",
+                    },
+                    timestamp: new Date().toISOString(),
+                }],
+            }),
+        })
+    } catch (error) {
+        console.error("[Critical] Failed to send Discord notification:", error)
+    }
+}
