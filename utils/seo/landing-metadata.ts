@@ -12,7 +12,7 @@ export function buildMetadata(data: CityLandingData): Metadata {
   const { city, province, cafeCount } = data
   const provinceSlug = province.toLowerCase().replace(/\s+/g, "-")
   const citySlug = city.toLowerCase().replace(/\s+/g, "-")
-  const path = `/cafes/${provinceSlug}/${citySlug}`
+  const path = `/cafes/location/${provinceSlug}/${citySlug}`
 
   return {
     title: `Best Cafes in ${city}, ${province} | Grounds PH`,
