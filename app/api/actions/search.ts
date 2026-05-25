@@ -5,6 +5,7 @@ import { cafes, profiles, blogPosts, cafeCrawls, collections, events, cafeMenuIt
 import { ilike, or, eq, and } from "drizzle-orm"
 import { SearchResult } from "@/utils/types/search"
 import { staticPages, quickActions } from "@/utils/search-index"
+import { omitTestCafes } from "@/utils/filters"
 
 const MAX_RESULTS = 8
 
@@ -23,7 +24,7 @@ export async function searchCafesAndUsers(
       slug: cafes.slug,
       thumbnail: cafes.thumbnail,
     }).from(cafes).where(
-      or(ilike(cafes.name, searchTerm), ilike(cafes.addressDisplay, searchTerm))
+      and(or(ilike(cafes.name, searchTerm), ilike(cafes.addressDisplay, searchTerm)), ...omitTestCafes([]))
     ).limit(MAX_RESULTS / 2),
 
     !query.startsWith('>')
@@ -215,7 +216,8 @@ async function searchMenuItems(
       and(
         ilike(cafeMenuItems.name, `%${query}%`),
         eq(cafeMenuItems.isAvailable, true),
-        eq(cafes.isPublished, true)
+        eq(cafes.isPublished, true),
+        ...omitTestCafes([])
       )
     )
     .limit(5)

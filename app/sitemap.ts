@@ -3,16 +3,18 @@ import { db } from '@/db'
 import { cafes, blogPosts, cafeMenuItems, collections, cafeCrawls } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { buildSitemapEntries } from '@/utils/seo/sitemap'
+import { getProductionFilter } from '@/utils/filters'
 
 export const dynamic = "force-dynamic"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grounds.ph"
 
+    const testFilter = getProductionFilter()
     const cafeResults = await db
         .select({ slug: cafes.slug, updatedAt: cafes.updatedAt, createdAt: cafes.createdAt })
         .from(cafes)
-        .where(eq(cafes.isPublished, true))
+        .where(testFilter ? and(eq(cafes.isPublished, true), testFilter) : eq(cafes.isPublished, true))
 
     const blogResults = await db
         .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, publishedAt: blogPosts.publishedAt })

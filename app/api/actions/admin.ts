@@ -4231,3 +4231,36 @@ export async function deleteLeaderboardSnapshots(
         }
     }
 }
+
+/**
+ * Toggle the isTest flag on a cafe (admin only).
+ * Test cafes are hidden from public queries in production.
+ */
+export async function setCafeTestFlag(
+  cafeId: string,
+  isTest: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) return { success: false, error: "Not authenticated" }
+
+  const profileResult = await db
+    .select({ role: profiles.role })
+    .from(profiles)
+    .where(eq(profiles.id, currentUser.id))
+    .limit(1)
+
+  if (profileResult[0]?.role !== "admin") {
+    return { success: false, error: "Only admins can change test flag" }
+  }
+
+  try {
+    await db.update(cafes)
+      .set({ isTest, updatedAt: new Date() })
+      .where(eq(cafes.id, cafeId))
+  } catch (error) {
+    console.error("Error setting test flag:", error)
+    return { success: false, error: "Failed to update test flag" }
+  }
+
+  return { success: true }
+}

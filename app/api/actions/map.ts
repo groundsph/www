@@ -5,6 +5,7 @@ import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, or, gte, lte, isNull, sql } from "drizzle-orm"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { getPHTime } from "@/utils/featured"
+import { omitTestCafes } from "@/utils/filters"
 
 export interface MapBounds {
     swLat: number
@@ -92,6 +93,7 @@ export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatin
             and(
                 eq(cafes.isPublished, true),
                 eq(cafes.isHiddenGem, false),
+                ...omitTestCafes([]),
                 // Exclude chains by default unless includeChains is true
                 // Treat NULL as non-chain (include cafes where is_chain is false OR null)
                 ...(bounds.includeChains ? [] : [or(eq(cafes.isChain, false), isNull(cafes.isChain))]),

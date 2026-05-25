@@ -5,6 +5,7 @@ import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteracti
 import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray } from "drizzle-orm"
 import { getDayOfYear, getPHTime } from "@/utils/featured"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
+import { omitTestCafes } from "@/utils/filters"
 
 // Helper to get current day key from PH time
 function getCurrentDayKey(): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
@@ -149,7 +150,7 @@ function mapCafeToSnakeCase(c: {
     } as unknown as CafeWithRatings
 }
 
-export async function getCafeBySlug(slug: string) {
+export async function getCafeBySlug(slug: string, includeTest = false) {
     // Get cafe with rating stats
     const cafeResult = await db
         .select({
@@ -213,7 +214,7 @@ export async function getCafeBySlug(slug: string) {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(eq(cafes.slug, slug))
+        .where(and(eq(cafes.slug, slug), ...(includeTest ? [] : omitTestCafes([]))))
         .limit(1)
 
     const cafe = cafeResult[0]
@@ -387,7 +388,7 @@ export async function getDailyFeatured() {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder")))
+        .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ...omitTestCafes([])))
         .orderBy(desc(cafeRatingStats.averageRating))
         .limit(10)
 
@@ -488,7 +489,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`)))
+            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`), ...omitTestCafes([])))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -520,7 +521,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`)))
+            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`), ...omitTestCafes([])))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -561,10 +562,10 @@ export async function getAllCafes(
             const ilikeTerm = `%${filters.search}%`
 
             // Build conditions for ILIKE fallback
-            const ilikConditions = [
+            const ilikConditions = omitTestCafes([
                 eq(cafes.isPublished, true),
                 ilike(cafes.name, ilikeTerm)
-            ]
+            ])
 
             const fallbackResults = await db
                 .select({
@@ -667,7 +668,7 @@ export async function getAllCafes(
     }
 
     // Build query conditions
-    const conditions = [eq(cafes.isPublished, true)]
+    const conditions = omitTestCafes([eq(cafes.isPublished, true)])
     if (filters.has_wifi) conditions.push(eq(cafes.hasWifi, true))
     if (filters.has_smoking) conditions.push(eq(cafes.hasSmoking, true))
 
@@ -962,7 +963,7 @@ export async function getReviewsByCafeIdPaginated(
  * Get the count of published cafes
  */
 export async function getPublishedCafeCount(): Promise<number> {
-    const result = await db.select({ count: count() }).from(cafes).where(eq(cafes.isPublished, true))
+    const result = await db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), ...omitTestCafes([])))
     return result[0]?.count ?? 0
 }
 
@@ -982,7 +983,7 @@ export async function searchCafesSimple(query: string) {
             is_published: cafes.isPublished,
         })
         .from(cafes)
-        .where(ilike(cafes.name, `%${query}%`))
+        .where(and(ilike(cafes.name, `%${query}%`), ...omitTestCafes([])))
         .limit(5)
 
     return result
@@ -1001,7 +1002,7 @@ export async function searchCafesForBlog(query: string) {
         thumbnail: cafes.thumbnail,
     })
         .from(cafes)
-        .where(and(eq(cafes.isPublished, true), ilike(cafes.name, `%${query}%`)))
+        .where(and(eq(cafes.isPublished, true), ilike(cafes.name, `%${query}%`), ...omitTestCafes([])))
         .limit(10)
 }
 
@@ -1072,7 +1073,7 @@ export async function getCafesByIds(ids: string[]) {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(eq(cafes.isPublished, true), inArray(cafes.id, ids)))
+        .where(and(eq(cafes.isPublished, true), inArray(cafes.id, ids), ...omitTestCafes([])))
 
     return results.map(c => mapCafeToSnakeCase(c))
 }
@@ -1144,7 +1145,7 @@ export async function getCafesBySlugs(slugs: string[]) {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(eq(cafes.isPublished, true), inArray(cafes.slug, slugs)))
+        .where(and(eq(cafes.isPublished, true), inArray(cafes.slug, slugs), ...omitTestCafes([])))
 
     return results.map(c => mapCafeToSnakeCase(c))
 }
@@ -1220,6 +1221,7 @@ export async function getAllPublishedCafes(): Promise<CafeWithRatings[]> {
             and(
                 eq(cafes.isPublished, true),
                 eq(cafes.isHiddenGem, false),
+                ...omitTestCafes([]),
             )
         )
         .orderBy(desc(cafes.createdAt))
