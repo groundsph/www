@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { cafes, profiles, cafeMenuItems } from "@/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, and, ilike, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { notifyDiscord } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
@@ -69,6 +69,114 @@ export interface SubmitCafeResult {
     error?: string
 }
 
+interface DuplicateCheckResult {
+    isDuplicate: boolean
+    existingCafes: Array<{
+        id: string
+        name: string
+        slug: string
+        isPublished: boolean
+        addressDisplay: string
+    }>
+}
+
+/**
+ * Haversine distance in meters between two lat/lng points
+ */
+function haversineDistance(
+    lat1: number, lng1: number,
+    lat2: number, lng2: number
+): number {
+    const R = 6371000 // Earth radius in meters
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+}
+
+async function checkDuplicateCafe(
+    name: string,
+    cityMunicipality: string,
+    province: string,
+    lat: number | null,
+    lng: number | null
+): Promise<DuplicateCheckResult> {
+    const normalized = name.toLowerCase().trim()
+
+    // Step 1: Name-based check (exact case-insensitive name match in same city)
+    const exactMatches = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            isPublished: cafes.isPublished,
+            addressDisplay: cafes.addressDisplay,
+        })
+        .from(cafes)
+        .where(
+            and(
+                sql`lower(${cafes.name}) = ${normalized}`,
+                ilike(cafes.cityMunicipality, `%${cityMunicipality}%`)
+            )
+        )
+        .limit(5)
+
+    if (exactMatches.length > 0) {
+        return { isDuplicate: true, existingCafes: exactMatches }
+    }
+
+    // Step 2: Proximity-based check (200m radius + name similarity)
+    if (lat !== null && lng !== null) {
+        const DUPLICATE_RADIUS_METERS = 200
+
+        const nearbyCafes = await db
+            .select({
+                id: cafes.id,
+                name: cafes.name,
+                slug: cafes.slug,
+                isPublished: cafes.isPublished,
+                addressDisplay: cafes.addressDisplay,
+                lat: cafes.lat,
+                lng: cafes.lng,
+            })
+            .from(cafes)
+            .where(
+                and(
+                    ilike(cafes.cityMunicipality, `%${cityMunicipality}%`),
+                    ilike(cafes.province, `%${province}%`)
+                )
+            )
+            .limit(50)
+
+        // Calculate haversine distance for each
+        const nearby = nearbyCafes.filter((cafe) => {
+            if (cafe.lat === null || cafe.lng === null) return false
+            const distance = haversineDistance(lat, lng, cafe.lat, cafe.lng)
+            return distance <= DUPLICATE_RADIUS_METERS
+        })
+
+        // Among nearby cafes, check name similarity
+        if (nearby.length > 0) {
+            const similarNames = nearby.filter((cafe) => {
+                const words1 = new Set(normalized.split(/\s+/))
+                const words2 = new Set(cafe.name.toLowerCase().split(/\s+/))
+                const intersection = [...words1].filter((w) => words2.has(w))
+                return intersection.length >= Math.min(words1.size, words2.size) * 0.5
+            })
+
+            if (similarNames.length > 0) {
+                return { isDuplicate: true, existingCafes: similarNames }
+            }
+        }
+    }
+
+    return { isDuplicate: false, existingCafes: [] }
+}
+
 /**
  * Submit a new cafe for review
  * Cafe is created with is_published: false and needs admin approval
@@ -102,6 +210,29 @@ export async function submitCafe(
     }
     // Thumbnail is now optional - use placeholder if not provided
     const finalThumbnail = thumbnailUrl || "placeholder"
+
+    // Duplicate detection
+    try {
+        const duplicate = await checkDuplicateCafe(
+            formData.name,
+            formData.city_municipality,
+            formData.province,
+            formData.lat,
+            formData.lng
+        )
+
+        if (duplicate.isDuplicate) {
+            const allPending = duplicate.existingCafes.every((c) => !c.isPublished)
+            const message = allPending
+                ? "A cafe with a similar name and location has already been submitted and is awaiting review."
+                : `This cafe may already exist on Grounds. Check: ${duplicate.existingCafes.map((c) => c.name).join(", ")}`
+
+            return { success: false, error: message }
+        }
+    } catch (err) {
+        // Duplicate check failure is non-fatal — log and continue
+        console.error("[Submit] Duplicate check failed:", err)
+    }
 
     try {
         // Generate unique slug
