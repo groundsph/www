@@ -4,10 +4,10 @@ import { db } from "@/db"
 import { cafes, profiles, cafeMenuItems } from "@/db/schema"
 import { eq, and, ilike, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
-import { notifyDiscord } from "./notify"
+import { notifyDiscord, notifyDiscordCritical } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
-import { OperatingHour } from "@/utils/types/cafe"
 import { logContribution } from "@/utils/contribution-logging"
+import { cafeSubmissionSchema, CafeSubmissionError, SubmitError } from "@/utils/validation/cafe-submission"
 
 function generateSlug(name: string, cityMunicipality?: string, province?: string): string {
     const slugify = (s: string): string => s
@@ -66,7 +66,7 @@ export interface SubmitCafeResult {
     success: boolean
     cafeId?: string
     slug?: string
-    error?: string
+    error?: SubmitError
 }
 
 interface DuplicateCheckResult {
@@ -75,7 +75,7 @@ interface DuplicateCheckResult {
         id: string
         name: string
         slug: string
-        isPublished: boolean
+        isPublished: boolean | null
         addressDisplay: string
     }>
 }
@@ -187,38 +187,31 @@ export async function submitCafe(
     galleryUrls: string[],
     menuItems: { name: string; category: string; price: number; description: string; imageUrl: string | null }[] = []
 ): Promise<SubmitCafeResult> {
-    // Get current user
+    // 1. Auth check
     const user = await getCurrentUser()
     if (!user) {
-        return { success: false, error: "Not authenticated" }
+        return { success: false, error: CafeSubmissionError.auth() }
     }
 
-    // Validate required fields
-    if (!formData.name.trim()) {
-        return { success: false, error: "Cafe name is required" }
+    // 2. Zod validation
+    const validation = cafeSubmissionSchema.safeParse(formData)
+    if (!validation.success) {
+        return {
+            success: false,
+            error: CafeSubmissionError.fromZod(validation.error),
+        }
     }
-    // Hidden Gems don't require full address (approximate location only)
-    if (!formData.is_hidden_gem && !formData.address_display.trim()) {
-        return { success: false, error: "Address is required" }
-    }
-    if (!formData.region || !formData.province || !formData.city_municipality) {
-        return { success: false, error: "Location details are required" }
-    }
-    // Hidden Gems don't require lat/lng (approximate location only)
-    if (!formData.is_hidden_gem && (formData.lat === null || formData.lng === null)) {
-        return { success: false, error: "Please select a location on the map" }
-    }
-    // Thumbnail is now optional - use placeholder if not provided
-    const finalThumbnail = thumbnailUrl || "placeholder"
 
-    // Duplicate detection
+    const validData = validation.data
+
+    // 3. Duplicate detection
     try {
         const duplicate = await checkDuplicateCafe(
-            formData.name,
-            formData.city_municipality,
-            formData.province,
-            formData.lat,
-            formData.lng
+            validData.name,
+            validData.city_municipality,
+            validData.province,
+            validData.lat,
+            validData.lng
         )
 
         if (duplicate.isDuplicate) {
@@ -227,89 +220,99 @@ export async function submitCafe(
                 ? "A cafe with a similar name and location has already been submitted and is awaiting review."
                 : `This cafe may already exist on Grounds. Check: ${duplicate.existingCafes.map((c) => c.name).join(", ")}`
 
-            return { success: false, error: message }
+            return { success: false, error: CafeSubmissionError.duplicate(message) }
         }
     } catch (err) {
         // Duplicate check failure is non-fatal — log and continue
         console.error("[Submit] Duplicate check failed:", err)
     }
 
+    // 4. Slug generation
+    let slug: string
     try {
-        // Generate unique slug
         const baseSlug = generateSlug(
-            formData.name,
-            formData.city_municipality,
-            formData.province
+            validData.name,
+            validData.city_municipality,
+            validData.province
         )
-        const slug = await ensureUniqueSlug(baseSlug)
+        slug = await ensureUniqueSlug(baseSlug)
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        console.error("[Submit] Slug generation failed:", err)
 
-        // Format operating hours for DB
-        const operatingHoursJson = formData.operating_hours.length > 0
-            ? formData.operating_hours.map((h: OperatingHour) => ({
-                day: h.day,
-                open: h.open,
-                close: h.close,
-                is_closed: h.is_closed || false,
-                is_24_hours: h.is_24_hours || false,
-            }))
+        // Critical webhook (fire-and-forget)
+        notifyDiscordCritical(
+            "Slug Generation Failed",
+            `Could not generate unique slug for cafe "${validData.name}". Error: ${errorMessage}`,
+            {
+                cafeName: validData.name,
+                submitterId: user.id,
+                errorMessage,
+                errorStack: err instanceof Error ? err.stack : undefined,
+                failedStep: "slug_generation",
+            }
+        ).catch(() => {})
+
+        return { success: false, error: CafeSubmissionError.db() }
+    }
+
+    // 5. DB insert
+    const finalThumbnail = thumbnailUrl || "placeholder"
+
+    try {
+        const operatingHoursJson = validData.operating_hours.length > 0
+            ? validData.operating_hours
             : null
+        const socialsJson = validData.socials.length > 0 ? validData.socials : null
 
-        // Format socials for DB
-        const socialsJson = formData.socials.length > 0
-            ? formData.socials
-            : null
-
-        // Insert cafe into database
         const [cafe] = await db.insert(cafes).values({
-            name: formData.name.trim(),
+            name: validData.name.trim(),
             slug,
-            description: formData.description.trim() || null,
+            description: validData.description?.trim() || null,
             thumbnail: finalThumbnail,
             gallery: galleryUrls.length > 0 ? galleryUrls : null,
 
             // Location
-            region: formData.region,
-            province: formData.province,
-            cityMunicipality: formData.city_municipality,
-            area: formData.area.trim() || null,
-            // For Hidden Gems with no address, use city/province as fallback
-            addressDisplay: formData.address_display.trim() || `${formData.city_municipality}, ${formData.province}`,
-            lat: formData.lat,
-            lng: formData.lng,
+            region: validData.region,
+            province: validData.province,
+            cityMunicipality: validData.city_municipality,
+            area: validData.area?.trim() || null,
+            addressDisplay: validData.address_display || `${validData.city_municipality}, ${validData.province}`,
+            lat: validData.lat,
+            lng: validData.lng,
 
             // Amenities
-            hasWifi: formData.has_wifi,
-            hasSmoking: formData.has_smoking,
-            hasSockets: formData.has_sockets,
-
-            hasParking: formData.has_parking,
-            hasAircon: formData.has_aircon,
-            isPetFriendly: formData.is_pet_friendly,
-            hasOutdoorSeating: formData.has_outdoor_seating,
-            hasIndoorSeating: formData.has_indoor_seating,
-            hasRestroom: formData.has_restroom,
-            hasBidet: formData.has_bidet,
-            hasNonDairy: formData.has_non_dairy,
-            hasDecaf: formData.has_decaf,
-            milkOptions: formData.milk_options.length > 0 ? formData.milk_options : null,
-            servesFood: formData.serves_food,
-            isWorkFriendly: formData.is_work_friendly,
+            hasWifi: validData.has_wifi,
+            hasSmoking: validData.has_smoking,
+            hasSockets: validData.has_sockets,
+            hasParking: validData.has_parking,
+            hasAircon: validData.has_aircon,
+            isPetFriendly: validData.is_pet_friendly,
+            hasOutdoorSeating: validData.has_outdoor_seating,
+            hasIndoorSeating: validData.has_indoor_seating,
+            hasRestroom: validData.has_restroom,
+            hasBidet: validData.has_bidet,
+            hasNonDairy: validData.has_non_dairy,
+            hasDecaf: validData.has_decaf,
+            milkOptions: validData.milk_options.length > 0 ? validData.milk_options : null,
+            servesFood: validData.serves_food,
+            isWorkFriendly: validData.is_work_friendly,
 
             // Details
-            priceLevel: formData.price_level,
-            paymentMethods: formData.payment_methods.trim() || null,
-            specialty: formData.specialty.length > 0 ? formData.specialty : null,
-            tags: formData.tags.length > 0 ? formData.tags : null,
-            brewMethods: formData.brew_methods.length > 0 ? formData.brew_methods : null,
-            roaster: formData.roaster.trim() || null,
+            priceLevel: validData.price_level,
+            paymentMethods: validData.payment_methods?.trim() || null,
+            specialty: validData.specialty.length > 0 ? validData.specialty : null,
+            tags: validData.tags.length > 0 ? validData.tags : null,
+            brewMethods: validData.brew_methods.length > 0 ? validData.brew_methods : null,
+            roaster: validData.roaster?.trim() || null,
 
             // Schedule
             operatingHours: operatingHoursJson,
 
             // Contact
-            websiteUrl: formData.website_url.trim() || null,
-            phone: formData.phone.trim() || null,
-            email: formData.email.trim() || null,
+            websiteUrl: validData.website_url || null,
+            phone: validData.phone?.trim() || null,
+            email: validData.email?.trim() || null,
             socials: socialsJson,
 
             // Meta
@@ -318,22 +321,21 @@ export async function submitCafe(
             isActive: true,
             isVerified: false,
             isClaimed: false,
-            isHiddenGem: formData.is_hidden_gem || false,
-            findingHint: formData.finding_hint?.trim() || null,
-            isChain: formData.is_chain || false,
-            isHalalCertified: formData.is_halal_certified,
-            strawType: formData.straw_type?.trim() || null,
-            strawTypeOther:
-                formData.straw_type === "other" && formData.straw_type_other?.trim()
-                    ? formData.straw_type_other.trim()
-                    : null,
+            isHiddenGem: validData.is_hidden_gem || false,
+            findingHint: validData.finding_hint?.trim() || null,
+            isChain: validData.is_chain || false,
+            isHalalCertified: validData.is_halal_certified,
+            strawType: validData.straw_type || null,
+            strawTypeOther: validData.straw_type === "other" && validData.straw_type_other
+                ? validData.straw_type_other : null,
             ownerIds: null,
         }).returning({ id: cafes.id, slug: cafes.slug })
 
         if (!cafe) {
-            return { success: false, error: "Failed to submit cafe" }
+            throw new Error("Insert returned no cafe")
         }
 
+        // Post-submit hooks (fire-and-forget)
         // Get submitter profile for notification
         const profileResult = await db
             .select({ displayName: profiles.displayName, username: profiles.username })
@@ -342,25 +344,19 @@ export async function submitCafe(
             .limit(1)
 
         const profile = profileResult[0]
-        const submitterName = profile?.displayName || profile?.username || 'Anonymous'
+        const submitterName = profile?.displayName || profile?.username || "Anonymous"
 
-        // Notify Discord
-        await notifyDiscord(
-            formData.name,
-            `${formData.city_municipality}, ${formData.province}`,
-            submitterName
-        )
+        notifyDiscord(validData.name, `${validData.city_municipality}, ${validData.province}`, submitterName)
+            .catch((err) => console.error("[Submit] Discord notify failed:", err))
 
-        // Log contribution
-        await logContribution(user.id, cafe.id, 'CREATE', {
-            summary: `Scouted ${formData.name}`,
-            source: 'cafe_submission',
-            cafe_name: formData.name
-        })
+        logContribution(user.id, cafe.id, "CREATE", {
+            summary: `Scouted ${validData.name}`,
+            source: "cafe_submission",
+            cafe_name: validData.name,
+        }).catch((err) => console.error("[Submit] Contribution log failed:", err))
 
         // Insert menu items if any were submitted
         if (menuItems.length > 0) {
-            console.log(`[Cafe Submit] Inserting ${menuItems.length} menu items...`)
             for (let i = 0; i < menuItems.length; i++) {
                 const item = menuItems[i]
                 try {
@@ -376,19 +372,30 @@ export async function submitCafe(
                         lastUpdatedBy: user.id,
                     })
                 } catch (err) {
-                    console.error(`[Cafe Submit] Failed to insert menu item "${item.name}":`, err)
-                    // Continue with other items, don't fail the whole submission
+                    console.error(`[Submit] Menu item "${item.name}" insert failed:`, err)
                 }
             }
         }
 
-        return {
-            success: true,
-            cafeId: cafe.id,
-            slug: cafe.slug
-        }
-    } catch (error) {
-        console.error("Submit cafe error:", error)
-        return { success: false, error: "An unexpected error occurred" }
+        return { success: true, cafeId: cafe.id, slug: cafe.slug }
+
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        console.error("[Submit] DB insert failed:", err)
+
+        // Critical webhook (fire-and-forget)
+        notifyDiscordCritical(
+            "Cafe Submission DB Insert Failed",
+            `Database insert failed for cafe "${validData.name}". The user's submission was lost.`,
+            {
+                cafeName: validData.name,
+                submitterId: user.id,
+                errorMessage,
+                errorStack: err instanceof Error ? err.stack : undefined,
+                failedStep: "db_insert",
+            }
+        ).catch(() => {})
+
+        return { success: false, error: CafeSubmissionError.db() }
     }
 }

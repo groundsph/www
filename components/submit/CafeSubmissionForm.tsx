@@ -63,7 +63,8 @@ import {
     uploadCafeImageWithProgress,
     uploadOwnershipProofWithProgress,
 } from "@/utils/storage/client"
-import { submitCafe } from "@/app/api/actions/submit"
+import { submitCafe, SubmitCafeResult } from "@/app/api/actions/submit"
+import { SubmitError } from "@/utils/validation/cafe-submission"
 import { submitCafeClaim } from "@/app/api/actions/claim"
 import { searchCafesSimple } from "@/app/api/actions/cafe"
 import ImageUpload from "@/components/reviews/ImageUpload"
@@ -344,6 +345,57 @@ export default function CafeSubmissionForm({
         setPreSearchResults([])
         setPossibleDuplicates([])
         clearDraft()
+    }
+
+    /**
+     * Maps a field name from SubmitError to the form step containing that field.
+     * Returns null if no specific step is found.
+     */
+    const getStepForField = (field: string): number | null => {
+        const fieldToStep: Record<string, number> = {
+            name: 1,
+            description: 1,
+            price_level: 1,
+            region: 2,
+            province: 2,
+            city_municipality: 2,
+            area: 2,
+            address_display: 2,
+            lat: 2,
+            lng: 2,
+            has_wifi: 3,
+            has_smoking: 3,
+            has_sockets: 3,
+            has_parking: 3,
+            has_aircon: 3,
+            is_pet_friendly: 3,
+            has_outdoor_seating: 3,
+            has_indoor_seating: 3,
+            has_restroom: 3,
+            has_bidet: 3,
+            has_non_dairy: 3,
+            has_decaf: 3,
+            milk_options: 3,
+            serves_food: 3,
+            is_work_friendly: 3,
+            is_halal_certified: 3,
+            straw_type: 3,
+            straw_type_other: 3,
+            operating_hours: 4,
+            website_url: 6,
+            phone: 6,
+            email: 6,
+            socials: 6,
+            is_hidden_gem: 2,
+            finding_hint: 2,
+            is_chain: 1,
+            specialty: 3,
+            tags: 3,
+            brew_methods: 3,
+            roaster: 3,
+            payment_methods: 3,
+        }
+        return fieldToStep[field] ?? null
     }
 
     const validateStep = (step: number): string | null => {
@@ -754,7 +806,21 @@ export default function CafeSubmissionForm({
             )
 
             if (!result.success) {
-                throw new Error(result.error || "Failed to submit cafe")
+                // Handle structured SubmitError from server
+                const submitError: SubmitError | undefined = result.error
+                const errorMessage = submitError?.message || "Something went wrong"
+                trigger("error")
+                setError(errorMessage)
+                addNotification(errorMessage, "error")
+
+                // Navigate to the relevant step if a specific field is indicated
+                if (submitError?.field) {
+                    const step = getStepForField(submitError.field)
+                    if (step !== null) {
+                        setCurrentStep(step)
+                    }
+                }
+                return
             }
 
             // 7. Create ownership claim if owner
