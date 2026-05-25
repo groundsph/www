@@ -6,6 +6,7 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { Coffee } from "lucide-react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import { buildBreadcrumbList } from "@/utils/seo/breadcrumbs"
 import MenuHeader from "@/components/menu/MenuHeader"
 import MenuContent from "@/components/menu/MenuContent"
 
@@ -40,13 +41,19 @@ export async function generateMetadata({
         ? getCafeThumbnailUrl(cafe.thumbnail)
         : undefined
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
+
     return {
         title: `${cafe.name} Menu | Grounds`,
         description:
             `View the menu at ${cafe.name} with prices and photos. ${cafe.description || ""}`.trim(),
+        alternates: {
+            canonical: `${siteUrl}/cafes/${slug}/menu`,
+        },
         openGraph: {
             title: `${cafe.name} Menu | Grounds`,
             description: `View the menu at ${cafe.name} with prices and photos.`,
+            url: `${siteUrl}/cafes/${slug}/menu`,
             images: thumbnailUrl
                 ? [{ url: thumbnailUrl, width: 1200, height: 630 }]
                 : undefined,
@@ -116,8 +123,52 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
     // Group items by category
     const categories = [...new Set(menuItems.map((item) => item.category))]
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
+
+    // Build BreadcrumbList JSON-LD
+    const breadcrumbs = buildBreadcrumbList([
+        { name: "Grounds PH", url: siteUrl },
+        { name: "Cafes", url: `${siteUrl}/cafes` },
+        { name: cafe.name, url: `${siteUrl}/cafes/${cafe.slug}` },
+        { name: "Menu", url: `${siteUrl}/cafes/${cafe.slug}/menu` },
+    ])
+
+    // Build Menu JSON-LD
+    const menuJsonLd = {
+        "@context": "https://schema.org",
+        "@type": "Menu",
+        name: `Menu for ${cafe.name}`,
+        hasMenuSection: [
+            {
+                "@type": "MenuSection",
+                name: "Drinks",
+                hasMenuItem: (menuItems || [])
+                    .filter((item: any) => item.category !== "Food")
+                    .map((item: any) => ({
+                        "@type": "MenuItem",
+                        name: item.name,
+                        description: item.description || "",
+                        offers: {
+                            "@type": "Offer",
+                            price: item.price,
+                            priceCurrency: "PHP",
+                        },
+                    })),
+            },
+        ],
+    }
+
     return (
         <div className='min-h-screen bg-background w-full'>
+            {/* JSON-LD Structured Data */}
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+            />
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(menuJsonLd) }}
+            />
             {/* Header - only shows if navigated from within the site */}
             <MenuHeader
                 slug={slug}

@@ -20,6 +20,8 @@ import BlogImageGallery from "@/components/blog/BlogImageGallery"
 import BlogCafeHighlights from "@/components/blog/BlogCafeHighlights"
 import BlogCrawlEmbed from "@/components/blog/BlogCrawlEmbed"
 import { buildPageMetadata } from "@/utils/seo/metadata"
+import { buildBlogPostingJsonLd } from "@/utils/seo/jsonld"
+import { buildBreadcrumbList } from "@/utils/seo/breadcrumbs"
 import { getCurrentUser } from "@/lib/auth"
 
 // Dynamic rendering for Dokploy build
@@ -124,8 +126,31 @@ export default async function BlogPostPage({
     const readingTime = estimateReadingTime(post.content)
     const categoryInfo = BLOG_CATEGORIES.find((c) => c.value === post.category)
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
+    const blogPostingJsonLd = buildBlogPostingJsonLd({
+        title: post.title,
+        url: `${siteUrl}/blog/${post.slug}`,
+        description: post.excerpt || post.content?.slice(0, 160) || "",
+        imageUrl: post.cover_image || undefined,
+        authorName: post.author?.display_name || "Grounds PH",
+        authorUrl: post.author?.username
+            ? `${siteUrl}/profile/${post.author.username}`
+            : undefined,
+        datePublished: post.published_at || post.created_at || "",
+        dateModified: post.updated_at || undefined,
+    })
+
+    const breadcrumbs = buildBreadcrumbList([
+        { name: "Grounds PH", url: siteUrl },
+        { name: "Blog", url: `${siteUrl}/blog` },
+        { name: post.title, url: `${siteUrl}/blog/${post.slug}` },
+    ])
+
     return (
         <main className='w-full min-h-screen bg-background [&_button]:cursor-pointer'>
+            {/* JSON-LD Structured Data */}
+            <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd) }} />
+            <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
             {/* Draft Banner */}
             {(isDraft || isPending) && (
                 <div className='sticky top-0 z-30 bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-4'>

@@ -6,11 +6,18 @@ import { getFeaturedPosts, getPublishedBlogPosts } from "@/app/api/actions/blog"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-    title: "Blog",
-    description:
-        "Coffee stories, brewing guides, and news from the Philippine coffee community",
+    title: "Blog | Grounds PH",
+    description: "Latest cafe news, guides, and community stories from Grounds PH.",
     alternates: {
-        canonical: "/community?tab=blogs",
+        canonical: "/blog",
+    },
+    keywords: [
+        "cafe blog", "coffee guides", "cafe news Philippines",
+        "coffee culture", "Philippines cafe stories",
+    ],
+    openGraph: {
+        title: "Blog | Grounds PH",
+        description: "Latest cafe news, guides, and community stories from Grounds PH.",
     },
 }
 

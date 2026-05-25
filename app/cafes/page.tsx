@@ -7,6 +7,10 @@ export const metadata: Metadata = {
     title: "Cafes",
     description:
         "Discover the best cafes for coffee lovers and remote workers. Browse our curated list of cafes with WiFi, power outlets, and great coffee.",
+    keywords: [
+        "cafes Philippines", "coffee shops", "cafe directory",
+        "find cafes near me", "coffee finder Philippines",
+    ],
     openGraph: {
         title: "Cafes",
         description:

@@ -138,6 +138,11 @@ export const metadata: Metadata = {
         ],
     },
     category: "food and drink",
+    verification: {
+        google: process.env.GOOGLE_SITE_VERIFICATION,
+        yandex: process.env.YANDEX_SITE_VERIFICATION,
+        yahoo: process.env.YAHOO_SITE_VERIFICATION,
+    },
 }
 
 export default function RootLayout({

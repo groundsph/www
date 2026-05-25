@@ -14,6 +14,10 @@ export const metadata: Metadata = {
     title: "Community",
     description:
         "Discover curated cafe collections, connect with coffee enthusiasts, and find upcoming events across the Philippines.",
+    keywords: [
+        "coffee community Philippines", "cafe crawls", "cafe collections",
+        "coffee events Philippines", "coffee enthusiasts",
+    ],
     openGraph: {
         title: "Community | Grounds",
         description:

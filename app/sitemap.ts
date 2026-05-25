@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/db'
-import { cafes, blogPosts, cafeMenuItems, collections, cafeCrawls } from '@/db/schema'
+import { cafes, blogPosts, cafeMenuItems, collections, cafeCrawls, profiles } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { buildSitemapEntries } from '@/utils/seo/sitemap'
 import { getProductionFilter } from '@/utils/filters'
@@ -50,6 +50,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .from(cafeCrawls)
         .where(and(eq(cafeCrawls.isPublic, true), eq(cafeCrawls.status, 'published')))
 
+    const profileResults = await db
+        .select({ username: profiles.username, updatedAt: profiles.updatedAt })
+        .from(profiles)
+        .where(and(
+            eq(profiles.profileCompleted, true),
+            eq(profiles.isPrivate, false)
+        ))
+        .limit(500)
+
     return buildSitemapEntries({
         baseUrl,
         staticPages: [
@@ -75,6 +84,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         menus: menuResults,
         collections: collectionResults,
         crawls: crawlResults,
-        profiles: [],
+        profiles: profileResults,
     })
 }

@@ -7,6 +7,7 @@ import { getCafeMenuItems } from "@/app/api/actions/owner"
 import { getCafeEditPermission } from "@/app/api/actions/cafe-edit-permission"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { getCafeDescription, getCafeThumbnailUrl } from "@/utils/extras"
+import { buildBreadcrumbList } from "@/utils/seo/breadcrumbs"
 
 export async function generateMetadata({
     params,
@@ -46,14 +47,20 @@ export async function generateMetadata({
         ...(specialty || []),
     ].filter(Boolean)
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
+
     return {
         title: name,
         description: metaDescription,
         keywords: keywords,
+        alternates: {
+            canonical: `${siteUrl}/cafes/${slug}`,
+        },
         openGraph: {
             title: name,
             description: metaDescription,
             type: "website",
+            url: `${siteUrl}/cafes/${slug}`,
             images: thumbnailUrl ? [{ url: thumbnailUrl }] : undefined,
         },
         twitter: {
@@ -197,8 +204,15 @@ export default async function CafePage({
             </section>
         )
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
+
     // Generate JSON-LD for SEO
     const jsonLd = generateJsonLd(cafe)
+    const breadcrumbs = buildBreadcrumbList([
+        { name: "Grounds PH", url: siteUrl },
+        { name: "Cafes", url: `${siteUrl}/cafes` },
+        { name: cafe.name, url: `${siteUrl}/cafes/${cafe.slug}` },
+    ])
 
     // Pass cafe slug to client component
     return (
@@ -206,6 +220,10 @@ export default async function CafePage({
             <script
                 type='application/ld+json'
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
             />
             <CafeDetails
                 key={cafe.id}
