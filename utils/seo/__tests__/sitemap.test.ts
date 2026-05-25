@@ -69,4 +69,43 @@ describe("buildSitemapEntries", () => {
         expect(cafe?.priority).toBe(0.8)
         expect(cafe?.changeFrequency).toBe("weekly")
     })
+
+    it("includes profile entries when provided", () => {
+        const entries = buildSitemapEntries({
+            baseUrl: "https://grounds.ph",
+            staticPages: [],
+            cafes: [],
+            blogs: [],
+            menus: [],
+            collections: [],
+            crawls: [],
+            profiles: [
+                { username: "adrianbonpin", updatedAt: new Date("2025-01-01") },
+                { username: "notwabbit", updatedAt: null },
+            ],
+        })
+
+        const profileEntries = entries.filter(
+            (e) => e.url.includes("/profile/")
+        )
+        expect(profileEntries.length).toBe(2)
+        expect(profileEntries[0].url).toBe("https://grounds.ph/profile/adrianbonpin")
+        expect(profileEntries[1].url).toBe("https://grounds.ph/profile/notwabbit")
+    })
+
+    it("handles empty profiles gracefully", () => {
+        const entries = buildSitemapEntries({
+            baseUrl: "https://grounds.ph",
+            staticPages: [{ path: "/", changeFrequency: "daily", priority: 1 }],
+            cafes: [],
+            blogs: [],
+            menus: [],
+            collections: [],
+            crawls: [],
+            profiles: [],
+        })
+
+        expect(entries.length).toBe(1)
+        expect(entries[0].url).toBe("https://grounds.ph/")
+    })
 })
