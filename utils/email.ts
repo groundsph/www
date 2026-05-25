@@ -11,7 +11,7 @@ import EventRejectedEmail from "@/emails/EventRejectedEmail"
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Email sender
-const FROM_EMAIL = "Grounds <noreply@grounds.ph>"
+const FROM_EMAIL = "GroundsPH <noreply@grounds.ph>"
 
 /**
  * Send a password reset email to a user
@@ -21,7 +21,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
         const { data, error } = await resend.emails.send({
             from: FROM_EMAIL,
             to,
-            subject: "Reset Your Grounds Password",
+            subject: "Reset Your GroundsPH Password",
             react: PasswordResetEmail({ resetUrl, email: to }),
         })
 

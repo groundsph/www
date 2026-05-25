@@ -52,8 +52,7 @@ export default function EventApprovedEmail({
                         {/* Header */}
                         <Section className='text-center mb-8'>
                             <Heading className='text-4xl font-bold text-primary font-serif m-0'>
-                                Grounds
-                                <span className='text-secondary'>.</span>
+                                GroundsPH
                             </Heading>
                         </Section>
 
@@ -72,7 +71,7 @@ export default function EventApprovedEmail({
                             <Text className='text-text text-base leading-relaxed'>
                                 Great news! Your event submission{" "}
                                 <strong>{eventTitle}</strong> has been reviewed
-                                and approved. It is now live on Grounds and can
+                                and approved. It is now live on GroundsPH and can
                                 be discovered by coffee lovers everywhere!
                             </Text>
 
@@ -86,7 +85,7 @@ export default function EventApprovedEmail({
                             </Section>
 
                             <Text className='text-secondary text-sm'>
-                                Thank you for contributing to the Grounds
+                                Thank you for contributing to the GroundsPH
                                 community. Your help in sharing coffee events is
                                 greatly appreciated!
                             </Text>
@@ -96,12 +95,12 @@ export default function EventApprovedEmail({
                         <Section className='text-center mt-8'>
                             <Hr className='border-secondary my-6' />
                             <Text className='text-secondary text-sm m-0'>
-                                © {new Date().getFullYear()} Grounds. All rights
+                                © {new Date().getFullYear()} GroundsPH. All rights
                                 reserved.
                             </Text>
                             <Text className='text-secondary text-xs mt-2'>
                                 You received this email because you submitted an
-                                event to Grounds.
+                                event to GroundsPH.
                             </Text>
                         </Section>
                     </Container>

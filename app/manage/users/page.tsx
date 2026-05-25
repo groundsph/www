@@ -262,7 +262,7 @@ export default function UsersManagePage() {
                             {loading ? (
                                 <tr>
                                     <td
-                                        colSpan={7}
+                                        colSpan={8}
                                         className='px-4 py-16 text-center'
                                     >
                                         <Loader2 className='w-6 h-6 mx-auto animate-spin text-text opacity-40' />
@@ -271,7 +271,7 @@ export default function UsersManagePage() {
                             ) : profiles.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={7}
+                                        colSpan={8}
                                         className='px-4 py-16 text-center'
                                     >
                                         <Users className='w-10 h-10 mx-auto text-text opacity-30 mb-2' />

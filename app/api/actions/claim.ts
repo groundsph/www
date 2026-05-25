@@ -433,7 +433,7 @@ export async function approveClaim(
 
         if (email && cafe) {
             await resend.emails.send({
-                from: "Grounds <noreply@grounds.ph>",
+                from: "GroundsPH <noreply@grounds.ph>",
                 to: email,
                 subject: `Your claim for ${cafe.name} has been approved! 🎉`,
                 react: ClaimApprovedEmail({
@@ -519,7 +519,7 @@ export async function rejectClaim(
 
             if (email && cafe) {
                 await resend.emails.send({
-                    from: "Grounds <noreply@grounds.ph>",
+                    from: "GroundsPH <noreply@grounds.ph>",
                     to: email,
                     subject: `Update on your claim for ${cafe.name}`,
                     react: ClaimRejectedEmail({

@@ -231,6 +231,16 @@ export default function AuthPage() {
             return
         }
 
+        // Block signups with @grounds.ph email addresses
+        if (email.toLowerCase().endsWith("@grounds.ph")) {
+            addNotification(
+                "Signups with @grounds.ph email addresses are not allowed. Please use a different email.",
+                "error"
+            )
+            setIsLoading(false)
+            return
+        }
+
         try {
             const { error } = await signUp.email({
                 email,

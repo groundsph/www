@@ -3844,11 +3844,12 @@ export async function deleteUserAsAdmin(userId: string): Promise<AdminActionResu
 // Profile Management Functions
 // ============================================
 
-export type ProfileSortField = "created_at" | "username" | "display_name" | "role" | "total_contribution"
+export type ProfileSortField = "created_at" | "username" | "display_name" | "email" | "role" | "total_contribution"
 export type ProfileSortDirection = "asc" | "desc"
 
 export interface ProfileForAdmin {
     id: string
+    email: string
     username: string
     displayName: string
     avatarUrl: string | null
@@ -3901,7 +3902,8 @@ export async function getProfilesForAdmin(options: {
     const searchCondition = search.trim()
         ? or(
             ilike(profiles.username, `%${search.trim()}%`),
-            ilike(profiles.displayName, `%${search.trim()}%`)
+            ilike(profiles.displayName, `%${search.trim()}%`),
+            ilike(user.email, `%${search.trim()}%`)
         )
         : undefined
 
@@ -3911,6 +3913,7 @@ export async function getProfilesForAdmin(options: {
         created_at: profiles.createdAt,
         username: profiles.username,
         display_name: profiles.displayName,
+        email: user.email,
         role: profiles.role,
         total_contribution: profiles.createdAt, // Sort by date when sorting by contribution since we count separately
     }[sortField]
@@ -3919,6 +3922,7 @@ export async function getProfilesForAdmin(options: {
     const profilesResult = await db
         .select({
             id: profiles.id,
+            email: user.email,
             username: profiles.username,
             displayName: profiles.displayName,
             avatarUrl: profiles.avatarUrl,
@@ -3928,6 +3932,7 @@ export async function getProfilesForAdmin(options: {
             contributionCount: sql<number>`(SELECT COUNT(*) FROM contribution_logs WHERE contribution_logs.user_id = profiles.id AND (contribution_logs.details->>'source' IS NULL OR contribution_logs.details->>'source' != 'admin_edit'))`,
         })
         .from(profiles)
+        .innerJoin(user, eq(profiles.id, user.id))
         .where(searchCondition)
         .orderBy(
             sortField === "total_contribution"
@@ -3967,6 +3972,7 @@ export async function getProfilesForAdmin(options: {
     return {
         profiles: profilesResult.map((p) => ({
             id: p.id,
+            email: p.email,
             username: p.username,
             displayName: p.displayName,
             avatarUrl: p.avatarUrl,

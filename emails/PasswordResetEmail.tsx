@@ -39,7 +39,7 @@ export default function PasswordResetEmail({
 }: PasswordResetEmailProps) {
     return (
         <Html>
-            <Preview>Reset your Grounds password</Preview>
+            <Preview>Reset your GroundsPH password</Preview>
             <Tailwind config={tailwindConfig}>
                 <Head />
                 <Body className='bg-tertiary font-sans'>
@@ -47,8 +47,7 @@ export default function PasswordResetEmail({
                         {/* Header */}
                         <Section className='text-center mb-8'>
                             <Heading className='text-4xl font-bold text-primary font-serif m-0'>
-                                Grounds
-                                <span className='text-secondary'>.</span>
+                                GroundsPH
                             </Heading>
                         </Section>
 
@@ -89,7 +88,7 @@ export default function PasswordResetEmail({
                         <Section className='text-center mt-8'>
                             <Hr className='border-secondary my-6' />
                             <Text className='text-secondary text-sm m-0'>
-                                © {new Date().getFullYear()} Grounds. All rights
+                                © {new Date().getFullYear()} GroundsPH. All rights
                                 reserved.
                             </Text>
                             <Text className='text-secondary text-xs mt-2'>

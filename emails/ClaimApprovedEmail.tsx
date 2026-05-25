@@ -54,8 +54,7 @@ export default function ClaimApprovedEmail({
                         {/* Header */}
                         <Section className='text-center mb-8'>
                             <Heading className='text-4xl font-bold text-primary font-serif m-0'>
-                                Grounds
-                                <span className='text-secondary'>.</span>
+                                GroundsPH
                             </Heading>
                         </Section>
 
@@ -73,7 +72,7 @@ export default function ClaimApprovedEmail({
                                 Great news! Your ownership claim for{" "}
                                 <strong>{cafeName}</strong> has been verified
                                 and approved. You now have full access to manage
-                                your cafe&apos;s listing on Grounds!
+                                your cafe&apos;s listing on GroundsPH!
                             </Text>
 
                             <Text className='text-text text-base leading-relaxed'>
@@ -106,7 +105,7 @@ export default function ClaimApprovedEmail({
                             </Section>
 
                             <Text className='text-secondary text-sm'>
-                                Welcome to the Grounds community of cafe owners!
+                                Welcome to the GroundsPH community of cafe owners!
                             </Text>
                         </Section>
 
@@ -114,12 +113,12 @@ export default function ClaimApprovedEmail({
                         <Section className='text-center mt-8'>
                             <Hr className='border-secondary my-6' />
                             <Text className='text-secondary text-sm m-0'>
-                                © {new Date().getFullYear()} Grounds. All rights
+                                © {new Date().getFullYear()} GroundsPH. All rights
                                 reserved.
                             </Text>
                             <Text className='text-secondary text-xs mt-2'>
                                 You received this email because you claimed
-                                ownership of a cafe on Grounds.
+                                ownership of a cafe on GroundsPH.
                             </Text>
                         </Section>
                     </Container>

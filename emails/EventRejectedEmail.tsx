@@ -49,8 +49,7 @@ export default function EventRejectedEmail({
                         {/* Header */}
                         <Section className='text-center mb-8'>
                             <Heading className='text-4xl font-bold text-primary font-serif m-0'>
-                                Grounds
-                                <span className='text-secondary'>.</span>
+                                GroundsPH
                             </Heading>
                         </Section>
 
@@ -68,7 +67,7 @@ export default function EventRejectedEmail({
 
                             <Text className='text-text text-base leading-relaxed'>
                                 Thank you for your interest in sharing coffee
-                                events with the Grounds community.
+                                events with the GroundsPH community.
                                 Unfortunately, your event submission{" "}
                                 <strong>{eventTitle}</strong> was not approved.
                             </Text>
@@ -97,12 +96,12 @@ export default function EventRejectedEmail({
                         <Section className='text-center mt-8'>
                             <Hr className='border-secondary my-6' />
                             <Text className='text-secondary text-sm m-0'>
-                                © {new Date().getFullYear()} Grounds. All rights
+                                © {new Date().getFullYear()} GroundsPH. All rights
                                 reserved.
                             </Text>
                             <Text className='text-secondary text-xs mt-2'>
                                 You received this email because you submitted an
-                                event to Grounds.
+                                event to GroundsPH.
                             </Text>
                         </Section>
                     </Container>

@@ -6,6 +6,7 @@ import { admin, apiKey, lastLoginMethod } from "better-auth/plugins"
 import { passkey } from "@better-auth/passkey"
 import * as authSchema from "@/db/schema/auth"
 import bcrypt from "bcrypt"
+import { APIError } from "better-call"
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
@@ -19,6 +20,20 @@ export const auth = betterAuth({
             apikey: authSchema.apikey,
         },
     }),
+    databaseHooks: {
+        user: {
+            create: {
+                before: async (user) => {
+                    if (user.email?.toLowerCase().endsWith("@grounds.ph")) {
+                        throw new APIError("BAD_REQUEST", {
+                            message:
+                                "Signups with @grounds.ph email addresses are not allowed. Please use a different email.",
+                        })
+                    }
+                },
+            },
+        },
+    },
     advanced: {
         database: {
             generateId: false

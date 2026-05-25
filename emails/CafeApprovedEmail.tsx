@@ -54,8 +54,7 @@ export default function CafeApprovedEmail({
                         {/* Header */}
                         <Section className='text-center mb-8'>
                             <Heading className='text-4xl font-bold text-primary font-serif m-0'>
-                                Grounds
-                                <span className='text-secondary'>.</span>
+                                GroundsPH
                             </Heading>
                         </Section>
 
@@ -74,7 +73,7 @@ export default function CafeApprovedEmail({
                             <Text className='text-text text-base leading-relaxed'>
                                 Great news! Your cafe submission{" "}
                                 <strong>{cafeName}</strong> has been reviewed
-                                and approved. It is now live on Grounds and can
+                                and approved. It is now live on GroundsPH and can
                                 be discovered by coffee lovers everywhere!
                             </Text>
 
@@ -88,7 +87,7 @@ export default function CafeApprovedEmail({
                             </Section>
 
                             <Text className='text-secondary text-sm'>
-                                Thank you for contributing to the Grounds
+                                Thank you for contributing to the GroundsPH
                                 community. Your help in mapping the coffee scene
                                 is greatly appreciated!
                             </Text>
@@ -98,12 +97,12 @@ export default function CafeApprovedEmail({
                         <Section className='text-center mt-8'>
                             <Hr className='border-secondary my-6' />
                             <Text className='text-secondary text-sm m-0'>
-                                © {new Date().getFullYear()} Grounds. All rights
+                                © {new Date().getFullYear()} GroundsPH. All rights
                                 reserved.
                             </Text>
                             <Text className='text-secondary text-xs mt-2'>
                                 You received this email because you submitted a
-                                cafe to Grounds.
+                                cafe to GroundsPH.
                             </Text>
                         </Section>
                     </Container>

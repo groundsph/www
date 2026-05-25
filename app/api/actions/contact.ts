@@ -40,10 +40,10 @@ export async function sendContactEmail(data: ContactFormData): Promise<{
 
     try {
         const { error } = await resend.emails.send({
-            from: "Grounds Contact <contact@grounds.ph>",
+            from: "GroundsPH Contact <contact@grounds.ph>",
             to: "adrianbonpin@gmail.com",
             replyTo: email,
-            subject: `[Grounds Contact] ${subject}`,
+            subject: `[GroundsPH Contact] ${subject}`,
             react: ContactEmail({
                 name: name.trim(),
                 email: email.trim(),
