@@ -63,7 +63,7 @@ import {
     uploadCafeImageWithProgress,
     uploadOwnershipProofWithProgress,
 } from "@/utils/storage/client"
-import { submitCafe, SubmitCafeResult } from "@/app/api/actions/submit"
+import { submitCafe } from "@/app/api/actions/submit"
 import { SubmitError } from "@/utils/validation/cafe-submission"
 import { submitCafeClaim } from "@/app/api/actions/claim"
 import { searchCafesSimple } from "@/app/api/actions/cafe"

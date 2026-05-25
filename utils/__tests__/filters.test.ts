@@ -1,7 +1,7 @@
-import { describe, it, expect, mock, afterEach } from "bun:test"
+import { describe, it, expect, afterEach } from "bun:test"
 import { getProductionFilter, omitTestCafes } from "@/utils/filters"
 import { cafes } from "@/db/schema"
-import { eq, and, SQL } from "drizzle-orm"
+import { eq, SQL } from "drizzle-orm"
 
 describe("getProductionFilter", () => {
   afterEach(() => {

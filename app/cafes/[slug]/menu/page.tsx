@@ -143,8 +143,8 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
                 "@type": "MenuSection",
                 name: "Drinks",
                 hasMenuItem: (menuItems || [])
-                    .filter((item: any) => item.category !== "Food")
-                    .map((item: any) => ({
+                    .filter((item: { category: string }) => item.category !== "Food")
+                    .map((item: { name: string; description: string | null; price: number }) => ({
                         "@type": "MenuItem",
                         name: item.name,
                         description: item.description || "",

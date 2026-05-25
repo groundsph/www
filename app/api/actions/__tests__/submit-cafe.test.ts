@@ -81,7 +81,7 @@ describe("submitCafe", () => {
 
     it("returns structured error on validation failure", async () => {
         const result = await submitCafe(
-            { name: "" } as any, // Empty name triggers Zod validation failure
+            { name: "" } as Record<string, unknown>, // Empty name triggers Zod validation failure
             null,
             []
         )
