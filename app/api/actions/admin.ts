@@ -3949,6 +3949,7 @@ export async function getProfilesForAdmin(options: {
     const countResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(profiles)
+        .leftJoin(user, eq(profiles.id, user.id))
         .where(searchCondition)
 
     // Get aggregate stats (all profiles, not filtered)
