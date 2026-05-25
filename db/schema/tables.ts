@@ -153,6 +153,7 @@ export const cafes = pgTable(
         ownerIds: uuid("owner_ids").array(),
         contributorId: uuid("contributor_id").references(() => profiles.id, { onDelete: "set null" }),
         featuredUntil: timestamp("featured_until", { withTimezone: true }),
+        isTest: boolean("is_test").default(false).notNull(),
         searchVector: tsvector("search_vector"),
         isMallCafe: boolean("is_mall_cafe").default(false),
         mallVerificationStatus: enums.mallVerificationStatusEnum("mall_verification_status").default("pending"),

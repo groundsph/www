@@ -1,0 +1,1 @@
+ALTER TABLE "cafes" ADD COLUMN "is_test" boolean DEFAULT false NOT NULL;
