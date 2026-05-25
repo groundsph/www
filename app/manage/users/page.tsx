@@ -198,7 +198,7 @@ export default function UsersManagePage() {
                 <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                 <input
                     type='text'
-                    placeholder='Search by username or display name...'
+                    placeholder='Search by username, display name, or email...'
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className='w-full pl-10 pr-4 py-2 bg-tertiary/20 border border-tertiary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm'
@@ -219,6 +219,15 @@ export default function UsersManagePage() {
                                     >
                                         Username
                                         {getSortIcon("username")}
+                                    </button>
+                                </th>
+                                <th className='px-4 py-3 font-medium'>
+                                    <button
+                                        onClick={() => handleSort("email")}
+                                        className='flex items-center gap-1 hover:text-text/60 transition'
+                                    >
+                                        Email
+                                        {getSortIcon("email")}
                                     </button>
                                 </th>
                                 <th className='px-4 py-3 font-medium'>
@@ -309,6 +318,9 @@ export default function UsersManagePage() {
                                             className='px-4 py-3 text-text/60 text-sm hover:underline cursor-pointer'
                                         >
                                             @{profile.username}
+                                        </td>
+                                        <td className='px-4 py-3 text-text/60 text-sm max-w-[250px] truncate'>
+                                            {profile.email}
                                         </td>
                                         <td className='px-4 py-3'>
                                             <span
