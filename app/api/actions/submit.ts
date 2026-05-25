@@ -9,32 +9,54 @@ import { SerializableCafeSubmission } from "@/utils/types/extra"
 import { OperatingHour } from "@/utils/types/cafe"
 import { logContribution } from "@/utils/contribution-logging"
 
-// Generate a URL-friendly slug from cafe name
-function generateSlug(name: string): string {
-    return name
+function generateSlug(name: string, cityMunicipality?: string, province?: string): string {
+    const slugify = (s: string): string => s
         .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-        .replace(/\s+/g, '-') // Replace spaces with hyphens
-        .replace(/-+/g, '-') // Replace multiple hyphens with single
-        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+
+    const nameSlug = slugify(name) || "cafe"
+
+    if (cityMunicipality && province) {
+        const citySlug = slugify(cityMunicipality)
+        const provSlug = slugify(province)
+
+        let locationSlug = ""
+        if (citySlug && provSlug) locationSlug = `${citySlug}-${provSlug}`
+        else if (provSlug) locationSlug = provSlug
+
+        if (locationSlug) {
+            const combined = `${nameSlug}-${locationSlug}`
+            return combined.length > 200 ? combined.slice(0, 200).replace(/-$/, "") : combined
+        }
+    }
+
+    return nameSlug.length > 200 ? nameSlug.slice(0, 200).replace(/-$/, "") : nameSlug
 }
 
-// Make slug unique by appending random suffix if needed
+const MAX_SLUG_ITERATIONS = 100
+
 async function ensureUniqueSlug(baseSlug: string): Promise<string> {
     let slug = baseSlug
     let counter = 0
 
-    while (true) {
+    while (counter < MAX_SLUG_ITERATIONS) {
         const result = await db
             .select({ id: cafes.id })
             .from(cafes)
             .where(eq(cafes.slug, slug))
             .limit(1)
 
-        if (!result[0]) break // Slug is unique
+        if (!result[0]) break
 
         counter++
         slug = `${baseSlug}-${counter}`
+    }
+
+    if (counter >= MAX_SLUG_ITERATIONS) {
+        throw new Error("SLUG_EXHAUSTED")
     }
 
     return slug
@@ -83,7 +105,11 @@ export async function submitCafe(
 
     try {
         // Generate unique slug
-        const baseSlug = generateSlug(formData.name)
+        const baseSlug = generateSlug(
+            formData.name,
+            formData.city_municipality,
+            formData.province
+        )
         const slug = await ensureUniqueSlug(baseSlug)
 
         // Format operating hours for DB
