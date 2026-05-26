@@ -633,6 +633,47 @@ describe("region filtering integration", () => {
             expect(result.error).toBe("Unauthorized - cafe is outside your region scope")
         })
 
+        it("updateCafe accepts region/province/city_municipality fields", async () => {
+            mockGetCurrentUser.setCurrentUser({ id: "admin1" })
+            mockProfilesData["admin1"] = { role: "admin", id: "admin1" }
+
+            const mockCafesDb: Record<string, { id: string; name: string; region: string }> = {
+                "cafe1": { id: "cafe1", name: "Test Cafe", region: "NCR - National Capital Region" }
+            }
+
+            let savedUpdates: Record<string, unknown> | null = null
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const updateCafe = async (cafeId: string, _updates: Record<string, unknown>) => {
+                const currentUser = await mockGetCurrentUser.getCurrentUser()
+                if (!currentUser) return { success: false, error: "Not authenticated" }
+
+                const profile = mockProfilesData[currentUser.id]
+                if (profile?.role !== "admin" && profile?.role !== "moderator") {
+                    return { success: false, error: "Unauthorized" }
+                }
+
+                const cafe = mockCafesDb[cafeId]
+                if (!cafe) return { success: false, error: "Cafe not found" }
+
+                savedUpdates = _updates
+                return { success: true }
+            }
+
+            const result = await updateCafe("cafe1", {
+                name: "Updated Cafe",
+                region: "Region VII - Central Visayas",
+                province: "Cebu",
+                city_municipality: "Cebu City",
+            })
+
+            expect(result.success).toBe(true)
+            expect(savedUpdates).toBeDefined()
+            expect(savedUpdates?.region).toBe("Region VII - Central Visayas")
+            expect(savedUpdates?.province).toBe("Cebu")
+            expect(savedUpdates?.city_municipality).toBe("Cebu City")
+        })
+
         it("deleteCafeStory enforces region scoping", async () => {
             mockGetCurrentUser.setCurrentUser({ id: "mod123" })
             mockProfilesData["mod123"] = { role: "moderator", id: "mod123" }

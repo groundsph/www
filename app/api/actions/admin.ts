@@ -838,6 +838,9 @@ export async function updateCafe(
         name: string
         description: string
         address_display: string
+        region: string
+        province: string
+        city_municipality: string
         area: string
         lat: number
         lng: number
@@ -904,8 +907,11 @@ export async function updateCafe(
 
     // Validate region access for moderators with region restrictions
     const regions = await getModeratorRegionsForCurrentUser()
-    if (regions.length > 0 && currentCafe && !regions.includes(currentCafe.region)) {
-        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
+    if (regions.length > 0) {
+        const effectiveRegion = updates.region || currentCafe?.region
+        if (currentCafe && !regions.includes(effectiveRegion!)) {
+            return { success: false, error: "Unauthorized - cafe is outside your region scope" }
+        }
     }
 
     // Map snake_case updates to camelCase for Drizzle
@@ -939,6 +945,7 @@ export async function updateCafe(
         is_halal_certified: 'isHalalCertified',
         straw_type: 'strawType',
         straw_type_other: 'strawTypeOther',
+        city_municipality: 'cityMunicipality',
     }
 
     const drizzleUpdates: Record<string, unknown> = { updatedAt: new Date() }
