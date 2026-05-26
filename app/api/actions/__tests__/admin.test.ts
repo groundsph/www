@@ -719,5 +719,117 @@ describe("region filtering integration", () => {
             expect(result.success).toBe(false)
             expect(result.error).toBe("Unauthorized - cafe is outside your region scope")
         })
+
+        it("blocks moderator from changing cafe region outside their scope", async () => {
+            mockGetCurrentUser.setCurrentUser({ id: "mod123" })
+            mockProfilesData["mod123"] = { role: "moderator", id: "mod123" }
+
+            const mockCafesDb: Record<string, { id: string; name: string; region: string }> = {
+                "cafe1": { id: "cafe1", name: "Test Cafe", region: "Region I" }
+            }
+
+            const mockModeratorRegions: Record<string, string[]> = {
+                "mod123": ["Region I"]
+            }
+
+            const normalizeRegions = (regions?: string[] | null): string[] => {
+                if (!regions || regions.length === 0) return []
+                return regions
+                    .map(r => r.trim())
+                    .filter(r => r.length > 0)
+                    .filter((r, i, arr) => arr.indexOf(r) === i)
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const updateCafe = async (cafeId: string, _updates: Record<string, unknown>) => {
+                const currentUser = await mockGetCurrentUser.getCurrentUser()
+                if (!currentUser) return { success: false, error: "Not authenticated" }
+
+                const profile = mockProfilesData[currentUser.id]
+                if (profile?.role !== "admin" && profile?.role !== "moderator") {
+                    return { success: false, error: "Unauthorized" }
+                }
+
+                const cafe = mockCafesDb[cafeId]
+                if (!cafe) return { success: false, error: "Cafe not found" }
+
+                // CHECK UPDATED REGION, not current region
+                const regions = normalizeRegions(mockModeratorRegions[currentUser.id])
+                if (regions.length > 0) {
+                    const effectiveRegion = _updates.region || cafe.region
+                    if (!regions.includes(effectiveRegion)) {
+                        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
+                    }
+                }
+
+                return { success: true }
+            }
+
+            // Moderator in Region I tries to change a Region I cafe to Region VI
+            const result = await updateCafe("cafe1", {
+                name: "Updated Cafe",
+                region: "Region VI - Western Visayas",
+                province: "Iloilo",
+                city_municipality: "Iloilo City",
+            })
+
+            expect(result.success).toBe(false)
+            expect(result.error).toBe("Unauthorized - cafe is outside your region scope")
+        })
+
+        it("allows moderator to change region within their scope", async () => {
+            mockGetCurrentUser.setCurrentUser({ id: "mod456" })
+            mockProfilesData["mod456"] = { role: "moderator", id: "mod456" }
+
+            const mockCafesDb: Record<string, { id: string; name: string; region: string }> = {
+                "cafe1": { id: "cafe1", name: "Test Cafe", region: "Region I" }
+            }
+
+            const mockModeratorRegions: Record<string, string[]> = {
+                "mod456": ["Region I", "Region II - Cagayan Valley"]
+            }
+
+            const normalizeRegions = (regions?: string[] | null): string[] => {
+                if (!regions || regions.length === 0) return []
+                return regions
+                    .map(r => r.trim())
+                    .filter(r => r.length > 0)
+                    .filter((r, i, arr) => arr.indexOf(r) === i)
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const updateCafe = async (cafeId: string, _updates: Record<string, unknown>) => {
+                const currentUser = await mockGetCurrentUser.getCurrentUser()
+                if (!currentUser) return { success: false, error: "Not authenticated" }
+
+                const profile = mockProfilesData[currentUser.id]
+                if (profile?.role !== "admin" && profile?.role !== "moderator") {
+                    return { success: false, error: "Unauthorized" }
+                }
+
+                const cafe = mockCafesDb[cafeId]
+                if (!cafe) return { success: false, error: "Cafe not found" }
+
+                const regions = normalizeRegions(mockModeratorRegions[currentUser.id])
+                if (regions.length > 0) {
+                    const effectiveRegion = _updates.region || cafe.region
+                    if (!regions.includes(effectiveRegion)) {
+                        return { success: false, error: "Unauthorized - cafe is outside your region scope" }
+                    }
+                }
+
+                return { success: true }
+            }
+
+            // Moderator with Region I + II access changes region within scope
+            const result = await updateCafe("cafe1", {
+                name: "Updated Cafe",
+                region: "Region II - Cagayan Valley",
+                province: "Cagayan",
+                city_municipality: "Tuguegarao City",
+            })
+
+            expect(result.success).toBe(true)
+        })
     })
 })
