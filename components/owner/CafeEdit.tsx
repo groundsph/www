@@ -100,6 +100,9 @@ export default function CafeEdit({
             area: cafe.area || undefined,
             lat: cafe.lat || undefined,
             lng: cafe.lng || undefined,
+            region: cafe.region,
+            province: cafe.province,
+            city_municipality: cafe.city_municipality,
             has_wifi: cafe.has_wifi || false,
             has_smoking: cafe.has_smoking || false,
             has_sockets: cafe.has_sockets || false,
@@ -512,7 +515,7 @@ export default function CafeEdit({
                                     )
                                     setHasChanges(true)
                                 }}
-                                readOnlyLocation={true}
+                                readOnlyLocation={false}
                                 colorScheme='primary'
                             />
                         )}
