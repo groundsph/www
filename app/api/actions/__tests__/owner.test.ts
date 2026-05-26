@@ -29,11 +29,10 @@ describe("updateCafeAsOwner", () => {
         expect(receivedUpdates?.city_municipality).toBe("Makati")
     })
 
-    it("maps city_municipality to cityMunicipality via fieldMap", () => {
+    it("maps city_municipality to cityMunicipality via fieldMap", async () => {
         // Replicate the EXACT fieldMap from updateCafeAsOwner
-        // This test reads the actual source to verify the mapping exists
-        const fs = require("fs")
-        const source = fs.readFileSync("app/api/actions/owner.ts", "utf-8")
+        // This reads the actual source to verify the mapping exists
+        const source = await Bun.file("app/api/actions/owner.ts").text()
 
         // Verify city_municipality is in the fieldMap
         const fieldMapPattern = /city_municipality:\s*'cityMunicipality'/

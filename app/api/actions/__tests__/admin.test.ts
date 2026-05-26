@@ -643,8 +643,7 @@ describe("region filtering integration", () => {
 
             let savedUpdates: Record<string, unknown> | null = null
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const updateCafe = async (cafeId: string, _updates: Record<string, unknown>) => {
+            const updateCafe = async (cafeId: string, updates: Record<string, unknown>) => {
                 const currentUser = await mockGetCurrentUser.getCurrentUser()
                 if (!currentUser) return { success: false, error: "Not authenticated" }
 
@@ -656,7 +655,7 @@ describe("region filtering integration", () => {
                 const cafe = mockCafesDb[cafeId]
                 if (!cafe) return { success: false, error: "Cafe not found" }
 
-                savedUpdates = _updates
+                savedUpdates = updates
                 return { success: true }
             }
 
@@ -740,8 +739,7 @@ describe("region filtering integration", () => {
                     .filter((r, i, arr) => arr.indexOf(r) === i)
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const updateCafe = async (cafeId: string, _updates: Record<string, unknown>) => {
+            const updateCafe = async (cafeId: string, updates: Record<string, unknown>) => {
                 const currentUser = await mockGetCurrentUser.getCurrentUser()
                 if (!currentUser) return { success: false, error: "Not authenticated" }
 
@@ -756,7 +754,7 @@ describe("region filtering integration", () => {
                 // CHECK UPDATED REGION, not current region
                 const regions = normalizeRegions(mockModeratorRegions[currentUser.id])
                 if (regions.length > 0) {
-                    const effectiveRegion = _updates.region || cafe.region
+                    const effectiveRegion = updates.region || cafe.region
                     if (!regions.includes(effectiveRegion)) {
                         return { success: false, error: "Unauthorized - cafe is outside your region scope" }
                     }
@@ -797,8 +795,7 @@ describe("region filtering integration", () => {
                     .filter((r, i, arr) => arr.indexOf(r) === i)
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const updateCafe = async (cafeId: string, _updates: Record<string, unknown>) => {
+            const updateCafe = async (cafeId: string, updates: Record<string, unknown>) => {
                 const currentUser = await mockGetCurrentUser.getCurrentUser()
                 if (!currentUser) return { success: false, error: "Not authenticated" }
 
@@ -812,7 +809,7 @@ describe("region filtering integration", () => {
 
                 const regions = normalizeRegions(mockModeratorRegions[currentUser.id])
                 if (regions.length > 0) {
-                    const effectiveRegion = _updates.region || cafe.region
+                    const effectiveRegion = updates.region || cafe.region
                     if (!regions.includes(effectiveRegion)) {
                         return { success: false, error: "Unauthorized - cafe is outside your region scope" }
                     }
