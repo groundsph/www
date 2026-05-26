@@ -473,3 +473,39 @@ describe("submitEditSuggestion validation", () => {
         expect(result.success).toBe(true)
     })
 })
+
+describe("submitEditSuggestion Zod validation integration", () => {
+    // Simulates the validation logic now in submitEditSuggestion after auth check
+    const simulateValidation = (changes: unknown) => {
+        const validation = suggestableFieldsSchema.safeParse(changes)
+        if (!validation.success) {
+            const firstIssue = validation.error.issues[0]
+            return {
+                success: false as const,
+                error: firstIssue?.message ?? "Invalid field values",
+            }
+        }
+        return { success: true as const }
+    }
+
+    it("rejects lat=200 in changes and returns error message", () => {
+        const result = simulateValidation({ lat: 200 })
+        expect(result.success).toBe(false)
+        if (!result.success) {
+            expect(result.error).toBeTruthy()
+        }
+    })
+
+    it("rejects invalid website_url in changes and returns error message", () => {
+        const result = simulateValidation({ website_url: "not-a-url" })
+        expect(result.success).toBe(false)
+        if (!result.success) {
+            expect(result.error).toBeTruthy()
+        }
+    })
+
+    it("accepts valid changes through server action validation", () => {
+        const result = simulateValidation({ name: "Updated Cafe", lat: 14.5, lng: 121.0 })
+        expect(result.success).toBe(true)
+    })
+})

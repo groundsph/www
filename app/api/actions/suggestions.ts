@@ -13,6 +13,7 @@ import {
 } from "@/utils/types/suggestions"
 import { logContribution } from "@/utils/contribution-logging"
 import { getModeratorRegionsForCurrentUser } from "@/utils/moderation/region-access"
+import { suggestableFieldsSchema } from "@/utils/validation/cafe-submission"
 
 // Map snake_case suggestion fields to camelCase Drizzle columns
 const fieldMapping: Record<string, string> = {
@@ -85,6 +86,16 @@ export async function submitEditSuggestion(
     const currentUser = await getCurrentUser()
     if (!currentUser) {
         return { success: false, error: "Not authenticated" }
+    }
+
+    // Validate changes with Zod schema
+    const validation = suggestableFieldsSchema.safeParse(changes)
+    if (!validation.success) {
+        const firstIssue = validation.error.issues[0]
+        return {
+            success: false,
+            error: firstIssue?.message ?? "Invalid field values",
+        }
     }
 
     // Validate that there are actual changes
