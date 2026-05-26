@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { cafes, profiles, cafeMenuItems } from "@/db/schema"
-import { eq, and, ilike, sql } from "drizzle-orm"
+import { eq, and, ilike, sql, or, like } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { notifyDiscord, notifyDiscordCritical } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
@@ -13,27 +13,45 @@ import { generateSlug, MAX_SLUG_ITERATIONS } from "@/utils/slug"
 
 
 async function ensureUniqueSlug(baseSlug: string): Promise<string> {
-    let slug = baseSlug
-    let counter = 0
+    // Single query: find all existing slugs that match the base or its numbered variants
+    const existing = await db
+        .select({ slug: cafes.slug })
+        .from(cafes)
+        .where(
+            or(
+                eq(cafes.slug, baseSlug),
+                like(cafes.slug, `${baseSlug}-%`)
+            )
+        )
 
-    while (counter < MAX_SLUG_ITERATIONS) {
-        const result = await db
-            .select({ id: cafes.id })
-            .from(cafes)
-            .where(eq(cafes.slug, slug))
-            .limit(1)
-
-        if (!result[0]) break
-
-        counter++
-        slug = `${baseSlug}-${counter}`
+    // If base slug doesn't exist, use it directly
+    const slugSet = new Set(existing.map(r => r.slug))
+    if (!slugSet.has(baseSlug)) {
+        return baseSlug
     }
 
-    if (counter >= MAX_SLUG_ITERATIONS) {
-        throw new Error("SLUG_EXHAUSTED")
+    // Find max suffix number among existing variants
+    let maxSuffix = 0
+    const prefix = `${baseSlug}-`
+    for (const slug of slugSet) {
+        if (slug.startsWith(prefix)) {
+            const suffix = parseInt(slug.slice(prefix.length), 10)
+            if (!isNaN(suffix) && suffix > maxSuffix) {
+                maxSuffix = suffix
+            }
+        }
     }
 
-    return slug
+    // Try numerical suffixes first
+    for (let i = maxSuffix + 1; i < maxSuffix + 100; i++) {
+        const candidate = `${baseSlug}-${i}`
+        if (!slugSet.has(candidate)) {
+            return candidate
+        }
+    }
+
+    // Fallback: use timestamp (epoch ms) as last resort
+    return `${baseSlug}-${Date.now()}`
 }
 
 export interface SubmitCafeResult {

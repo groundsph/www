@@ -5,9 +5,11 @@ mock.module("@/db", () => ({
     db: {
         select: () => ({
             from: () => ({
-                where: () => ({
-                    limit: () => Promise.resolve([])
-                })
+                where: () => {
+                    const p: any = Promise.resolve([])
+                    p.limit = () => p
+                    return p
+                }
             })
         }),
         insert: () => ({
@@ -103,9 +105,11 @@ describe("submitCafe", () => {
             db: {
                 select: () => ({
                     from: () => ({
-                        where: () => ({
-                            limit: () => Promise.resolve([])
-                        })
+                        where: () => {
+                            const p: any = Promise.resolve([])
+                            p.limit = () => p
+                            return p
+                        }
                     })
                 }),
                 insert: () => ({
