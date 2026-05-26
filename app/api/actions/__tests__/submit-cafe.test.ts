@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, mock } from "bun:test"
 import { submitCafe } from "@/app/api/actions/submit"
 import { getUserPendingSubmissions } from "@/app/api/actions/cafe"

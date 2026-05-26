@@ -8,7 +8,7 @@ import { notifyDiscord, notifyDiscordCritical } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
 import { logContribution } from "@/utils/contribution-logging"
 import { cafeSubmissionSchema, CafeSubmissionError, SubmitError } from "@/utils/validation/cafe-submission"
-import { generateSlug, MAX_SLUG_ITERATIONS } from "@/utils/slug"
+import { generateSlug } from "@/utils/slug"
 
 
 

@@ -102,7 +102,6 @@ function getTitleHints(name: string): { type: "warning" | "info"; message: strin
     const trimmed = name.trim()
     if (!trimmed) return hints
 
-    const wordCount = trimmed.split(/\s+/).length
     const charCount = trimmed.length
 
     // Very short names

@@ -37,10 +37,9 @@ mock.module("next/image", () => ({
 }))
 
 mock.module("next/link", () => ({
-    default: ({ children }: { children: any }) => children,
+    default: ({ children }: { children: unknown }) => children,
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 mock.module("@/utils/extras", () => ({
     getCafeThumbnailUrl: (thumbnail: string) => (thumbnail === "placeholder" ? "placeholder.jpg" : thumbnail),
 }))

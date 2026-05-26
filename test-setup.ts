@@ -65,7 +65,7 @@ HTMLCanvasElement.prototype.toDataURL = function () {
 }
 
 HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback) {
-    callback(new Blob([]), null as unknown as any)
+    callback(new Blob([]), null as unknown as string | null)
 }
 
 global.requestAnimationFrame = (callback: FrameRequestCallback) => {
