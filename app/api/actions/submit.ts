@@ -208,6 +208,18 @@ export async function submitCafe(
 
         if (duplicate.isDuplicate) {
             const allPending = duplicate.existingCafes.every((c) => !c.isPublished)
+
+            if (allPending && duplicate.existingCafes.length === 1) {
+                const pending = duplicate.existingCafes[0]
+                return {
+                    success: false,
+                    error: CafeSubmissionError.duplicateWithLink(
+                        "This cafe has already been submitted and is awaiting review. You can track its status on your pending submissions page.",
+                        pending.slug
+                    ),
+                }
+            }
+
             const message = allPending
                 ? "A cafe with a similar name and location has already been submitted and is awaiting review."
                 : `This cafe may already exist on Grounds. Check: ${duplicate.existingCafes.map((c) => c.name).join(", ")}`
