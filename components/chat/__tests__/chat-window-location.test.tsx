@@ -1,5 +1,8 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, mock, beforeEach, afterAll } from "bun:test"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+
+// Save original crypto before overriding to prevent leaking to other test files
+const _originalCrypto = globalThis.crypto
 
 // Mock crypto.randomUUID before importing ChatWindow
 Object.defineProperty(global, "crypto", {
@@ -7,6 +10,10 @@ Object.defineProperty(global, "crypto", {
         randomUUID: () => "test-uuid-123",
     },
     writable: true,
+})
+
+afterAll(() => {
+    globalThis.crypto = _originalCrypto
 })
 
 const localStorageMock = {
