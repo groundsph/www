@@ -8,35 +8,9 @@ import { notifyDiscord, notifyDiscordCritical } from "./notify"
 import { SerializableCafeSubmission } from "@/utils/types/extra"
 import { logContribution } from "@/utils/contribution-logging"
 import { cafeSubmissionSchema, CafeSubmissionError, SubmitError } from "@/utils/validation/cafe-submission"
+import { generateSlug, MAX_SLUG_ITERATIONS } from "@/utils/slug"
 
-function generateSlug(name: string, cityMunicipality?: string, province?: string): string {
-    const slugify = (s: string): string => s
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
 
-    const nameSlug = slugify(name) || "cafe"
-
-    if (cityMunicipality && province) {
-        const citySlug = slugify(cityMunicipality)
-        const provSlug = slugify(province)
-
-        let locationSlug = ""
-        if (citySlug && provSlug) locationSlug = `${citySlug}-${provSlug}`
-        else if (provSlug) locationSlug = provSlug
-
-        if (locationSlug) {
-            const combined = `${nameSlug}-${locationSlug}`
-            return combined.length > 200 ? combined.slice(0, 200).replace(/-$/, "") : combined
-        }
-    }
-
-    return nameSlug.length > 200 ? nameSlug.slice(0, 200).replace(/-$/, "") : nameSlug
-}
-
-const MAX_SLUG_ITERATIONS = 100
 
 async function ensureUniqueSlug(baseSlug: string): Promise<string> {
     let slug = baseSlug

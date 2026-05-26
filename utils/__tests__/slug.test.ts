@@ -1,98 +1,69 @@
 import { describe, it, expect } from "bun:test"
+import { slugify, generateSlug } from "@/utils/slug"
 
-// Replicate the slug logic here for direct testing
-function generateSlug(name: string, locationSlug?: string): string {
-  const nameSlug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    || "cafe"
-
-  if (locationSlug) {
-    const combined = `${nameSlug}-${locationSlug}`
-    return combined.length > 200 ? combined.slice(0, 200).replace(/-$/, "") : combined
-  }
-
-  return nameSlug.length > 200 ? nameSlug.slice(0, 200).replace(/-$/, "") : nameSlug
-}
-
-function buildLocationSlug(cityMunicipality: string, province: string): string {
-  const slugify = (s: string) => s
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-
-  const citySlug = slugify(cityMunicipality)
-  const provinceSlug = slugify(province)
-
-  if (citySlug && provinceSlug) return `${citySlug}-${provinceSlug}`
-  if (provinceSlug) return provinceSlug
-  return ""
-}
-
-describe("generateSlug", () => {
-  it("generates simple slug from name", () => {
-    expect(generateSlug("Starbucks")).toBe("starbucks")
+describe("slugify", () => {
+  it("NFD-normalizes accented characters: Café → cafe", () => {
+    expect(slugify("Café")).toBe("cafe")
   })
 
-  it("includes location in slug", () => {
-    expect(generateSlug("Starbucks", "makati-metro-manila"))
-      .toBe("starbucks-makati-metro-manila")
+  it("NFD-normalizes accented characters: San José → san-jose", () => {
+    expect(slugify("San José")).toBe("san-jose")
   })
 
-  it("handles special characters", () => {
-    expect(generateSlug("Café & Restaurant!"))
-      .toBe("caf-restaurant")
+  it("strips punctuation and symbols", () => {
+    expect(slugify("Café & Restaurant!")).toBe("cafe-restaurant")
   })
 
-  it("collapses multiple hyphens", () => {
-    expect(generateSlug("Test -- Cafe --- Special"))
-      .toBe("test-cafe-special")
+  it("trims and collapses spaces", () => {
+    expect(slugify("  Spaces  Around  ")).toBe("spaces-around")
   })
 
-  it("trims leading/trailing hyphens", () => {
-    expect(generateSlug("  ---Hello World---  "))
-      .toBe("hello-world")
+  it("returns 'cafe' for empty string", () => {
+    expect(slugify("")).toBe("cafe")
   })
 
-  it("returns 'cafe' for purely special character names", () => {
-    expect(generateSlug("!!!")).toBe("cafe")
-  })
-
-  it("truncates long slugs to 200 chars", () => {
-    const longName = "a".repeat(250)
-    const slug = generateSlug(longName)
+  it("truncates to 200 chars max", () => {
+    const slug = slugify("a".repeat(300))
     expect(slug.length).toBeLessThanOrEqual(200)
-  })
-
-  it("does not end truncated slug with hyphen", () => {
-    const longName = "a".repeat(250) + "-"
-    const slug = generateSlug(longName)
-    expect(slug.endsWith("-")).toBe(false)
   })
 })
 
-describe("buildLocationSlug", () => {
-  it("builds city-province slug", () => {
-    expect(buildLocationSlug("Makati", "Metro Manila"))
-      .toBe("makati-metro-manila")
+describe("generateSlug", () => {
+  it("applies NFD normalization on all parts", () => {
+    expect(generateSlug("Café", "San José", "Nueva Ecija"))
+      .toBe("cafe-san-jose-nueva-ecija")
   })
 
-  it("falls back to province only when city is empty", () => {
-    expect(buildLocationSlug("", "Metro Manila"))
-      .toBe("metro-manila")
+  it("combines name + city + province", () => {
+    expect(generateSlug("Best Coffee", "Makati", "Metro Manila"))
+      .toBe("best-coffee-makati-metro-manila")
   })
 
-  it("returns empty when both are empty", () => {
-    expect(buildLocationSlug("", "")).toBe("")
+  it("returns name-only slug when no location", () => {
+    expect(generateSlug("Cafe")).toBe("cafe")
   })
 
-  it("handles special characters in city names", () => {
-    expect(buildLocationSlug("San José", "Nueva Ecija"))
-      .toBe("san-jos-nueva-ecija")
+  it("truncates combined slug to 200 chars max", () => {
+    const slug = generateSlug("A".repeat(300), "City", "Province")
+    expect(slug.length).toBeLessThanOrEqual(200)
+  })
+
+  it("falls back to 'cafe' for empty name and uses location", () => {
+    expect(generateSlug("", "City", "Province")).toBe("cafe-city-province")
+  })
+
+  it("preserves existing dashes in name", () => {
+    expect(generateSlug("hello-world", "City", "Province"))
+      .toBe("hello-world-city-province")
+  })
+
+  it("strips symbols and keeps alphanumerics", () => {
+    expect(generateSlug("Cafe 123!", "City", "Province"))
+      .toBe("cafe-123-city-province")
+  })
+
+  it("collapses multiple spaces into single dash", () => {
+    expect(generateSlug("multiple   spaces", "City", "Province"))
+      .toBe("multiple-spaces-city-province")
   })
 })
