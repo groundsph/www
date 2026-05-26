@@ -305,19 +305,21 @@ export default function CafeSubmissionForm({
             area: string | null
             fullAddress: string
         }) => {
-            if (match.region) {
+            // Only auto-fill location fields when the user hasn't made a manual selection.
+            // This prevents wrong Nominatim results from overwriting dropdown selections.
+            if (match.region && !formData.region) {
                 updateFormData("region", match.region)
             }
 
-            if (match.province) {
+            if (match.province && !formData.province) {
                 updateFormData("province", match.province)
             }
 
-            if (match.city) {
+            if (match.city && !formData.city_municipality) {
                 updateFormData("city_municipality", match.city)
             }
 
-            if (match.area) {
+            if (match.area && !formData.area) {
                 updateFormData("area", match.area)
             }
 
