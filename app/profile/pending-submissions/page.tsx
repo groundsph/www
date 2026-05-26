@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default async function PendingSubmissionsPage() {
     const user = await getCurrentUser()
-    if (!user) redirect("/login")
+    if (!user) redirect("/auth?redirect=/profile/pending-submissions")
 
     const submissions = await getUserPendingSubmissions()
 

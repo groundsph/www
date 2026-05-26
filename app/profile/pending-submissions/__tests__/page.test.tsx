@@ -109,6 +109,6 @@ describe("Pending Submissions page", () => {
         }
 
         expect(caught).not.toBeNull()
-        expect(caught?.message).toContain("REDIRECT:/login")
+        expect(caught?.message).toContain("REDIRECT:/auth?redirect=/profile/pending-submissions")
     })
 })
