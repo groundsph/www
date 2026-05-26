@@ -15,6 +15,8 @@ export async function generateMetadata({
     params: Promise<{ slug: string }>
 }): Promise<Metadata> {
     const { slug } = await params
+    // getCafeBySlug now filters out unpublished cafes by default (includeUnpublished: false)
+    // Unpublished cafes will return null, resulting in a 404 for public visitors
     const cafe = await getCafeBySlug(slug)
 
     if (!cafe) {
@@ -173,6 +175,8 @@ export default async function CafePage({
 }) {
     // Constants
     const { slug } = await params
+    // getCafeBySlug filters unpublished cafes (includeUnpublished defaults to false)
+    // Cafe details page will show 404 if the cafe is unpublished
     const cafe = await getCafeBySlug(slug)
     const [{ reviews: initialReviews, hasMore: initialHasMore }, menuItems] = await Promise.all([
         cafe ? getReviewsByCafeIdPaginated(cafe.id, 1, 10) : { reviews: [], hasMore: false },
