@@ -1,8 +1,8 @@
-import { describe, it, expect, jest } from "bun:test"
+import { describe, it, expect, mock } from "bun:test"
 import { render } from "@testing-library/react"
 import ShrinkwrapBubble from "@/components/chat/ShrinkwrapBubble"
 
-jest.mock("@chenglou/pretext", () => ({
+mock.module("@chenglou/pretext", () => ({
     prepareWithSegments: (text: string) => ({
         widths: text.split("").map((char) => (char === " " ? 5 : 8)),
         segments: text.split("").map((char, i) => ({ index: i, char })),
