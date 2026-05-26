@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteractions, ownerReviewResponses, featuredSchedules } from "@/db/schema"
-import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray } from "drizzle-orm"
+import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray, SQL } from "drizzle-orm"
 import { getDayOfYear, getPHTime } from "@/utils/featured"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 import { omitTestCafes } from "@/utils/filters"
@@ -150,7 +150,13 @@ function mapCafeToSnakeCase(c: {
     } as unknown as CafeWithRatings
 }
 
-export async function getCafeBySlug(slug: string, includeTest = false) {
+export async function getCafeBySlug(slug: string, options: { includeTest?: boolean; includeUnpublished?: boolean } = {}) {
+    const { includeTest = false, includeUnpublished = false } = options
+
+    const conditions: (SQL<unknown> | undefined)[] = [eq(cafes.slug, slug)]
+    if (!includeTest) conditions.push(...omitTestCafes([]))
+    if (!includeUnpublished) conditions.push(eq(cafes.isPublished, true))
+
     // Get cafe with rating stats
     const cafeResult = await db
         .select({
@@ -214,7 +220,7 @@ export async function getCafeBySlug(slug: string, includeTest = false) {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(eq(cafes.slug, slug), ...(includeTest ? [] : omitTestCafes([]))))
+        .where(and(...conditions))
         .limit(1)
 
     const cafe = cafeResult[0]
