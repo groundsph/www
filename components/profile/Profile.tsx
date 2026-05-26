@@ -870,6 +870,13 @@ export default function Profile() {
                                 <Ticket className='w-4 h-4' />
                                 Vouchers
                             </Link>
+                            <Link
+                                href='/profile/pending-submissions'
+                                className='flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors text-sm font-medium'
+                            >
+                                <Store className='w-4 h-4' />
+                                Pending Submissions
+                            </Link>
                         </div>
                     </div>
                 </motion.section>
