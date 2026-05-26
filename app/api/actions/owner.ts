@@ -263,6 +263,9 @@ export async function updateCafeAsOwner(
         description: string
         address_display: string
         area: string
+        region: string
+        province: string
+        city_municipality: string
         lat: number
         lng: number
         has_wifi: boolean
@@ -354,6 +357,7 @@ export async function updateCafeAsOwner(
         is_halal_certified: 'isHalalCertified',
         straw_type: 'strawType',
         straw_type_other: 'strawTypeOther',
+        city_municipality: 'cityMunicipality',
     }
 
     for (const [key, value] of Object.entries(updates)) {
