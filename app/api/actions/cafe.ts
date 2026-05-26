@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { getCurrentUser } from "@/lib/auth"
 import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteractions, ownerReviewResponses, featuredSchedules } from "@/db/schema"
 import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray, SQL } from "drizzle-orm"
 import { getDayOfYear, getPHTime } from "@/utils/featured"
@@ -1233,4 +1234,49 @@ export async function getAllPublishedCafes(): Promise<CafeWithRatings[]> {
         .orderBy(desc(cafes.createdAt))
 
     return results.map(c => mapCafeToSnakeCase(c)) as CafeWithRatings[]
+}
+
+/**
+ * Get pending (unpublished) submissions for the current user
+ */
+export async function getUserPendingSubmissions(): Promise<Array<{
+    id: string
+    name: string
+    slug: string
+    thumbnail: string | null
+    created_at: string | null
+    city_municipality: string
+    province: string
+}>> {
+    const user = await getCurrentUser()
+    if (!user) return []
+
+    const results = await db
+        .select({
+            id: cafes.id,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            created_at: cafes.createdAt,
+            city_municipality: cafes.cityMunicipality,
+            province: cafes.province,
+        })
+        .from(cafes)
+        .where(
+            and(
+                eq(cafes.contributorId, user.id),
+                eq(cafes.isPublished, false),
+            )
+        )
+        .orderBy(desc(cafes.createdAt))
+
+    return results.map(r => ({
+        id: r.id,
+        name: r.name,
+        slug: r.slug,
+        thumbnail: r.thumbnail,
+        created_at: r.created_at?.toISOString() ?? null,
+        city_municipality: r.city_municipality,
+        province: r.province,
+    }))
 }

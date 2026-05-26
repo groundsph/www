@@ -1,5 +1,6 @@
 import { describe, it, expect, mock } from "bun:test"
 import { submitCafe } from "@/app/api/actions/submit"
+import { getUserPendingSubmissions } from "@/app/api/actions/cafe"
 
 mock.module("@/db", () => ({
     db: {
@@ -175,5 +176,39 @@ describe("submitCafe", () => {
             expect(result.error!.code).toBe("AUTH")
             expect(result.error!.retryable).toBe(false)
         }
+    })
+})
+
+describe("getUserPendingSubmissions", () => {
+    it("returns empty array when no pending submissions exist", async () => {
+        // Reset auth to authenticated user
+        mock.module("@/lib/auth", () => ({
+            getCurrentUser: () => ({ id: "test-user-1" }),
+        }))
+        mock.module("@/db", () => ({
+            db: {
+                select: () => ({
+                    from: () => ({
+                        where: () => ({
+                            orderBy: () => Promise.resolve([]),
+                        }),
+                    }),
+                }),
+            },
+        }))
+
+        const result = await getUserPendingSubmissions()
+        expect(Array.isArray(result)).toBe(true)
+        expect(result.length).toBe(0)
+    })
+
+    it("returns empty array when not authenticated", async () => {
+        mock.module("@/lib/auth", () => ({
+            getCurrentUser: () => null,
+        }))
+
+        const result = await getUserPendingSubmissions()
+        expect(Array.isArray(result)).toBe(true)
+        expect(result.length).toBe(0)
     })
 })
