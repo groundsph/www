@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test"
+import { suggestableFieldsSchema } from "@/utils/validation/cafe-submission"
 
 const mockGetCurrentUser = {
     __currentUser: null as { id: string } | null,
@@ -453,5 +454,22 @@ describe("suggestions region filtering", () => {
             const result = await getPendingSuggestions()
             expect(result).toHaveLength(2)
         })
+    })
+})
+
+describe("submitEditSuggestion validation", () => {
+    it("rejects lat=200 in changes", () => {
+        const result = suggestableFieldsSchema.safeParse({ lat: 200 })
+        expect(result.success).toBe(false)
+    })
+
+    it("rejects invalid website_url in changes", () => {
+        const result = suggestableFieldsSchema.safeParse({ website_url: "not-a-url" })
+        expect(result.success).toBe(false)
+    })
+
+    it("accepts valid changes object", () => {
+        const result = suggestableFieldsSchema.safeParse({ name: "Updated Cafe Name" })
+        expect(result.success).toBe(true)
     })
 })

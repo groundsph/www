@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { cafeSubmissionSchema, CafeSubmissionError } from "@/utils/validation/cafe-submission"
+import { cafeSubmissionSchema, CafeSubmissionError, suggestableFieldsSchema } from "@/utils/validation/cafe-submission"
 
 const validSubmission = {
   name: "Test Cafe",
@@ -136,5 +136,57 @@ describe("CafeSubmissionError", () => {
       expect(formatted.message).not.toBe("")
       expect(formatted.retryable).toBe(true)
     }
+  })
+
+  it("duplicateWithLink returns error with link containing /profile/pending-submissions/<slug>", () => {
+    const slug = "test-cafe-slug"
+    const error = CafeSubmissionError.duplicateWithLink("A cafe with this name already exists", slug)
+    expect(error.code).toBe("VALIDATION")
+    expect(error.message).toBe("A cafe with this name already exists")
+    expect(error.field).toBe("name")
+    expect(error.retryable).toBe(false)
+    expect(error.details).toBe(`/profile/pending-submissions/${slug}`)
+  })
+})
+
+describe("suggestableFieldsSchema", () => {
+  it("accepts valid partial changes (only name + description)", () => {
+    const result = suggestableFieldsSchema.safeParse({ name: "Updated Name", description: "New desc" })
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts empty object (all fields optional)", () => {
+    const result = suggestableFieldsSchema.safeParse({})
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts lat with valid value", () => {
+    const result = suggestableFieldsSchema.safeParse({ lat: 14.5547 })
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects lat=200 (out of range)", () => {
+    const result = suggestableFieldsSchema.safeParse({ lat: 200 })
+    expect(result.success).toBe(false)
+  })
+
+  it("accepts valid website_url", () => {
+    const result = suggestableFieldsSchema.safeParse({ website_url: "https://example.com" })
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects invalid website_url", () => {
+    const result = suggestableFieldsSchema.safeParse({ website_url: "not-a-url" })
+    expect(result.success).toBe(false)
+  })
+
+  it("accepts valid email", () => {
+    const result = suggestableFieldsSchema.safeParse({ email: "test@example.com" })
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects invalid email format", () => {
+    const result = suggestableFieldsSchema.safeParse({ email: "not-an-email" })
+    expect(result.success).toBe(false)
   })
 })
