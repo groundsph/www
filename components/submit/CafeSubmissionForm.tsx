@@ -29,6 +29,8 @@ import {
     Trash2,
     Search,
     AlertCircle,
+    AlertTriangle,
+    Info,
     ImageIcon,
     Armchair,
     Droplet,
@@ -94,6 +96,43 @@ const STEPS = [
 ]
 
 const DRAFT_KEY = "grounds_cafe_submission_draft"
+
+function getTitleHints(name: string): { type: "warning" | "info"; message: string }[] {
+    const hints: { type: "warning" | "info"; message: string }[] = []
+    const trimmed = name.trim()
+    if (!trimmed) return hints
+
+    const wordCount = trimmed.split(/\s+/).length
+    const charCount = trimmed.length
+
+    // Very short names
+    if (charCount < 3) {
+        hints.push({ type: "warning", message: "Cafe name is very short" })
+    }
+
+    // Check for generic words
+    const genericWords = ["cafe", "coffee", "shop", "house", "store", "place", "bar", "hub", "spot", "bean"]
+    const words = trimmed.toLowerCase().split(/\s+/)
+    const hasGeneric = words.some((w) => genericWords.includes(w))
+
+    // Short name with generic words -> suggest adding location
+    if (hasGeneric && charCount < 15) {
+        hints.push({
+            type: "info",
+            message: "Consider adding a location to make your cafe more discoverable (e.g., 'Cafe - Makati')",
+        })
+    }
+
+    // Plain alpha-only short name (no numbers, no location indicators)
+    if (/^[a-zA-Z\s]+$/.test(trimmed) && charCount < 10) {
+        hints.push({
+            type: "info",
+            message: "Add a descriptor like 'Roastery', 'Brew Bar', or your location",
+        })
+    }
+
+    return hints
+}
 
 // Animation variants for staggered entrance
 const containerVariants = {
@@ -1563,6 +1602,29 @@ export default function CafeSubmissionForm({
                                             placeholder='e.g. The Coffee House'
                                             className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none'
                                         />
+
+                                        {/* Title quality hints */}
+                                        {formData.name.trim().length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                {getTitleHints(formData.name).map((hint, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className={`flex items-center gap-1.5 text-xs ${
+                                                            hint.type === "warning"
+                                                                ? "text-amber-600"
+                                                                : "text-blue-600"
+                                                        }`}
+                                                    >
+                                                        {hint.type === "warning" ? (
+                                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                                        ) : (
+                                                            <Info className="w-3.5 h-3.5" />
+                                                        )}
+                                                        <span>{hint.message}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         {/* Duplicate Warning */}
                                         <AnimatePresence>
