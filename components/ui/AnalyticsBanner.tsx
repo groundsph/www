@@ -42,7 +42,7 @@ export default function AnalyticsBanner() {
                                 <p className='text-xs text-text/70'>
                                     We use{" "}
                                     <Link
-                                        href='https://rybbit.com'
+                                        href='https://ranio.xyz'
                                         target='_blank'
                                         className='underline hover:text-text'
                                     >

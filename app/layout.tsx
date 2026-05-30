@@ -182,7 +182,7 @@ export default function RootLayout({
                 </NotificationProvider>
                 <AnalyticsBanner />
                 <Script
-                    src='https://analytics.ranlabs.space/api/script.js'
+                    src='https://stat.ranio.xyz/api/script.js'
                     data-site-id='5'
                     strategy='afterInteractive'
                 />
