@@ -52,7 +52,7 @@ const SUGGESTED_PROMPTS = [
     { label: "Find hidden gems near me", icon: "💎" },
     { label: "Work-friendly cafes with WiFi", icon: "💻" },
     { label: "Plan a cafe crawl in Cebu", icon: "🗺️" },
-    { label: "What is Grounds.ph?", icon: "☕" },
+    { label: "What is GroundsPH?", icon: "☕" },
 ]
 
 function TypingIndicator() {

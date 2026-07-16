@@ -378,7 +378,7 @@ export default async function Image({
                 </div>
             )}
 
-            {/* GROUNDS.PH branding at bottom */}
+            {/* GROUNDSPH branding at bottom */}
             <div
                 style={{
                     display: "flex",
@@ -391,7 +391,7 @@ export default async function Image({
                     letterSpacing: 4,
                 }}
             >
-                GROUNDS.PH
+                GROUNDSPH
             </div>
         </div>,
         {

@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 export const metadata: Metadata = {
     title: "Account Terms and Conditions",
     description:
-        "Terms and Conditions for creating and using a Grounds.ph account",
+        "Terms and Conditions for creating and using a GroundsPH account",
 }
 
 export default function AccountTermsPage() {
@@ -32,7 +32,7 @@ export default function AccountTermsPage() {
                         1. Account Eligibility
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        By creating an account on Grounds.ph, you confirm that:
+                        By creating an account on GroundsPH, you confirm that:
                     </p>
                     <ul className='list-disc list-inside text-text/80 mt-3 space-y-1'>
                         <li>
@@ -128,7 +128,7 @@ export default function AccountTermsPage() {
                     <ul className='list-disc list-inside text-text/80 space-y-2'>
                         <li>
                             <strong>Grant us a license:</strong> You grant
-                            Grounds.ph a non-exclusive, worldwide, royalty-free
+                            GroundsPH a non-exclusive, worldwide, royalty-free
                             license to use, display, reproduce, and distribute
                             your content in connection with the Service.
                         </li>
@@ -218,7 +218,7 @@ export default function AccountTermsPage() {
                         7. Limitation of Liability
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        Grounds.ph shall not be liable for any loss or damage
+                        GroundsPH shall not be liable for any loss or damage
                         arising from:
                     </p>
                     <ul className='list-disc list-inside text-text/80 mt-3 space-y-1'>
@@ -247,7 +247,7 @@ export default function AccountTermsPage() {
                         9. Agreement
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        By creating an account on Grounds.ph, you acknowledge
+                        By creating an account on GroundsPH, you acknowledge
                         that you have read, understood, and agree to be bound by
                         these Account Terms and Conditions, as well as our
                         general{" "}

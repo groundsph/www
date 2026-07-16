@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 export const metadata: Metadata = {
     title: "Content & Copyright Policy",
     description:
-        "Content guidelines, copyright policy, and takedown procedures for Grounds.ph",
+        "Content guidelines, copyright policy, and takedown procedures for GroundsPH",
 }
 
 export default function ContentPolicyPage() {
@@ -32,7 +32,7 @@ export default function ContentPolicyPage() {
                         1. Community-Contributed Content
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        Grounds.ph is a community-driven platform. All cafe
+                        GroundsPH is a community-driven platform. All cafe
                         information, photos, and reviews are contributed by our
                         users. We do not independently verify the accuracy of
                         user submissions, though we make reasonable efforts to
@@ -59,7 +59,7 @@ export default function ContentPolicyPage() {
                         2. Photo and Image Policy
                     </h2>
                     <p className='text-text/80 leading-relaxed mb-4'>
-                        When users upload photos to Grounds.ph, they represent
+                        When users upload photos to GroundsPH, they represent
                         that:
                     </p>
                     <ul className='list-disc list-inside text-text/80 space-y-2'>
@@ -78,7 +78,7 @@ export default function ContentPolicyPage() {
                         </li>
                     </ul>
                     <p className='text-text/80 leading-relaxed mt-4'>
-                        By uploading photos, users grant Grounds.ph a
+                        By uploading photos, users grant GroundsPH a
                         non-exclusive, royalty-free license to display,
                         reproduce, and distribute the images in connection with
                         the Service.
@@ -104,7 +104,7 @@ export default function ContentPolicyPage() {
                         4. Copyright Takedown Procedure
                     </h2>
                     <p className='text-text/80 leading-relaxed mb-4'>
-                        Grounds.ph respects intellectual property rights. If you
+                        GroundsPH respects intellectual property rights. If you
                         believe that content on our platform infringes your
                         copyright, you may submit a takedown request.
                     </p>
@@ -130,7 +130,7 @@ export default function ContentPolicyPage() {
                         </li>
                         <li>
                             The specific URL(s) of the infringing content on
-                            Grounds.ph
+                            GroundsPH
                         </li>
                         <li>
                             A statement that you have a good faith belief the
@@ -191,7 +191,7 @@ export default function ContentPolicyPage() {
                         6. Review Guidelines
                     </h2>
                     <p className='text-text/80 leading-relaxed mb-4'>
-                        Reviews on Grounds.ph should be:
+                        Reviews on GroundsPH should be:
                     </p>
                     <ul className='list-disc list-inside text-text/80 space-y-1'>
                         <li>Based on genuine personal experiences</li>
@@ -214,7 +214,7 @@ export default function ContentPolicyPage() {
                         7. Disclaimer
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        Grounds.ph acts as a platform for user-generated
+                        GroundsPH acts as a platform for user-generated
                         content. We are not the author of user submissions and
                         do not endorse or guarantee the accuracy of any content.
                         While we moderate content and respond to valid
@@ -233,7 +233,7 @@ export default function ContentPolicyPage() {
                         cafe owner requests, please contact:
                     </p>
                     <div className='bg-background border border-text/10 rounded-lg p-4 mt-4'>
-                        <p className='font-medium'>Grounds.ph Content Team</p>
+                        <p className='font-medium'>GroundsPH Content Team</p>
                         <a
                             href='mailto:legal@grounds.ph'
                             className='text-primary hover:underline'

@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 export const metadata: Metadata = {
     title: "Privacy Policy",
     description:
-        "Privacy Policy for Grounds.ph - How we collect, use, and protect your data",
+        "Privacy Policy for GroundsPH - How we collect, use, and protect your data",
 }
 
 export default function PrivacyPage() {
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
                         3. Location Data
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        Grounds.ph may request access to your device&apos;s
+                        GroundsPH may request access to your device&apos;s
                         location to provide features like &quot;Find Cafes Near
                         Me&quot; and location-based featured cafes. This is
                         entirely optional. If you grant permission:
@@ -144,7 +144,7 @@ export default function PrivacyPage() {
                         5. Third-Party Services
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        Grounds.ph uses the following third-party services:
+                        GroundsPH uses the following third-party services:
                     </p>
                     <ul className='list-disc list-inside text-text/80 mt-3 space-y-1'>
                         <li>

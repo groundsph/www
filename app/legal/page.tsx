@@ -5,13 +5,13 @@ import { FileText, Shield, Scale } from "lucide-react"
 export const metadata: Metadata = {
     title: "Legal",
     description:
-        "Terms of Service, Privacy Policy, and Content Policy for Grounds.ph",
+        "Terms of Service, Privacy Policy, and Content Policy for GroundsPH",
 }
 
 const legalPages = [
     {
         title: "Terms of Service",
-        description: "The rules and guidelines for using Grounds.ph",
+        description: "The rules and guidelines for using GroundsPH",
         href: "/legal/terms",
         icon: FileText,
     },
@@ -37,7 +37,7 @@ export default function LegalPage() {
                 Legal
             </h1>
             <p className='text-text/70 mb-10 max-w-2xl'>
-                Welcome to the Grounds.ph legal hub. Here you&apos;ll find our
+                Welcome to the GroundsPH legal hub. Here you&apos;ll find our
                 Terms of Service, Privacy Policy, and Content Policy. These
                 documents outline how we operate and protect both our users and
                 content creators.

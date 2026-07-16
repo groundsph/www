@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 
 export const metadata: Metadata = {
     title: "Terms of Service",
-    description: "Terms of Service for using Grounds.ph",
+    description: "Terms of Service for using GroundsPH",
 }
 
 export default function TermsPage() {
@@ -31,7 +31,7 @@ export default function TermsPage() {
                         1. Acceptance of Terms
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        By accessing or using Grounds.ph (&quot;the
+                        By accessing or using GroundsPH (&quot;the
                         Service&quot;), you agree to be bound by these Terms of
                         Service. If you do not agree to these terms, please do
                         not use the Service. These terms apply to all visitors,
@@ -44,7 +44,7 @@ export default function TermsPage() {
                         2. Description of Service
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        Grounds.ph is a community-driven platform that allows
+                        GroundsPH is a community-driven platform that allows
                         users to discover, share, and review cafes across the
                         Philippines. The Service includes but is not limited to:
                     </p>
@@ -91,7 +91,7 @@ export default function TermsPage() {
                         4. Community Contributions and User-Generated Content
                     </h2>
                     <p className='text-text/80 leading-relaxed mb-4'>
-                        Grounds.ph relies on community contributions. When you
+                        GroundsPH relies on community contributions. When you
                         submit content to the Service (including but not limited
                         to cafe information, photos, reviews, comments, menu
                         items, menu edits, and corrections), you:
@@ -99,7 +99,7 @@ export default function TermsPage() {
                     <ul className='list-disc list-inside text-text/80 space-y-2'>
                         <li>
                             <strong>Grant us a license:</strong> You grant
-                            Grounds.ph a non-exclusive, worldwide, royalty-free,
+                            GroundsPH a non-exclusive, worldwide, royalty-free,
                             perpetual license to use, display, reproduce,
                             modify, and distribute your content in connection
                             with the Service. This includes incorporating your
@@ -145,7 +145,7 @@ export default function TermsPage() {
                         5. AI Features and Data Usage
                     </h2>
                     <p className='text-text/80 leading-relaxed mb-4'>
-                        Grounds.ph may offer AI-powered features to enhance your
+                        GroundsPH may offer AI-powered features to enhance your
                         experience, including but not limited to cafe discovery,
                         menu assistance, and conversational recommendations.
                         When using these features:
@@ -225,7 +225,7 @@ export default function TermsPage() {
                     <p className='text-text/80 leading-relaxed'>
                         The Service and its original content (excluding
                         user-generated content), features, and functionality are
-                        owned by Grounds.ph and are protected by international
+                        owned by GroundsPH and are protected by international
                         copyright, trademark, and other intellectual property
                         laws. Our trademarks and trade dress may not be used in
                         connection with any product or service without prior
@@ -239,7 +239,7 @@ export default function TermsPage() {
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
                         The Service may contain links to third-party websites or
-                        services that are not owned or controlled by Grounds.ph.
+                        services that are not owned or controlled by GroundsPH.
                         We have no control over, and assume no responsibility
                         for, the content, privacy policies, or practices of any
                         third-party websites or services.
@@ -253,7 +253,7 @@ export default function TermsPage() {
                     <p className='text-text/80 leading-relaxed'>
                         The Service is provided &quot;as is&quot; and &quot;as
                         available&quot; without warranties of any kind, either
-                        express or implied. Grounds.ph does not guarantee the
+                        express or implied. GroundsPH does not guarantee the
                         accuracy, completeness, or reliability of any content on
                         the platform. Cafe information, including hours, prices,
                         and amenities, may be outdated or incorrect. We
@@ -267,7 +267,7 @@ export default function TermsPage() {
                         10. Limitation of Liability
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        To the maximum extent permitted by law, Grounds.ph shall
+                        To the maximum extent permitted by law, GroundsPH shall
                         not be liable for any indirect, incidental, special,
                         consequential, or punitive damages arising from your use
                         of the Service, including but not limited to damages for
@@ -282,7 +282,7 @@ export default function TermsPage() {
                         11. Indemnification
                     </h2>
                     <p className='text-text/80 leading-relaxed'>
-                        You agree to indemnify and hold harmless Grounds.ph and
+                        You agree to indemnify and hold harmless GroundsPH and
                         its officers, directors, employees, and agents from any
                         claims, damages, losses, liabilities, and expenses
                         (including legal fees) arising out of your use of the

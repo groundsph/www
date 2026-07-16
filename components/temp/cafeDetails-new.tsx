@@ -90,7 +90,7 @@ const App = () => {
                 <div className='max-w-[1400px] mx-auto flex items-center justify-between'>
                     <div className='flex items-center gap-8'>
                         <div className='text-2xl font-bold tracking-tight'>
-                            Grounds<span className='text-[#D4AF37]'>.ph</span>
+                            Grounds<span className='text-[#D4AF37]'>PH</span>
                         </div>
                         <div className='hidden lg:flex items-center gap-6 text-sm font-medium text-gray-300'>
                             <a
@@ -549,14 +549,14 @@ const App = () => {
                 </div>
             </div>
 
-            {/* Footer - Consistent with Grounds.ph */}
+            {/* Footer - Consistent with GroundsPH */}
             <footer className='bg-[#1A1A1A] text-white pt-20 pb-10 mt-20'>
                 <div className='max-w-[1200px] mx-auto px-6'>
                     <div className='grid grid-cols-1 md:grid-cols-4 gap-12 mb-16'>
                         <div className='md:col-span-2'>
                             <div className='text-3xl font-bold mb-6'>
                                 Grounds
-                                <span className='text-[#D4AF37]'>.ph</span>
+                                <span className='text-[#D4AF37]'>PH</span>
                             </div>
                             <p className='text-gray-400 text-sm max-w-sm leading-relaxed'>
                                 Discover and explore the best cafes and the
@@ -647,7 +647,7 @@ const App = () => {
                         </div>
                     </div>
                     <div className='pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500'>
-                        <p>© 2024 Grounds.ph - All rights reserved.</p>
+                        <p>© 2024 GroundsPH - All rights reserved.</p>
                         <p>Made with ☕ in Cebu, Philippines.</p>
                     </div>
                 </div>

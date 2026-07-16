@@ -7,7 +7,7 @@ import { CafeWithRatings } from "@/utils/types/extra"
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-    title: "Cafe Map | Grounds PH",
+    title: "Cafe Map | GroundsPH",
     description: "Explore cafes across the Philippines on an interactive map. Find coffee shops near you.",
     keywords: [
         "cafe map Philippines", "coffee shops near me",

@@ -51,8 +51,8 @@ export const viewport = {
 export const metadata: Metadata = {
     metadataBase: new URL("https://grounds.ph"),
     title: {
-        default: "Grounds PH - Discover the Best Cafes in the Philippines",
-        template: "%s | Grounds PH",
+        default: "GroundsPH - Discover the Best Cafes in the Philippines",
+        template: "%s | GroundsPH",
     },
     alternates: {
         canonical: "./",

@@ -28,7 +28,7 @@ export function buildBlogPostingJsonLd(input: BlogPostingInput) {
     ...(input.dateModified && { dateModified: input.dateModified }),
     publisher: {
       "@type": "Organization",
-      name: "Grounds PH",
+      name: "GroundsPH",
       url: BASE_URL,
     },
   }

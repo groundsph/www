@@ -77,7 +77,7 @@ export default async function CityLandingPage({ params }: Props) {
   }
 
   const breadcrumbs = buildBreadcrumbList([
-    { name: "Grounds PH", url: siteUrl },
+    { name: "GroundsPH", url: siteUrl },
     { name: "Cafes", url: `${siteUrl}/cafes` },
     { name: `${city}, ${province}`, url: `${siteUrl}/cafes/location/${provinceSlug}/${citySlug}` },
   ])

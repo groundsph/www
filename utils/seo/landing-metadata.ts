@@ -15,7 +15,7 @@ export function buildMetadata(data: CityLandingData): Metadata {
   const path = `/cafes/location/${provinceSlug}/${citySlug}`
 
   return {
-    title: `Best Cafes in ${city}, ${province} | Grounds PH`,
+    title: `Best Cafes in ${city}, ${province} | GroundsPH`,
     description: `Discover ${cafeCount}+ cafes in ${city}, ${province}. Find WiFi-friendly, pet-friendly, and specialty coffee shops. Read reviews and plan your next coffee trip.`,
     keywords: [
       `cafes in ${city}`,
@@ -31,7 +31,7 @@ export function buildMetadata(data: CityLandingData): Metadata {
       canonical: `${siteUrl}${path}`,
     },
     openGraph: {
-      title: `Best Cafes in ${city}, ${province} | Grounds PH`,
+      title: `Best Cafes in ${city}, ${province} | GroundsPH`,
       description: `Discover ${cafeCount}+ cafes in ${city}, ${province}. Community-reviewed and curated.`,
       url: `${siteUrl}${path}`,
     },

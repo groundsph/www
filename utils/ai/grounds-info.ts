@@ -50,9 +50,9 @@ export async function getGroundsInfo(): Promise<GroundsInfo> {
     }
 
     return {
-        platform: "Grounds.ph",
+        platform: "GroundsPH",
         url: "https://grounds.ph",
-        description: "Grounds.ph is a community-driven coffee discovery platform for the Philippines. It helps coffee lovers find, review, and share their favorite cafes across the country.",
+        description: "GroundsPH is a community-driven coffee discovery platform for the Philippines. It helps coffee lovers find, review, and share their favorite cafes across the country.",
         features: [
             { name: "Cafe Directory", description: `Browse ${stats.totalCafes}+ cafes across the Philippines with detailed info on amenities, hours, prices, and more.` },
             { name: "Reviews & Ratings", description: "Read and write reviews for cafes. Rate your experience and help others discover great coffee." },

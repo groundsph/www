@@ -127,7 +127,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
 
     // Build BreadcrumbList JSON-LD
     const breadcrumbs = buildBreadcrumbList([
-        { name: "Grounds PH", url: siteUrl },
+        { name: "GroundsPH", url: siteUrl },
         { name: "Cafes", url: `${siteUrl}/cafes` },
         { name: cafe.name, url: `${siteUrl}/cafes/${cafe.slug}` },
         { name: "Menu", url: `${siteUrl}/cafes/${cafe.slug}/menu` },
@@ -231,7 +231,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
                             href='/'
                             className='text-primary hover:underline'
                         >
-                            Grounds.ph
+                            GroundsPH
                         </Link>
                     </p>
                 </div>

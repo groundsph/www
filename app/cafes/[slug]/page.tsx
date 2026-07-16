@@ -213,7 +213,7 @@ export default async function CafePage({
     // Generate JSON-LD for SEO
     const jsonLd = generateJsonLd(cafe)
     const breadcrumbs = buildBreadcrumbList([
-        { name: "Grounds PH", url: siteUrl },
+        { name: "GroundsPH", url: siteUrl },
         { name: "Cafes", url: `${siteUrl}/cafes` },
         { name: cafe.name, url: `${siteUrl}/cafes/${cafe.slug}` },
     ])

@@ -132,7 +132,7 @@ export default async function BlogPostPage({
         url: `${siteUrl}/blog/${post.slug}`,
         description: post.excerpt || post.content?.slice(0, 160) || "",
         imageUrl: post.cover_image || undefined,
-        authorName: post.author?.display_name || "Grounds PH",
+        authorName: post.author?.display_name || "GroundsPH",
         authorUrl: post.author?.username
             ? `${siteUrl}/profile/${post.author.username}`
             : undefined,
@@ -141,7 +141,7 @@ export default async function BlogPostPage({
     })
 
     const breadcrumbs = buildBreadcrumbList([
-        { name: "Grounds PH", url: siteUrl },
+        { name: "GroundsPH", url: siteUrl },
         { name: "Blog", url: `${siteUrl}/blog` },
         { name: post.title, url: `${siteUrl}/blog/${post.slug}` },
     ])

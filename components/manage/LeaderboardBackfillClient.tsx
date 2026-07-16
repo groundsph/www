@@ -21,7 +21,7 @@ interface BackfillResult {
 
 function getMonthsFromLaunch(): string[] {
     const months: string[] = []
-    // Grounds.ph started December 2025
+    // GroundsPH started December 2025
     const startDate = new Date(2025, 11, 1) // December 2025
     const now = new Date()
     

@@ -23,7 +23,7 @@ Available tools:
 - get_upcoming_events: Get upcoming coffee events and meetups
 - find_hidden_gems: Discover hidden gem cafes and lesser-known spots
 - find_cafes_with_feature: Find cafes with specific combinations of amenities
-- get_grounds_info: Return general information about Grounds.ph features and how to use the platform
+- get_grounds_info: Return general information about GroundsPH features and how to use the platform
 - get_cafe_stats: Get aggregate statistics about cafes
 - search_menu_items: Search for menu items across all cafes by name
 - compare_menu_items: Compare specific menu items side by side
@@ -49,7 +49,7 @@ Rules:
 2. If a location is mentioned (e.g., "Cebu", "Manila"), use query_cafes with the city filter
 3. If the user asks for "top" or "best" cafes, use get_top_rated or sort by rating
 4. If the user asks for cafes "near" a location, use get_nearby_cafes
-5. Use get_grounds_info for questions about Grounds.ph platform, features, or how to use the site
+5. Use get_grounds_info for questions about GroundsPH platform, features, or how to use the site
 6. Ask clarifying questions if day/time or start location is missing for crawl requests
 7. Provide concise, helpful responses based on the tool results
 8. If no cafes match the query, politely inform the user and suggest alternatives
@@ -172,7 +172,7 @@ export const CHAT_TOOLS: ToolDefinition[] = [
         type: "function",
         function: {
             name: "get_grounds_info",
-            description: "Return general information about Grounds.ph features and how to use the platform",
+            description: "Return general information about GroundsPH features and how to use the platform",
             parameters: { type: "object", properties: {} },
         },
     },

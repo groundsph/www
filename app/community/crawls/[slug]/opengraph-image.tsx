@@ -362,7 +362,7 @@ export default async function Image({
                     </div>
                 </div>
 
-                {/* GROUNDS.PH Branding */}
+                {/* GROUNDSPH Branding */}
                 <div
                     style={{
                         display: "flex",
@@ -374,7 +374,7 @@ export default async function Image({
                         textTransform: "uppercase",
                     }}
                 >
-                    GROUNDS.PH
+                    GROUNDSPH
                 </div>
             </div>
         </div>,
