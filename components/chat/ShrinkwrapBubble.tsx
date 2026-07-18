@@ -9,6 +9,16 @@ interface ShrinkwrapBubbleProps {
     maxWidth: number
     minWidth?: number
     paddingX?: number
+    /**
+     * When false (the default), skip pretext measurement and let the browser
+     * size the bubble with natural `fit-content` clamped to `maxWidth` /
+     * `minWidth`. The browser uses the *actual* rendered metrics, so it avoids
+     * the rounding/border mismatch that the pretext binary-search introduces
+     * (e.g. the box-sizing border eating ~2px and forcing the last word to
+     * wrap onto a new line). Use `shrink` only if you need pretext-based
+     * tightening for a known plain-text string.
+     */
+    shrink?: boolean
     children: ReactNode
     className?: string
 }
@@ -61,23 +71,29 @@ export default function ShrinkwrapBubble({
     maxWidth,
     minWidth = 40,
     paddingX = 32,
+    shrink = false,
     children,
     className,
 }: ShrinkwrapBubbleProps) {
     const [calculatedMaxWidth, setCalculatedMaxWidth] = useState(maxWidth)
 
     useLayoutEffect(() => {
+        if (!shrink) return
         if (!text) return
 
         const width = measureShrinkwrapWidth(text, font, maxWidth, minWidth, paddingX)
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Layout measurement required before paint
         setCalculatedMaxWidth(width)
-    }, [text, font, maxWidth, minWidth, paddingX])
+    }, [text, font, maxWidth, minWidth, paddingX, shrink])
 
     return (
         <div
             className={className}
-            style={{ maxWidth: calculatedMaxWidth, width: "fit-content" }}
+            style={{
+                maxWidth: shrink ? calculatedMaxWidth : maxWidth,
+                minWidth,
+                width: "fit-content",
+            }}
         >
             {children}
         </div>

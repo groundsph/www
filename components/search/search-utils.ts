@@ -40,7 +40,7 @@ export function buildChatResult(query: string): SearchResult | null {
   return {
     id: "chat-ask",
     type: "chat",
-    title: "Ask Grounds AI",
+    title: "Ask Marble",
     subtitle: `Ask about "${trimmed}"`,
     href: "#",
     priority: 100,

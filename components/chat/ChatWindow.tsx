@@ -167,20 +167,20 @@ export default function ChatWindow({
 
     const mapLocationError = useCallback((message: string | null) => {
         if (!message) return null
-        if (message.includes("timed out")) {
-            return "The chat provider timed out. Please try again in a moment."
+        if (message.includes("timed out") || message.includes("TimeoutError")) {
+            return "That took a bit too long. Could you try sending it again?"
         }
-        if (message.includes("401")) {
-            return "Chat provider rejected the API key. Please check your configuration."
-        }
-        if (message.includes("403")) {
-            return "Chat provider denied access to this model. Please verify your plan or model name."
-        }
-        if (message.includes("404")) {
-            return "Chat provider endpoint or model was not found. Please verify configuration."
+        if (message.includes("401") || message.includes("403") || message.includes("404")) {
+            return "I had trouble reaching my responses right now. Please try again in a bit."
         }
         if (message.includes("Rate limit")) {
-            return "Rate limit exceeded. Please try again later."
+            return "I've received a lot of messages just now. Please give me a minute and try again."
+        }
+        if (message.includes("Stream processing failed") || message.includes("No response from AI")) {
+            return "I couldn't put a response together for that. Could you rephrase it and try again?"
+        }
+        if (message.includes("Access Denied")) {
+            return "I couldn't reach my coffee knowledge right now. Please try again in a bit."
         }
         return message
     }, [])
@@ -613,7 +613,7 @@ export default function ChatWindow({
                     </motion.div>
                     <div>
                         <h3 className='font-semibold text-sm'>
-                            Chat with Grounds AI
+                            Chat with Marble
                         </h3>
                         <motion.p
                             key={currentRemaining}
@@ -755,13 +755,21 @@ export default function ChatWindow({
                     {error && (
                         <motion.div
                             key='error-message'
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className='flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive'
+                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            className='flex justify-start'
                         >
-                            <AlertCircle className='w-4 h-4 shrink-0' />
-                            <span className='text-sm'>{error}</span>
+                            <div className='max-w-[85%] px-4 py-2.5 rounded-2xl rounded-bl-md bg-secondary/5 border border-secondary/15 text-sm leading-relaxed'>
+                                <div className='flex items-center gap-1.5 text-text/70'>
+                                    <Sparkles className='w-3.5 h-3.5 text-secondary/60 shrink-0' />
+                                    <span className='font-medium'>
+                                        Marble couldn&apos;t respond
+                                    </span>
+                                </div>
+                                <p className='mt-1 text-text/60'>{error}</p>
+                            </div>
                         </motion.div>
                     )}
                     {locationLoading && (

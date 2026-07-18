@@ -249,19 +249,30 @@ export async function chatCompletionWithTools(
                 tool_choice: options.toolChoice ?? "auto",
                 max_tokens: options.maxTokens ?? 1000,
                 temperature: options.temperature ?? 0.7,
+                // Disable thinking/reasoning for chat. Thinking models like
+                // qwen3.5 auto-enable reasoning by default, which eats the
+                // token budget and can return an empty `content` for short
+                // prompts (e.g. "Hello"). Per Ollama's OpenAI-compatible API,
+                // `reasoning_effort: "none"` turns thinking off and returns the
+                // final answer directly in `content`.
+                reasoning_effort: "none",
             }),
             signal: AbortSignal.timeout(timeoutMs),
         })
 
         if (!response.ok) {
             console.error(`Chat completion failed: ${response.status} ${response.statusText}`)
-            return null
+            // Throw with the status so callers can surface a meaningful,
+            // mappable error instead of a generic "no response".
+            throw new Error(`Chat provider responded with ${response.status}`)
         }
 
         const data = (await response.json()) as {
             choices?: {
                 message?: {
                     content?: string
+                    reasoning_content?: string
+                    thinking?: string
                     tool_calls?: ToolCall[]
                 }
             }[]
@@ -272,16 +283,34 @@ export async function chatCompletionWithTools(
             return null
         }
 
+        // Strip any stray thinking tags that leak into content when a reasoning
+        // model emits them despite reasoning being disabled, then fall back to
+        // the reasoning trace only when the final answer is empty.
+        const stripThinking = (text: string): string =>
+            text.replace(/<[\s\S]*?<\/think>\s*/gi, "").trim()
+
+        let content = message.content ? stripThinking(message.content) : ""
+        const reasoningHint =
+            message.reasoning_content ?? message.thinking ?? ""
+        if (!content && reasoningHint.trim()) {
+            content = stripThinking(reasoningHint)
+        }
+
         return {
-            content: message.content ?? null,
+            content: content || null,
             toolCalls: message.tool_calls ?? null,
         }
     } catch (error) {
         if (error instanceof Error && error.name === "TimeoutError") {
             console.error("Chat completion timed out")
-        } else {
-            console.error("Chat completion error:", error)
+            throw new Error("The chat provider timed out")
         }
+        // Re-throw our own status errors; swallow truly unexpected ones as null
+        // to avoid leaking internal details to the client.
+        if (error instanceof Error && error.message.startsWith("Chat provider")) {
+            throw error
+        }
+        console.error("Chat completion error:", error)
         return null
     }
 }

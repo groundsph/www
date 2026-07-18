@@ -41,14 +41,20 @@ export async function sendChatMessageStream(
         buffer = lines.pop() ?? ""
 
         for (const line of lines) {
-            if (line.startsWith("data: ")) {
-                try {
-                    const chunk = JSON.parse(line.slice(6))
-                    onChunk(chunk)
-                } catch {
-                    // Ignore parse errors
-                }
+            if (!line.startsWith("data: ")) continue
+
+            // Only swallow JSON parse failures for malformed lines. Errors
+            // thrown by onChunk (e.g. an `{type:"error"}` chunk) must
+            // propagate so the caller can surface them — otherwise provider
+            // errors like a 403 get discarded and the chat renders an empty
+            // response.
+            let chunk: ChatStreamChunk
+            try {
+                chunk = JSON.parse(line.slice(6))
+            } catch {
+                continue
             }
+            onChunk(chunk)
         }
     }
 }

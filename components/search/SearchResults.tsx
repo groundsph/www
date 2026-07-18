@@ -91,7 +91,7 @@ export function SearchResults({ results, selectedIndex, onSelect, query }: Searc
 
   const groupOrder = ['chat', 'action', 'page', 'cafe', 'user', 'blog', 'crawl', 'collection', 'event', 'menu-item']
   const groupLabels: Record<string, string> = {
-    chat: 'Grounds AI', action: 'Quick Actions', page: 'Pages', cafe: 'Cafes', user: 'Users',
+    chat: 'Marble', action: 'Quick Actions', page: 'Pages', cafe: 'Cafes', user: 'Users',
     blog: 'Blogs', crawl: 'Crawls', collection: 'Collections', event: 'Events', 'menu-item': 'Menu Items',
   }
 

@@ -159,12 +159,25 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
 
     // Normal tool-calling flow
     for (let callCount = 0; callCount < MAX_TOOL_CALLS; callCount++) {
-            const response = await chatCompletionWithTools(messages, CHAT_TOOLS, {
-                temperature: 0.7,
-                maxTokens: 1000,
-                timeoutMs: 60000,
-                toolChoice: "auto",
-            })
+            let response
+            try {
+                response = await chatCompletionWithTools(messages, CHAT_TOOLS, {
+                    temperature: 0.7,
+                    maxTokens: 1000,
+                    timeoutMs: 60000,
+                    toolChoice: "auto",
+                })
+            } catch (completionError) {
+                // Forward provider errors (e.g. 403, timeout) so the client
+                // can map them to a friendly, soft notification.
+                await onChunk({
+                    type: "error",
+                    error: completionError instanceof Error
+                        ? completionError.message
+                        : "An error occurred while processing your message",
+                })
+                return
+            }
 
             if (!response) {
                 await onChunk({ type: "error", error: "No response from AI" })
@@ -255,7 +268,13 @@ export async function runChatStream(options: ChatStreamOptions): Promise<void> {
                     await onChunk({ type: "crawlDraft", crawlDraft })
                 }
 
-                const baseMessage = response.content ?? "I don't have a response for that."
+                // Guard against empty/whitespace-only content so the UI never
+                // renders a blank bubble (e.g. when a reasoning model returns
+                // no final answer).
+                const baseMessage =
+                    response.content && response.content.trim()
+                        ? response.content
+                        : "I don't have a response for that right now. Could you rephrase your question?"
                 const finalMessage = (cafes.length > 0 && crawlDraft)
                     ? `I found ${cafes.length} cafes for your crawl! ${crawlDraft.description}`
                     : baseMessage
