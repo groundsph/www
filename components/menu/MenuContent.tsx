@@ -4,12 +4,13 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
-import { X, ChevronDown, Scale, Plus, Check, Flame, Snowflake, UtensilsCrossed, Leaf, Globe, Pencil, Coffee } from "lucide-react"
+import { X, ChevronDown, Scale, Plus, Check, Flame, Snowflake, UtensilsCrossed, Leaf, Globe, Pencil, Coffee, ArrowLeft, Search } from "lucide-react"
 import dynamic from "next/dynamic"
 import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
 import { useAuth } from "@/components/layout/AuthProvider"
 import SuggestMenuItemButton from "@/components/suggestions/SuggestMenuItemButton"
 import type { ComparableMenuItem } from "@/utils/types/menu-comparison"
+import { getCafeThumbnailUrl } from "@/utils/extras"
 
 const MenuComparisonModal = dynamic(
     () => import("@/components/menu/MenuComparisonModal"),
@@ -51,6 +52,8 @@ interface MenuContentProps {
     cafeId: string
     cafeName: string
     cafeSlug: string
+    cafeThumbnail?: string | null
+    cafeAddressDisplay?: string | null
     highlightItemId?: string
 }
 
@@ -62,6 +65,8 @@ export default function MenuContent({
     cafeId,
     cafeName,
     cafeSlug,
+    cafeThumbnail,
+    cafeAddressDisplay,
     highlightItemId,
 }: MenuContentProps) {
     const [lightboxImage, setLightboxImage] = useState<{
@@ -77,6 +82,8 @@ export default function MenuContent({
     const [editTarget, setEditTarget] = useState<MenuItem | null>(null)
     const [highlightedItemId, setHighlightedItemId] = useState<string | null>(highlightItemId || null)
     const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+    const [searchQuery, setSearchQuery] = useState("")
 
     // Handle scroll to highlighted item
     useEffect(() => {
@@ -146,29 +153,80 @@ export default function MenuContent({
         setIsCompareModalOpen(false)
     }, [])
 
-    // Filter items based on active filter
+    // Filter items based on active filter and search query
     const filteredMenuItems = useMemo(() => {
+        let items = menuItems
+
         switch (activeFilter) {
             case "coffee":
-                return menuItems.filter((item) => !item.isFood)
+                items = items.filter((item) => !item.isFood)
+                break
             case "food":
-                return menuItems.filter((item) => item.isFood)
+                items = items.filter((item) => item.isFood)
+                break
             case "cold":
-                return menuItems.filter((item) => item.isCold)
+                items = items.filter((item) => item.isCold)
+                break
             case "hot":
-                return menuItems.filter((item) => item.isHot)
+                items = items.filter((item) => item.isHot)
+                break
             case "vegan":
-                return menuItems.filter((item) => item.isVegan)
+                items = items.filter((item) => item.isVegan)
+                break
             default:
-                return menuItems
+                break
         }
-    }, [menuItems, activeFilter])
+
+        const query = searchQuery.trim().toLowerCase()
+        if (query) {
+            items = items.filter(
+                (item) =>
+                    item.name.toLowerCase().includes(query) ||
+                    (item.description?.toLowerCase().includes(query) ?? false) ||
+                    item.category.toLowerCase().includes(query)
+            )
+        }
+
+        return items
+    }, [menuItems, activeFilter, searchQuery])
+
+    // Smart sort categories: signatures first, drinks before food, add-ons last
+    const sortedCategories = useMemo(() => {
+        const drinkKeywords = ["coffee", "espresso", "tea", "matcha", "chocolate", "beverage", "drink", "milkshake", "smoothie", "juice", "latte", "cappuccino", "americano"]
+        const specialtyDrinkKeywords = ["specialty", "signature"]
+        const foodKeywords = ["food", "pastry", "sandwich", "breakfast", "lunch", "brunch", "dessert", "cake", "snack", "salad", "pasta", "rice", "burger", "pizza", "toast", "bowl"]
+        const addonKeywords = ["add-on", "addon", "add on", "add-ons", "extras", "extra", "option", "options", "modification", "modifier", "upgrade", "topping", "syrup", "shot"]
+
+        const getCategoryPriority = (category: string) => {
+            const lower = category.toLowerCase()
+            if (addonKeywords.some((kw) => lower.includes(kw))) return 100
+            if (lower === "add-ons") return 100
+            if (lower === "food") return 40
+            if (lower === "drinks") return 20
+            const itemCount = filteredMenuItems.filter((item) => item.category === category).length
+            const signatureCount = filteredMenuItems.filter(
+                (item) => item.category === category && item.isSignature
+            ).length
+            if (itemCount > 0 && signatureCount / itemCount >= 0.5) return 10
+            if (specialtyDrinkKeywords.some((kw) => lower.includes(kw))) return 15
+            if (drinkKeywords.some((kw) => lower.includes(kw))) return 30
+            if (foodKeywords.some((kw) => lower.includes(kw))) return 50
+            return 60
+        }
+
+        return [...categories].sort((a, b) => {
+            const priorityA = getCategoryPriority(a)
+            const priorityB = getCategoryPriority(b)
+            if (priorityA !== priorityB) return priorityA - priorityB
+            return a.localeCompare(b)
+        })
+    }, [categories, filteredMenuItems])
 
     // Get categories that have items after filtering
     const filteredCategories = useMemo(() => {
         const categoriesWithItems = new Set(filteredMenuItems.map((item) => item.category))
-        return categories.filter((cat) => categoriesWithItems.has(cat))
-    }, [categories, filteredMenuItems])
+        return sortedCategories.filter((cat) => categoriesWithItems.has(cat))
+    }, [sortedCategories, filteredMenuItems])
 
     const filterPills: { key: FilterType; label: string }[] = [
         { key: "all", label: "All" },
@@ -267,30 +325,80 @@ export default function MenuContent({
 
     return (
         <>
-            {/* Compare Button Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-tertiary/40 border-b border-text/10">
-                <div className="flex items-center gap-2">
-                    {compareItemIds.length > 0 && (
-                        <span className="text-sm text-text/60">
-                            {compareItemIds.length} item{compareItemIds.length === 1 ? "" : "s"} selected
-                        </span>
-                    )}
-                </div>
-                <div className="flex items-center gap-2">
-                    <SuggestMenuItemButton cafeId={cafeId} cafeName={cafeName} variant="default" />
-                    <MenuOcrScanButton
-                        cafeId={cafeId}
-                        cafeName={cafeName}
-                        cafeSlug={cafeSlug}
-                        variant="default"
-                    />
-                    <button
-                        onClick={handleOpenCompareModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
+            {/* Unified sticky header: back link, cafe info, actions */}
+            <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-text/10">
+                <div className="px-4 py-3 flex items-center gap-3">
+                    <Link
+                        href={`/cafes/${cafeSlug}`}
+                        className="p-2 hover:bg-text/10 rounded-full transition-colors shrink-0"
+                        aria-label="Back to cafe"
                     >
-                        <Scale className="w-4 h-4" />
-                        Compare Items
-                    </button>
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
+                    {cafeThumbnail && (
+                        <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0">
+                            <Image
+                                src={getCafeThumbnailUrl(cafeThumbnail)}
+                                alt={cafeName}
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                        <h1 className="font-semibold text-sm md:text-base truncate">
+                            {cafeName}
+                        </h1>
+                        {cafeAddressDisplay && (
+                            <p className="text-xs text-text/60 truncate hidden sm:block">
+                                {cafeAddressDisplay}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <SuggestMenuItemButton
+                            cafeId={cafeId}
+                            cafeName={cafeName}
+                            variant="compact"
+                        />
+                        <MenuOcrScanButton
+                            cafeId={cafeId}
+                            cafeName={cafeName}
+                            cafeSlug={cafeSlug}
+                            variant="compact"
+                        />
+                        <button
+                            onClick={handleOpenCompareModal}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
+                        >
+                            <Scale className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Compare</span>
+                            <span className="sm:hidden">{compareItemIds.length || "0"}</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* Search bar — scrolls with content */}
+            <div className="px-4 py-3 bg-tertiary/20 border-b border-text/10">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search menu items..."
+                        className="w-full pl-9 pr-9 py-2 bg-background border border-text/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-text/10 rounded-full transition-colors"
+                            aria-label="Clear search"
+                        >
+                            <X className="w-3.5 h-3.5 text-text/50" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -325,8 +433,10 @@ export default function MenuContent({
 
             {filteredCategories.length === 0 ? (
                 <div className="text-center py-16 text-text/60 px-4">
-                    <p className="text-lg font-medium">No items match this filter</p>
-                    <p className="text-sm mt-1">Try selecting a different filter</p>
+                    <p className="text-lg font-medium">No items match</p>
+                    <p className="text-sm mt-1">
+                        {searchQuery ? "Try a different search term or filter" : "Try selecting a different filter"}
+                    </p>
                 </div>
             ) : (
                 filteredCategories.map((category) => {
@@ -338,14 +448,75 @@ export default function MenuContent({
                             return 0
                         })
 
-                    // Helper to render a menu item
-                    const renderMenuItem = (item: MenuItem) => {
+                    const itemsWithPhotos = categoryItems.filter((item) => item.imageUrl)
+                    const itemsWithoutPhotos = categoryItems.filter((item) => !item.imageUrl)
+
+                    const compareButton = (item: MenuItem) => {
                         const isInComparison = isItemInComparison(item.id)
                         const canAddMore = compareItemIds.length < 4 || isInComparison
 
                         return (
+                            <button
+                                onClick={() => toggleCompareItem(item)}
+                                disabled={!canAddMore}
+                                className={`p-1.5 rounded-full shadow-sm transition-all cursor-pointer ${
+                                    isInComparison
+                                        ? "bg-primary text-white"
+                                        : "bg-background/90 backdrop-blur-sm text-text/60 hover:text-primary hover:bg-background"
+                                } ${!canAddMore ? "opacity-50 cursor-not-allowed" : ""}`}
+                                title={isInComparison ? "Remove from comparison" : compareItemIds.length >= 4 ? "Max 4 items" : "Add to comparison"}
+                                aria-label={isInComparison ? "Remove from comparison" : compareItemIds.length >= 4 ? "Max 4 items" : "Add to comparison"}
+                            >
+                                {isInComparison ? (
+                                    <Check className="w-3.5 h-3.5" />
+                                ) : (
+                                    <Plus className="w-3.5 h-3.5" />
+                                )}
+                            </button>
+                        )
+                    }
+
+                    const editButton = (item: MenuItem) => {
+                        const buttonClasses = "text-text/30 hover:text-primary transition-colors cursor-pointer"
+                        const label = "Suggest an edit"
+
+                        return authUser ? (
+                            <button
+                                onClick={() => setEditTarget(item)}
+                                className={buttonClasses}
+                                title={label}
+                                aria-label={label}
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                        ) : (
+                            <Link
+                                href={`/auth?redirect=/cafes/${cafeSlug}/menu`}
+                                className={buttonClasses}
+                                title={label}
+                                aria-label={label}
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                            </Link>
+                        )
+                    }
+
+                    const signatureBadge = (item: MenuItem) => item.isSignature ? (
+                        <div className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm shrink-0">
+                            <span>★</span>
+                            <span>Signature</span>
+                        </div>
+                    ) : null
+
+                    const communityIndicator = (item: MenuItem) => item.communitySubmitted ? (
+                        <div className="bg-background/90 backdrop-blur-sm p-1 rounded-full shadow-sm">
+                            <Globe className="w-3.5 h-3.5 text-text/50" />
+                        </div>
+                    ) : null
+
+                    const renderMenuItemCard = (item: MenuItem) => {
+                        return (
                             <div
-                                key={item.id}
                                 ref={(el) => {
                                     if (el) itemRefs.current.set(item.id, el)
                                 }}
@@ -385,37 +556,23 @@ export default function MenuContent({
                                     )}
 
                                     {/* Signature badge */}
-                                    {item.isSignature && (
-                                        <div className="absolute top-2 left-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                                            <span>★</span>
-                                            <span>Signature</span>
+                                    {signatureBadge(item) && (
+                                        <div className="absolute top-2 left-2">
+                                            {signatureBadge(item)}
                                         </div>
                                     )}
 
                                     {/* Community indicator */}
-                                    {item.communitySubmitted && (
-                                        <div className="absolute top-2 right-10 bg-background/90 backdrop-blur-sm p-1.5 rounded-full shadow-sm">
-                                            <Globe className="w-3.5 h-3.5 text-text/50" />
+                                    {communityIndicator(item) && (
+                                        <div className="absolute top-2 right-10">
+                                            {communityIndicator(item)}
                                         </div>
                                     )}
 
                                     {/* Compare button */}
-                                    <button
-                                        onClick={() => toggleCompareItem(item)}
-                                        disabled={!canAddMore}
-                                        className={`absolute top-2 right-2 z-10 p-1.5 rounded-full shadow-sm transition-all cursor-pointer ${
-                                            isInComparison
-                                                ? "bg-primary text-white"
-                                                : "bg-background/90 backdrop-blur-sm text-text/60 hover:text-primary hover:bg-background"
-                                        } ${!canAddMore ? "opacity-50 cursor-not-allowed" : ""}`}
-                                        title={isInComparison ? "Remove from comparison" : compareItemIds.length >= 4 ? "Max 4 items" : "Add to comparison"}
-                                    >
-                                        {isInComparison ? (
-                                            <Check className="w-3.5 h-3.5" />
-                                        ) : (
-                                            <Plus className="w-3.5 h-3.5" />
-                                        )}
-                                    </button>
+                                    <div className="absolute top-2 right-2 z-10">
+                                        {compareButton(item)}
+                                    </div>
                                 </div>
 
                                 {/* Content Section */}
@@ -449,25 +606,48 @@ export default function MenuContent({
                                         <span className="text-[10px] text-text/30 uppercase tracking-wider font-medium">
                                             {item.category}
                                         </span>
-                                        {authUser ? (
-                                            <button
-                                                onClick={() => setEditTarget(item)}
-                                                className="text-text/30 hover:text-primary transition-colors cursor-pointer"
-                                                title="Suggest an edit"
-                                                aria-label="Suggest an edit to this menu item"
-                                            >
-                                                <Pencil className="w-3.5 h-3.5" />
-                                            </button>
-                                        ) : (
-                                            <Link
-                                                href={`/auth?redirect=/cafes/${cafeSlug}/menu`}
-                                                className="text-text/30 hover:text-primary transition-colors cursor-pointer"
-                                                title="Suggest an edit"
-                                                aria-label="Suggest an edit to this menu item"
-                                            >
-                                                <Pencil className="w-3.5 h-3.5" />
-                                            </Link>
-                                        )}
+                                        {editButton(item)}
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    }
+
+                    const renderMenuItemRow = (item: MenuItem) => {
+                        return (
+                            <div
+                                ref={(el) => {
+                                    if (el) itemRefs.current.set(item.id, el)
+                                }}
+                                className={`group flex items-center justify-between gap-3 px-3 py-2.5 bg-tertiary/30 rounded-xl border hover:border-text/20 transition-all ${
+                                    highlightedItemId === item.id
+                                        ? 'border-primary ring-2 ring-primary/30 shadow-lg'
+                                        : 'border-transparent'
+                                }`}
+                            >
+                                <div className="min-w-0 flex-1 flex items-center gap-2.5 overflow-hidden">
+                                    <h3 className="font-semibold text-sm text-text shrink-0">
+                                        {item.name}
+                                    </h3>
+                                    <div className="hidden sm:flex items-center gap-1 shrink-0">
+                                        {signatureBadge(item)}
+                                        {renderBadges(item)}
+                                        {communityIndicator(item)}
+                                    </div>
+                                    {item.description && (
+                                        <span className="text-xs text-text/50 truncate hidden md:inline">
+                                            {item.description}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                    <span className="font-bold text-sm text-primary">
+                                        ₱{item.price.toFixed(0)}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        {compareButton(item)}
+                                        {editButton(item)}
                                     </div>
                                 </div>
                             </div>
@@ -527,19 +707,37 @@ export default function MenuContent({
                                                 ))}
                                             </div>
                                         ) : (
-                                            /* Regular items: card grid */
-                                            <div className="px-4 mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                                {categoryItems.map((item, index) => (
-                                                    <motion.div
-                                                        key={item.id}
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: index * 0.05 }}
-                                                    >
-                                                        {renderMenuItem(item)}
-                                                    </motion.div>
-                                                ))}
-                                            </div>
+                                            /* Mixed layout: cards for items with photos, rows for items without */
+                                            <>
+                                                {itemsWithPhotos.length > 0 && (
+                                                    <div className="px-4 mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                                        {itemsWithPhotos.map((item, index) => (
+                                                            <motion.div
+                                                                key={item.id}
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                transition={{ delay: index * 0.05 }}
+                                                            >
+                                                                {renderMenuItemCard(item)}
+                                                            </motion.div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {itemsWithoutPhotos.length > 0 && (
+                                                    <div className="px-4 mt-2 space-y-2">
+                                                        {itemsWithoutPhotos.map((item, index) => (
+                                                            <motion.div
+                                                                key={item.id}
+                                                                initial={{ opacity: 0, x: -10 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                transition={{ delay: index * 0.03 }}
+                                                            >
+                                                                {renderMenuItemRow(item)}
+                                                            </motion.div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </motion.div>
                                 )}

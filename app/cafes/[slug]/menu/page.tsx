@@ -1,13 +1,12 @@
+import { Metadata } from "next"
+import Link from "next/link"
+import { Coffee } from "lucide-react"
 import { db } from "@/db"
 import { cafes, cafeMenuItems } from "@/db/schema"
 import { eq, and, asc } from "drizzle-orm"
 import { notFound } from "next/navigation"
-import { Metadata } from "next"
-import Link from "next/link"
-import { Coffee } from "lucide-react"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { buildBreadcrumbList } from "@/utils/seo/breadcrumbs"
-import MenuHeader from "@/components/menu/MenuHeader"
 import MenuContent from "@/components/menu/MenuContent"
 
 interface MenuPageProps {
@@ -169,14 +168,6 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
                 type='application/ld+json'
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(menuJsonLd) }}
             />
-            {/* Header - only shows if navigated from within the site */}
-            <MenuHeader
-                slug={slug}
-                cafeName={cafe.name}
-                thumbnail={cafe.thumbnail}
-                addressDisplay={cafe.addressDisplay}
-            />
-
             {/* Menu Content */}
             <main className='w-full'>
                 {!menuItems || menuItems.length === 0 ? (
@@ -211,6 +202,8 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
                         cafeId={cafe.id}
                         cafeName={cafe.name}
                         cafeSlug={cafe.slug}
+                        cafeThumbnail={cafe.thumbnail}
+                        cafeAddressDisplay={cafe.addressDisplay}
                         highlightItemId={typeof highlightItemId === 'string' ? highlightItemId : undefined}
                     />
                 )}
