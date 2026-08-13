@@ -370,6 +370,12 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://localhost:3000/api/cron/hid
 
 This project uses a custom versioning scheme: `YEAR.FEATURE_NUM.FIXES` (e.g., `2026.13.0`).
 
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+
+In short: you are free to use, modify, and share this software, but any modified version you run as a network service (e.g., a web application) must be made available under the same license. See the [LICENSE](LICENSE) file for the full terms.
+
 ## Troubleshooting
 
 ### Database connection issues
