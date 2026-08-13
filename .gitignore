@@ -47,3 +47,5 @@ certificates
 plan.md
 .opencode/
 .worktrees/
+.superpowers/
+.pi/
