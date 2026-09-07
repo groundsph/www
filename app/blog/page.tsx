@@ -10,6 +10,11 @@ export const metadata: Metadata = {
     description: "Latest cafe news, guides, and community stories from GroundsPH.",
     alternates: {
         canonical: "/blog",
+        types: {
+            "application/rss+xml": [
+                { url: "/feed.xml", title: "GroundsPH Blog RSS Feed" },
+            ],
+        },
     },
     keywords: [
         "cafe blog", "coffee guides", "cafe news Philippines",

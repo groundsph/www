@@ -14,6 +14,16 @@ describe("openai-compatible helpers", () => {
         expect(normalizeBaseUrl("https://example.com/api/")).toBe("https://example.com/api")
     })
 
+    it("strips a trailing /v1 path segment so callers' /v1 isn't duplicated", () => {
+        // OpenRouter users commonly provide https://openrouter.ai/api/v1, but the
+        // helpers append /v1 themselves (e.g. .../v1/chat/completions). Without
+        // this, the request went to .../v1/v1/chat/completions and returned 404.
+        expect(normalizeBaseUrl("https://openrouter.ai/api/v1")).toBe("https://openrouter.ai/api")
+        expect(normalizeBaseUrl("https://openrouter.ai/api/v1/")).toBe("https://openrouter.ai/api")
+        // Ollama-style host without a v1 segment is untouched.
+        expect(normalizeBaseUrl("https://ollama.com")).toBe("https://ollama.com")
+    })
+
     it("extracts model ids from API payload", () => {
         const data = { data: [{ id: "model-a" }, { id: "model-b" }] }
         expect(extractModelIds(data)).toEqual(["model-a", "model-b"])
@@ -253,6 +263,10 @@ describe("checkBlogPost", () => {
         })
         expect(mockFetch).toHaveBeenCalledTimes(1)
         expect(mockFetch.mock.calls[0][1].signal).toBeDefined()
+        // Reasoning models return empty content; the request must disable thinking
+        // (mirrors the chat path) or the moderation check fails intermittently.
+        const reqBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+        expect(reqBody.reasoning_effort).toBe("none")
     })
 
     it("throws error when environment variables are missing", async () => {
@@ -321,6 +335,59 @@ describe("checkBlogPost", () => {
         global.fetch = mockFetch
 
         expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Invalid AI response format")
+    })
+
+    it("parses JSON wrapped in markdown code fences", async () => {
+        // Ollama (and other OpenAI-compatible cloud models) return the JSON
+        // wrapped in ```json ... ``` fences even when response_format asks for
+        // a JSON object. Regression test for the AI checkup silently failing.
+        const fenced = "```json\n" + JSON.stringify({
+            approved: true,
+            issues: [],
+            suggestions: ["Add a headline"],
+        }, null, 2) + "\n```"
+        const mockFetch = mock(() =>
+            Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({
+                    choices: [{ message: { content: fenced } }],
+                }),
+            } as Response),
+        )
+        global.fetch = mockFetch
+
+        const result = await checkBlogPost("gpt-4", "This is blog content.")
+
+        expect(result).toEqual({
+            approved: true,
+            issues: [],
+            suggestions: ["Add a headline"],
+        })
+    })
+
+    it("parses JSON extracted from surrounding prose", async () => {
+        const prose = `Here is my assessment:\n${JSON.stringify({
+            approved: false,
+            issues: ["Too short"],
+            suggestions: [],
+        })}\nHope this helps.`
+        const mockFetch = mock(() =>
+            Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({
+                    choices: [{ message: { content: prose } }],
+                }),
+            } as Response),
+        )
+        global.fetch = mockFetch
+
+        const result = await checkBlogPost("gpt-4", "content")
+
+        expect(result).toEqual({
+            approved: false,
+            issues: ["Too short"],
+            suggestions: [],
+        })
     })
 })
 

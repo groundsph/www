@@ -25,7 +25,11 @@ function getConfig() {
 }
 
 export function normalizeBaseUrl(url: string): string {
-    return url.replace(/\/$/, "")
+    // Callers append "/v1/..." themselves (e.g. "/v1/chat/completions"), so the
+    // configured base must NOT already end in "/v1". Some providers (OpenRouter)
+    // publish their OpenAI-compatible endpoint as ".../api/v1"; strip that trailing
+    // segment to avoid double-suffixing (which yields a 404).
+    return url.replace(/\/+$/, "").replace(/\/v1$/i, "")
 }
 
 export function extractModelIds(payload: { data?: { id: string }[] }): string[] {
@@ -88,6 +92,9 @@ export async function generateExcerpt(
             ],
             max_tokens: 150,
             temperature: 0.7,
+            // Some reasoning models consume the token budget thinking and return
+            // empty/truncated content. Turn thinking off for deterministic output.
+            reasoning_effort: "none",
         }),
         signal: AbortSignal.timeout(30000),
     })
@@ -106,6 +113,31 @@ export async function generateExcerpt(
     }
 
     return excerpt
+}
+
+/**
+ * Extract a JSON object from an LLM response string, tolerating the ways
+ * OpenAI-compatible providers wrap the payload:
+ *  - markdown code fences (```json ... ```) which Ollama's cloud models emit
+ *    even when `response_format: { type: "json_object" }` is requested
+ *  - surrounding prose before/after the JSON object
+ * Falls back to extracting the outermost {...} span, then JSON.parse.
+ */
+function parseJsonFromLlmResponse(raw: string): unknown {
+    let text = raw.trim()
+
+    // Strip a single enclosing markdown code fence (language tag optional).
+    const fence = text.match(/^```[a-zA-Z]*[\n\r]?\s*([\s\S]*?)\s*```$/)
+    if (fence) text = fence[1].trim()
+
+    // If the model wrapped the JSON in prose, take the outermost {...} span.
+    const firstBrace = text.indexOf("{")
+    const lastBrace = text.lastIndexOf("}")
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+        text = text.slice(firstBrace, lastBrace + 1)
+    }
+
+    return JSON.parse(text)
 }
 
 export async function checkBlogPost(
@@ -139,6 +171,11 @@ export async function checkBlogPost(
             max_tokens: 500,
             temperature: 0.3,
             response_format: { type: "json_object" },
+            // Reasoning models (e.g. deepseek-v4-flash) spend the token budget on
+            // `reasoning` and can return empty/truncated `content`, making the
+            // moderation check fail ("Unexpected EOF"). Disable thinking so the
+            // answer is returned directly as JSON in `content`.
+            reasoning_effort: "none",
         }),
         signal: AbortSignal.timeout(30000),
     })
@@ -157,7 +194,7 @@ export async function checkBlogPost(
     }
 
     try {
-        const parsed = JSON.parse(jsonContent)
+        const parsed = parseJsonFromLlmResponse(jsonContent)
         return blogCheckSchema.parse(parsed)
     } catch (error) {
         console.error("AI response validation failed:", error)

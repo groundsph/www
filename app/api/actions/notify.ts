@@ -302,6 +302,179 @@ export async function notifyDiscordCafeClaim(
 }
 
 /**
+ * Format the AI moderation verdict for a Discord embed field value.
+ */
+function formatAiReviewSummary(
+    aiReview?: { approved: boolean; issues: string[] }
+): string {
+    if (!aiReview) return "Not reviewed (admin/mod submission)"
+    if (aiReview.approved && aiReview.issues.length === 0) {
+        return "✅ Approved by AI"
+    }
+    const issues = aiReview.issues.length > 0
+        ? aiReview.issues.slice(0, 4).map((i) => `• ${i}`).join("\n") +
+          (aiReview.issues.length > 4 ? `\n• +${aiReview.issues.length - 4} more` : "")
+        : "• No specific issues listed"
+    return `⚠️ Needs manual review\n${issues}`.slice(0, 1024)
+}
+
+/**
+ * Notify Discord when a blog post is submitted for approval (pending moderation).
+ * Includes the AI review verdict so moderators can triage at a glance.
+ */
+export async function notifyDiscordBlogSubmission(
+    blogInfo: { title: string; slug: string; category: string },
+    authorName?: string,
+    aiReview?: { approved: boolean; issues: string[] }
+): Promise<NotifyResult> {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn('Discord webhook URL not configured')
+        return { success: false, message: 'Webhook not configured' }
+    }
+
+    try {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'
+        const blogUrl = `${siteUrl}/blog/${blogInfo.slug}`
+        const adminUrl = `${siteUrl}/manage/content`
+        const displayTitle = blogInfo.title.length > 100
+            ? blogInfo.title.slice(0, 100) + '...'
+            : blogInfo.title
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: "📝 New Blog Submission",
+                    description: "A blog post has been submitted for approval.",
+                    color: 0xf59e0b, // Amber color — awaiting moderation
+                    fields: [
+                        {
+                            name: "Blog Post",
+                            value: `[${displayTitle}](${blogUrl})`,
+                            inline: false
+                        },
+                        {
+                            name: "Category",
+                            value: blogInfo.category,
+                            inline: true
+                        },
+                        {
+                            name: "Submitted By",
+                            value: authorName || "Anonymous User",
+                            inline: true
+                        },
+                        {
+                            name: "AI Review",
+                            value: formatAiReviewSummary(aiReview),
+                            inline: false
+                        },
+                        {
+                            name: "Action Required",
+                            value: `[Review in Content Management](${adminUrl})`,
+                            inline: false
+                        },
+                    ],
+                    footer: {
+                        text: "Grounds • Blog Submission"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            }),
+        })
+
+        if (!response.ok) {
+            console.error('Discord webhook failed:', response.status)
+            return {
+                success: false,
+                message: 'Failed to notify Discord',
+            }
+        }
+
+        return {
+            success: true,
+            message: 'Blog Submission Notified',
+        }
+    } catch (error) {
+        console.error('Discord notification error:', error)
+        return {
+            success: false,
+            message: 'Error sending notification',
+        }
+    }
+}
+
+/**
+ * Notify Discord when a blog post has been approved and published.
+ */
+export async function notifyDiscordBlogApproved(
+    blogInfo: { title: string; slug: string },
+    moderatorName?: string
+): Promise<NotifyResult> {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn('Discord webhook URL not configured')
+        return { success: false, message: 'Webhook not configured' }
+    }
+
+    try {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'
+        const blogUrl = `${siteUrl}/blog/${blogInfo.slug}`
+        const displayTitle = blogInfo.title.length > 100
+            ? blogInfo.title.slice(0, 100) + '...'
+            : blogInfo.title
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: "✅ Blog Post Approved",
+                    description: "A blog post has been approved and published.",
+                    color: 0x22c55e, // Green — success
+                    fields: [
+                        {
+                            name: "Blog Post",
+                            value: `[${displayTitle}](${blogUrl})`,
+                            inline: false
+                        },
+                        {
+                            name: "Approved By",
+                            value: moderatorName || "A moderator",
+                            inline: true
+                        },
+                    ],
+                    footer: {
+                        text: "Grounds • Blog Approval"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            }),
+        })
+
+        if (!response.ok) {
+            console.error('Discord webhook failed:', response.status)
+            return {
+                success: false,
+                message: 'Failed to notify Discord',
+            }
+        }
+
+        return {
+            success: true,
+            message: 'Blog Approval Notified',
+        }
+    } catch (error) {
+        console.error('Discord notification error:', error)
+        return {
+            success: false,
+            message: 'Error sending notification',
+        }
+    }
+}
+
+/**
  * Notify Discord about a reported blog post
  */
 export async function notifyDiscordBlogReport(

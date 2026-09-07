@@ -19,6 +19,7 @@ import { checkBlogPost } from "@/utils/ai/openai-compatible"
 import { revalidatePath } from "next/cache"
 import { createNotification } from "./user-notifications"
 import { logSystemAction } from "./system-logs"
+import { notifyDiscordBlogSubmission, notifyDiscordBlogApproved } from "./notify"
 
 // ============================================
 // Helper Functions
@@ -646,6 +647,24 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
     if (!inserted) return { success: false, error: "Failed to create blog post" }
 
     revalidatePath("/blog")
+
+    // Notify Discord when the post is awaiting approval (fire-and-forget).
+    if (finalStatus === "pending") {
+        const authorProfile = await db
+            .select({ displayName: profiles.displayName })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1)
+
+        notifyDiscordBlogSubmission(
+            { title: inserted.title, slug: inserted.slug, category: finalCategory },
+            authorProfile[0]?.displayName ?? undefined,
+            llmReview
+                ? { approved: llmReview.approved, issues: llmReview.issues }
+                : undefined
+        ).catch((err) => console.error("[Blog] Discord submission notify failed:", err))
+    }
+
     return { success: true, slug: inserted.slug }
 }
 
@@ -787,6 +806,25 @@ export async function approveBlogPost(postId: string): Promise<BlogActionResult>
             slug: existing[0].slug,
         },
     })
+
+    // Notify Discord that the post is now live (fire-and-forget, first publish only)
+    if (!isAlreadyPublished) {
+        const moderator = await getCurrentUser()
+        let moderatorName: string | undefined
+        if (moderator) {
+            const modProfile = await db
+                .select({ displayName: profiles.displayName })
+                .from(profiles)
+                .where(eq(profiles.id, moderator.id))
+                .limit(1)
+            moderatorName = modProfile[0]?.displayName ?? undefined
+        }
+
+        notifyDiscordBlogApproved(
+            { title: existing[0].title, slug: existing[0].slug },
+            moderatorName
+        ).catch((err) => console.error("[Blog] Discord approval notify failed:", err))
+    }
 
     revalidatePath("/blog")
     revalidatePath("/admin/blog")

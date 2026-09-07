@@ -1,4 +1,4 @@
-import { Mail, Facebook } from "lucide-react"
+import { Mail, Facebook, Rss } from "lucide-react"
 import Link from "next/link"
 
 export default function Footer() {
@@ -91,6 +91,16 @@ export default function Footer() {
                             >
                                 Blog
                             </Link>
+                            <a
+                                href='/feed.xml'
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className='inline-flex items-center gap-1.5 text-background/80 hover:text-background transition-colors text-sm'
+                                title='Subscribe to the GroundsPH blog via RSS'
+                            >
+                                <Rss className='w-3.5 h-3.5' />
+                                RSS Feed
+                            </a>
                         </div>
                         <div className='flex flex-col gap-3'>
                             <h4 className='font-serif font-semibold text-sm text-background/50 uppercase tracking-wider'>
