@@ -1,5 +1,5 @@
-import { describe, it, expect } from "bun:test"
-import { parseOcrMenuItems } from "@/utils/ai/menu-ocr"
+import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
+import { parseOcrMenuItems, extractMenuItemsFromImage } from "@/utils/ai/menu-ocr"
 
 describe("parseOcrMenuItems", () => {
     it("parses valid JSON array", () => {
@@ -128,5 +128,46 @@ Let me know if you need anything else!
         ])
         const items = parseOcrMenuItems(raw)
         expect(items).toHaveLength(0)
+    })
+})
+
+describe("extractMenuItemsFromImage", () => {
+    let originalEnv: { [key: string]: string | undefined }
+    const originalFetch = globalThis.fetch
+    let fetchCalls: Array<{ url: string; body: string }> = []
+
+    beforeEach(() => {
+        originalEnv = {
+            OPENAI_COMPATIBLE_BASE_URL: process.env.OPENAI_COMPATIBLE_BASE_URL,
+            OPENAI_COMPATIBLE_API_KEY: process.env.OPENAI_COMPATIBLE_API_KEY,
+            OPENAI_COMPATIBLE_OCR_MODEL: process.env.OPENAI_COMPATIBLE_OCR_MODEL,
+        }
+        process.env.OPENAI_COMPATIBLE_BASE_URL = "https://openrouter.ai/api/v1"
+        process.env.OPENAI_COMPATIBLE_API_KEY = "test-key"
+        process.env.OPENAI_COMPATIBLE_OCR_MODEL = "z-ai/glm-5.3-flash"
+        fetchCalls = []
+        globalThis.fetch = mock((url: string, init: RequestInit) => {
+            fetchCalls.push({ url, body: init.body as string })
+            return Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({
+                    choices: [{ message: { content: "[]" } }],
+                }),
+            } as Response)
+        })
+    })
+
+    afterEach(() => {
+        globalThis.fetch = originalFetch
+        Object.assign(process.env, originalEnv)
+    })
+
+    it("hits the correct URL when the base already includes /v1", async () => {
+        await extractMenuItemsFromImage("aW1hZ2VkYXRh")
+        expect(fetchCalls.length).toBe(1)
+        expect(fetchCalls[0].url).toBe("https://openrouter.ai/api/v1/chat/completions")
+        const body = JSON.parse(fetchCalls[0].body)
+        expect(body.model).toBe("z-ai/glm-5.3-flash")
+        expect(body.messages[1].content[0].type).toBe("image_url")
     })
 })

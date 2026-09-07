@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { normalizeBaseUrl } from "./openai-compatible"
 
 const priceSchema = z.union([
     z.number().nonnegative(),
@@ -41,10 +42,6 @@ function getConfig() {
     const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL ?? ""
     const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY ?? ""
     return { baseUrl, apiKey }
-}
-
-function normalizeBaseUrl(url: string): string {
-    return url.replace(/\/$/, "")
 }
 
 function extractJsonFromMarkdown(text: string): string {
