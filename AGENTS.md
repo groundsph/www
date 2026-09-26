@@ -13,7 +13,7 @@ bun db:push          # Push schema to DB (dev)
 bun db:generate      # Generate migration files
 bun db:migrate       # Run migrations (prod)
 bun db:studio        # Drizzle Studio
-bun merge            # Checkout prod, merge dev, push, checkout back to dev
+bun merge            # Stale: assumes a `dev` branch that does not exist. See "Remotes & deploys".
 ```
 
 - `bun lint` runs ESLint 9 with `eslint-config-next`. No Prettier is configured.
@@ -25,6 +25,7 @@ bun merge            # Checkout prod, merge dev, push, checkout back to dev
 - `drizzle.config.ts` loads `.env.local` explicitly via `dotenv`.
 - `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, and `NEXT_PUBLIC_APP_URL` must all use `https://localhost:3000` locally.
 - AI features are optional—leave `OPENAI_COMPATIBLE_*` empty to disable.
+- `NEXT_PUBLIC_*` vars are inlined into the client bundle at **build** time, so they must also be set in Dokploy (the build platform), not only on the running server. This includes `NEXT_PUBLIC_CARTO_API_KEY`.
 
 ## Architecture
 
@@ -74,11 +75,36 @@ Add new components to the matching domain folder. Create a new domain only if no
 - JSDOM environment is preloaded via `bunfig.toml` → `test-setup.ts` (provides `document`, `window`, `navigator`, `requestAnimationFrame`, `scrollIntoView`).
 - Test files are excluded from `tsconfig.json` compilation.
 
+## Remotes & deploys
+
+Two remotes exist and **both must be kept in sync**:
+
+| Remote | URL | Role |
+|---|---|---|
+| `origin` | `git.ranio.xyz/groundsph/www` (Gitea) | Source of truth for review. Feature branches and PRs live here. |
+| `github` | `github.com/groundsph/www` (public) | What **Dokploy builds from**. |
+
+- **Dokploy builds automatically on `prod` changes to GitHub.** Pushing to Gitea alone does *not*
+  trigger a build or update production.
+- `bun merge` is stale and unsafe: its script expects a `dev` branch and pushes only to `origin`.
+  Never use it to deploy.
+- A change is not finished until GitHub has the merge **and** Dokploy has picked it up. Build and
+  deploy logs live in the Dokploy dashboard, not in the Gitea UI.
+- Build-time env vars live in Dokploy — see `## Environment`.
+
+After merging to `prod`, sync GitHub:
+
+```sh
+git checkout prod && git merge --ff-only origin/prod
+git push github prod
+```
+
 ## Branching
 
-- `dev` = active development. `prod` = production (deployed).
-- Feature branches: `feature/<name>` off `dev`.
-- Merge to prod: `bun merge`.
+- `prod` = production. It is the default branch on both remotes and **the only branch — there is no
+  `dev`**. Cut short-lived feature branches from `prod`.
+- Open the PR against `prod` on **Gitea** (`tea pr create --base prod`), squash-merge, then delete the
+  branch locally and on the remote. Finish by syncing `prod` to GitHub (see *Remotes & deploys*).
 - Commits: Conventional Commits format. Types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`. Scopes (optional): `cafe`, `blog`, `auth`, `map`, `owner`, `manage`, `ai`, etc.
 
 ## Gotchas
