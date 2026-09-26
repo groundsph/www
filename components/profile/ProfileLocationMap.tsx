@@ -5,6 +5,10 @@ import { DivIcon } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import "@/app/map.css"
 import { useEffect, useState } from "react"
+import {
+    CARTO_ATTRIBUTION,
+    CARTO_LIGHT_NOLABELS_TILE_URL,
+} from "@/utils/map/tiles"
 
 function LocationMarker() {
     const [position, setPosition] = useState<[number, number] | null>(null)
@@ -36,8 +40,8 @@ export default function ProfileLocationMap() {
         <div className="rounded-2xl overflow-hidden border border-secondary/20">
             <MapContainer center={[12.8797, 121.774]} zoom={6} scrollWheelZoom className="h-[240px] w-full">
                 <TileLayer
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
+                    attribution={CARTO_ATTRIBUTION}
+                    url={CARTO_LIGHT_NOLABELS_TILE_URL}
                 />
                 <LocationMarker />
             </MapContainer>

@@ -17,6 +17,10 @@ import { getCrawlSegmentStyle } from "@/utils/map/crawl-route-style"
 import { invalidateMapSize } from "@/utils/map/leaflet"
 import { normalizeLatLng } from "@/utils/map/coords"
 import { buildOsrmUrl } from "@/utils/map/osrm"
+import {
+    CARTO_ATTRIBUTION,
+    CARTO_LIGHT_NOLABELS_TILE_URL,
+} from "@/utils/map/tiles"
 
 function MapFocus({
     focusPoint,
@@ -413,8 +417,8 @@ export default function CrawlRouteMap({
                 style={{ minHeight: "420px" }}
             >
                 <TileLayer
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    url='https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+                    attribution={CARTO_ATTRIBUTION}
+                    url={CARTO_LIGHT_NOLABELS_TILE_URL}
                 />
                 {/* Markers and routes - only show after successful fetch */}
                 <div

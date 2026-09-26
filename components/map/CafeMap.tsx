@@ -38,6 +38,7 @@ import {
 
 import MarkerClusterGroup from "react-leaflet-cluster"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import { CARTO_ATTRIBUTION, CARTO_LIGHT_TILE_URL } from "@/utils/map/tiles"
 
 interface CafeMapProps {
     cafes: CafeWithRatings[]
@@ -132,15 +133,13 @@ function ViewportMarkers({
         zoomend: updateVisibleCafes,
     })
 
-    // Initial render - use a ref to avoid synchronous setState in effect
-    const hasInitialized = useRef(false)
+    // Recompute whenever `updateVisibleCafes` changes identity — that covers both
+    // map swaps and a new `cafes` array (e.g. a filter toggle), so the pins update
+    // immediately instead of waiting for the next moveend/zoomend. Deferred through
+    // setTimeout so we don't setState synchronously inside the effect.
     useEffect(() => {
-        if (!hasInitialized.current) {
-            hasInitialized.current = true
-            // Defer the update to avoid cascading renders
-            const timeoutId = setTimeout(updateVisibleCafes, 0)
-            return () => clearTimeout(timeoutId)
-        }
+        const timeoutId = setTimeout(updateVisibleCafes, 0)
+        return () => clearTimeout(timeoutId)
     }, [updateVisibleCafes])
 
     // Filter valid cafes for rendering
@@ -504,8 +503,8 @@ export default function CafeMap({ cafes }: CafeMapProps) {
             style={{ minHeight: "500px" }}
         >
             <TileLayer
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+                attribution={CARTO_ATTRIBUTION}
+                url={CARTO_LIGHT_TILE_URL}
             />
             <LocationMarker />
             <MarkerClusterGroup

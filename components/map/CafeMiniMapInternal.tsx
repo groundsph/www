@@ -3,6 +3,7 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
 import { Icon } from "leaflet"
 import "leaflet/dist/leaflet.css"
+import { CARTO_ATTRIBUTION, CARTO_LIGHT_TILE_URL } from "@/utils/map/tiles"
 
 interface CafeMiniMapInternalProps {
     cafe: {
@@ -38,8 +39,8 @@ export default function CafeMiniMapInternal({
             style={{ minHeight: "180px" }}
         >
             <TileLayer
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+                attribution={CARTO_ATTRIBUTION}
+                url={CARTO_LIGHT_TILE_URL}
             />
             <Marker
                 position={[cafe.lat, cafe.lng]}

@@ -4,7 +4,7 @@ import { useHaptics } from "@/hooks/useHaptics"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { filterCafes } from "@/utils/map/client-filter"
 import dynamic from "next/dynamic"
-import { useState, useMemo } from "react"
+import { useState, useMemo, type ReactNode } from "react"
 import { Store, Clock12, ChessBishop, DoorOpen } from "lucide-react"
 import { getPHDayKey } from "@/utils/time"
 
@@ -19,6 +19,54 @@ const CafeMap = dynamic(() => import("@/components/map/CafeMap"), {
 
 interface CafeMapWrapperProps {
     cafes: CafeWithRatings[]
+}
+
+/**
+ * Filter toggle. Shows a short label on mobile and the full label from `sm` up,
+ * so the buttons always communicate what they do even on narrow screens.
+ */
+function FilterButton({
+    active,
+    activeClassName,
+    icon,
+    label,
+    shortLabel,
+    onClick,
+}: {
+    active: boolean
+    activeClassName: string
+    icon: ReactNode
+    label: string
+    shortLabel: string
+    onClick: () => void
+}) {
+    return (
+        <button
+            type='button'
+            onClick={onClick}
+            title={label}
+            aria-label={label}
+            aria-pressed={active}
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium shadow-lg transition-all cursor-pointer whitespace-nowrap ${
+                active ? activeClassName : "bg-background text-text/80 hover:bg-text/5"
+            }`}
+        >
+            <span className='shrink-0 flex items-center'>{icon}</span>
+            {/* Visual labels only — the accessible name comes from aria-label. */}
+            <span
+                className='sm:hidden'
+                aria-hidden='true'
+            >
+                {shortLabel}
+            </span>
+            <span
+                className='hidden sm:inline'
+                aria-hidden='true'
+            >
+                {label}
+            </span>
+        </button>
+    )
 }
 
 export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
@@ -69,57 +117,39 @@ export default function CafeMapWrapper({ cafes }: CafeMapWrapperProps) {
             <CafeMap cafes={filteredCafes} />
 
             {/* Filter Buttons */}
-            <div className='absolute top-4 right-4 z-10 flex flex-col gap-2'>
-                <button
+            <div className='absolute top-4 right-4 z-10 flex flex-col items-end gap-2'>
+                <FilterButton
+                    active={isOpenNow}
+                    activeClassName='bg-primary text-white'
+                    icon={<DoorOpen className='w-4 h-4' />}
+                    label='Open Now'
+                    shortLabel='Open'
                     onClick={toggleOpenNow}
-                    title='Currently Open'
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
-                        isOpenNow
-                            ? "bg-primary text-white"
-                            : "bg-background text-text/80 hover:bg-text/5"
-                    }`}
-                >
-                    <DoorOpen className='w-4 h-4' />
-                    <span className='hidden sm:inline'>Open Now</span>
-                </button>
-                <button
+                />
+                <FilterButton
+                    active={is24_7}
+                    activeClassName='bg-text text-background'
+                    icon={<Clock12 className='w-4 h-4' />}
+                    label='24 Hours'
+                    shortLabel='24h'
                     onClick={toggle24_7}
-                    title='24 Hours'
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
-                        is24_7
-                            ? "bg-text text-background"
-                            : "bg-background text-text/80 hover:bg-text/5"
-                    }`}
-                >
-                    <Clock12 className='w-4 h-4' />
-                    <span className='hidden sm:inline'>24 Hours</span>
-                </button>
-                <button
+                />
+                <FilterButton
+                    active={isHalalCertified}
+                    activeClassName='bg-green-500 text-white'
+                    icon={<ChessBishop className='w-4 h-4' />}
+                    label='Halal Certified'
+                    shortLabel='Halal'
                     onClick={toggleHalalCertified}
-                    title='Halal Certified'
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
-                        isHalalCertified
-                            ? "bg-green-500 text-white"
-                            : "bg-background text-text/80 hover:bg-text/5"
-                    }`}
-                >
-                    <ChessBishop className='w-4 h-4' />
-                    <span className='hidden sm:inline'>Halal Certified</span>
-                </button>
-                <button
+                />
+                <FilterButton
+                    active={includeChains}
+                    activeClassName='bg-orange-500 text-white'
+                    icon={<Store className='w-4 h-4' />}
+                    label='Show Chains'
+                    shortLabel='Chains'
                     onClick={toggleChains}
-                    title='Show Chains'
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium shadow-lg transition-all cursor-pointer ${
-                        includeChains
-                            ? "bg-orange-500 text-white"
-                            : "bg-background text-text/80 hover:bg-text/5"
-                    }`}
-                >
-                    <Store className='w-4 h-4' />
-                    <span className='hidden sm:inline'>
-                        {includeChains ? "Hiding Chains" : "Show Chains"}
-                    </span>
-                </button>
+                />
             </div>
         </div>
     )
