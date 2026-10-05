@@ -1,4 +1,5 @@
 import { Database, Json } from "./database.types"
+import { BlogBlock } from "./blog-blocks"
 
 // Database types
 export type BlogPostRow = Database["public"]["Tables"]["blog_posts"]["Row"]
@@ -10,7 +11,7 @@ export type BlogStatus = Database["public"]["Enums"]["blog_status"]
 export type BlogCategory = Database["public"]["Enums"]["blog_category"]
 
 // Extended blog post with author and cafe info
-export interface BlogPost extends Omit<BlogPostRow, "search_vector"> {
+export interface BlogPost extends Omit<BlogPostRow, "search_vector" | "blocks"> {
     author?: {
         id: string
         display_name: string
@@ -24,6 +25,8 @@ export interface BlogPost extends Omit<BlogPostRow, "search_vector"> {
         thumbnail: string
     } | null
     llm_review: Json | null
+    /** Ordered block-based body. Null for legacy posts not yet converted. */
+    blocks?: BlogBlock[] | null
 }
 
 // Input for creating/updating blog posts
@@ -41,6 +44,8 @@ export interface BlogPostInput {
     images?: string[]
     tagged_cafe_ids?: string[]
     crawl_id?: string | null
+    /** Block-based body. When provided, `content` is recomputed from it. */
+    blocks?: BlogBlock[] | null
 }
 
 // Blog category metadata
@@ -101,6 +106,7 @@ export const BLOG_STATUSES: {
             label: "Published",
             color: "text-green-600 bg-green-100",
         },
+        { value: "rejected", label: "Rejected", color: "text-red-600 bg-red-100" },
         { value: "archived", label: "Archived", color: "text-gray-600 bg-gray-100" },
     ]
 

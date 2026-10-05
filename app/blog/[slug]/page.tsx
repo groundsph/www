@@ -18,7 +18,14 @@ import { extractCafeSlugsFromContent } from "@/utils/blog/link-detection"
 import { mergeCafeTags } from "@/utils/blog/merge-cafe-tags"
 import BlogImageGallery from "@/components/blog/BlogImageGallery"
 import BlogCafeHighlights from "@/components/blog/BlogCafeHighlights"
-import BlogCrawlEmbed from "@/components/blog/BlogCrawlEmbed"
+import BlogCrawlEmbed, { type CrawlEmbedData } from "@/components/blog/BlogCrawlEmbed"
+import BlockRenderer from "@/components/blog/blocks/BlockRenderer"
+import {
+    collectBlockCafeIds,
+    collectBlockCrawlIds,
+    hasRenderableContent,
+    normalizeBlocks,
+} from "@/utils/types/blog-blocks"
 import { buildPageMetadata } from "@/utils/seo/metadata"
 import { buildBlogPostingJsonLd } from "@/utils/seo/jsonld"
 import { buildBreadcrumbList } from "@/utils/seo/breadcrumbs"
@@ -76,6 +83,7 @@ export default async function BlogPostPage({
 
     const isDraft = post.status === "draft"
     const isPending = post.status === "pending"
+    const isRejected = post.status === "rejected"
     const isPublished = post.status === "published"
     const isAuthor = currentUser?.id === post.author_id
 
@@ -84,35 +92,61 @@ export default async function BlogPostPage({
         incrementViewCount(post.id)
     }
 
-    // Extract cafe slugs from content
-    const detectedSlugs = extractCafeSlugsFromContent(post.content)
+    // Block-based body takes precedence; legacy markdown is the fallback for
+    // posts that have not been converted yet.
+    const blocks = normalizeBlocks(post.blocks)
+    const useBlocks = hasRenderableContent(blocks)
 
-    // Fetch cafes by detected slugs and explicit tagged IDs in parallel
-    const [cafesBySlugs, cafesByIds] = await Promise.all([
-        detectedSlugs.length > 0 ? getCafesBySlugs(detectedSlugs) : Promise.resolve([]),
-        post.tagged_cafe_ids && post.tagged_cafe_ids.length > 0
-            ? getCafesByIds(post.tagged_cafe_ids)
-            : Promise.resolve([]),
-    ])
+    let mergedCafes: Awaited<ReturnType<typeof getCafesByIds>> = []
+    let blockCafesById: Record<string, Awaited<ReturnType<typeof getCafesByIds>>[number]> = {}
+    const blockCrawlsById: Record<string, CrawlEmbedData> = {}
+    let legacyCrawl: CrawlEmbedData | null = null
 
-    // Merge cafe IDs, dedupe and preserve order
-    const explicitIds = post.tagged_cafe_ids || []
-    const detectedIds = cafesBySlugs.map((c) => c.id)
-    const mergedCafeIds = mergeCafeTags(explicitIds, detectedIds)
+    if (useBlocks) {
+        const blockCafeIds = collectBlockCafeIds(blocks)
+        const blockCrawlIds = collectBlockCrawlIds(blocks)
+        const [cafes, crawls] = await Promise.all([
+            blockCafeIds.length > 0
+                ? getCafesByIds(blockCafeIds)
+                : Promise.resolve([]),
+            blockCrawlIds.length > 0
+                ? Promise.all(blockCrawlIds.map((id) => getCafeCrawlById(id)))
+                : Promise.resolve([]),
+        ])
+        blockCafesById = Object.fromEntries(cafes.map((c) => [c.id, c]))
+        for (const crawl of crawls) {
+            if (crawl) blockCrawlsById[crawl.id] = crawl
+        }
+    } else {
+        // Extract cafe slugs from content
+        const detectedSlugs = extractCafeSlugsFromContent(post.content)
 
-    // Build final cafe list preserving merge order
-    const cafeMap = new Map<string, typeof cafesByIds[0]>([
-        ...cafesByIds.map((c) => [c.id, c] as const),
-        ...cafesBySlugs.map((c) => [c.id, c] as const),
-    ])
-    const mergedCafes = mergedCafeIds
-        .map((id) => cafeMap.get(id))
-        .filter((c): c is NonNullable<typeof c> => c !== undefined)
+        // Fetch cafes by detected slugs and explicit tagged IDs in parallel
+        const [cafesBySlugs, cafesByIds] = await Promise.all([
+            detectedSlugs.length > 0
+                ? getCafesBySlugs(detectedSlugs)
+                : Promise.resolve([]),
+            post.tagged_cafe_ids && post.tagged_cafe_ids.length > 0
+                ? getCafesByIds(post.tagged_cafe_ids)
+                : Promise.resolve([]),
+        ])
 
-    // Fetch crawl if linked
-    const crawl = post.crawl_id
-        ? await getCafeCrawlById(post.crawl_id)
-        : null
+        // Merge cafe IDs, dedupe and preserve order
+        const explicitIds = post.tagged_cafe_ids || []
+        const detectedIds = cafesBySlugs.map((c) => c.id)
+        const mergedCafeIds = mergeCafeTags(explicitIds, detectedIds)
+
+        // Build final cafe list preserving merge order
+        const cafeMap = new Map<string, typeof cafesByIds[0]>([
+            ...cafesByIds.map((c) => [c.id, c] as const),
+            ...cafesBySlugs.map((c) => [c.id, c] as const),
+        ])
+        mergedCafes = mergedCafeIds
+            .map((id) => cafeMap.get(id))
+            .filter((c): c is NonNullable<typeof c> => c !== undefined)
+
+        legacyCrawl = post.crawl_id ? await getCafeCrawlById(post.crawl_id) : null
+    }
 
     // Get related posts (same category, excluding current)
     const { posts: relatedPosts } = await getPublishedBlogPosts({
@@ -151,19 +185,23 @@ export default async function BlogPostPage({
             {/* JSON-LD Structured Data */}
             <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd) }} />
             <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
-            {/* Draft Banner */}
-            {(isDraft || isPending) && (
+            {/* Draft / Pending / Rejected Banner */}
+            {(isDraft || isPending || isRejected) && (
                 <div className='sticky top-0 z-30 bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-4'>
                     <span>
-                        {isDraft ? "Draft Preview" : "Pending Review"} — {isDraft ? "Not visible to the public" : "Awaiting approval"}
+                        {isDraft
+                            ? "Draft Preview — Not visible to the public"
+                            : isPending
+                              ? "Pending Review — Awaiting approval"
+                              : `Changes requested${post.rejection_reason ? `: ${post.rejection_reason}` : ""}`}
                     </span>
-                    {isAuthor && isDraft && (
+                    {isAuthor && (isDraft || isRejected) && (
                         <Link
                             href={`/blog/edit/${post.id}`}
                             className='inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md transition-colors text-xs'
                         >
                             <Pencil className='w-3 h-3' />
-                            Edit Draft
+                            {isRejected ? "Edit & resubmit" : "Edit Draft"}
                         </Link>
                     )}
                 </div>
@@ -284,21 +322,36 @@ export default async function BlogPostPage({
                     </div>
                 </header>
 
-                {/* Gallery */}
-                {post.images && post.images.length > 0 && (
-                    <BlogImageGallery images={post.images} />
+                {/* Body: block-based when available, legacy markdown otherwise */}
+                {useBlocks ? (
+                    <div className='mb-12'>
+                        <BlockRenderer
+                            blocks={blocks}
+                            cafesById={blockCafesById}
+                            crawlsById={blockCrawlsById}
+                        />
+                    </div>
+                ) : (
+                    <>
+                        {/* Gallery */}
+                        {post.images && post.images.length > 0 && (
+                            <BlogImageGallery images={post.images} />
+                        )}
+
+                        {/* Content */}
+                        <div className='max-w-none mb-12'>
+                            <MarkdownRender content={post.content} />
+                        </div>
+
+                        {/* Cafe Highlights */}
+                        {mergedCafes.length > 0 && (
+                            <BlogCafeHighlights cafes={mergedCafes} />
+                        )}
+
+                        {/* Crawl Embed */}
+                        {legacyCrawl && <BlogCrawlEmbed crawl={legacyCrawl} />}
+                    </>
                 )}
-
-                {/* Content */}
-                <div className='max-w-none mb-12'>
-                    <MarkdownRender content={post.content} />
-                </div>
-
-                {/* Cafe Highlights */}
-                {mergedCafes.length > 0 && <BlogCafeHighlights cafes={mergedCafes} />}
-
-                {/* Crawl Embed */}
-                {crawl && <BlogCrawlEmbed crawl={crawl} />}
 
                 {/* Tags */}
                 {post.tags && post.tags.length > 0 && (

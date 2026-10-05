@@ -1,4 +1,5 @@
 import { BlogCategory } from "@/utils/types/blog"
+import { BlogBlock } from "@/utils/types/blog-blocks"
 
 export interface RichBlogEditorProps {
     post?: {
@@ -15,6 +16,7 @@ export interface RichBlogEditorProps {
         images?: string[] | null
         tagged_cafe_ids?: string[] | null
         crawl_id?: string | null
+        blocks?: BlogBlock[] | null
     }
     cafeId?: string
     cafeName?: string

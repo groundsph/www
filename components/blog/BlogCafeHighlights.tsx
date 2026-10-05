@@ -12,7 +12,7 @@ interface BlogCafeHighlightsProps {
     cafes: CafeWithRatings[]
 }
 
-function CafeHighlightCard({
+export function CafeHighlightCard({
     cafe,
     idx,
 }: {

@@ -12,6 +12,14 @@ import {
     BlogStatus,
     generateSlug,
 } from "@/utils/types/blog"
+import {
+    BlogBlock,
+    blocksToMarkdown,
+    hasRenderableContent,
+    normalizeBlocks,
+    pruneEmptyTextBlocks,
+    legacyContentToBlocks,
+} from "@/utils/types/blog-blocks"
 import { format } from "date-fns"
 import { resolveBlogStatus } from "@/utils/blog/moderation"
 import { canSubmitBlogPost } from "@/utils/blog/community-posting"
@@ -74,6 +82,30 @@ function buildBlogSearchCondition(search: string) {
     )
 }
 
+/**
+ * Resolve the canonical `content` markdown + `blocks` jsonb pair for a write.
+ *
+ * - When `blocks` is supplied it wins; `content` is recomputed as its
+ *   markdown projection so search/RSS/SEO stay in sync.
+ * - When only legacy `content` is supplied, a single text block is derived so
+ *   every post the app writes has a block body.
+ * - When neither is supplied (partial update), returns null.
+ */
+function resolveContentAndBlocks(input: {
+    content?: string
+    blocks?: BlogBlock[] | null
+}): { content: string; blocks: BlogBlock[] } | null {
+    if (input.blocks !== undefined) {
+        const blocks = pruneEmptyTextBlocks(normalizeBlocks(input.blocks))
+        return { blocks, content: blocksToMarkdown(blocks) }
+    }
+    if (input.content !== undefined) {
+        const content = input.content
+        return { content, blocks: legacyContentToBlocks({ content }) }
+    }
+    return null
+}
+
 // Helper to map blog post
 function mapBlogPost(
     b: {
@@ -82,6 +114,10 @@ function mapBlogPost(
         slug: string
         excerpt: string | null
         content: string
+        blocks: unknown
+        rejectionReason: string | null
+        rejectedBy: string | null
+        rejectedAt: Date | null
         coverImage: string | null
         authorId: string | null
         cafeId: string | null
@@ -106,6 +142,10 @@ function mapBlogPost(
         slug: b.slug,
         excerpt: b.excerpt,
         content: b.content,
+        blocks: normalizeBlocks(b.blocks),
+        rejection_reason: b.rejectionReason,
+        rejected_by: b.rejectedBy,
+        rejected_at: b.rejectedAt?.toISOString() ?? null,
         cover_image: b.coverImage,
         author_id: b.authorId,
         cafe_id: b.cafeId,
@@ -165,7 +205,7 @@ export async function getPublishedBlogPosts(
         postsResult = await db
             .select({
                 id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-                content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+                content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
                 cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
                 tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds,
                 crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
@@ -181,7 +221,7 @@ export async function getPublishedBlogPosts(
         [postsResult, countResult] = await Promise.all([
             db.select({
                 id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-                content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+                content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
                 cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
                 tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds,
                 crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
@@ -227,7 +267,7 @@ export async function getPublishedBlogPosts(
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
     const result = await db.select({
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
         tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
@@ -268,6 +308,7 @@ export async function autoSaveDraft(input: {
     postId?: string
     title: string
     content: string
+    blocks?: BlogBlock[] | null
     excerpt?: string
     coverImage?: string | null
     category: BlogCategory
@@ -276,6 +317,11 @@ export async function autoSaveDraft(input: {
     try {
         const user = await getCurrentUser()
         if (!user) return { success: false, error: "Not authenticated" }
+
+        const resolved = resolveContentAndBlocks({
+            content: input.content,
+            blocks: input.blocks,
+        })
 
         if (input.postId) {
             const existing = await db
@@ -291,7 +337,8 @@ export async function autoSaveDraft(input: {
                 .update(blogPosts)
                 .set({
                     title: input.title,
-                    content: input.content,
+                    content: resolved?.content ?? input.content,
+                    blocks: resolved?.blocks,
                     excerpt: input.excerpt || null,
                     coverImage: input.coverImage || null,
                     category: input.category,
@@ -310,7 +357,8 @@ export async function autoSaveDraft(input: {
                 authorId: user.id,
                 title: input.title,
                 slug,
-                content: input.content,
+                content: resolved?.content ?? input.content,
+                blocks: resolved?.blocks,
                 excerpt: input.excerpt || null,
                 coverImage: input.coverImage || null,
                 category: input.category,
@@ -329,7 +377,7 @@ export async function autoSaveDraft(input: {
 export async function getFeaturedPosts(limit: number = 5): Promise<BlogPost[]> {
     const postsResult = await db.select({
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
         tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
@@ -405,7 +453,7 @@ export async function getAdminBlogPosts(params: AdminBlogParams = {}): Promise<P
     const [postsResult, countResult] = await Promise.all([
         db.select({
             id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-            content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+            content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
             cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
             tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
             publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
@@ -497,7 +545,7 @@ export async function getWriterBlogPostById(id: string): Promise<BlogPost | null
 
     const postResult = await db.select({
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
         tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
@@ -523,7 +571,7 @@ export async function getOwnerBlogPosts(cafeId: string): Promise<BlogPost[]> {
 
     const postsResult = await db.select({
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
         tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
@@ -558,6 +606,14 @@ export interface BlogActionResult {
 export async function createBlogPost(input: BlogPostInput): Promise<BlogActionResult> {
     const userId = await getCurrentUserId()
     if (!userId) return { success: false, error: "Not authenticated" }
+
+    const resolved = resolveContentAndBlocks({
+        content: input.content,
+        blocks: input.blocks,
+    })
+    if (!resolved || !hasRenderableContent(resolved.blocks)) {
+        return { success: false, error: "Content is required" }
+    }
 
     const isAdminMod = await isAdminOrModerator()
     const isOwner = input.cafe_id ? await isCafeOwner(input.cafe_id) : false
@@ -617,7 +673,7 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
     if (!isAdminMod) {
         try {
             const model = process.env.BLOG_CHECK_MODEL || "gpt-4"
-            llmReview = await checkBlogPost(model, input.content)
+            llmReview = await checkBlogPost(model, resolved.content)
         } catch (error) {
             console.error("LLM check failed:", error)
             // Fail-closed: require manual review if LLM check fails
@@ -629,7 +685,8 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
         title: input.title,
         slug,
         excerpt: input.excerpt || null,
-        content: input.content,
+        content: resolved.content,
+        blocks: resolved.blocks,
         coverImage: input.cover_image || null,
         authorId: userId,
         cafeId: input.cafe_id || null,
@@ -681,9 +738,17 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     const isOwner = existing[0].cafeId ? await isCafeOwner(existing[0].cafeId) : false
     const isAuthor = existing[0].authorId === userId
 
-    if (!isAdminMod && !isOwner && !isAuthor) {
+    // Content edits are restricted to the author or the owning cafe's owners.
+    // Admins/moderators get moderation actions (approve/reject/archive) but
+    // must not silently rewrite someone else's writing.
+    if (!isAuthor && !isOwner) {
         return { success: false, error: "Not authorized to edit this post" }
     }
+
+    const resolved = resolveContentAndBlocks({
+        content: input.content,
+        blocks: input.blocks,
+    })
 
     // Handle slug update
     let slug = input.slug
@@ -703,10 +768,10 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
 
     // Re-run LLM check if content changes for non-admin/mod updates
     let llmReview = null
-    if (!isAdminMod && input.content !== undefined) {
+    if (!isAdminMod && resolved) {
         try {
             const model = process.env.BLOG_CHECK_MODEL || "gpt-4"
-            llmReview = await checkBlogPost(model, input.content)
+            llmReview = await checkBlogPost(model, resolved.content)
         } catch (error) {
             console.error("LLM check failed during update:", error)
             // Fail-closed: require manual review if LLM check fails
@@ -723,11 +788,20 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     if (input.title !== undefined) updateData.title = input.title
     if (slug) updateData.slug = slug
     if (input.excerpt !== undefined) updateData.excerpt = input.excerpt
-    if (input.content !== undefined) updateData.content = input.content
+    if (resolved) {
+        updateData.content = resolved.content
+        updateData.blocks = resolved.blocks
+    }
     if (input.cover_image !== undefined) updateData.coverImage = input.cover_image
     if (input.cafe_id !== undefined) updateData.cafeId = input.cafe_id
     if (input.category !== undefined) updateData.category = input.category
     if (resolvedStatus !== undefined) updateData.status = resolvedStatus
+    // Resubmitting for review clears any previous rejection metadata.
+    if (resolvedStatus === "pending") {
+        updateData.rejectionReason = null
+        updateData.rejectedBy = null
+        updateData.rejectedAt = null
+    }
     if (input.tags !== undefined) updateData.tags = input.tags
     if (input.images !== undefined) updateData.images = input.images
     if (input.tagged_cafe_ids !== undefined) updateData.taggedCafeIds = input.tagged_cafe_ids
@@ -827,7 +901,8 @@ export async function approveBlogPost(postId: string): Promise<BlogActionResult>
     }
 
     revalidatePath("/blog")
-    revalidatePath("/admin/blog")
+    revalidatePath("/manage/content")
+    revalidatePath("/manage/moderation")
     revalidatePath(`/blog/${existing[0].slug}`)
 
     // Log the blog approval
@@ -871,7 +946,7 @@ async function fetchUserBlogsWithPagination(params: UserBlogQueryParams): Promis
     const [postsResult, countResult] = await Promise.all([
         db.select({
             id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-            content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+            content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
             cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
             tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
             publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
@@ -922,13 +997,17 @@ export async function createCommunityBlogPost(input: {
     excerpt?: string
     content: string
     cover_image?: string | null
+    blocks?: BlogBlock[] | null
+    images?: string[]
 }): Promise<BlogActionResult> {
     // Validate required fields
     if (!input.title || input.title.trim().length === 0) {
         return { success: false, error: "Title is required" }
     }
     if (!input.content || input.content.trim().length === 0) {
-        return { success: false, error: "Content is required" }
+        if (!input.blocks || input.blocks.length === 0) {
+            return { success: false, error: "Content is required" }
+        }
     }
 
     const result = await createBlogPost({
@@ -940,10 +1019,11 @@ export async function createCommunityBlogPost(input: {
         status: "pending",
         tags: [],
         featured: false,
-        images: [],
+        images: input.images ?? [],
         tagged_cafe_ids: [],
         crawl_id: null,
         cafe_id: null,
+        blocks: input.blocks ?? null,
     })
 
     return result
@@ -971,7 +1051,7 @@ export async function getBlogPostById(postId: string): Promise<BlogPost | null> 
 
     const postResult = await db.select({
         id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, excerpt: blogPosts.excerpt,
-        content: blogPosts.content, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
+        content: blogPosts.content, blocks: blogPosts.blocks, rejectionReason: blogPosts.rejectionReason, rejectedBy: blogPosts.rejectedBy, rejectedAt: blogPosts.rejectedAt, coverImage: blogPosts.coverImage, authorId: blogPosts.authorId,
         cafeId: blogPosts.cafeId, category: blogPosts.category, status: blogPosts.status,
         tags: blogPosts.tags, images: blogPosts.images, taggedCafeIds: blogPosts.taggedCafeIds, crawlId: blogPosts.crawlId, featured: blogPosts.featured, viewsCount: blogPosts.viewsCount,
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,

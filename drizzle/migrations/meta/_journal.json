@@ -127,6 +127,13 @@
       "when": 1779700933614,
       "tag": "0017_military_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791194272541,
+      "tag": "0018_quiet_bill_hollister",
+      "breakpoints": true
     }
   ]
 }

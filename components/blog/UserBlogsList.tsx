@@ -128,7 +128,7 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
                                             {post.excerpt}
                                         </p>
                                     )}
-                                    <div className="flex items-center gap-3 mt-2">
+                                    <div className="flex items-center gap-3 mt-2 flex-wrap">
                                         <span className={`text-xs px-2 py-0.5 rounded-full ${getBlogStatusStyle(post.status)}`}>
                                             {getBlogStatusLabel(post.status)}
                                         </span>
@@ -141,7 +141,28 @@ export default function UserBlogsList({ initialPosts }: UserBlogsListProps) {
                                                 })}
                                             </span>
                                         )}
+                                        {post.status === "pending" && (
+                                            <span className="text-xs text-orange-600/80">
+                                                Awaiting review
+                                            </span>
+                                        )}
                                     </div>
+                                    {post.status === "rejected" && post.rejection_reason && (
+                                        <div className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2">
+                                            <p className="text-xs font-medium text-red-600">
+                                                Changes requested
+                                            </p>
+                                            <p className="text-xs text-text/70 mt-0.5">
+                                                {post.rejection_reason}
+                                            </p>
+                                            <Link
+                                                href={`/blog/edit/${post.id}`}
+                                                className="mt-1 inline-block text-xs font-medium text-primary hover:underline"
+                                            >
+                                                Edit & resubmit →
+                                            </Link>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Actions */}

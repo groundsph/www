@@ -1,21 +1,15 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { useEditor, EditorContent } from "@tiptap/react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
 import {
     X, Save, Send, Loader2, ImageIcon, Trash2, AlertCircle,
-    Images, MapPin, Route, Sparkles, Eye, Tag
+    Sparkles, Eye, Tag
 } from "lucide-react"
-import { getEditorExtensions } from "./editor/extensions"
-import EditorToolbar from "./editor/EditorToolbar"
-import TableFloatingToolbar from "./editor/TableFloatingToolbar"
+import BlockEditor from "./editor/BlockEditor"
 import { useAutoSave } from "./editor/useAutoSave"
-import { useEditorContent } from "./editor/useEditorContent"
 import { RichBlogEditorProps } from "./editor/types"
-import BlogCafePicker from "./BlogCafePicker"
-import BlogCrawlPicker from "./BlogCrawlPicker"
 import {
     BlogPostInput,
     BlogCategory,
@@ -24,6 +18,17 @@ import {
     generateSlug,
     estimateReadingTime,
 } from "@/utils/types/blog"
+import {
+    ADDABLE_BLOCK_TYPES,
+    blocksToMarkdown,
+    collectBlockCafeIds,
+    createBlock,
+    hasRenderableContent,
+    legacyContentToBlocks,
+    normalizeBlocks,
+    type BlogBlock,
+    type BlogBlockType,
+} from "@/utils/types/blog-blocks"
 import { createBlogPost, updateBlogPost, createCommunityBlogPost } from "@/app/api/actions/blog"
 import { uploadBlogImageAction } from "@/utils/storage/actions"
 import { compressBlogCover } from "@/utils/image-processing"
@@ -34,6 +39,9 @@ import { cn } from "@/utils/cn"
 const MAX_CONTENT_FOR_EXCERPT = 6000
 const MIN_CONTENT_FOR_EXCERPT = 50
 const AI_COOLDOWN_MS = 20000
+
+/** Block types that are unavailable when cafe/crawl pickers are hidden. */
+const CAFE_BLOCK_TYPES: BlogBlockType[] = ["cafe", "cafe-carousel", "map"]
 
 export default function RichBlogEditor({
     post,
@@ -50,7 +58,7 @@ export default function RichBlogEditor({
     mode = "full",
 }: RichBlogEditorProps) {
     const { addNotification } = useNotification()
-    
+
     const showTags = showTagsProp ?? true
     const showCafePicker = showCafePickerProp ?? true
     const showCrawlPicker = showCrawlPickerProp ?? true
@@ -66,14 +74,27 @@ export default function RichBlogEditor({
     const [tags, setTags] = useState<string[]>(post?.tags || [])
     const [tagInput, setTagInput] = useState("")
     const [featured, setFeatured] = useState(post?.featured || false)
-    const [galleryImages, setGalleryImages] = useState<string[]>(post?.images || [])
-    const [taggedCafeIds, setTaggedCafeIds] = useState<string[]>(post?.tagged_cafe_ids || [])
-    const [linkedCrawlId, setLinkedCrawlId] = useState<string | null>(post?.crawl_id || null)
+
+    // Block body
+    const initialBlocks = useMemo<BlogBlock[]>(() => {
+        const fromPost = normalizeBlocks(post?.blocks)
+        if (fromPost.length > 0) return fromPost
+        if (post) {
+            return legacyContentToBlocks({
+                content: post.content,
+                images: post.images,
+                cafeIds: post.tagged_cafe_ids,
+                crawlId: post.crawl_id,
+            })
+        }
+        return [createBlock("text")]
+    }, [post])
+    const [blocks, setBlocks] = useState<BlogBlock[]>(initialBlocks)
+    const [blockEditorKey, setBlockEditorKey] = useState(0)
 
     // UI state
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
-    const [isUploadingGallery, setIsUploadingGallery] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [autoSlug, setAutoSlug] = useState(!post?.slug)
     const [isGeneratingExcerpt, setIsGeneratingExcerpt] = useState(false)
@@ -82,48 +103,22 @@ export default function RichBlogEditor({
     const [showRestorePrompt, setShowRestorePrompt] = useState(false)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const galleryInputRef = useRef<HTMLInputElement>(null)
 
-    const editor = useEditor({
-        extensions: getEditorExtensions("full", "Start writing your post... Type / for commands"),
-        content: post?.content || "",
-        immediatelyRender: false,
-        editorProps: {
-            attributes: { class: "prose prose-lg prose-stone max-w-none outline-none" },
-            handleDrop: (view, event, _slice, moved) => {
-                if (!moved && event.dataTransfer?.files?.length) {
-                    const file = event.dataTransfer.files[0]
-                    if (file.type.startsWith("image/")) {
-                        event.preventDefault()
-                        handleInlineImageUpload(file)
-                        return true
-                    }
-                }
-                return false
-            },
-            handlePaste: (_view, event) => {
-                const items = event.clipboardData?.items
-                if (!items) return false
-                for (const item of Array.from(items)) {
-                    if (item.type.startsWith("image/")) {
-                        event.preventDefault()
-                        const file = item.getAsFile()
-                        if (file) handleInlineImageUpload(file)
-                        return true
-                    }
-                }
-                return false
-            },
-        },
-    })
+    const content = useMemo(() => blocksToMarkdown(blocks), [blocks])
 
-    const { getMarkdown } = useEditorContent(editor)
-    const currentContent = editor ? getMarkdown() : ""
-    
+    const allowedBlockTypes = useMemo(() => {
+        const excluded = new Set<BlogBlockType>()
+        if (!showCafePicker) CAFE_BLOCK_TYPES.forEach((t) => excluded.add(t))
+        if (!showCrawlPicker) excluded.add("crawl")
+        if (excluded.size === 0) return undefined
+        return ADDABLE_BLOCK_TYPES.filter((type) => !excluded.has(type))
+    }, [showCafePicker, showCrawlPicker])
+
     const { state: autoSaveState, clearDraft, loadDraft } = useAutoSave({
         postId: post?.id,
         title,
-        content: currentContent,
+        content,
+        blocks,
         excerpt,
         coverImage,
         category,
@@ -151,18 +146,9 @@ export default function RichBlogEditor({
     useEffect(() => {
         if (post?.id) return
         const draft = loadDraft()
-        if (draft && draft.content.trim()) setShowRestorePrompt(true)
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Image upload event listener
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const customEvent = e as CustomEvent<{ file: File | null }>
-            const file = customEvent.detail?.file
-            if (file) handleInlineImageUpload(file)
+        if (draft && (draft.blocks?.length || draft.content?.trim())) {
+            setShowRestorePrompt(true)
         }
-        window.addEventListener("editor:image-upload", handler)
-        return () => window.removeEventListener("editor:image-upload", handler)
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleRestoreDraft = () => {
@@ -173,7 +159,13 @@ export default function RichBlogEditor({
         setCoverImage(draft.coverImage || null)
         setCategory(draft.category)
         setTags(draft.tags || [])
-        if (editor && draft.content) editor.commands.setContent(draft.content)
+        const restored = draft.blocks?.length
+            ? normalizeBlocks(draft.blocks)
+            : legacyContentToBlocks({ content: draft.content })
+        if (restored.length > 0) {
+            setBlocks(restored)
+            setBlockEditorKey((key) => key + 1)
+        }
         setShowRestorePrompt(false)
         addNotification("Draft restored", "success", { duration: 2000 })
     }
@@ -183,20 +175,20 @@ export default function RichBlogEditor({
         if (autoSlug) setSlug(generateSlug(value, true))
     }
 
-    const handleInlineImageUpload = async (file: File) => {
+    /** Shared image uploader used by image / gallery blocks. */
+    const handleBlockImageUpload = async (file: File): Promise<string | null> => {
         try {
             const compressedFile = await compressBlogCover(file)
             const formData = new FormData()
             formData.append("image", compressedFile)
             const result = await uploadBlogImageAction(formData)
-            if (result.success && result.url && editor) {
-                editor.chain().focus().setImage({ src: result.url }).run()
-            } else {
-                addNotification(result.error || "Failed to upload image", "error")
-            }
+            if (result.success && result.url) return result.url
+            addNotification(result.error || "Failed to upload image", "error")
+            return null
         } catch (err) {
             console.error(err)
             addNotification("Failed to upload image", "error")
+            return null
         }
     }
 
@@ -220,28 +212,6 @@ export default function RichBlogEditor({
         }
     }
 
-    const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files
-        if (!files || files.length === 0) return
-        setIsUploadingGallery(true)
-        const newImages: string[] = []
-        try {
-            for (const file of Array.from(files)) {
-                const compressedFile = await compressBlogCover(file)
-                const formData = new FormData()
-                formData.append("image", compressedFile)
-                const result = await uploadBlogImageAction(formData)
-                if (result.success && result.url) newImages.push(result.url)
-            }
-            if (newImages.length > 0) setGalleryImages([...galleryImages, ...newImages])
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setIsUploadingGallery(false)
-            if (galleryInputRef.current) galleryInputRef.current.value = ""
-        }
-    }
-
     const handleAddTag = () => {
         const trimmed = tagInput.trim().toLowerCase()
         if (trimmed && !tags.includes(trimmed) && tags.length < 10) {
@@ -254,37 +224,43 @@ export default function RichBlogEditor({
         setTags(tags.filter((t) => t !== tag))
     }
 
-    const handleRemoveGalleryImage = (index: number) => {
-        setGalleryImages(galleryImages.filter((_, i) => i !== index))
-    }
-
     const handleSubmit = async (status: BlogStatus) => {
         if (!title.trim()) {
             setError("Title is required")
             return
         }
-        const content = getMarkdown()
-        if (!content.trim()) {
-            setError("Content is required")
+        if (!hasRenderableContent(blocks)) {
+            setError("Add some content to your post")
             return
         }
         setIsSubmitting(true)
         setError(null)
 
+        // Keep the legacy columns in sync so non-block consumers (feeds, cards,
+        // search, the pre-conversion fallback) keep working.
+        const legacyImages = blocks.flatMap((block) => {
+            if (block.type === "image") return [block.url]
+            if (block.type === "gallery") return block.images.map((image) => image.url)
+            return []
+        })
+        const taggedCafeIds = collectBlockCafeIds(blocks)
+        const crawlId = blocks.find((block) => block.type === "crawl")?.crawlId ?? null
+
         const input: BlogPostInput = {
             title: title.trim(),
             slug: slug.trim() || undefined,
             excerpt: excerpt.trim() || undefined,
-            content: content.trim(),
+            content,
+            blocks,
             cover_image: coverImage,
             cafe_id: cafeId,
             category,
             status,
             tags,
             featured,
-            images: galleryImages,
+            images: legacyImages,
             tagged_cafe_ids: taggedCafeIds,
-            crawl_id: linkedCrawlId,
+            crawl_id: crawlId,
         }
 
         try {
@@ -295,6 +271,8 @@ export default function RichBlogEditor({
                     content: input.content,
                     excerpt: input.excerpt,
                     cover_image: input.cover_image,
+                    blocks: input.blocks,
+                    images: input.images,
                 })
             } else {
                 result = post
@@ -315,7 +293,7 @@ export default function RichBlogEditor({
         }
     }
 
-    const readingTime = estimateReadingTime(currentContent)
+    const readingTime = estimateReadingTime(content)
     const categories = allowedCategories
         ? BLOG_CATEGORIES.filter((c) => allowedCategories.includes(c.value))
         : BLOG_CATEGORIES
@@ -329,7 +307,7 @@ export default function RichBlogEditor({
                     ? "Save failed"
                     : ""
 
-    const wordCount = currentContent.trim().split(/\s+/).filter(Boolean).length
+    const wordCount = content.trim().split(/\s+/).filter(Boolean).length
 
     return (
         <div className="h-full flex flex-col bg-background">
@@ -391,7 +369,7 @@ export default function RichBlogEditor({
                             {saveStatusText}
                         </span>
                     )}
-                    
+
                     {post?.id && (
                         <a
                             href={`/blog/${post.slug}`}
@@ -419,7 +397,9 @@ export default function RichBlogEditor({
                             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 shadow-sm hover:shadow-md hover:shadow-primary/20 transition-all disabled:opacity-50"
                         >
                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                            <span className="hidden sm:inline">Publish</span>
+                            <span className="hidden sm:inline">
+                                {mode === "community" ? "Submit for review" : "Publish"}
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -445,7 +425,7 @@ export default function RichBlogEditor({
             {/* Main Content - Scrollable */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="max-w-6xl mx-auto p-6 space-y-8">
-                    
+
                     {/* TOP SECTION: 2 Columns - Cover + Title/Details */}
                     <section className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         {/* Left: Cover Image */}
@@ -621,125 +601,6 @@ export default function RichBlogEditor({
                         </div>
                     </section>
 
-                    {/* GALLERY IMAGES - Full Width */}
-                    <section className="space-y-2 md:space-y-3">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-text flex items-center gap-2 text-sm md:text-base">
-                                <Images className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
-                                Gallery Images
-                            </h3>
-                            <span className="text-xs md:text-sm text-text/50">{galleryImages.length}/10</span>
-                        </div>
-                        
-                        {galleryImages.length > 0 && (
-                            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5 md:gap-2">
-                                {galleryImages.map((image, index) => (
-                                    <div
-                                        key={image}
-                                        className="relative aspect-square rounded-md md:rounded-lg overflow-hidden bg-text/5 group"
-                                    >
-                                        <Image
-                                            src={image}
-                                            alt={`Gallery ${index + 1}`}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                        <button
-                                            onClick={() => handleRemoveGalleryImage(index)}
-                                            className="absolute top-0.5 right-0.5 md:top-1 md:right-1 p-0.5 md:p-1 bg-white text-red-500 rounded shadow-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Trash2 className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        
-                        <button
-                            onClick={() => galleryInputRef.current?.click()}
-                            disabled={isUploadingGallery || galleryImages.length >= 10}
-                            className="w-full py-2.5 md:py-3 rounded-lg md:rounded-xl border-2 border-dashed border-text/20 hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-text/50 hover:text-primary text-sm disabled:opacity-50"
-                        >
-                            {isUploadingGallery ? (
-                                <><Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> Uploading...</>
-                            ) : (
-                                <><Images className="w-4 h-4 md:w-5 md:h-5" /> Add Images</>
-                            )}
-                        </button>
-                        <input
-                            ref={galleryInputRef}
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleGalleryUpload}
-                            className="hidden"
-                        />
-                    </section>
-
-                    {/* SETTINGS GRID - Cafes, Crawl, Featured */}
-                    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                        {/* Tagged Cafes */}
-                        {showCafePicker && (
-                            <div className="space-y-1.5 md:space-y-2 p-3 md:p-4 rounded-lg md:rounded-xl border border-text/10 bg-tertiary/10">
-                                <h3 className="font-medium text-text flex items-center gap-2 text-xs md:text-sm">
-                                    <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
-                                    Tagged Cafes
-                                    {taggedCafeIds.length > 0 && (
-                                        <span className="text-[10px] md:text-xs text-text/50">({taggedCafeIds.length})</span>
-                                    )}
-                                </h3>
-                                <BlogCafePicker
-                                    selectedCafeIds={taggedCafeIds}
-                                    onChange={setTaggedCafeIds}
-                                    maxCafes={5}
-                                />
-                            </div>
-                        )}
-
-                        {/* Linked Crawl */}
-                        {showCrawlPicker && (
-                            <div className="space-y-1.5 md:space-y-2 p-3 md:p-4 rounded-lg md:rounded-xl border border-text/10 bg-tertiary/10">
-                                <h3 className="font-medium text-text flex items-center gap-2 text-xs md:text-sm">
-                                    <Route className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
-                                    Linked Crawl
-                                </h3>
-                                <BlogCrawlPicker
-                                    selectedCrawlId={linkedCrawlId}
-                                    onChange={setLinkedCrawlId}
-                                />
-                            </div>
-                        )}
-
-                        {/* Featured Toggle (Admin Only) */}
-                        {showFeatured && !cafeId && (
-                            <div className="flex items-center justify-between p-3 md:p-4 rounded-lg md:rounded-xl border border-text/10 bg-tertiary/10">
-                                <div>
-                                    <h3 className="font-medium text-text flex items-center gap-2 text-xs md:text-sm">
-                                        <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
-                                        Featured
-                                    </h3>
-                                    <p className="text-[10px] md:text-xs text-text/50">
-                                        Pin to top of blog
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => setFeatured(!featured)}
-                                    className={cn(
-                                        "relative w-9 h-5 md:w-11 md:h-6 rounded-full transition-colors",
-                                        featured ? "bg-primary" : "bg-text/20"
-                                    )}
-                                >
-                                    <span
-                                        className={cn(
-                                            "absolute top-0.5 left-0.5 md:top-1 md:left-1 w-3.5 h-3.5 md:w-4 md:h-4 bg-white rounded-full shadow-sm transition-transform",
-                                            featured ? "translate-x-4 md:translate-x-5" : ""
-                                        )}
-                                    />
-                                </button>
-                            </div>
-                        )}
-                    </section>
-
                     {/* EXCERPT - Above Content */}
                     <section className="space-y-1.5 md:space-y-2">
                         <div className="flex items-center justify-between">
@@ -752,7 +613,7 @@ export default function RichBlogEditor({
                                 </span>
                                 <button
                                     onClick={async () => {
-                                        if (currentContent.length < MIN_CONTENT_FOR_EXCERPT) {
+                                        if (content.length < MIN_CONTENT_FOR_EXCERPT) {
                                             addNotification(`Write at least ${MIN_CONTENT_FOR_EXCERPT} characters.`, "error")
                                             return
                                         }
@@ -762,7 +623,7 @@ export default function RichBlogEditor({
                                         }
                                         setIsGeneratingExcerpt(true)
                                         try {
-                                            const contentToUse = currentContent.slice(0, MAX_CONTENT_FOR_EXCERPT)
+                                            const contentToUse = content.slice(0, MAX_CONTENT_FOR_EXCERPT)
                                             const res = await generateExcerptAction(contentToUse)
                                             if (res.success && res.excerpt) {
                                                 setExcerpt(res.excerpt)
@@ -775,7 +636,7 @@ export default function RichBlogEditor({
                                             setIsGeneratingExcerpt(false)
                                         }
                                     }}
-                                    disabled={isGeneratingExcerpt || currentContent.length < MIN_CONTENT_FOR_EXCERPT || cooldownRemaining > 0}
+                                    disabled={isGeneratingExcerpt || content.length < MIN_CONTENT_FOR_EXCERPT || cooldownRemaining > 0}
                                     className="flex items-center gap-1 text-[10px] md:text-xs text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     {isGeneratingExcerpt ? (
@@ -796,34 +657,53 @@ export default function RichBlogEditor({
                         />
                     </section>
 
-                    {/* CONTENT EDITOR - Full Width at Bottom */}
-                    <section className="space-y-1.5 md:space-y-2">
+                    {/* CONTENT BLOCKS */}
+                    <section className="space-y-2">
                         <div className="flex items-center justify-between">
                             <label className="block text-xs md:text-sm font-medium text-text/70">
                                 Content <span className="text-red-500">*</span>
                             </label>
                             <span className="text-[10px] md:text-xs text-text/40">
-                                {wordCount} words · {readingTime} min read
+                                {blocks.length} block{blocks.length === 1 ? "" : "s"} · {wordCount} words · {readingTime} min read
                             </span>
                         </div>
-                        <div className="rounded-lg md:rounded-xl border border-text/15 bg-background overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all relative">
-                            <EditorToolbar
-                                editor={editor}
-                                onImageUpload={() => {
-                                    const input = document.createElement("input")
-                                    input.type = "file"
-                                    input.accept = "image/*"
-                                    input.onchange = (e) => {
-                                        const file = (e.target as HTMLInputElement).files?.[0]
-                                        if (file) handleInlineImageUpload(file)
-                                    }
-                                    input.click()
-                                }}
-                            />
-                            <TableFloatingToolbar editor={editor} />
-                            <EditorContent editor={editor} className="min-h-[300px] md:min-h-[400px] p-3 md:p-6" />
-                        </div>
+                        <BlockEditor
+                            key={blockEditorKey}
+                            blocks={blocks}
+                            onChange={setBlocks}
+                            uploadImage={handleBlockImageUpload}
+                            allowedTypes={allowedBlockTypes}
+                        />
                     </section>
+
+                    {/* Featured Toggle (Admin Only) */}
+                    {showFeatured && !cafeId && (
+                        <section className="flex items-center justify-between p-3 md:p-4 rounded-lg md:rounded-xl border border-text/10 bg-tertiary/10">
+                            <div>
+                                <h3 className="font-medium text-text flex items-center gap-2 text-xs md:text-sm">
+                                    <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
+                                    Featured
+                                </h3>
+                                <p className="text-[10px] md:text-xs text-text/50">
+                                    Pin to top of blog
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setFeatured(!featured)}
+                                className={cn(
+                                    "relative w-9 h-5 md:w-11 md:h-6 rounded-full transition-colors",
+                                    featured ? "bg-primary" : "bg-text/20"
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        "absolute top-0.5 left-0.5 md:top-1 md:left-1 w-3.5 h-3.5 md:w-4 md:h-4 bg-white rounded-full shadow-sm transition-transform",
+                                        featured ? "translate-x-4 md:translate-x-5" : ""
+                                    )}
+                                />
+                            </button>
+                        </section>
+                    )}
                 </div>
             </div>
         </div>

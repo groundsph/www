@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
 import {
     Clock,
@@ -31,12 +32,34 @@ interface ModerationQueueProps {
     initialStats: ModerationStats
 }
 
+/** Surface the AI reviewer's flagged issues inline for faster triage. */
+function renderLlmIssues(llmReview: Record<string, unknown> | null) {
+    if (!llmReview) return null
+    const issues = llmReview.issues
+    const list = Array.isArray(issues)
+        ? issues.filter((issue): issue is string => typeof issue === "string")
+        : []
+    if (list.length === 0) return null
+    return (
+        <ul className="mt-2 space-y-1">
+            {list.slice(0, 3).map((issue, index) => (
+                <li
+                    key={index}
+                    className="flex items-start gap-1.5 text-xs text-amber-600"
+                >
+                    <AlertCircle className="mt-0.5 w-3 h-3 shrink-0" />
+                    {issue}
+                </li>
+            ))}
+        </ul>
+    )
+}
+
 export default function ModerationQueue({
     initialPosts,
     initialTotal,
     initialStats,
-}: ModerationQueueProps) {
-    const [posts, setPosts] = useState(initialPosts)
+}: ModerationQueueProps) {    const [posts, setPosts] = useState(initialPosts)
     const [stats, setStats] = useState(initialStats)
     const [currentPage, setCurrentPage] = useState(1)
     const [total] = useState(initialTotal)
@@ -141,13 +164,22 @@ export default function ModerationQueue({
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-text">
-                    Moderation Queue
-                </h1>
-                <p className="text-text/60 mt-1">
-                    Review and approve community blog posts.
-                </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-text">
+                        Moderation Queue
+                    </h1>
+                    <p className="text-text/60 mt-1">
+                        Review blog posts submitted for publication.
+                    </p>
+                </div>
+                <Link
+                    href="/manage/content"
+                    className="inline-flex items-center gap-1.5 self-start rounded-lg border border-text/10 bg-text/5 px-3 py-2 text-sm font-medium text-text/70 transition-colors hover:bg-text/10"
+                >
+                    <FileText className="w-4 h-4" />
+                    All content
+                </Link>
             </div>
 
             {/* Stats Cards */}
@@ -255,6 +287,7 @@ export default function ModerationQueue({
                                             </>
                                         )}
                                     </div>
+                                    {renderLlmIssues(post.llmReview)}
                                 </div>
 
                                 {/* Actions */}

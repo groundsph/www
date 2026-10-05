@@ -97,7 +97,7 @@ export default function WriterDashboard({
             {/* Filters */}
             <div className='flex flex-col md:flex-row gap-4 py-4 border-y border-text/5'>
                 <div className='flex items-center gap-2 overflow-x-auto pb-2 md:pb-0'>
-                    {(["all", "published", "pending", "draft", "archived"] as const).map(
+                    {(["all", "published", "pending", "draft", "rejected", "archived"] as const).map(
                         (status) => (
                             <button
                                 key={status}
@@ -215,6 +215,16 @@ export default function WriterDashboard({
                                         <p className='text-text/60 text-sm line-clamp-2'>
                                             {post.excerpt || "No excerpt"}
                                         </p>
+                                        {post.status === "rejected" && post.rejection_reason && (
+                                            <div className='mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2'>
+                                                <p className='text-xs font-medium text-red-600'>
+                                                    Changes requested
+                                                </p>
+                                                <p className='text-xs text-text/70 mt-0.5'>
+                                                    {post.rejection_reason}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

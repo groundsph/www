@@ -71,6 +71,7 @@ export type Database = {
       blog_posts: {
         Row: {
           author_id: string
+          blocks: Json | null
           cafe_id: string | null
           category: Database["public"]["Enums"]["blog_category"]
           content: string
@@ -83,6 +84,9 @@ export type Database = {
           images: string[] | null
           llm_review: Json | null
           published_at: string | null
+          rejection_reason: string | null
+          rejected_at: string | null
+          rejected_by: string | null
           search_vector: unknown
           slug: string
           status: Database["public"]["Enums"]["blog_status"]
@@ -94,6 +98,7 @@ export type Database = {
         }
         Insert: {
           author_id: string
+          blocks?: Json | null
           cafe_id?: string | null
           category?: Database["public"]["Enums"]["blog_category"]
           content: string
@@ -106,6 +111,9 @@ export type Database = {
           images?: string[] | null
           llm_review?: Json | null
           published_at?: string | null
+          rejection_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
           search_vector?: unknown
           slug: string
           status?: Database["public"]["Enums"]["blog_status"]
@@ -117,6 +125,7 @@ export type Database = {
         }
         Update: {
           author_id?: string
+          blocks?: Json | null
           cafe_id?: string | null
           category?: Database["public"]["Enums"]["blog_category"]
           content?: string
@@ -129,6 +138,9 @@ export type Database = {
           images?: string[] | null
           llm_review?: Json | null
           published_at?: string | null
+          rejection_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
           search_vector?: unknown
           slug?: string
           status?: Database["public"]["Enums"]["blog_status"]
@@ -1546,7 +1558,7 @@ export type Database = {
       | "promotions"
       | "community"
       | "cafe_update"
-      blog_status: "pending" | "draft" | "published" | "archived"
+      blog_status: "pending" | "draft" | "published" | "rejected" | "archived"
       coffee_style: "classic" | "artisan"
       contribution_action_type:
       | "CREATE"
@@ -1700,7 +1712,7 @@ export const Constants = {
         "community",
         "cafe_update",
       ],
-      blog_status: ["pending", "draft", "published", "archived"],
+      blog_status: ["pending", "draft", "published", "rejected", "archived"],
       coffee_style: ["classic", "artisan"],
       contribution_action_type: [
         "CREATE",

@@ -123,3 +123,66 @@
     cursor: ew-resize;
     cursor: col-resize;
 }
+
+/* Code block syntax highlighting (lowlight / highlight.js token classes) */
+.hljs-comment,
+.hljs-quote {
+    color: #6b7280;
+    font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-type {
+    color: #7c3aed;
+}
+
+.hljs-string,
+.hljs-doctag,
+.hljs-regexp,
+.hljs-addition {
+    color: #16a34a;
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-variable,
+.hljs-template-variable {
+    color: #d97706;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-built_in,
+.hljs-class .hljs-title,
+.hljs-function .hljs-title {
+    color: #0e7490;
+}
+
+.hljs-meta,
+.hljs-tag {
+    color: #64748b;
+}
+
+.hljs-deletion {
+    color: #dc2626;
+}
+
+.hljs-emphasis {
+    font-style: italic;
+}
+
+.hljs-strong {
+    font-weight: 700;
+}

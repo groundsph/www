@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { X, Search, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
-import { searchCafesForBlog } from "@/app/api/actions/cafe"
+import { searchCafesForBlog, getCafesByIds } from "@/app/api/actions/cafe"
 
 interface CafeSearchResult {
     id: string
@@ -30,33 +30,44 @@ export default function BlogCafePicker({
     const [searchError, setSearchError] = useState<string | null>(null)
     const [selectedCafes, setSelectedCafes] = useState<CafeSearchResult[]>([])
 
-    // Fetch selected cafes on mount
+    // Stable key so array props with fresh identities don't refetch every render.
+    const selectedKey = selectedCafeIds.join(",")
+
+    // Fetch selected cafes when the selection set changes
     useEffect(() => {
+        const ids = selectedKey ? selectedKey.split(",") : []
         const fetchSelectedCafes = async () => {
-            if (selectedCafeIds.length === 0) {
+            if (ids.length === 0) {
                 setSelectedCafes([])
                 return
             }
 
-            // Fetch cafe details for selected IDs
-            // Note: In production, this would be a batch query
-            // For now, we'll search by ID patterns
-            const cafes: CafeSearchResult[] = []
-            for (const id of selectedCafeIds) {
-                const results = await searchCafesForBlog(id)
-                const cafe = results.find((c) => c.id === id)
-                if (cafe) {
-                    cafes.push(cafe)
-                }
+            try {
+                // Resolve by id — searching by id as a name substring never matches.
+                const results = await getCafesByIds(ids)
+                const byId = new Map(results.map((c) => [c.id, c]))
+                setSelectedCafes(
+                    ids
+                        .map((id) => byId.get(id))
+                        .filter((c): c is NonNullable<typeof c> => Boolean(c))
+                        .map((c) => ({
+                            id: c.id,
+                            name: c.name,
+                            slug: c.slug,
+                            thumbnail: c.thumbnail,
+                        }))
+                )
+            } catch (err) {
+                console.error("Failed to load selected cafes:", err)
             }
-            setSelectedCafes(cafes)
         }
 
         fetchSelectedCafes()
-    }, [selectedCafeIds])
+    }, [selectedKey])
 
     // Search cafes when query changes
     useEffect(() => {
+        const selected = selectedKey ? selectedKey.split(",") : []
         const debounceTimeout = setTimeout(async () => {
             if (searchQuery.length < 2) {
                 setSearchResults([])
@@ -69,7 +80,7 @@ export default function BlogCafePicker({
                 const results = await searchCafesForBlog(searchQuery)
                 // Filter out already selected cafes
                 const filtered = results.filter(
-                    (cafe) => !selectedCafeIds.includes(cafe.id)
+                    (cafe) => !selected.includes(cafe.id)
                 )
                 setSearchResults(filtered)
             } catch (err) {
@@ -81,7 +92,7 @@ export default function BlogCafePicker({
         }, 300)
 
         return () => clearTimeout(debounceTimeout)
-    }, [searchQuery, selectedCafeIds])
+    }, [searchQuery, selectedKey])
 
     const handleAddCafe = (cafe: CafeSearchResult) => {
         if (selectedCafeIds.length >= maxCafes) return

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { isAdmin } from "@/app/api/actions/admin"
+import { getCurrentUser } from "@/lib/auth"
 import { getAdminBlogPosts } from "@/app/api/actions/blog"
 import { getAdminEvents } from "@/app/api/actions/events"
 import ContentManagement from "@/components/manage/ContentManagement"
@@ -15,15 +16,17 @@ export default async function ManageContentPage() {
         redirect("/")
     }
 
-    const [blogPostsResult, eventsResult] = await Promise.all([
+    const [blogPostsResult, eventsResult, currentUser] = await Promise.all([
         getAdminBlogPosts({ pageSize: 50 }),
         getAdminEvents(1, 50),
+        getCurrentUser(),
     ])
 
     return (
         <ContentManagement
             blogPosts={blogPostsResult.posts}
             events={eventsResult.events}
+            currentUserId={currentUser?.id ?? null}
         />
     )
 }

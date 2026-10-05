@@ -11,6 +11,9 @@ import {
     Loader2,
     Flag,
     CheckCircle,
+    XCircle,
+    Archive,
+    ShieldAlert,
 } from "lucide-react"
 import { BlogPost, BlogStatus } from "@/utils/types/blog"
 import { EventWithCafe } from "@/utils/types/extra"
@@ -18,19 +21,32 @@ import RichBlogEditor from "@/components/blog/RichBlogEditor"
 import EventsManagement from "@/components/events/EventsManagement"
 import BlogReportsPanel from "./BlogReportsPanel"
 import ApprovePostModal from "@/components/admin/ApprovePostModal"
-import Link from "next/link"
+import RejectPostModal from "./RejectPostModal"
+import BlogPostPreviewModal from "./BlogPostPreviewModal"
 import { useNotification } from "@/components/layout/NotificationProvider"
 
 interface ContentManagementProps {
     blogPosts: BlogPost[]
     events: EventWithCafe[]
+    /** Current admin/moderator id — used to separate "own" from "review" posts. */
+    currentUserId: string | null
 }
 
 type TabType = "blog" | "events" | "reports"
 
+const STATUS_FILTERS: (BlogStatus | "all")[] = [
+    "all",
+    "published",
+    "pending",
+    "draft",
+    "rejected",
+    "archived",
+]
+
 export default function ContentManagement({
     blogPosts: initialBlogPosts,
     events: initialEvents,
+    currentUserId,
 }: ContentManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("blog")
     const [blogPosts, setBlogPosts] = useState(initialBlogPosts)
@@ -38,14 +54,18 @@ export default function ContentManagement({
     const [statusFilter, setStatusFilter] = useState<BlogStatus | "all">("all")
 
     const [showBlogEditor, setShowBlogEditor] = useState(false)
-    const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(
-        null
-    )
+    const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)
+    const [previewPost, setPreviewPost] = useState<BlogPost | null>(null)
+    const [rejectPost, setRejectPost] = useState<BlogPost | null>(null)
     const { addNotification } = useNotification()
 
     // Approval confirmation modal state
     const [approvalPost, setApprovalPost] = useState<BlogPost | null>(null)
+
+    /** Only the author may edit a post; admins get moderation actions instead. */
+    const isOwnPost = (post: BlogPost) =>
+        Boolean(currentUserId && post.author_id === currentUserId)
 
     // Blog handlers
     const refreshBlogPosts = async () => {
@@ -81,9 +101,15 @@ export default function ContentManagement({
         if (result.success) {
             setBlogPosts((prev) => prev.filter((p) => p.id !== postId))
         } else {
-            alert(result.error || "Failed to delete post")
+            addNotification(result.error || "Failed to delete post", "error")
         }
         setProcessing(null)
+    }
+
+    const setPostStatus = (postId: string, status: BlogStatus) => {
+        setBlogPosts((prev) =>
+            prev.map((p) => (p.id === postId ? { ...p, status } : p))
+        )
     }
 
     const handleApproveBlogPost = async (postId: string) => {
@@ -131,6 +157,51 @@ export default function ContentManagement({
             )
             addNotification(
                 error instanceof Error ? error.message : "Failed to approve post",
+                "error"
+            )
+        } finally {
+            setProcessing(null)
+        }
+    }
+
+    const handleRejectBlogPost = async (postId: string, reason: string) => {
+        if (processing) return
+        setProcessing(postId)
+        try {
+            const { rejectBlogPost } = await import("@/app/api/actions/moderation")
+            const result = await rejectBlogPost(postId, reason)
+            if (!result.success) {
+                throw new Error(result.error || "Failed to reject post")
+            }
+            setPostStatus(postId, "rejected")
+            addNotification("Post rejected", "success")
+            setRejectPost(null)
+        } catch (error) {
+            addNotification(
+                error instanceof Error ? error.message : "Failed to reject post",
+                "error"
+            )
+        } finally {
+            setProcessing(null)
+        }
+    }
+
+    const handleArchiveBlogPost = async (postId: string) => {
+        if (processing) return
+        setProcessing(postId)
+        try {
+            const { archiveBlogPostForModeration } = await import(
+                "@/app/api/actions/blog-report"
+            )
+            const result = await archiveBlogPostForModeration(postId)
+            if (!result.success) {
+                throw new Error(result.error || "Failed to archive post")
+            }
+            setPostStatus(postId, "archived")
+            addNotification("Post archived", "success")
+        } catch (error) {
+            addNotification(
+                error instanceof Error ? error.message : "Failed to archive post",
                 "error"
             )
         } finally {
@@ -202,18 +273,24 @@ export default function ContentManagement({
             {/* Blog Tab */}
             {activeTab === "blog" && (
                 <div className='space-y-4'>
-                    {/* Create Button */}
-                    <button
-                        onClick={() => openBlogEditor()}
-                        className='flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition'
-                    >
-                        <Plus className='w-4 h-4' />
-                        New Blog Post
-                    </button>
+                    <div className='flex flex-wrap items-center justify-between gap-3'>
+                        <button
+                            onClick={() => openBlogEditor()}
+                            className='flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition'
+                        >
+                            <Plus className='w-4 h-4' />
+                            New Blog Post
+                        </button>
+                        <p className='flex items-center gap-1.5 text-xs text-text/50'>
+                            <ShieldAlert className='w-3.5 h-3.5' />
+                            Review only — you can approve, reject or archive posts
+                            you don&apos;t own, but not edit them.
+                        </p>
+                    </div>
 
                     {/* Status Filter Tabs */}
                     <div className='flex gap-2 overflow-x-auto py-1'>
-                        {(["all", "published", "pending", "draft", "archived"] as const).map((status) => (
+                        {STATUS_FILTERS.map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setStatusFilter(status)}
@@ -246,14 +323,16 @@ export default function ContentManagement({
                         </div>
                     ) : (
                         <div className='space-y-3'>
-                            {filteredPosts.map((post) => (
+                            {filteredPosts.map((post) => {
+                                const own = isOwnPost(post)
+                                return (
                                 <div
                                     key={post.id}
                                     className='flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-background rounded-xl shadow-sm border border-tertiary/50'
                                 >
                                     <div className='flex-1 min-w-0'>
                                         <h3 className='font-semibold truncate'>
-                                            {post.title}
+                                            {post.title || "(untitled)"}
                                         </h3>
                                         <p className='text-sm text-text/60 truncate'>
                                             {post.excerpt}
@@ -265,10 +344,15 @@ export default function ContentManagement({
                                                         ? "bg-green-500/20 text-green-600"
                                                         : post.status === "pending"
                                                           ? "bg-orange-500/20 text-orange-600"
-                                                          : "bg-amber-500/20 text-amber-600"
+                                                          : post.status === "rejected"
+                                                            ? "bg-red-500/20 text-red-600"
+                                                            : "bg-amber-500/20 text-amber-600"
                                                 }`}
                                             >
                                                 {post.status}
+                                            </span>
+                                            <span className='rounded-full bg-text/5 px-2 py-0.5 text-xs text-text/60'>
+                                                {own ? "Your post" : "Community"}
                                             </span>
                                             <span className='text-xs text-text/40'>
                                                 {post.created_at &&
@@ -276,17 +360,33 @@ export default function ContentManagement({
                                                         post.created_at
                                                     ).toLocaleDateString()}
                                             </span>
+                                            {post.status === "rejected" && post.rejection_reason && (
+                                                <span
+                                                    className='text-xs text-red-500/80 truncate max-w-[240px]'
+                                                    title={post.rejection_reason}
+                                                >
+                                                    Reason: {post.rejection_reason}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className='flex items-center gap-2 self-end sm:self-center'>
-                                         {post.status === "pending" && (
+                                        <button
+                                            onClick={() => setPreviewPost(post)}
+                                            className='p-2 bg-tertiary/30 text-text rounded-lg hover:bg-tertiary transition'
+                                            title='Preview'
+                                        >
+                                            <Eye className='w-4 h-4' />
+                                        </button>
+
+                                        {/* Moderation actions (available to admins on any post) */}
+                                        {(post.status === "pending" ||
+                                            post.status === "rejected") && (
                                             <button
-                                                onClick={() => {
-                                                    setApprovalPost(post)
-                                                }}
+                                                onClick={() => setApprovalPost(post)}
                                                 disabled={processing === post.id}
                                                 className='flex items-center gap-1.5 px-3 py-2 bg-green-500/20 text-green-600 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
-                                                title='Approve'
+                                                title='Approve & publish'
                                             >
                                                 {processing === post.id ? (
                                                     <Loader2 className='w-4 h-4 animate-spin' />
@@ -298,40 +398,61 @@ export default function ContentManagement({
                                                 )}
                                             </button>
                                         )}
-                                        {post.status === "published" && (
-                                            <Link
-                                                href={`/blog/${post.slug}`}
-                                                target='_blank'
-                                                className='p-2 bg-tertiary/30 text-text rounded-lg hover:bg-tertiary transition'
-                                                title='View'
+                                        {(post.status === "pending" ||
+                                            post.status === "published") && (
+                                            <button
+                                                onClick={() => setRejectPost(post)}
+                                                disabled={processing === post.id}
+                                                className='p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition disabled:opacity-50'
+                                                title='Reject with reason'
                                             >
-                                                <Eye className='w-4 h-4' />
-                                            </Link>
+                                                <XCircle className='w-4 h-4' />
+                                            </button>
                                         )}
-                                        <button
-                                            onClick={() => openBlogEditor(post)}
-                                            className='p-2 bg-tertiary/30 text-text rounded-lg hover:bg-tertiary transition'
-                                            title='Edit'
-                                        >
-                                            <Pencil className='w-4 h-4' />
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                handleDeleteBlogPost(post.id)
-                                            }
-                                            disabled={processing === post.id}
-                                            className='p-2 bg-red-500/20 text-red-600 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
-                                            title='Delete'
-                                        >
-                                            {processing === post.id ? (
-                                                <Loader2 className='w-4 h-4 animate-spin' />
-                                            ) : (
-                                                <Trash2 className='w-4 h-4' />
-                                            )}
-                                        </button>
+                                        {post.status === "published" && (
+                                            <button
+                                                onClick={() => handleArchiveBlogPost(post.id)}
+                                                disabled={processing === post.id}
+                                                className='p-2 bg-tertiary/30 text-text rounded-lg hover:bg-tertiary transition disabled:opacity-50'
+                                                title='Archive'
+                                            >
+                                                {processing === post.id ? (
+                                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                                ) : (
+                                                    <Archive className='w-4 h-4' />
+                                                )}
+                                            </button>
+                                        )}
+
+                                        {/* Editing is restricted to the author */}
+                                        {own && (
+                                            <button
+                                                onClick={() => openBlogEditor(post)}
+                                                className='p-2 bg-tertiary/30 text-text rounded-lg hover:bg-tertiary transition'
+                                                title='Edit'
+                                            >
+                                                <Pencil className='w-4 h-4' />
+                                            </button>
+                                        )}
+                                        {own && (
+                                            <button
+                                                onClick={() =>
+                                                    handleDeleteBlogPost(post.id)
+                                                }
+                                                disabled={processing === post.id}
+                                                className='p-2 bg-red-500/20 text-red-600 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
+                                                title='Delete'
+                                            >
+                                                {processing === post.id ? (
+                                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                                ) : (
+                                                    <Trash2 className='w-4 h-4' />
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                            ))}
+                            )})}
                         </div>
                     )}
                 </div>
@@ -376,6 +497,25 @@ export default function ContentManagement({
                         await handleApproveBlogPost(approvalPost.id)
                         setApprovalPost(null)
                     }}
+                />
+            )}
+
+            {/* Reject Modal */}
+            {rejectPost && (
+                <RejectPostModal
+                    postTitle={rejectPost.title}
+                    postId={rejectPost.id}
+                    onClose={() => setRejectPost(null)}
+                    onConfirm={(reason) => handleRejectBlogPost(rejectPost.id, reason)}
+                    isProcessing={processing === rejectPost.id}
+                />
+            )}
+
+            {/* Read-only preview modal */}
+            {previewPost && (
+                <BlogPostPreviewModal
+                    post={previewPost}
+                    onClose={() => setPreviewPost(null)}
                 />
             )}
         </div>

@@ -11,6 +11,8 @@ export function getBlogStatusStyle(status: BlogStatus): string {
             return "text-orange-600 bg-orange-100"
         case "draft":
             return "text-yellow-600 bg-yellow-100"
+        case "rejected":
+            return "text-red-600 bg-red-100"
         case "archived":
             return "text-gray-600 bg-gray-100"
         default:
@@ -29,6 +31,8 @@ export function getBlogStatusLabel(status: BlogStatus): string {
             return "Pending"
         case "draft":
             return "Draft"
+        case "rejected":
+            return "Rejected"
         case "archived":
             return "Archived"
         default:

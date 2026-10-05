@@ -4,11 +4,13 @@ import { useEffect, useRef, useCallback, useState } from "react"
 import { AutoSaveState } from "./types"
 import { autoSaveDraft } from "@/app/api/actions/blog"
 import { BlogCategory } from "@/utils/types/blog"
+import { BlogBlock } from "@/utils/types/blog-blocks"
 
 interface AutoSaveConfig {
     postId?: string
     title: string
     content: string
+    blocks?: BlogBlock[]
     excerpt?: string
     coverImage?: string | null
     category: BlogCategory
@@ -28,6 +30,7 @@ function getStorageKey(postId?: string) {
 interface DraftData {
     title: string
     content: string
+    blocks?: BlogBlock[]
     excerpt?: string
     coverImage?: string | null
     category: BlogCategory
@@ -36,7 +39,7 @@ interface DraftData {
 }
 
 export function useAutoSave(config: AutoSaveConfig) {
-    const { postId, title, content, excerpt, coverImage, category, tags, enabled = true, onPostCreated } = config
+    const { postId, title, content, blocks, excerpt, coverImage, category, tags, enabled = true, onPostCreated } = config
     const [state, setState] = useState<AutoSaveState>({ status: "idle" })
     const localTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const serverIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -47,7 +50,7 @@ export function useAutoSave(config: AutoSaveConfig) {
     const saveToLocal = useCallback(() => {
         if (!enabled) return
         const data: DraftData = {
-            title, content, excerpt, coverImage, category, tags,
+            title, content, blocks, excerpt, coverImage, category, tags,
             savedAt: new Date().toISOString(),
         }
         try {
@@ -55,7 +58,7 @@ export function useAutoSave(config: AutoSaveConfig) {
         } catch {
             // localStorage full or unavailable — silent fail
         }
-    }, [title, content, excerpt, coverImage, category, tags, enabled])
+    }, [title, content, blocks, excerpt, coverImage, category, tags, enabled])
 
     const saveToServer = useCallback(async () => {
         if (!enabled || !hasChangesRef.current) return
@@ -66,7 +69,7 @@ export function useAutoSave(config: AutoSaveConfig) {
         try {
             const result = await autoSaveDraft({
                 postId: currentPostIdRef.current,
-                title, content, excerpt, coverImage, category, tags,
+                title, content, blocks, excerpt, coverImage, category, tags,
             })
             if (result.success) {
                 lastServerContentRef.current = content
@@ -82,9 +85,9 @@ export function useAutoSave(config: AutoSaveConfig) {
         } catch {
             setState({ status: "error", error: "Auto-save failed" })
         }
-    }, [title, content, excerpt, coverImage, category, tags, onPostCreated, enabled])
+    }, [title, content, blocks, excerpt, coverImage, category, tags, onPostCreated, enabled])
 
-    useEffect(() => { hasChangesRef.current = true }, [title, content, excerpt, coverImage, category, tags])
+    useEffect(() => { hasChangesRef.current = true }, [title, content, blocks, excerpt, coverImage, category, tags])
 
     useEffect(() => {
         if (localTimeoutRef.current) clearTimeout(localTimeoutRef.current)

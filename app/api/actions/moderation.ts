@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { blogPosts, profiles } from "@/db/schema"
-import { eq, and, desc, count, sql } from "drizzle-orm"
+import { eq, and, or, desc, count, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { createNotification } from "./user-notifications"
@@ -54,17 +54,13 @@ export async function getPendingCommunityPosts(
     const offset = (page - 1) * pageSize
 
     try {
-        // Get total count of pending posts by regular users
+        // Pending posts are those awaiting review from any non-admin author
+        // (regular users and writers both publish through the queue).
         const countResult = await db
             .select({ count: count() })
             .from(blogPosts)
             .innerJoin(profiles, eq(blogPosts.authorId, profiles.id))
-            .where(
-                and(
-                    eq(blogPosts.status, "pending"),
-                    eq(profiles.role, "user")
-                )
-            )
+            .where(eq(blogPosts.status, "pending"))
 
         const total = countResult[0]?.count ?? 0
 
@@ -87,12 +83,7 @@ export async function getPendingCommunityPosts(
             })
             .from(blogPosts)
             .innerJoin(profiles, eq(blogPosts.authorId, profiles.id))
-            .where(
-                and(
-                    eq(blogPosts.status, "pending"),
-                    eq(profiles.role, "user")
-                )
-            )
+            .where(eq(blogPosts.status, "pending"))
             .orderBy(desc(blogPosts.createdAt))
             .limit(pageSize)
             .offset(offset)
@@ -157,7 +148,7 @@ export async function rejectBlogPost(
         await db
             .update(blogPosts)
             .set({
-                status: "archived",
+                status: "rejected",
                 rejectionReason: reason,
                 rejectedBy: user.id,
                 rejectedAt: new Date(),
@@ -178,7 +169,8 @@ export async function rejectBlogPost(
             },
         })
 
-        revalidatePath("/admin/moderation")
+        revalidatePath("/manage/moderation")
+        revalidatePath("/manage/content")
         revalidatePath("/blog")
 
         // Log the blog post rejection
@@ -187,7 +179,7 @@ export async function rejectBlogPost(
             "blog",
             postId,
             { status: "pending" },
-            { status: "archived", rejectionReason: reason },
+            { status: "rejected", rejectionReason: reason },
             { reason: `Blog post rejected: ${reason}`, postTitle: existing[0].title }
         )
 
@@ -208,40 +200,33 @@ export async function getModerationStats(): Promise<{
     }
 
     try {
-        // Pending: posts by regular users with pending status
+        // Pending: any post awaiting review
         const pendingResult = await db
             .select({ count: count() })
             .from(blogPosts)
             .innerJoin(profiles, eq(blogPosts.authorId, profiles.id))
-            .where(
-                and(
-                    eq(blogPosts.status, "pending"),
-                    eq(profiles.role, "user")
-                )
-            )
+            .where(eq(blogPosts.status, "pending"))
 
-        // Approved: posts by regular users that are published
+        // Approved: posts that are live
         const approvedResult = await db
             .select({ count: count() })
             .from(blogPosts)
             .innerJoin(profiles, eq(blogPosts.authorId, profiles.id))
-            .where(
-                and(
-                    eq(blogPosts.status, "published"),
-                    eq(profiles.role, "user")
-                )
-            )
+            .where(eq(blogPosts.status, "published"))
 
-        // Rejected: posts by regular users that are archived and have rejection info
+        // Rejected: status 'rejected', including legacy rejections that were
+        // stored as 'archived' with rejection metadata.
         const rejectedResult = await db
             .select({ count: count() })
             .from(blogPosts)
             .innerJoin(profiles, eq(blogPosts.authorId, profiles.id))
             .where(
-                and(
-                    eq(blogPosts.status, "archived"),
-                    eq(profiles.role, "user"),
-                    sql`${blogPosts.rejectedBy} IS NOT NULL`
+                or(
+                    eq(blogPosts.status, "rejected"),
+                    and(
+                        eq(blogPosts.status, "archived"),
+                        sql`${blogPosts.rejectedBy} IS NOT NULL`
+                    )
                 )
             )
 

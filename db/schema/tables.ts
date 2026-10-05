@@ -341,6 +341,12 @@ export const blogPosts = pgTable(
         title: text("title").notNull(),
         slug: text("slug").notNull().unique(),
         content: text("content").notNull(),
+        /**
+         * Ordered block-based body (see utils/types/blog-blocks.ts).
+         * `content` above is kept as a derived markdown projection of the
+         * textual blocks for search, RSS, SEO and legacy renderers.
+         */
+        blocks: jsonb("blocks"),
         excerpt: text("excerpt"),
         coverImage: text("cover_image"),
         category: enums.blogCategoryEnum("category").default("news"),

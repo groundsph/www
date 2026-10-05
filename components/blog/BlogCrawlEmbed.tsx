@@ -7,29 +7,31 @@ import CrawlRouteMap from "@/components/map/CrawlRouteMap"
 import { buildCrawlMapPoints } from "@/utils/map/crawl-map-points"
 
 interface BlogCrawlEmbedProps {
-    crawl: {
+    crawl: CrawlEmbedData
+}
+
+export interface CrawlEmbedData {
+    id: string
+    slug: string
+    title: string
+    description: string | null
+    coverImage: string | null
+    itemCount: number
+    items: {
         id: string
+        cafeId: string
+        name: string
         slug: string
-        title: string
-        description: string | null
-        coverImage: string | null
-        itemCount: number
-        items: {
-            id: string
-            cafeId: string
-            name: string
-            slug: string
-            thumbnail: string | null
-            cityMunicipality: string
-            region: string
-            lat: number | null
-            lng: number | null
-            averageRating: number | null
-            totalReviews: number | null
-            sortOrder: number
-            note: string | null
-        }[]
-    }
+        thumbnail: string | null
+        cityMunicipality: string
+        region: string
+        lat: number | null
+        lng: number | null
+        averageRating: number | null
+        totalReviews: number | null
+        sortOrder: number
+        note: string | null
+    }[]
 }
 
 export default function BlogCrawlEmbed({ crawl }: BlogCrawlEmbedProps) {
