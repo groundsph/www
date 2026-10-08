@@ -29,6 +29,10 @@ import {
     COFFEE_STYLES,
     CAFE_VIBE_TAGS,
 } from "@/utils/data/philippines"
+import {
+    FILTERABLE_PAYMENT_METHODS,
+    PAYMENT_METHOD_LABELS,
+} from "@/utils/payment-methods"
 import { useCallback, useEffect, useState, useRef } from "react"
 import { useDebounce } from "@/utils/hooks/useDebounce"
 import RandomCafeButton from "@/components/map/RandomCafeButton"
@@ -58,6 +62,7 @@ const INITIAL_FILTERS = {
     region: "",
     near_me: false,
     tags: [] as string[],
+    payment_methods: [] as string[],
     include_chains: false,
     is_halal_certified: false,
 }
@@ -120,6 +125,10 @@ export default function CafesPageClient() {
         region: filters.region || undefined,
         near_me: filters.near_me && userLocation ? { city: userLocation.city, region: userLocation.region } : undefined,
         tags: filters.tags.length > 0 ? filters.tags : undefined,
+        payment_methods:
+            filters.payment_methods.length > 0
+                ? filters.payment_methods
+                : undefined,
         sortBy,
         include_chains: filters.include_chains || undefined,
     }), [debouncedSearch, filters, sortBy, userLocation])
@@ -256,7 +265,7 @@ export default function CafesPageClient() {
         filters.has_aircon, filters.is_pet_friendly, filters.has_outdoor_seating, filters.has_indoor_seating,
         filters.has_restroom, filters.has_bidet, filters.has_non_dairy, filters.has_decaf, filters.is_work_friendly,
         filters.is_24_7, filters.is_halal_certified, filters.price_level, filters.coffee_style, filters.region,
-        filters.near_me, filters.tags, filters.include_chains])
+        filters.near_me, filters.tags, filters.payment_methods, filters.include_chains])
 
     // Simple list - no virtualization needed for typical cafe lists
     // Reset scroll position when cafes change (filter applied)
@@ -336,7 +345,8 @@ export default function CafesPageClient() {
             (key === "price_level" && value !== "") ||
             (key === "coffee_style" && value !== "") ||
             (key === "region" && value !== "") ||
-            (key === "tags" && Array.isArray(value) && value.length > 0)
+            (key === "tags" && Array.isArray(value) && value.length > 0) ||
+            (key === "payment_methods" && Array.isArray(value) && value.length > 0)
     ).length
 
     const filterOptions = [
@@ -469,13 +479,15 @@ export default function CafesPageClient() {
                                 <div className='mb-3'>
                                     <span className='text-xs text-text/60 mb-1.5 block'>Price Range</span>
                                     <div className='flex flex-row gap-2'>
+                                        {/* Symbol and name are separate so phones can drop the
+                                            word and keep just the peso signs, which were wrapping. */}
                                         {[
-                                            { value: "", label: "All" },
-                                            { value: "budget", label: "₱ Budget" },
-                                            { value: "mid", label: "₱₱ Mid" },
-                                            { value: "premium", label: "₱₱₱ Premium" },
-                                            { value: "luxury", label: "₱₱₱₱ Luxury" },
-                                        ].map(({ value, label }) => (
+                                            { value: "", symbol: "All", name: "" },
+                                            { value: "budget", symbol: "₱", name: "Budget" },
+                                            { value: "mid", symbol: "₱₱", name: "Mid" },
+                                            { value: "premium", symbol: "₱₱₱", name: "Premium" },
+                                            { value: "luxury", symbol: "₱₱₱₱", name: "Luxury" },
+                                        ].map(({ value, symbol, name }) => (
                                             <button
                                                 key={value}
                                                 onClick={() =>
@@ -484,13 +496,19 @@ export default function CafesPageClient() {
                                                         price_level: value as "" | "budget" | "mid" | "premium" | "luxury",
                                                     }))
                                                 }
-                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer ${
+                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-all border cursor-pointer whitespace-nowrap ${
                                                     filters.price_level === value
                                                         ? "bg-text text-background border-text"
                                                         : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
                                                 }`}
                                             >
-                                                {label}
+                                                {symbol}
+                                                {name && (
+                                                    <span className='hidden sm:inline'>
+                                                        {" "}
+                                                        {name}
+                                                    </span>
+                                                )}
                                             </button>
                                         ))}
                                     </div>
@@ -561,6 +579,43 @@ export default function CafesPageClient() {
                                                 {label}
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* Payment */}
+                                <div className='mt-3'>
+                                    <span className='text-xs text-text/60 mb-1.5 block'>Payment</span>
+                                    <div className='flex flex-row flex-wrap gap-2'>
+                                        {FILTERABLE_PAYMENT_METHODS.map((method) => {
+                                            const isSelected =
+                                                filters.payment_methods.includes(method)
+                                            return (
+                                                <button
+                                                    key={method}
+                                                    onClick={() => {
+                                                        trigger("selection")
+                                                        setFilters((prev) => ({
+                                                            ...prev,
+                                                            payment_methods: isSelected
+                                                                ? prev.payment_methods.filter(
+                                                                      (m) => m !== method
+                                                                  )
+                                                                : [
+                                                                      ...prev.payment_methods,
+                                                                      method,
+                                                                  ],
+                                                        }))
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border cursor-pointer whitespace-nowrap ${
+                                                        isSelected
+                                                            ? "bg-text text-background border-text"
+                                                            : "bg-transparent text-text/70 border-text/20 hover:border-text/50"
+                                                    }`}
+                                                >
+                                                    {PAYMENT_METHOD_LABELS[method] ?? method}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 </div>
 

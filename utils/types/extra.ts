@@ -139,6 +139,7 @@ export interface CafeFilters {
         region?: string;
     };
     tags?: string[]; // Filter by vibe tags (any matching)
+    payment_methods?: string[]; // Filter by payment method (any matching, exact token)
     search?: string;
     sortBy?: "recommended" | "rating" | "reviews" | "price_low" | "price_high";
     exclude_hidden_gems?: boolean; // Exclude Hidden Gems from results

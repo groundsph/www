@@ -183,6 +183,64 @@ export function togglePaymentMethod(
 }
 
 /**
+ * Tokens offered as discovery filters on the cafe list.
+ *
+ * Deliberately narrower than {@link PAYMENT_METHODS}:
+ *
+ * - `cash` is on 104 of the 110 cafes that record a payment method, so it
+ *   filters almost nothing.
+ * - `maya` stays a valid stored value and still renders on cafe pages, but it is
+ *   not offered as a filter chip. Most owners record the brand their QR code
+ *   actually works with, and `qr_ph` already carries the interoperable case.
+ */
+export const FILTERABLE_PAYMENT_METHODS = [
+    "card",
+    "gcash",
+    "qr_ph",
+    "google_pay",
+    "apple_pay",
+] as const;
+
+export type FilterablePaymentMethod =
+    typeof FILTERABLE_PAYMENT_METHODS[number];
+
+/**
+ * Validate a client-supplied payment filter against the filterable list.
+ *
+ * Server actions receive filters from the browser, so unknown or malformed
+ * entries are dropped here rather than reaching the query. Accepts a single
+ * string or an array, so a one-value filter works either way, and normalizes
+ * first so `"QR Ph"` resolves to `qr_ph`.
+ *
+ * @example parsePaymentMethodFilter(["gcash", "GCash", "venmo"])
+ *          => ["gcash"]
+ * @example parsePaymentMethodFilter("qr_ph") => ["qr_ph"]
+ */
+export function parsePaymentMethodFilter(value: unknown): string[] {
+    const raw = Array.isArray(value)
+        ? value
+        : value === null || value === undefined
+          ? []
+          : [value];
+
+    const allowed = FILTERABLE_PAYMENT_METHODS as readonly string[];
+    const seen = new Set<string>();
+    const tokens: string[] = [];
+
+    for (const entry of raw) {
+        if (typeof entry !== "string") continue;
+
+        const token = normalizePaymentMethod(entry);
+        if (token && allowed.includes(token) && !seen.has(token)) {
+            seen.add(token);
+            tokens.push(token);
+        }
+    }
+
+    return tokens;
+}
+
+/**
  * Normalize a stored value into display labels for rendering.
  *
  * Legacy tokens resolve through the alias map first, so a row still holding

@@ -2,6 +2,8 @@ import { describe, it, expect } from "bun:test"
 import {
     PAYMENT_METHODS,
     PAYMENT_METHOD_LABELS,
+    FILTERABLE_PAYMENT_METHODS,
+    parsePaymentMethodFilter,
     normalizePaymentMethods,
     normalizePaymentMethod,
     serializePaymentMethods,
@@ -202,5 +204,79 @@ describe("togglePaymentMethod", () => {
         expect(togglePaymentMethod("bank_transfer", "apple_pay")).toBe(
             "qr_ph, apple_pay"
         )
+    })
+})
+
+describe("FILTERABLE_PAYMENT_METHODS", () => {
+    it("offers the discovery filters in display order", () => {
+        expect(FILTERABLE_PAYMENT_METHODS).toEqual([
+            "card",
+            "gcash",
+            "qr_ph",
+            "google_pay",
+            "apple_pay",
+        ])
+    })
+
+    it("withholds cash and maya from filters on purpose", () => {
+        // Locked in deliberately: `cash` is on 104 of 110 cafes so it filters
+        // almost nothing, and `maya` is not offered as a chip. Both remain valid
+        // stored values — this asserts the filter list, not the taxonomy.
+        expect(FILTERABLE_PAYMENT_METHODS).not.toContain("cash")
+        expect(FILTERABLE_PAYMENT_METHODS).not.toContain("maya")
+        expect(PAYMENT_METHODS).toContain("cash")
+        expect(PAYMENT_METHODS).toContain("maya")
+    })
+})
+
+describe("parsePaymentMethodFilter", () => {
+    it("accepts the filterable tokens", () => {
+        expect(parsePaymentMethodFilter(["card", "gcash"])).toEqual([
+            "card",
+            "gcash",
+        ])
+    })
+
+    it("accepts a bare string as a one-value filter", () => {
+        expect(parsePaymentMethodFilter("qr_ph")).toEqual(["qr_ph"])
+    })
+
+    it("drops canonical tokens that are not offered as filters", () => {
+        expect(parsePaymentMethodFilter(["gcash", "maya", "cash"])).toEqual([
+            "gcash",
+        ])
+    })
+
+    it("drops unknown, non-string and hostile values", () => {
+        expect(
+            parsePaymentMethodFilter([
+                "venmo",
+                "'; DROP TABLE cafes; --",
+                "card' OR '1'='1",
+                42,
+                null,
+                undefined,
+                {} as unknown,
+            ])
+        ).toEqual([])
+    })
+
+    it("normalizes casing and spacing before matching", () => {
+        expect(parsePaymentMethodFilter(["GCash", "  gcash  ", "QR Ph"])).toEqual(
+            ["gcash", "qr_ph"]
+        )
+    })
+
+    it("dedupes while preserving order", () => {
+        expect(
+            parsePaymentMethodFilter(["apple_pay", "card", "apple_pay"])
+        ).toEqual(["apple_pay", "card"])
+    })
+
+    it("returns an empty list for empty input", () => {
+        expect(parsePaymentMethodFilter([])).toEqual([])
+        expect(parsePaymentMethodFilter(null)).toEqual([])
+        expect(parsePaymentMethodFilter(undefined)).toEqual([])
+        expect(parsePaymentMethodFilter("")).toEqual([])
     })
 })

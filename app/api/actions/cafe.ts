@@ -7,6 +7,7 @@ import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray, SQ
 import { getDayOfYear, getPHTime } from "@/utils/featured"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 import { omitTestCafes } from "@/utils/filters"
+import { parsePaymentMethodFilter } from "@/utils/payment-methods"
 
 // Helper to get current day key from PH time
 function getCurrentDayKey(): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
@@ -676,6 +677,21 @@ export async function getAllCafes(
 
     // Build query conditions
     const conditions = omitTestCafes([eq(cafes.isPublished, true)])
+
+    // Payment methods live in a comma-separated text column, so match whole
+    // tokens rather than substrings — a LIKE '%card%' would also hit unrelated
+    // custom values an owner typed in. Several selected methods mean "takes any
+    // of these", matching the existing vibes filter.
+    const paymentMethods = parsePaymentMethodFilter(filters.payment_methods)
+    if (paymentMethods.length > 0) {
+        const tokenConditions = paymentMethods.map(
+            (method) =>
+                sql`string_to_array(coalesce(${cafes.paymentMethods}, ''), ', ') @> ARRAY[${method}]::text[]`
+        )
+        const anyPaymentMethod = or(...tokenConditions)
+        if (anyPaymentMethod) conditions.push(anyPaymentMethod)
+    }
+
     if (filters.has_wifi) conditions.push(eq(cafes.hasWifi, true))
     if (filters.has_smoking) conditions.push(eq(cafes.hasSmoking, true))
 
