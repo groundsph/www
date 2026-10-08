@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
+import { formatPaymentMethods } from "@/utils/payment-methods"
 import Image from "next/image"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import {
@@ -714,18 +715,16 @@ export function DetailsTabContent({
                         Payment Methods
                     </h3>
                     <div className='flex flex-wrap gap-2'>
-                        {cafe.payment_methods
-                            .split(",")
-                            .map((method) => method.trim())
-                            .filter(Boolean)
-                            .map((method) => (
+                        {formatPaymentMethods(cafe.payment_methods).map(
+                            (method) => (
                                 <span
                                     key={method}
                                     className='text-sm bg-text/10 px-3 py-1.5 rounded-full capitalize text-nowrap'
                                 >
-                                    {method.split("_").join(" ")}
+                                    {method}
                                 </span>
-                            ))}
+                            )
+                        )}
                     </div>
                 </div>
             )}

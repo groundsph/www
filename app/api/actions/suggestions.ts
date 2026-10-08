@@ -12,6 +12,7 @@ import {
     SuggestedImageChanges
 } from "@/utils/types/suggestions"
 import { logContribution } from "@/utils/contribution-logging"
+import { serializePaymentMethods } from "@/utils/payment-methods"
 import { getModeratorRegionsForCurrentUser } from "@/utils/moderation/region-access"
 import { suggestableFieldsSchema } from "@/utils/validation/cafe-submission"
 
@@ -51,7 +52,12 @@ function mapSuggestableFieldsToDrizzle(fields: SuggestableFields): Record<string
     for (const [key, value] of Object.entries(fields)) {
         if (value !== undefined) {
             const drizzleKey = fieldMapping[key] || key
-            result[drizzleKey] = value
+            // Suggestions carry free-text payment values straight from a user,
+            // so normalize here rather than trusting the submitted string.
+            result[drizzleKey] =
+                key === "payment_methods"
+                    ? serializePaymentMethods(value as string)
+                    : value
         }
     }
     return result

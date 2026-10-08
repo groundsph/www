@@ -5,9 +5,15 @@ import {
     CAFE_VIBE_TAGS,
     CAFE_SPECIALTIES,
     BREW_METHODS,
-    PAYMENT_METHODS,
     STRAW_TYPES,
 } from "@/utils/data/philippines"
+import {
+    PAYMENT_METHODS,
+    PAYMENT_METHOD_LABELS,
+    addPaymentMethods,
+    normalizePaymentMethods,
+    togglePaymentMethod,
+} from "@/utils/payment-methods"
 import AmenityToggles from "@/components/submit/AmenityToggles"
 
 interface AmenitiesSectionProps {
@@ -46,19 +52,20 @@ export default function AmenitiesSection({
     const formatLabel = (s: string) =>
         s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
+    // The stored value is normalized once here, so every chip below works on
+    // canonical tokens. A cafe still holding `credit_card, debit_card` shows a
+    // single "Credit / Debit Card" rather than two unselected pills.
+    const paymentMethods = normalizePaymentMethods(cafe.payment_methods)
+
+    const paymentMethodLabel = (method: string) =>
+        PAYMENT_METHOD_LABELS[method] ?? formatLabel(method)
+
     const addCustomPaymentMethods = () => {
         if (!customPaymentMethods.trim()) return
-        const newMethods = customPaymentMethods
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        const current =
-            cafe.payment_methods
-                ?.split(",")
-                .map((s) => s.trim())
-                .filter(Boolean) || []
-        const unique = [...new Set([...current, ...newMethods])]
-        onChange("payment_methods", unique.join(", "))
+        onChange(
+            "payment_methods",
+            addPaymentMethods(cafe.payment_methods, customPaymentMethods)
+        )
         setCustomPaymentMethods("")
     }
 
@@ -163,24 +170,18 @@ export default function AmenitiesSection({
                 </label>
                 <div className='flex flex-wrap gap-2 mb-2'>
                     {PAYMENT_METHODS.map((method) => {
-                        const isSelected =
-                            cafe.payment_methods?.includes(method)
+                        const isSelected = paymentMethods.includes(method)
                         return (
                             <motion.button
                                 key={method}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => {
-                                    const current =
-                                        cafe.payment_methods
-                                            ?.split(",")
-                                            .map((s) => s.trim())
-                                            .filter(Boolean) || []
-                                    const updated = isSelected
-                                        ? current.filter((m) => m !== method)
-                                        : [...current, method]
                                     onChange(
                                         "payment_methods",
-                                        updated.join(", ")
+                                        togglePaymentMethod(
+                                            cafe.payment_methods,
+                                            method
+                                        )
                                     )
                                 }}
                                 className={`px-3 py-1.5 rounded-full text-sm transition ${
@@ -189,7 +190,7 @@ export default function AmenitiesSection({
                                         : "bg-text/5 border border-text/10 hover:bg-text/10"
                                 }`}
                             >
-                                    {formatLabel(method)}
+                                    {paymentMethodLabel(method)}
                                 </motion.button>
                         )
                     })}
@@ -215,42 +216,33 @@ export default function AmenitiesSection({
                         Add
                     </button>
                 </div>
-                {cafe.payment_methods && cafe.payment_methods.length > 0 && (
+                {paymentMethods.length > 0 && (
                     <div className='flex flex-wrap gap-1 mt-2'>
-                        {cafe.payment_methods
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                            .map((s) => (
-                                <span
-                                    key={s}
-                                    className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
-                                        colorScheme === "primary"
-                                            ? "bg-primary/20 text-primary"
-                                            : "bg-accent/20 text-accent"
-                                    }`}
+                        {paymentMethods.map((method) => (
+                            <span
+                                key={method}
+                                className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
+                                    colorScheme === "primary"
+                                        ? "bg-primary/20 text-primary"
+                                        : "bg-accent/20 text-accent"
+                                }`}
+                            >
+                                {paymentMethodLabel(method)}
+                                <button
+                                    onClick={() => {
+                                        onChange(
+                                            "payment_methods",
+                                            paymentMethods
+                                                .filter((m) => m !== method)
+                                                .join(", ")
+                                        )
+                                    }}
+                                    className='hover:text-red-400'
                                 >
-                                    {formatLabel(s)}
-                                    <button
-                                        onClick={() => {
-                                            const current =
-                                                cafe.payment_methods
-                                                    ?.split(",")
-                                                    .map((x) => x.trim())
-                                                    .filter(Boolean) || []
-                                            onChange(
-                                                "payment_methods",
-                                                current
-                                                    .filter((x) => x !== s)
-                                                    .join(", ")
-                                            )
-                                        }}
-                                        className='hover:text-red-400'
-                                    >
-                                        ×
-                                    </button>
-                                </span>
-                            ))}
+                                    ×
+                                </button>
+                            </span>
+                        ))}
                     </div>
                 )}
             </div>

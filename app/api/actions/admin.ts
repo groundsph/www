@@ -20,6 +20,7 @@ import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
+import { serializePaymentMethods } from "@/utils/payment-methods"
 import { logSystemAction } from "./system-logs"
 import { getModeratorRegionsForCurrentUser, normalizeRegions } from "@/utils/moderation/region-access"
 
@@ -952,7 +953,12 @@ export async function updateCafe(
     for (const [key, value] of Object.entries(updates)) {
         if (value !== undefined) {
             const drizzleKey = fieldMap[key] || key
-            drizzleUpdates[drizzleKey] = value
+            // Payment methods arrive as free text from several surfaces, so keep
+            // the stored vocabulary canonical at this single write funnel.
+            drizzleUpdates[drizzleKey] =
+                key === "payment_methods"
+                    ? serializePaymentMethods(value as string)
+                    : value
         }
     }
 

@@ -9,6 +9,7 @@ import { SerializableCafeSubmission } from "@/utils/types/extra"
 import { logContribution } from "@/utils/contribution-logging"
 import { cafeSubmissionSchema, CafeSubmissionError, SubmitError } from "@/utils/validation/cafe-submission"
 import { generateSlug } from "@/utils/slug"
+import { serializePaymentMethods } from "@/utils/payment-methods"
 
 
 
@@ -304,7 +305,7 @@ export async function submitCafe(
 
             // Details
             priceLevel: validData.price_level,
-            paymentMethods: validData.payment_methods?.trim() || null,
+            paymentMethods: serializePaymentMethods(validData.payment_methods) || null,
             specialty: validData.specialty.length > 0 ? validData.specialty : null,
             tags: validData.tags.length > 0 ? validData.tags : null,
             brewMethods: validData.brew_methods.length > 0 ? validData.brew_methods : null,

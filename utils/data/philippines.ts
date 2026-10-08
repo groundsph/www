@@ -920,15 +920,3 @@ export const BREW_METHODS = [
 
 // Straw type options
 export const STRAW_TYPES = ["plastic", "paper", "metal", "stalk", "other"] as const;
-
-// Payment method options
-export const PAYMENT_METHODS = [
-    "cash",
-    "credit_card",
-    "debit_card",
-    "gcash",
-    "maya",
-    "qrph",
-    "bank_transfer",
-];
-

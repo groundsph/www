@@ -1,17 +1,18 @@
 import { describe, it, expect } from "bun:test"
-import { PAYMENT_METHODS, STRAW_TYPES } from "@/utils/data/philippines"
+import { PAYMENT_METHODS } from "@/utils/payment-methods"
+import { STRAW_TYPES } from "@/utils/data/philippines"
 import { DEFAULT_CAFE_SUBMISSION } from "@/utils/types/extra"
 
 describe("cafe constants and defaults", () => {
-    it("keeps payment method order and adds qrph", () => {
+    it("keeps a single card token and both mobile wallets", () => {
         expect(PAYMENT_METHODS).toEqual([
             "cash",
-            "credit_card",
-            "debit_card",
+            "card",
             "gcash",
             "maya",
-            "qrph",
-            "bank_transfer",
+            "qr_ph",
+            "google_pay",
+            "apple_pay",
         ])
     })
 

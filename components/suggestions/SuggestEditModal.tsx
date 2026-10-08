@@ -52,6 +52,7 @@ import {
     compressGalleryImage,
 } from "@/utils/image-processing"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import { serializePaymentMethods } from "@/utils/payment-methods"
 import ImageCropper from "@/components/ui/ImageCropper"
 import ImageUpload from "@/components/reviews/ImageUpload"
 import {
@@ -1248,8 +1249,9 @@ export default function SuggestEditModal({
                                                         type='text'
                                                         value={
                                                             changes.payment_methods ??
-                                                            cafe.payment_methods ??
-                                                            ""
+                                                            serializePaymentMethods(
+                                                                cafe.payment_methods
+                                                            )
                                                         }
                                                         onChange={(e) =>
                                                             updateChange(

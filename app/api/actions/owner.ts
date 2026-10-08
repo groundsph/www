@@ -26,6 +26,7 @@ import {
 } from "@/utils/types/owner"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
+import { serializePaymentMethods } from "@/utils/payment-methods"
 import { revalidatePath } from "next/cache"
 import { recalculatePriceLevel } from "./price-level"
 
@@ -363,7 +364,12 @@ export async function updateCafeAsOwner(
     for (const [key, value] of Object.entries(updates)) {
         if (value !== undefined) {
             const drizzleKey = fieldMap[key] || key
-            drizzleUpdates[drizzleKey] = value
+            // Payment methods arrive as free text from several surfaces, so keep
+            // the stored vocabulary canonical at this single write funnel.
+            drizzleUpdates[drizzleKey] =
+                key === "payment_methods"
+                    ? serializePaymentMethods(value as string)
+                    : value
         }
     }
 

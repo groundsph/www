@@ -2,6 +2,7 @@
 
 import { CafeWithRatings } from "@/utils/types/extra"
 import { CafeSocial, OperatingHour } from "@/utils/types/cafe"
+import { formatPaymentMethods } from "@/utils/payment-methods"
 import {
     StarIcon,
     UserIcon,
@@ -360,18 +361,16 @@ export default function CafeSidebar({
                         Payment Methods
                     </p>
                     <ul className='flex flex-row items-center gap-2 flex-wrap text-sm font-semibold text-text/60'>
-                        {cafe.payment_methods
-                            .split(",")
-                            .map((method) => method.trim())
-                            .filter(Boolean)
-                            .map((method) => (
+                        {formatPaymentMethods(cafe.payment_methods).map(
+                            (method) => (
                                 <li
                                     key={method}
                                     className='text-text capitalize bg-secondary/40 px-2 py-1 rounded-lg h-max w-max text-nowrap'
                                 >
-                                    {method.split("_").join(" ")}
+                                    {method}
                                 </li>
-                            ))}
+                            )
+                        )}
                     </ul>
                 </>
             )}
