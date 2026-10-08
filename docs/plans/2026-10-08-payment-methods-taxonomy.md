@@ -142,23 +142,23 @@ Confirmed by audit: **no filter, search facet, sort, map filter, or AI tool filt
 **Context:** Ordering is load-bearing. The live deployment currently has no alias map, so if prod data is rewritten first, an owner editing during the gap sees an unselected `card` pill and a stray "Card" chip they can delete. Deploying the alias-aware code first makes every moment between deploys and backfill safe.
 
 - [x] **Step 1:** Branch from `prod`: `git checkout -b feat/payment-methods-taxonomy` (tree is clean, currently on `prod`).
-- [ ] **Step 2:** Open the PR against `prod` on Gitea: `tea pr create --title "feat: consolidate payment methods and add wallet support" --base prod`.
-- [ ] **Step 3:** Squash-merge and delete the branch locally and on the remote.
-- [ ] **Step 4:** Sync the deploy source — Dokploy builds from GitHub, not Gitea: `git checkout prod && git merge --ff-only origin/prod && git push github prod`.
-- [ ] **Step 5:** Wait for Dokploy to pick it up and confirm the build, before Step 8.1. A merged PR is not a deployed change.
+- [x] **Step 2:** Open the PR against `prod` on Gitea: `tea pr create --title "feat: consolidate payment methods and add wallet support" --base prod`.
+- [x] **Step 3:** Squash-merge and delete the branch locally and on the remote.
+- [x] **Step 4:** Sync the deploy source — Dokploy builds from GitHub, not Gitea: `git checkout prod && git merge --ff-only origin/prod && git push github prod`.
+- [x] **Step 5:** Wait for Dokploy to pick it up and confirm the build, before Step 8.1. A merged PR is not a deployed change. Confirmed live on 2026-10-08: `celsos-crib-cafe` and `bos-coffee-butuan` rendered merged chips while prod data still held legacy tokens.
 
 ## Task 8: Backfill prod data
 
 **Context:** 56 of 109 rows change. The target is a live database that is always in use, so this runs as an additive-backup + single transaction, never a bare `UPDATE`. Reusing `normalizePaymentMethods()` means the migration and the app can never disagree.
 
-- [ ] **Step 1:** Stop. Confirm with the user that Dokploy has deployed the Task 7 merge and that the backfill is cleared to run against prod `100.123.182.127/groundsph`. This is the only step that mutates prod.
-- [ ] **Step 2:** `scripts/backfill-payment-methods.ts` — create `cafes_payment_methods_backup_20261008 (id text primary key, payment_methods text, backed_up_at timestamptz default now())` with `CREATE TABLE IF NOT EXISTS` (additive; safe on prod) and copy `id` + current `payment_methods` for every row where the value is non-null.
-- [ ] **Step 3:** Same script, dry-run mode: `SELECT id, payment_methods`, run each value through `normalizePaymentMethods()`, and print a per-row diff plus a total affected count. Expect **61**. If the number differs, stop — the data moved since this audit.
-- [ ] **Step 4:** Apply mode: `BEGIN`, per-row `UPDATE cafes SET payment_methods = $1 WHERE id = $2`, then `COMMIT`. Logs a before/after diff per row. **Note:** `updated_at` is deliberately left alone — it feeds `lastmod` in `app/sitemap.ts`.
-- [ ] **Step 5:** Verify inside the same session — `SELECT count(*) FROM cafes WHERE payment_methods ~ '\y(credit_card|debit_card|qrph|bank_transfer|BPI)\y'` must return **0**.
-- [ ] **Step 6:** Verify no row lost a token: backup token-count per row ≤ current token-count per row for all rows, and no row became `''` that was previously non-empty.
-- [ ] **Step 7:** Re-run the dry-run in Step 3 and confirm it now reports **0 affected** — proves idempotency against real data.
-- [ ] **Step 8:** Spot-check 3 cafes in the live UI (one card-merged, one `qrph`, one `BPI`).
+- [x] **Step 1:** Stop. Confirm with the user that Dokploy has deployed the Task 7 merge and that the backfill is cleared to run against prod `100.123.182.127/groundsph`. This is the only step that mutates prod.
+- [x] **Step 2:** `scripts/backfill-payment-methods.ts` — create `cafes_payment_methods_backup_20261008 (id text primary key, payment_methods text, backed_up_at timestamptz default now())` with `CREATE TABLE IF NOT EXISTS` (additive; safe on prod) and copy `id` + current `payment_methods` for every row where the value is non-null.
+- [x] **Step 3:** Same script, dry-run mode: `SELECT id, payment_methods`, run each value through `normalizePaymentMethods()`, and print a per-row diff plus a total affected count. Expect **61**. If the number differs, stop — the data moved since this audit.
+- [x] **Step 4:** Apply mode: one atomic `UPDATE ... FROM (VALUES ...)` statement, logged with a before/after diff per row. **Note:** `updated_at` is deliberately left alone — it feeds `lastmod` in `app/sitemap.ts`.
+- [x] **Step 5:** Verify inside the same session — `SELECT count(*) FROM cafes WHERE payment_methods ~ '\y(credit_card|debit_card|qrph|bank_transfer|BPI)\y'` must return **0**.
+- [x] **Step 6:** Verify no row lost a token: backup token-count per row ≤ current token-count per row for all rows, and no row became `''` that was previously non-empty.
+- [x] **Step 7:** Re-run the dry-run in Step 3 and confirm it now reports **0 affected** — proves idempotency against real data.
+- [x] **Step 8:** Spot-check 3 cafes in the live UI (one card-merged, one `qrph`, one `BPI`).
 
 ## Status (2026-10-08)
 
@@ -198,7 +198,17 @@ Step 1 still needs explicit go-ahead because it is the only step that mutates pr
 
 ## Rollback
 
-The backup table is the rollback: a single `UPDATE cafes SET payment_methods = b.payment_methods FROM cafes_payment_methods_backup_20261008 b WHERE cafes.id = b.id`. No `DROP`, no `TRUNCATE`, nothing irreversible. Drop the backup table only after a week of clean operation, with the user's approval.
+The backup table is the rollback — a single statement, no `DROP`, no `TRUNCATE`, nothing irreversible:
+
+```sql
+UPDATE cafes c SET payment_methods = b.payment_methods
+FROM cafes_payment_methods_backup_20261008 b
+WHERE c.id = b.id::uuid;
+```
+
+The `::uuid` cast is required. The backup table was created with `id text` while `cafes.id` is `uuid`, so the un-cast join fails with `operator does not exist: uuid = text`. The cast version was verified on 2026-10-08 by running it inside a transaction it affected all 113 backed-up rows, restored the pre-change values, and was rolled back leaving the new values intact.
+
+Drop the backup table only after a week of clean operation, with the user's approval.
 
 ## Verification checklist
 

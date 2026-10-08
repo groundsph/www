@@ -17,7 +17,12 @@
  * overwritten on re-run, so the change stays reversible with a single UPDATE:
  *
  *   UPDATE cafes c SET payment_methods = b.payment_methods
- *   FROM cafes_payment_methods_backup_20261008 b WHERE c.id = b.id
+ *   FROM cafes_payment_methods_backup_20261008 b WHERE c.id = b.id::uuid
+ *
+ * The `::uuid` cast is required: this table's `id` column is text, while
+ * `cafes.id` is uuid, so `c.id = b.id` fails with "operator does not exist:
+ * uuid = text". Verified to affect all 113 backed-up rows and to restore the
+ * original values.
  *
  * `cafes.updated_at` is deliberately left untouched: it feeds the cafe
  * `lastmod` value in `app/sitemap.ts`, and a vocabulary rename is not a content
@@ -31,7 +36,7 @@
 
 import { db } from "@/db"
 import { cafes } from "@/db/schema"
-import { eq, isNotNull, sql } from "drizzle-orm"
+import { isNotNull, sql } from "drizzle-orm"
 import {
     normalizePaymentMethods,
     serializePaymentMethods,
@@ -130,7 +135,7 @@ function assertNoTokenLoss(planned: PlannedRow[]): void {
 async function createBackup(): Promise<number> {
     await db.execute(sql`
         CREATE TABLE IF NOT EXISTS ${sql.identifier(BACKUP_TABLE)} (
-            id text PRIMARY KEY,
+            id uuid PRIMARY KEY,
             payment_methods text,
             backed_up_at timestamptz NOT NULL DEFAULT now()
         )
@@ -146,15 +151,30 @@ async function createBackup(): Promise<number> {
     return inserted.rowCount ?? 0
 }
 
+/**
+ * Apply every change in a single statement.
+ *
+ * An earlier version looped one UPDATE per row inside `db.transaction()`. That is
+ * 62 sequential round trips, and over a remote link it died mid-transaction with
+ * "Client has encountered a connection error" — harmless, because Postgres rolled
+ * it back, but it proved the approach fragile.
+ *
+ * Sending the whole plan as one statement keeps the normalizer as the single
+ * source of truth (values are still computed in TypeScript) while removing the
+ * long-lived transaction entirely: a lone UPDATE is already atomic, so a failure
+ * leaves the table exactly as it was.
+ */
 async function applyPlan(planned: PlannedRow[]): Promise<void> {
-    await db.transaction(async (tx) => {
-        for (const row of planned) {
-            await tx
-                .update(cafes)
-                .set({ paymentMethods: row.after })
-                .where(eq(cafes.id, row.id))
-        }
-    })
+    const pairs = planned.map(
+        (row) => sql`(${row.id}::uuid, ${row.after}::text)`
+    )
+
+    await db.execute(sql`
+        UPDATE cafes AS c
+        SET payment_methods = v.new_value
+        FROM (VALUES ${sql.join(pairs, sql`, `)}) AS v(id, new_value)
+        WHERE c.id = v.id
+    `)
 }
 
 async function countRowsWithLegacyTokens(): Promise<number> {
@@ -194,7 +214,7 @@ async function main(): Promise<void> {
     const backedUp = await createBackup()
     console.log(`   Backed up ${backedUp} new row(s).\n`)
 
-    console.log(`   Applying ${planned.length} row(s) in a transaction…`)
+    console.log(`   Applying ${planned.length} row(s) in one statement…`)
     await applyPlan(planned)
 
     const remaining = await countRowsWithLegacyTokens()
