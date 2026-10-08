@@ -49,3 +49,6 @@ plan.md
 .worktrees/
 .superpowers/
 .pi/
+
+# brand guidelines PDF build intermediates
+docs/brand/.brand.build.*

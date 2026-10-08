@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "llm:models": "bun run scripts/list-llm-models.ts",
-    "generate:icons": "./scripts/generate-icons.sh public/icon.png"
+    "generate:icons": "./scripts/generate-icons.sh public/icon.png",
+    "brand:pdf": "bun run scripts/build-brand-pdf.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.958.0",
