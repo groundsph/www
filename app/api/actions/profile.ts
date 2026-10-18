@@ -2,6 +2,7 @@
 
 import { getPHTime, getPHTodayStart } from "@/utils/featured"
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits, collections, monthlyLeaderboardSnapshots, userFollows } from "@/db/schema"
 import { eq, and, ne, desc, inArray, arrayContains, count, sql, asc } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
@@ -268,7 +269,7 @@ export async function getFullProfileData(
             id: c.id,
             name: c.name,
             slug: c.slug,
-            thumbnail: c.thumbnail,
+            thumbnail: toStoredThumbnail(c.thumbnail),
             city_municipality: c.cityMunicipality,
             region: c.region,
             is_verified: c.isVerified,

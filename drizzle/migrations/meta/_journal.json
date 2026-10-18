@@ -134,6 +134,13 @@
       "when": 1791194272541,
       "tag": "0018_quiet_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792236444772,
+      "tag": "0019_pink_cassandra_nova",
+      "breakpoints": true
     }
   ]
 }

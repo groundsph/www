@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { PLACEHOLDER_THUMBNAIL } from "@/utils/extras"
 import { collections, collectionLikes, collectionSaves, cafes, cafeRatingStats, profiles } from "@/db/schema"
 import { eq, and, desc, sql, inArray } from "drizzle-orm"
 import { auth } from "@/lib/auth"
@@ -260,7 +261,7 @@ export async function getCollectionBySlug(slug: string) {
                 id: cafes.id,
                 name: cafes.name,
                 slug: cafes.slug,
-                thumbnail: cafes.thumbnail,
+                thumbnail: sql<string>`coalesce(${cafes.thumbnail}, ${PLACEHOLDER_THUMBNAIL})`,
                 cityMunicipality: cafes.cityMunicipality,
                 region: cafes.region,
                 averageRating: cafeRatingStats.averageRating,
@@ -510,7 +511,7 @@ export async function searchCafesForCollection(query: string) {
             id: cafes.id,
             name: cafes.name,
             slug: cafes.slug,
-            thumbnail: cafes.thumbnail,
+            thumbnail: sql<string>`coalesce(${cafes.thumbnail}, ${PLACEHOLDER_THUMBNAIL})`,
             cityMunicipality: cafes.cityMunicipality,
             region: cafes.region,
         })

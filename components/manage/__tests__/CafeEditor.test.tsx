@@ -2,6 +2,9 @@ import { describe, it, expect, mock } from "bun:test"
 import { render } from "@testing-library/react"
 
 // Mock external dependencies
+mock.module("@/components/layout/NotificationProvider", () => ({
+    useNotification: () => ({ addNotification: mock() }),
+}))
 mock.module("next/navigation", () => ({
     useRouter: () => ({ push: mock() }),
 }))
@@ -46,6 +49,7 @@ mock.module("@/app/api/actions/admin", () => ({
     upsertCafeStory: () => Promise.resolve(),
     deleteCafeStory: () => Promise.resolve(),
     adminDeleteCafeImage: () => Promise.resolve(),
+    updateCafeImages: () => Promise.resolve({ success: true }),
     searchUsersForOwner: () => Promise.resolve([]),
     getOwnerProfiles: () => Promise.resolve([]),
 }))

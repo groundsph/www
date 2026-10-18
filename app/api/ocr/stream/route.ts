@@ -3,13 +3,15 @@ import { getCurrentUser } from "@/lib/auth"
 import { db } from "@/db"
 import { cafeMenuItems, cafes } from "@/db/schema/tables"
 import { eq } from "drizzle-orm"
-import { parseOcrMenuItems } from "@/utils/ai/menu-ocr"
+import { parseOcrMenuItems, MENU_EXTRACTION_SYSTEM_PROMPT, resolveImageMime } from "@/utils/ai/menu-ocr"
+import { buildChatCompletionsUrl, sanitizeUpstreamError } from "@/utils/ai/openai-compatible"
 import { deduplicateMenuItems } from "@/app/api/actions/menu-ocr"
 import { z } from "zod"
 
 const requestSchema = z.object({
     cafeId: z.string().min(1),
     imageBase64: z.string().min(1),
+    mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]).optional(),
 })
 
 function getConfig() {
@@ -18,29 +20,6 @@ function getConfig() {
     return { baseUrl, apiKey }
 }
 
-function normalizeBaseUrl(url: string): string {
-    return url.replace(/\/$/, "")
-}
-
-const MENU_EXTRACTION_SYSTEM_PROMPT =
-    `You are a menu item extractor. Given an image of a cafe/restaurant menu, extract ALL menu items.
-
-AVAILABLE CATEGORIES (use EXACTLY one of these):
-Coffee, Espresso Drinks, Cold Brew, Non-Coffee, Tea, Milk Drinks, Frappes, Smoothies, Specialty Drinks, Refreshers, Food, Rice Meals, Sandwiches, Pasta, Breakfast, Snacks, Pastries, Desserts, Cakes, Add-ons, Other
-
-For each item, respond with:
-- name: The item name exactly as written
-- category: MUST be one of the AVAILABLE CATEGORIES above (pick the closest match)
-- price: The numeric price (no currency symbol)
-- description: Brief description if visible (optional)
-- is_food: true if it's food, false if drink
-- is_hot: true if hot variant exists
-- is_cold: true if cold variant exists
-- is_vegan: true if the item or menu indicates it's vegan (optional)
-- is_vegetarian: true if the item or menu indicates it's vegetarian (optional)
-- calories: Numeric calorie count if visible on the menu (optional)
-
-Respond with a JSON array of objects. If no menu items are found, return an empty array.`
 
 export async function POST(request: NextRequest) {
     try {
@@ -80,10 +59,10 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const normalizedUrl = normalizeBaseUrl(baseUrl)
+        const normalizedUrl = buildChatCompletionsUrl(baseUrl)
         const model = process.env.OPENAI_COMPATIBLE_OCR_MODEL ?? "gpt-4o"
 
-        const ocrResponse = await fetch(`${normalizedUrl}/v1/chat/completions`, {
+        const ocrResponse = await fetch(normalizedUrl, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${apiKey}`,
@@ -102,7 +81,7 @@ export async function POST(request: NextRequest) {
                             {
                                 type: "image_url",
                                 image_url: {
-                                    url: `data:image/jpeg;base64,${validated.data.imageBase64}`,
+                                    url: `data:${resolveImageMime(validated.data.mimeType)};base64,${validated.data.imageBase64}`,
                                     detail: "low",
                                 },
                             },
@@ -117,8 +96,11 @@ export async function POST(request: NextRequest) {
         })
 
         if (!ocrResponse.ok) {
+            const upstreamBody = await ocrResponse.text().catch(() => "")
+            const detail = sanitizeUpstreamError(ocrResponse.status, ocrResponse.statusText, upstreamBody)
+            console.error(`OCR upstream error: ${detail} (url: ${normalizedUrl})`)
             return new Response(
-                JSON.stringify({ type: "error", error: `AI service error: ${ocrResponse.status}` }),
+                JSON.stringify({ type: "error", error: `AI service error: ${detail}` }),
                 { status: 502, headers: { "Content-Type": "application/json" } }
             )
         }

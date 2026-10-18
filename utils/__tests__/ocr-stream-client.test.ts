@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { OCR_PHASE_CONFIG, type OcrPhase, type OcrStreamCallbacks, extractItemCountFromStreamedContent } from "@/utils/ocr-stream-client"
+import { OCR_PHASE_CONFIG, type OcrPhase, type OcrStreamCallbacks, extractItemCountFromStreamedContent, describeEmptyOcrResult } from "@/utils/ocr-stream-client"
 
 describe("OCR Phase Configuration", () => {
     it("has config for all phases", () => {
@@ -79,5 +79,15 @@ describe("extractItemCountFromStreamedContent", () => {
     it("counts items with whitespace variations", () => {
         const content = '[{ "name" : "Cappuccino" }]'
         expect(extractItemCountFromStreamedContent(content)).toBe(1)
+    })
+})
+
+describe("describeEmptyOcrResult", () => {
+    it("explains an empty result instead of reporting an error", () => {
+        expect(describeEmptyOcrResult(0)).toContain("No menu items")
+    })
+
+    it("returns null when items were found", () => {
+        expect(describeEmptyOcrResult(3)).toBeNull()
     })
 })

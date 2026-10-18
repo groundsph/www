@@ -29,9 +29,18 @@ export function extractItemCountFromStreamedContent(content: string): number {
     return matches ? matches.length : 0
 }
 
+/**
+ * A successful scan that found nothing is not an error — it needs its own copy.
+ */
+export function describeEmptyOcrResult(itemCount: number): string | null {
+    if (itemCount > 0) return null
+    return "No menu items detected — try a clearer, straight-on photo of the menu."
+}
+
 export async function streamOcrScan(
     cafeId: string,
     imageBase64: string,
+    mimeType: string | undefined,
     callbacks: OcrStreamCallbacks,
     signal?: AbortSignal
 ): Promise<void> {
@@ -50,7 +59,7 @@ export async function streamOcrScan(
     const response = await fetch("/api/ocr/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cafeId, imageBase64 }),
+        body: JSON.stringify({ cafeId, imageBase64, mimeType }),
         signal,
     })
 

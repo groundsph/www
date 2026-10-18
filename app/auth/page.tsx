@@ -4,7 +4,7 @@ import AuthPageContent from "@/components/auth/AuthPage"
 
 export const metadata: Metadata = {
     title: "Auth",
-    description: "Sign in or create your Grounds account",
+    description: "Sign in or create your GroundsPH account",
 }
 
 export default function AuthPage() {

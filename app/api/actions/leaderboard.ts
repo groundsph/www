@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { cafes, cafeVisits, reviews, cafePageViews, monthlyLeaderboardSnapshots } from "@/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { applyTieRanking } from "@/utils/leaderboard"
@@ -203,7 +204,7 @@ async function computeCafeLeaderboardCore(
                 cafeId: r.cafeId,
                 name: r.name,
                 slug: r.slug,
-                thumbnail: r.thumbnail,
+                thumbnail: toStoredThumbnail(r.thumbnail),
                 region: r.region,
                 score: Math.round(r.score),
                 visitCount: r.visitCount || 0,

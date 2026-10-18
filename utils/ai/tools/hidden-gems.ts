@@ -1,4 +1,5 @@
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, desc, ilike } from "drizzle-orm"
 
@@ -53,6 +54,7 @@ export async function findHiddenGems(
         return {
             gems: results.map((r) => ({
                 ...r,
+                thumbnail: toStoredThumbnail(r.thumbnail),
                 averageRating: r.averageRating ?? null,
                 totalReviews: r.totalReviews ?? null,
             })),

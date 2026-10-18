@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { cafes, profiles, blogPosts, cafeCrawls, collections, events, cafeMenuItems } from "@/db/schema"
 import { ilike, or, eq, and } from "drizzle-orm"
 import { SearchResult } from "@/utils/types/search"
@@ -47,7 +48,7 @@ export async function searchCafesAndUsers(
       title: cafe.name,
       subtitle: cafe.addressDisplay,
       href: `/cafes/${cafe.slug}`,
-      imageUrl: cafe.thumbnail,
+      imageUrl: toStoredThumbnail(cafe.thumbnail),
       priority: 80,
     })),
     ...userResults.map(user => ({

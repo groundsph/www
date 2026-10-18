@@ -12,3 +12,5 @@ export { default as MenuSection } from "./MenuSection"
 export { default as AmenitiesSection } from "./AmenitiesSection"
 export { default as HoursSection } from "./HoursSection"
 
+export { default as EditorShell, type EditorSaveState } from "./EditorShell"
+export { default as EditorHeader, type EditorHeaderChip } from "./EditorHeader"

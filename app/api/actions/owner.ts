@@ -1,6 +1,7 @@
 'use server'
 
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import {
     cafes,
     cafeStories,
@@ -28,6 +29,8 @@ import { CafeWithRatings } from "@/utils/types/extra"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
 import { serializePaymentMethods } from "@/utils/payment-methods"
 import { revalidatePath } from "next/cache"
+import { logSystemAction } from "./system-logs"
+import { parseCafeImagesPatch } from "@/utils/validation/cafe-images"
 import { recalculatePriceLevel } from "./price-level"
 
 // ============================================
@@ -142,7 +145,7 @@ export async function getOwnedCafes(): Promise<OwnedCafe[]> {
             id: cafe.id,
             name: cafe.name,
             slug: cafe.slug,
-            thumbnail: cafe.thumbnail,
+            thumbnail: toStoredThumbnail(cafe.thumbnail),
             city_municipality: cafe.cityMunicipality,
             region: cafe.region,
             is_verified: cafe.isVerified ?? false,
@@ -185,7 +188,7 @@ export async function getCafeForOwnerManagement(cafeId: string): Promise<CafeWit
         name: cafe.name,
         slug: cafe.slug,
         description: cafe.description,
-        thumbnail: cafe.thumbnail,
+        thumbnail: toStoredThumbnail(cafe.thumbnail),
         gallery: cafe.gallery,
         address_display: cafe.addressDisplay,
         area: cafe.area,
@@ -297,6 +300,8 @@ export async function updateCafeAsOwner(
         socials: unknown
         is_hidden_gem: boolean
         finding_hint: string | null
+        thumbnail: string | null
+        gallery: string[]
         badge_stamp_url: string | null
         is_halal_certified: boolean
         straw_type: string
@@ -416,6 +421,50 @@ export async function deleteCafeImageAsOwner(
     // Import and call the storage delete function
     const { deleteSingleCafeImageAction } = await import('@/utils/storage/actions')
     return deleteSingleCafeImageAction(imageUrl)
+}
+
+/**
+ * Persist only the cafe image fields (owner).
+ */
+export async function updateCafeImagesAsOwner(
+    cafeId: string,
+    patch: { thumbnail?: string | null; gallery?: string[] }
+): Promise<OwnerActionResult> {
+    const isOwner = await isOwnerOfCafe(cafeId)
+    if (!isOwner) {
+        return { success: false, error: 'Not authorized to manage this cafe' }
+    }
+
+    const parsed = parseCafeImagesPatch(patch)
+    if (!parsed.ok) return { success: false, error: parsed.error }
+
+    try {
+        await db
+            .update(cafes)
+            .set({
+                ...(parsed.value.thumbnail !== undefined ? { thumbnail: parsed.value.thumbnail } : {}),
+                ...(parsed.value.gallery !== undefined ? { gallery: parsed.value.gallery } : {}),
+                updatedAt: new Date(),
+            })
+            .where(eq(cafes.id, cafeId))
+
+        revalidatePath("/owner/cafes/[slug]/edit", "page")
+        revalidatePath("/cafes/[slug]", "page")
+
+        await logSystemAction(
+            "update",
+            "cafe",
+            cafeId,
+            null,
+            parsed.value,
+            { reason: "Cafe images updated by owner" }
+        )
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error updating cafe images as owner:", error)
+        return { success: false, error: "Failed to save images" }
+    }
 }
 
 /**

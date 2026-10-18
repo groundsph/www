@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
-import { parseOcrMenuItems, extractMenuItemsFromImage } from "@/utils/ai/menu-ocr"
+import { parseOcrMenuItems, extractMenuItemsFromImage, MENU_EXTRACTION_SYSTEM_PROMPT, resolveImageMime } from "@/utils/ai/menu-ocr"
 
 describe("parseOcrMenuItems", () => {
     it("parses valid JSON array", () => {
@@ -169,5 +169,23 @@ describe("extractMenuItemsFromImage", () => {
         const body = JSON.parse(fetchCalls[0].body)
         expect(body.model).toBe("z-ai/glm-5.3-flash")
         expect(body.messages[1].content[0].type).toBe("image_url")
+    })
+})
+
+describe("MENU_EXTRACTION_SYSTEM_PROMPT", () => {
+    it("is exported for the streaming route to share", () => {
+        expect(MENU_EXTRACTION_SYSTEM_PROMPT).toContain("menu item extractor")
+    })
+})
+
+describe("resolveImageMime", () => {
+    it("keeps an allowed image MIME", () => {
+        expect(resolveImageMime("image/png")).toBe("image/png")
+        expect(resolveImageMime("image/webp")).toBe("image/webp")
+    })
+
+    it("falls back to image/jpeg when absent or unrecognised", () => {
+        expect(resolveImageMime(undefined)).toBe("image/jpeg")
+        expect(resolveImageMime("text/html")).toBe("image/jpeg")
     })
 })

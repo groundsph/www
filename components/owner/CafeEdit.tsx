@@ -1,15 +1,11 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
-import Link from "next/link"
 import {
-    ArrowLeft,
-    Save,
     MapPin,
     DollarSign,
-    Loader2,
     Coffee,
     Clock,
     Phone,
@@ -22,6 +18,7 @@ import {
 import {
     updateCafeAsOwner,
     deleteCafeImageAsOwner,
+    updateCafeImagesAsOwner,
     updateCafeStory,
     setCafeBadgeStamp,
     removeCafeBadgeStamp,
@@ -31,6 +28,7 @@ import { deleteCafeBadgeStampAction } from "@/utils/storage/actions"
 import { CafeMenuItem } from "@/utils/types/owner"
 import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { Database } from "@/utils/types/database.types"
+import TextField from "@/components/ui/TextField"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
@@ -44,6 +42,9 @@ import {
     MenuSection,
     MenuItemModal,
 } from "@/components/cafe-editor"
+import { useCafeImages } from "@/utils/hooks/useCafeImages"
+import { EditorShell, EditorHeader } from "@/components/cafe-editor"
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges"
 import { useMenuItems } from "@/utils/hooks/useMenuItems"
 
 type PriceLevel = Database["public"]["Enums"]["price_level"]
@@ -62,6 +63,23 @@ export default function CafeEdit({
 
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
+
+    // Cover and gallery persist as they change; the main Save never carries them.
+    const cafeImages = useCafeImages({
+        cafeId: cafe.id,
+        initial: { thumbnail: cafe.thumbnail, gallery: cafe.gallery || [] },
+        save: (patch) => updateCafeImagesAsOwner(cafe.id, patch),
+        removeFile: (url) => deleteCafeImageAsOwner(cafe.id, url),
+    })
+
+    const initialCafeRef = useRef(cafe)
+    useUnsavedChanges(hasChanges)
+
+    const handleDiscard = useCallback(() => {
+        setCafe(initialCafeRef.current)
+        setHasChanges(false)
+        addNotification("Changes discarded", "success")
+    }, [addNotification])
     const [activeSection, setActiveSection] = useState<
         | "basic"
         | "images"
@@ -161,67 +179,41 @@ export default function CafeEdit({
 
     return (
         <div className='w-full overflow-hidden space-y-6 [&_button]:cursor-pointer'>
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+            <EditorShell
+                ariaLabel='Cafe sections'
+                colorScheme='primary'
+                header={
+                    <EditorHeader
+                        title={`Edit ${cafe.name}`}
+                        subtitle='Update your cafe information'
+                        chips={[
+                            {
+                                label: cafe.is_published ? "Published" : "Pending review",
+                                tone: cafe.is_published ? ("green" as const) : ("amber" as const),
+                            },
+                        ]}
+                        backHref={`/owner/cafes/${cafe.slug}`}
+                        backLabel='Back to cafe'
+                    />
+                }
+                tabs={SECTIONS.map(({ id, title, icon }) => ({
+                    id,
+                    label: title,
+                    icon,
+                    dirty: id === "images" ? cafeImages.saveState.dirty : hasChanges && activeSection !== id,
+                }))}
+                activeSection={activeSection}
+                onSectionChange={(id) => setActiveSection(id as typeof activeSection)}
+                saveState={{
+                    dirty: hasChanges || cafeImages.saveState.dirty,
+                    saving: saving || cafeImages.saveState.saving,
+                    lastSavedAt: cafeImages.saveState.lastSavedAt,
+                    error: cafeImages.saveState.error,
+                }}
+                onSave={handleSave}
+                onDiscard={handleDiscard}
             >
-                <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-text/10'>
-                    <div className='flex items-center gap-4'>
-                        <Link
-                            href={`/owner/cafes/${cafe.slug}`}
-                            className='p-2 hover:bg-text/5 rounded-lg transition'
-                        >
-                            <ArrowLeft className='w-5 h-5' />
-                        </Link>
-                        <div>
-                            <h1 className='text-2xl font-bold font-serif'>
-                                Edit {cafe.name}
-                            </h1>
-                            <p className='text-text/60 text-sm'>
-                                Update your cafe information
-                            </p>
-                        </div>
-                    </div>
-                    <div className='flex items-center gap-2'>
-                        {hasChanges && (
-                            <motion.button
-                                onClick={handleSave}
-                                disabled={saving}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className='flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition disabled:opacity-50'
-                            >
-                                {saving ? (
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                ) : (
-                                    <Save className='w-4 h-4' />
-                                )}
-                                Save Changes
-                            </motion.button>
-                        )}
-                    </div>
-                </div>
-
-                <div className='flex gap-2 overflow-x-auto pb-2'>
-                    {SECTIONS.map(({ id, title, icon: Icon }) => (
-                        <motion.button
-                            key={id}
-                            onClick={() => setActiveSection(id)}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition border ${
-                                activeSection === id
-                                    ? "bg-primary/20 text-primary border-primary/30"
-                                    : "bg-text/5 border-text/10 hover:bg-text/10"
-                            }`}
-                        >
-                            <Icon className='w-4 h-4' />
-                            {title}
-                        </motion.button>
-                    ))}
-                </div>
-
+                <div className='space-y-6'>
                 <div className='relative h-auto aspect-6/2 rounded-xl overflow-hidden bg-text/5'>
                     {cafe.thumbnail ? (
                         <motion.div
@@ -247,7 +239,6 @@ export default function CafeEdit({
                         </div>
                     )}
                 </div>
-            </motion.div>
 
             <motion.div
                 className='w-full min-h-[400px] bg-text/5 border border-text/10 rounded-xl p-6'
@@ -333,19 +324,11 @@ export default function CafeEdit({
                                         </motion.div>
                                     )}
                                 </div>
-                                <div>
-                                    <label className='block text-sm font-medium text-text/60 mb-2'>
-                                        Cafe Name *
-                                    </label>
-                                    <input
-                                        type='text'
-                                        value={cafe.name}
-                                        onChange={(e) =>
-                                            updateField("name", e.target.value)
-                                        }
-                                        className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                    />
-                                </div>
+                                <TextField
+                                    label='Cafe Name *'
+                                    value={cafe.name}
+                                    onChange={(value) => updateField("name", value)}
+                                />
 
                                 <div>
                                     <label className='block text-sm font-medium text-text/60 mb-2'>
@@ -401,20 +384,12 @@ export default function CafeEdit({
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className='block text-sm font-medium text-text/60 mb-2'>
-                                        Roaster
-                                    </label>
-                                    <input
-                                        type='text'
-                                        value={cafe.roaster || ""}
-                                        onChange={(e) =>
-                                            updateField("roaster", e.target.value)
-                                        }
-                                        placeholder='Coffee roaster name'
-                                        className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50'
-                                    />
-                                </div>
+                                <TextField
+                                    label='Roaster'
+                                    value={cafe.roaster || ""}
+                                    onChange={(value) => updateField("roaster", value)}
+                                    placeholder='Coffee roaster name'
+                                />
 
                                 {cafe.gallery && cafe.gallery.length > 0 && (
                                     <div>
@@ -446,26 +421,24 @@ export default function CafeEdit({
 
                         {activeSection === "images" && (
                             <ImageSection
-                                thumbnail={cafe.thumbnail}
-                                gallery={cafe.gallery || []}
+                                thumbnail={cafeImages.thumbnail}
+                                gallery={cafeImages.gallery}
                                 cafeId={cafe.id}
                                 cafeName={cafe.name}
                                 onThumbnailChange={(url: string | null) => {
-                                    setCafe(
-                                        (prev) =>
-                                            ({
-                                                ...prev,
-                                                thumbnail: url ?? prev.thumbnail,
-                                            }) as typeof prev
-                                    )
-                                    setHasChanges(true)
+                                    cafeImages.setCoverImage(url)
                                 }}
                                 onGalleryChange={(urls: string[]) => {
-                                    updateField("gallery", urls)
-                                    setHasChanges(true)
+                                    cafeImages.replaceGallery(urls)
                                 }}
-                                onDeleteImage={async (url: string) => {
-                                    await deleteCafeImageAsOwner(cafe.id, url)
+                                onImageUploaded={(url: string) => {
+                                    cafeImages.appendGallery([url])
+                                }}
+                                onDeleteImage={async (_url: string, index: number) => {
+                                    await cafeImages.removeGalleryAt(index)
+                                }}
+                                onRemoveCoverImage={async () => {
+                                    await cafeImages.clearThumbnail()
                                 }}
                                 colorScheme='primary'
                                 badgeStampUrl={cafe.badge_stamp_url}
@@ -602,6 +575,8 @@ export default function CafeEdit({
                     </motion.div>
                 </AnimatePresence>
             </motion.div>
+                </div>
+            </EditorShell>
 
             <MenuItemModal
                 open={menu.modalOpen}
@@ -613,28 +588,6 @@ export default function CafeEdit({
                 cafeId={cafe.id}
             />
 
-            {hasChanges && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className='fixed bottom-6 left-4 right-4 md:hidden z-50'
-                >
-                    <motion.button
-                        onClick={handleSave}
-                        disabled={saving}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className='w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-medium shadow-lg hover:bg-primary/90 disabled:opacity-50'
-                    >
-                        {saving ? (
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                            <Save className='w-4 h-4' />
-                        )}
-                        Save Changes
-                    </motion.button>
-                </motion.div>
-            )}
         </div>
     )
 }

@@ -1,16 +1,14 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
+import TextField from "@/components/ui/TextField"
 import { UserAvatar } from "@/components/ui/UserAvatar"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-    ArrowLeft,
     Check,
     X,
-    Save,
     MapPin,
     DollarSign,
     Loader2,
@@ -37,6 +35,7 @@ import {
     upsertCafeStory,
     deleteCafeStory,
     adminDeleteCafeImage,
+    updateCafeImages,
     searchUsersForOwner,
     getOwnerProfiles,
 } from "@/app/api/actions/admin"
@@ -54,7 +53,13 @@ import {
     StorySection,
     AmenitiesSection,
     HoursSection,
+    EditorShell,
+    EditorHeader,
 } from "@/components/cafe-editor"
+import { useNotification } from "@/components/layout/NotificationProvider"
+import { useConfirm } from "@/hooks/useConfirm"
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges"
+import { useCafeImages } from "@/utils/hooks/useCafeImages"
 import { useMenuItems } from "@/utils/hooks/useMenuItems"
 import RejectCafeModal from "@/components/admin/RejectCafeModal"
 
@@ -73,6 +78,26 @@ export default function CafeEditor({
     const [cafe, setCafe] = useState(initialCafe)
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
+
+    // Cover and gallery are persisted by their own field-level action as they
+    // change, so the main Save never has to carry them.
+    const cafeImages = useCafeImages({
+        cafeId: cafe.id,
+        initial: { thumbnail: cafe.thumbnail, gallery: cafe.gallery || [] },
+        save: (patch) => updateCafeImages(cafe.id, patch),
+        removeFile: (url) => adminDeleteCafeImage(url, cafe.id),
+    })
+
+    const initialCafeRef = useRef(cafe)
+    const { addNotification } = useNotification()
+    const { confirm, dialog } = useConfirm()
+    useUnsavedChanges(hasChanges)
+
+    const handleDiscard = useCallback(() => {
+        setCafe(initialCafeRef.current)
+        setHasChanges(false)
+        addNotification("Changes discarded", "success")
+    }, [addNotification])
 
     // Menu Management (using shared hook)
     const menu = useMenuItems({
@@ -181,8 +206,6 @@ export default function CafeEditor({
             phone: cafe.phone || undefined,
             email: cafe.email || undefined,
             socials: cafe.socials || [],
-            thumbnail: cafe.thumbnail,
-            gallery: cafe.gallery,
             slug: cafe.slug,
             is_verified: cafe.is_verified || false,
             owner_ids: cafe.owner_ids || null,
@@ -193,8 +216,9 @@ export default function CafeEditor({
         setSaving(false)
         if (result.success) {
             setHasChanges(false)
+            addNotification("Changes saved", "success")
         } else {
-            alert(result.error || "Failed to save changes")
+            addNotification(result.error || "Failed to save changes", "error")
         }
     }
 
@@ -204,9 +228,9 @@ export default function CafeEditor({
         }
         const result = await approveCafe(cafe.id)
         if (result.success) {
-            router.push("/admin")
+            router.push("/manage/cafes")
         } else {
-            alert(result.error || "Failed to approve")
+            addNotification(result.error || "Failed to approve", "error")
         }
     }
 
@@ -214,37 +238,40 @@ export default function CafeEditor({
         const result = await rejectCafe(cafe.id, reason)
         if (result.success) {
             setRejectModalOpen(false)
-            router.push("/admin")
+            router.push("/manage/cafes")
         } else {
-            alert(result.error || "Failed to reject")
+            addNotification(result.error || "Failed to reject", "error")
         }
     }
 
     const handleUnpublish = async () => {
-        if (!confirm("Are you sure you want to unpublish this cafe?")) return
+        if (!(await confirm({ title: "Unpublish this cafe?", description: "It will be hidden from public listings.", confirmLabel: "Unpublish" }))) return
         if (hasChanges) {
             await handleSave()
         }
         const result = await unpublishCafe(cafe.id)
         if (result.success) {
-            router.push("/admin")
+            router.push("/manage/cafes")
         } else {
-            alert(result.error || "Failed to unpublish")
+            addNotification(result.error || "Failed to unpublish", "error")
         }
     }
 
     const handleDelete = async () => {
         if (
-            !confirm(
-                `Are you sure you want to PERMANENTLY DELETE "${cafe.name}"? This action cannot be undone and will remove all associated reviews, visits, and other data.`
-            )
+            !(await confirm({
+                title: `Permanently delete "${cafe.name}"?`,
+                description: "This cannot be undone. All associated reviews, visits and other data are removed too.",
+                confirmLabel: "Delete",
+                destructive: true,
+            }))
         )
             return
         const result = await deleteCafe(cafe.id)
         if (result.success) {
             router.push("/manage/cafes")
         } else {
-            alert(result.error || "Failed to delete cafe")
+            addNotification(result.error || "Failed to delete cafe", "error")
         }
     }
 
@@ -310,111 +337,86 @@ export default function CafeEditor({
 
     return (
         <div className='w-full overflow-hidden space-y-6 [&_button]:cursor-pointer'>
-            {/* Header with actions */}
-            <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-text/10'>
-                <div className='flex items-center gap-4'>
-                    <Link
-                        href='/manage/cafes'
-                        className='p-2 hover:bg-text/5 rounded-lg transition'
-                    >
-                        <ArrowLeft className='w-5 h-5' />
-                    </Link>
-                    <div>
-                        <h1 className='text-2xl font-bold font-serif'>
-                            {cafe.is_published
-                                ? "Edit Cafe Listing"
-                                : "Review Cafe Submission"}
-                        </h1>
-                        <p className='text-text/60 text-sm'>
-                            {cafe.is_published ? "Published " : "Submitted "}
-                            {new Date(cafe.created_at!).toLocaleDateString()}
-                            {cafe.contributor && (
-                                <span className='ml-2'>
-                                    by{" "}
-                                    <span className='font-medium text-text/80'>
-                                        {cafe.contributor.display_name ||
-                                            cafe.contributor.username}
-                                    </span>
-                                </span>
-                            )}
-                        </p>
-                    </div>
-                </div>
-                <div className='flex items-center gap-2'>
-                    {hasChanges && (
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className='flex items-center gap-2 px-4 py-2 bg-text/10 rounded-lg hover:bg-text/20 transition disabled:opacity-50'
-                        >
-                            {saving ? (
-                                <Loader2 className='w-4 h-4 animate-spin' />
-                            ) : (
-                                <Save className='w-4 h-4' />
-                            )}
-                            Save
-                        </button>
-                    )}
-                    {cafe.is_published ? (
-                        // Published cafe - show Unpublish and Delete buttons
-                        <>
-                            <button
-                                onClick={handleUnpublish}
-                                className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition'
-                            >
-                                <EyeOff className='w-4 h-4' />
-                                Unpublish
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition'
-                            >
-                                <Trash2 className='w-4 h-4' />
-                                Delete
-                            </button>
-                        </>
-                    ) : (
-                        // Pending cafe - show Reject and Approve buttons
-                        <>
-                            <button
-                                onClick={() => setRejectModalOpen(true)}
-                                className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition'
-                            >
-                                <X className='w-4 h-4' />
-                                Reject
-                            </button>
-                            <button
-                                onClick={handleApprove}
-                                className='flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition'
-                            >
-                                <Check className='w-4 h-4' />
-                                Approve
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
+            {dialog}
 
-            {/* Section Tabs */}
-            <div className='flex gap-2 overflow-x-auto pb-2'>
-                {SECTIONS.map(({ id, title, icon: Icon }) => (
-                    <motion.button
-                        key={id}
-                        onClick={() => setActiveSection(id)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition border ${
-                            activeSection === id
-                                ? "bg-accent/20 text-accent border-accent/30"
-                                : "bg-text/5 border-text/10 hover:bg-text/10"
+            <EditorShell
+                ariaLabel='Cafe sections'
+                colorScheme='accent'
+                header={
+                    <EditorHeader
+                        title={cafe.is_published ? "Edit Cafe Listing" : "Review Cafe Submission"}
+                        subtitle={`${cafe.is_published ? "Published" : "Submitted"} ${new Date(cafe.created_at!).toLocaleDateString()}${
+                            cafe.contributor
+                                ? ` by ${cafe.contributor.display_name || cafe.contributor.username}`
+                                : ""
                         }`}
-                    >
-                        <Icon className='w-4 h-4' />
-                        {title}
-                    </motion.button>
-                ))}
-            </div>
-
+                        chips={[
+                            {
+                                label: cafe.is_published ? "Published" : "Pending",
+                                tone: cafe.is_published ? ("green" as const) : ("amber" as const),
+                            },
+                        ]}
+                        backHref='/manage/cafes'
+                        backLabel='Back to cafes'
+                        actions={
+                            <>
+                                {cafe.is_published ? (
+                                    <>
+                                        <button
+                                            onClick={handleUnpublish}
+                                            className='flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-500 rounded-lg hover:bg-orange-500/30 transition'
+                                        >
+                                            <EyeOff className='w-4 h-4' />
+                                            Unpublish
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition'
+                                        >
+                                            <Trash2 className='w-4 h-4' />
+                                            Delete
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => setRejectModalOpen(true)}
+                                            className='flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition'
+                                        >
+                                            <X className='w-4 h-4' />
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={handleApprove}
+                                            className='flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 transition'
+                                        >
+                                            <Check className='w-4 h-4' />
+                                            Approve
+                                        </button>
+                                    </>
+                                )}
+                            </>
+                        }
+                    />
+                }
+                tabs={SECTIONS.map(({ id, title, icon }) => ({
+                    id,
+                    label: title,
+                    icon,
+                    dirty: id === "images" ? cafeImages.saveState.dirty : hasChanges && activeSection !== id,
+                }))}
+                activeSection={activeSection}
+                onSectionChange={(id) => setActiveSection(id as typeof activeSection)}
+                saveState={{
+                    dirty: hasChanges || cafeImages.saveState.dirty,
+                    saving: saving || cafeImages.saveState.saving,
+                    lastSavedAt: cafeImages.saveState.lastSavedAt,
+                    error: cafeImages.saveState.error,
+                }}
+                onSave={handleSave}
+                onDiscard={handleDiscard}
+            >
+                <div className='space-y-6'>
             {/* Cover Image */}
             <div className='relative h-auto aspect-6/2 rounded-xl overflow-hidden bg-text/5'>
                 {cafe.thumbnail ? (
@@ -582,19 +584,11 @@ export default function CafeEditor({
                                 />
                             </button>
                         </div>
-                        <div>
-                            <label className='block text-sm font-medium text-text/60 mb-2'>
-                                Cafe Name *
-                            </label>
-                            <input
-                                type='text'
-                                value={cafe.name}
-                                onChange={(e) =>
-                                    updateField("name", e.target.value)
-                                }
-                                className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50'
-                            />
-                        </div>
+                        <TextField
+                            label='Cafe Name *'
+                            value={cafe.name}
+                            onChange={(value) => updateField("name", value)}
+                        />
 
                         <div>
                             <label className='block text-sm font-medium text-text/60 mb-2'>
@@ -700,26 +694,24 @@ export default function CafeEditor({
                 {/* Images Section */}
                 {activeSection === "images" && (
                     <ImageSection
-                        thumbnail={cafe.thumbnail}
-                        gallery={cafe.gallery || []}
+                        thumbnail={cafeImages.thumbnail}
+                        gallery={cafeImages.gallery}
                         cafeId={cafe.id}
                         cafeName={cafe.name}
                         onThumbnailChange={(url: string | null) => {
-                            setCafe(
-                                (prev) =>
-                                    ({
-                                        ...prev,
-                                        thumbnail: url ?? prev.thumbnail,
-                                    }) as typeof prev
-                            )
-                            setHasChanges(true)
+                            cafeImages.setCoverImage(url)
                         }}
                         onGalleryChange={(urls: string[]) => {
-                            updateField("gallery", urls)
-                            setHasChanges(true)
+                            cafeImages.replaceGallery(urls)
                         }}
-                        onDeleteImage={async (url: string) => {
-                            await adminDeleteCafeImage(url)
+                        onImageUploaded={(url: string) => {
+                            cafeImages.appendGallery([url])
+                        }}
+                        onDeleteImage={async (_url: string, index: number) => {
+                            await cafeImages.removeGalleryAt(index)
+                        }}
+                        onRemoveCoverImage={async () => {
+                            await cafeImages.clearThumbnail()
                         }}
                         colorScheme='accent'
                     />
@@ -808,7 +800,7 @@ export default function CafeEditor({
                             if (result.success) {
                                 setStoryHasChanges(false)
                             } else {
-                                alert(result.error || "Failed to save story")
+                                addNotification(result.error || "Failed to save story", "error")
                             }
                         }}
                         onDelete={async () => {
@@ -819,7 +811,7 @@ export default function CafeEditor({
                                 setStoryContent("")
                                 setStoryHasChanges(false)
                             } else {
-                                alert(result.error || "Failed to delete story")
+                                addNotification(result.error || "Failed to delete story", "error")
                             }
                         }}
                         hasChanges={storyHasChanges}
@@ -983,6 +975,8 @@ export default function CafeEditor({
                 )}
                 </motion.div>
                 </AnimatePresence>
+                </div>
+            </EditorShell>
 
             {/* Menu Item Modal */}
             <MenuItemModal

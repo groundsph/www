@@ -1321,7 +1321,8 @@ export async function getOwnerCampaigns(): Promise<ActionResult<{ campaigns: Dis
       updatedAt: c.updatedAt?.toISOString() ?? "",
       cafeName: c.cafeName,
       cafeSlug: c.cafeSlug,
-      cafeThumbnail: c.cafeThumbnail,
+      // DiscountCampaign models a missing cafe thumbnail as optional, not as the placeholder sentinel
+      cafeThumbnail: c.cafeThumbnail ?? undefined,
     }))
 
     return { success: true, data: { campaigns: serialized } }

@@ -41,6 +41,7 @@ export {
 // Helpers
 export {
     validateFile,
+    sniffImageMime,
     generateFilePath,
     generateCafeFilePath,
     generateRootFilePath,

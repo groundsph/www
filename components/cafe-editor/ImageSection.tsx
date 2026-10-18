@@ -26,8 +26,12 @@ import {
     moveArrayItem,
 } from "@/utils/hooks/cafe-form"
 import { useCoverImageUpload } from "@/utils/hooks/useCoverImageUpload"
-import { compressGalleryImage } from "@/utils/image-processing"
-import { uploadCafeImage, uploadCafeBadgeStamp } from "@/utils/storage/client"
+import { compressBadgeStamp } from "@/utils/image-processing"
+import { useImageUploadQueue } from "@/utils/hooks/useImageUploadQueue"
+import { MAX_CAFE_GALLERY } from "@/utils/validation/cafe-images"
+import { useNotification } from "@/components/layout/NotificationProvider"
+import { useConfirm } from "@/hooks/useConfirm"
+import { uploadCafeBadgeStamp } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { getOptimizedImageUrl, getResponsiveSrcSet } from "@/utils/cloudflare-image"
 import { downloadImage } from "@/utils/image-download"
@@ -44,10 +48,14 @@ interface ImageSectionProps {
     cafeName: string
     /** Update thumbnail */
     onThumbnailChange: (url: string | null) => void
-    /** Update gallery */
+    /** Update gallery order */
     onGalleryChange: (urls: string[]) => void
-    /** Delete image action (admin vs owner have different actions) */
-    onDeleteImage: (url: string) => Promise<void>
+    /** Delete a gallery image; the caller persists first, then removes the file */
+    onDeleteImage: (url: string, index: number) => Promise<void>
+    /** Clear the cover image; the caller persists first, then removes the file */
+    onRemoveCoverImage?: () => Promise<void>
+    /** A single finished upload, so the caller can append it to its own state */
+    onImageUploaded?: (url: string) => void
     /** Color scheme for theming */
     colorScheme?: ColorScheme
     /** Current badge stamp URL (optional) */
@@ -68,48 +76,41 @@ export default function ImageSection({
     onThumbnailChange,
     onGalleryChange,
     onDeleteImage,
+    onRemoveCoverImage,
+    onImageUploaded,
     colorScheme = "primary",
     badgeStampUrl,
     onBadgeStampChange,
 }: ImageSectionProps) {
     const colors = getColorClasses(colorScheme)
-    const [uploadingGallery, setUploadingGallery] = useState(false)
     const [uploadingBadgeStamp, setUploadingBadgeStamp] = useState(false)
+    const { addNotification } = useNotification()
+    const { confirm, dialog } = useConfirm()
 
-    // Use the shared cover image upload hook
+    // Gallery uploads: compress, upload with progress, keep failures retryable
+    const uploadQueue = useImageUploadQueue({
+        purpose: "cafe-gallery",
+        cafeId,
+        maxFiles: MAX_CAFE_GALLERY - gallery.length,
+        onComplete: ({ url }) => onImageUploaded?.(url),
+        onReject: (fileName, reason) => {
+            console.warn(`Rejected ${fileName}: ${reason}`)
+        },
+    })
+
+    const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        uploadQueue.enqueue(Array.from(e.target.files || []))
+        e.target.value = ""
+    }
+
+    // Use the shared cover image upload hook.
+    // No onDelete here on purpose: replacing a cover must not delete the old file
+    // until the new URL is persisted. useCafeImages owns that deferred deletion.
     const coverImage = useCoverImageUpload({
         currentThumbnail: thumbnail,
         cafeId,
         onUpdate: onThumbnailChange,
-        onDelete: onDeleteImage,
     })
-
-    // Handle gallery image upload
-    const handleGalleryUpload = async (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        const files = Array.from(e.target.files || [])
-        if (files.length === 0) return
-
-        setUploadingGallery(true)
-        const newUrls: string[] = []
-
-        for (const file of files) {
-            // Compress gallery image (120KB WebP)
-            const processedFile = await compressGalleryImage(file)
-            const result = await uploadCafeImage(processedFile)
-            if (result.success && result.url) {
-                newUrls.push(result.url)
-            }
-        }
-
-        if (newUrls.length > 0) {
-            onGalleryChange([...gallery, ...newUrls])
-        }
-
-        setUploadingGallery(false)
-        e.target.value = ""
-    }
 
     // Handle gallery reorder via buttons (fallback for non-drag)
     const handleMoveGalleryImage = (
@@ -122,21 +123,28 @@ export default function ImageSection({
         }
     }
 
-    // Handle gallery image removal
+    // Handle gallery image removal (the caller persists, then deletes the file)
     const handleRemoveGalleryImage = async (index: number) => {
-        if (!confirm("Remove this image?")) return
-        const url = gallery[index]
-        await onDeleteImage(url)
-        onGalleryChange(gallery.filter((_, i) => i !== index))
+        if (!(await confirm({
+            title: "Remove this image?",
+            description: "The file is deleted from storage once the removal is saved.",
+            confirmLabel: "Remove",
+            destructive: true,
+        }))) return
+        await onDeleteImage(gallery[index], index)
     }
 
-    // Handle cover image removal
+    // Handle cover image removal (the caller persists, then deletes the file)
     const handleRemoveCover = async () => {
-        if (!confirm("Remove cover image?")) return
-        if (thumbnail) {
-            await onDeleteImage(thumbnail)
+        if (!(await confirm({
+            title: "Remove cover image?",
+            description: "This cafe will show the placeholder cover until you upload a new one.",
+            confirmLabel: "Remove",
+            destructive: true,
+        }))) return
+        if (onRemoveCoverImage) {
+            await onRemoveCoverImage()
         }
-        onThumbnailChange(null)
     }
 
     // Handle badge stamp upload
@@ -148,24 +156,25 @@ export default function ImageSection({
 
         // Validate file type (PNG only)
         if (file.type !== "image/png") {
-            alert("Please upload a PNG file only")
+            addNotification("Please upload a PNG file only", "error")
             e.target.value = ""
             return
         }
 
         // Validate file size (max 500KB)
         if (file.size > 500 * 1024) {
-            alert("File size must be less than 500KB")
+            addNotification("File size must be less than 500KB", "error")
             e.target.value = ""
             return
         }
 
         setUploadingBadgeStamp(true)
-        const result = await uploadCafeBadgeStamp(file, cafeId)
+        const processed = await compressBadgeStamp(file)
+        const result = await uploadCafeBadgeStamp(processed, cafeId)
         if (result.success && result.url) {
             onBadgeStampChange(result.url)
         } else {
-            alert(result.error || "Failed to upload badge stamp")
+            addNotification(result.error || "Failed to upload badge stamp", "error")
         }
         setUploadingBadgeStamp(false)
         e.target.value = ""
@@ -173,7 +182,7 @@ export default function ImageSection({
 
     // Handle badge stamp removal
     const handleRemoveBadgeStamp = async () => {
-        if (!confirm("Remove badge stamp?")) return
+        if (!(await confirm({ title: "Remove badge stamp?", confirmLabel: "Remove", destructive: true }))) return
         if (badgeStampUrl && onBadgeStampChange) {
             onBadgeStampChange(null)
         }
@@ -195,6 +204,7 @@ export default function ImageSection({
 
     return (
         <div className='space-y-8'>
+            {dialog}
             {/* Cover Image */}
             <div>
                 <label className='block text-sm font-medium text-text/60 mb-4'>
@@ -275,7 +285,7 @@ export default function ImageSection({
                     <label
                         className={`cursor-pointer flex items-center gap-2 px-4 py-2 ${colors.bgLight} ${colors.text} rounded-lg hover:opacity-80 transition`}
                     >
-                        {uploadingGallery ? (
+                        {uploadQueue.isBusy ? (
                             <Loader2 className='w-4 h-4 animate-spin' />
                         ) : (
                             <ImagePlus className='w-4 h-4' />
@@ -286,18 +296,19 @@ export default function ImageSection({
                             accept='image/jpeg,image/png,image/webp,image/gif'
                             multiple
                             className='hidden'
-                            disabled={uploadingGallery}
+                            disabled={uploadQueue.isBusy}
                             onChange={handleGalleryUpload}
                         />
                     </label>
                 </div>
 
-                {gallery.length > 0 ? (
+                {gallery.length > 0 || uploadQueue.items.length > 0 ? (
+                    <div className='flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-text/10'>
                     <Reorder.Group
                         axis='x'
                         values={gallery}
                         onReorder={onGalleryChange}
-                        className='flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-text/10'
+                        className='flex flex-row gap-4'
                     >
                         {gallery.map((url, idx) => (
                             <Reorder.Item
@@ -366,6 +377,70 @@ export default function ImageSection({
                             </Reorder.Item>
                         ))}
                     </Reorder.Group>
+
+                        {/* In-flight uploads: one tile per file, with progress and retry */}
+                        {uploadQueue.items.map((item) => (
+                            <div
+                                key={item.id}
+                                className='relative h-48 w-40 shrink-0 rounded-lg overflow-hidden border border-text/10 bg-text/5'
+                            >
+                                <img
+                                    src={item.previewUrl}
+                                    alt={item.fileName}
+                                    className='absolute inset-0 h-full w-full object-cover opacity-30'
+                                />
+                                <div className='absolute inset-0 flex flex-col items-center justify-center gap-1 p-2 text-center'>
+                                    {item.status === "error" ? (
+                                        <>
+                                            <span className='text-[11px] leading-tight text-red-600'>
+                                                {item.error}
+                                            </span>
+                                            <div className='flex gap-1'>
+                                                <button
+                                                    type='button'
+                                                    onClick={() => uploadQueue.retry(item.id)}
+                                                    className='rounded bg-background px-2 py-1 text-[11px]'
+                                                >
+                                                    Retry
+                                                </button>
+                                                <button
+                                                    type='button'
+                                                    onClick={() => uploadQueue.dismiss(item.id)}
+                                                    className='rounded bg-background px-2 py-1 text-[11px]'
+                                                >
+                                                    Dismiss
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className='w-full truncate text-[11px] text-text/70'>
+                                                {item.fileName}
+                                            </span>
+                                            <span className='text-[11px] font-medium text-text'>
+                                                {item.status === "compressing"
+                                                    ? "Optimising…"
+                                                    : `${item.progress}%`}
+                                            </span>
+                                            <div className='h-1 w-16 overflow-hidden rounded-full bg-text/20'>
+                                                <div
+                                                    className={colors.bg}
+                                                    style={{ width: `${item.progress}%` }}
+                                                />
+                                            </div>
+                                            <button
+                                                type='button'
+                                                onClick={() => uploadQueue.dismiss(item.id)}
+                                                className='text-[11px] text-text/50 underline'
+                                            >
+                                                Cancel
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 ) : (
                     <div className='bg-text/5 border border-text/10 border-dashed rounded-xl p-12 text-center text-text/40'>
                         <ImagePlus className='w-12 h-12 mx-auto mb-4 opacity-50' />

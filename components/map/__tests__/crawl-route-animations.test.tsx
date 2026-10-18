@@ -6,6 +6,12 @@ import { readFileSync } from "fs"
 let activeIntervals: Array<{ id: number; callback: () => void; delay: number }> = []
 let nextIntervalId = 1
 
+// Keep the real timers so they can be put back. These globals are shared by every
+// test file in the process, and a stubbed setInterval breaks anything that polls —
+// React Testing Library's waitFor included.
+const realSetInterval = global.setInterval
+const realClearInterval = global.clearInterval
+
 describe("CrawlRouteMap animations", () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -27,6 +33,8 @@ describe("CrawlRouteMap animations", () => {
     })
 
     afterEach(() => {
+        global.setInterval = realSetInterval
+        global.clearInterval = realClearInterval
         vi.restoreAllMocks()
     })
 

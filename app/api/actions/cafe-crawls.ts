@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { PLACEHOLDER_THUMBNAIL } from "@/utils/extras"
 import {
     cafeCrawls,
     cafeCrawlItems,
@@ -1004,7 +1005,7 @@ export async function searchCafesForCrawl(query: string): Promise<CafeSearchResu
             id: cafes.id,
             name: cafes.name,
             slug: cafes.slug,
-            thumbnail: cafes.thumbnail,
+            thumbnail: sql<string>`coalesce(${cafes.thumbnail}, ${PLACEHOLDER_THUMBNAIL})`,
             cityMunicipality: cafes.cityMunicipality,
             region: cafes.region,
             lat: cafes.lat,

@@ -358,9 +358,8 @@ export default function AuthPage() {
                     href='/'
                     className='block text-center mb-8'
                 >
-                    <h1 className='text-4xl md:text-5xl font-bold font-serif'>
-                        Grounds
-                        <span className='text-primary/80'>.ph</span>
+                    <h1 className='text-4xl md:text-5xl font-bold'>
+                        Grounds<span className='text-secondary'>PH</span>
                     </h1>
                 </Link>
 

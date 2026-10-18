@@ -14,6 +14,7 @@ import {
 } from "@/db/schema"
 import { PH_REGIONS } from "@/utils/ph-regions"
 import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull, inArray } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
 import { getCurrentUser } from "@/lib/auth"
 import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
 import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
@@ -22,6 +23,7 @@ import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
 import { serializePaymentMethods } from "@/utils/payment-methods"
 import { logSystemAction } from "./system-logs"
+import { parseCafeImagesPatch } from "@/utils/validation/cafe-images"
 import { getModeratorRegionsForCurrentUser, normalizeRegions } from "@/utils/moderation/region-access"
 
 type ScoutRank = 'novice' | 'scout' | 'explorer' | 'expert' | 'vanguard' | 'legend'
@@ -1052,10 +1054,18 @@ export async function bulkMarkAsChain(
 }
 
 /**
+ * Extract the cafe id from a cafe storage URL (cafes/<cafeId>/<file>)
+ */
+function getCafeIdFromImageUrl(imageUrl: string): string | null {
+    const match = imageUrl.match(/\/cafes\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\//i)
+    return match ? match[1] : null
+}
+
+/**
  * Delete a single cafe image from storage (admin only)
  * Used when admins remove individual images from cafe thumbnail or gallery
  */
-export async function adminDeleteCafeImage(imageUrl: string): Promise<AdminActionResult> {
+export async function adminDeleteCafeImage(imageUrl: string, cafeId?: string): Promise<AdminActionResult> {
     const currentUser = await getCurrentUser()
     if (!currentUser) return { success: false, error: "Not authenticated" }
 
@@ -1073,10 +1083,12 @@ export async function adminDeleteCafeImage(imageUrl: string): Promise<AdminActio
     const result = await deleteSingleCafeImageAction(imageUrl)
 
     if (result.success) {
+        // system_logs.entity_id is a uuid column, so log against the cafe the image
+        // belongs to and keep the image URL in beforeValue/metadata instead.
         await logSystemAction(
             "delete",
             "cafe",
-            imageUrl,
+            cafeId ?? getCafeIdFromImageUrl(imageUrl) ?? imageUrl,
             { imageUrl },
             null,
             { reason: "Cafe image deleted by admin", image_url: imageUrl }
@@ -1084,6 +1096,60 @@ export async function adminDeleteCafeImage(imageUrl: string): Promise<AdminActio
     }
 
     return result
+}
+
+/**
+ * Persist only the cafe image fields (admin/moderator).
+ * Kept separate from updateCafe so an image auto-save can never clobber edits
+ * being made in another section of the editor.
+ */
+export async function updateCafeImages(
+    cafeId: string,
+    patch: { thumbnail?: string | null; gallery?: string[] }
+): Promise<AdminActionResult> {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "Not authenticated" }
+
+    const parsed = parseCafeImagesPatch(patch)
+    if (!parsed.ok) return { success: false, error: parsed.error }
+
+    const profileResult = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, currentUser.id))
+        .limit(1)
+
+    if (profileResult[0]?.role !== 'admin' && profileResult[0]?.role !== 'moderator') {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    try {
+        await db
+            .update(cafes)
+            .set({
+                ...(parsed.value.thumbnail !== undefined ? { thumbnail: parsed.value.thumbnail } : {}),
+                ...(parsed.value.gallery !== undefined ? { gallery: parsed.value.gallery } : {}),
+                updatedAt: new Date(),
+            })
+            .where(eq(cafes.id, cafeId))
+
+        revalidatePath("/manage/preview/[id]", "page")
+        revalidatePath("/cafes/[slug]", "page")
+
+        await logSystemAction(
+            "update",
+            "cafe",
+            cafeId,
+            null,
+            parsed.value,
+            { reason: "Cafe images updated by admin" }
+        )
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error updating cafe images:", error)
+        return { success: false, error: "Failed to save images" }
+    }
 }
 
 /**

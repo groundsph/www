@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { cafes } from "@/db/schema"
 import { and, between, eq, sql } from "drizzle-orm"
 
@@ -87,7 +88,7 @@ export async function getNearbyCafes(
                 id: r.id,
                 name: r.name,
                 slug: r.slug,
-                thumbnail: r.thumbnail,
+                thumbnail: toStoredThumbnail(r.thumbnail),
                 distance: Math.round(r.distance), // Round to nearest meter
                 address: r.address,
             }))

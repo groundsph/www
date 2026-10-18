@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { blogPosts, profiles, cafes } from "@/db/schema"
 import { eq, and, desc, count, sql, ne, inArray, or, ilike } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
@@ -134,7 +135,7 @@ function mapBlogPost(
         updatedAt: Date | null
     },
     author?: { id: string; displayName: string; avatarUrl: string | null; username: string } | null,
-    cafe?: { id: string; name: string; slug: string; thumbnail: string } | null
+    cafe?: { id: string; name: string; slug: string; thumbnail: string | null } | null
 ): BlogPost {
     return {
         id: b.id,
@@ -161,7 +162,7 @@ function mapBlogPost(
         created_at: b.createdAt?.toISOString() ?? null,
         updated_at: b.updatedAt?.toISOString() ?? null,
         author: author ? { id: author.id, display_name: author.displayName, avatar_url: author.avatarUrl, username: author.username } : null,
-        cafe: cafe ? { id: cafe.id, name: cafe.name, slug: cafe.slug, thumbnail: cafe.thumbnail } : null,
+        cafe: cafe ? { id: cafe.id, name: cafe.name, slug: cafe.slug, thumbnail: toStoredThumbnail(cafe.thumbnail) } : null,
     } as BlogPost
 }
 

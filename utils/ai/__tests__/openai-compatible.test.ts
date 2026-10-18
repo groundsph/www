@@ -5,6 +5,8 @@ import {
     listModels,
     generateExcerpt,
     checkBlogPost,
+    buildChatCompletionsUrl,
+    sanitizeUpstreamError,
 } from "@/utils/ai/openai-compatible"
 
 describe("openai-compatible helpers", () => {
@@ -426,5 +428,43 @@ describe("getExcerptModel", () => {
         const { getExcerptModel } = await import("@/utils/ai/openai-compatible")
 
         expect(getExcerptModel()).toBe("custom-model-v2")
+    })
+})
+
+describe("buildChatCompletionsUrl", () => {
+    it("does not double the /v1 segment when the base already ends in /v1", () => {
+        expect(buildChatCompletionsUrl("https://openrouter.ai/api/v1"))
+            .toBe("https://openrouter.ai/api/v1/chat/completions")
+    })
+
+    it("appends /v1 when the base is a bare host", () => {
+        expect(buildChatCompletionsUrl("https://api.example.com"))
+            .toBe("https://api.example.com/v1/chat/completions")
+    })
+
+    it("tolerates a trailing slash after /v1", () => {
+        expect(buildChatCompletionsUrl("https://openrouter.ai/api/v1/"))
+            .toBe("https://openrouter.ai/api/v1/chat/completions")
+    })
+})
+
+describe("sanitizeUpstreamError", () => {
+    it("keeps the status and the upstream message", () => {
+        expect(sanitizeUpstreamError(404, "Not Found", '{"error":{"message":"Not Found","code":404}}'))
+            .toBe('404 Not Found: {"error":{"message":"Not Found","code":404}}')
+    })
+
+    it("redacts bearer tokens and api keys", () => {
+        const output = sanitizeUpstreamError(401, "Unauthorized", "Bearer sk-abc123 was rejected")
+        expect(output).not.toContain("sk-abc123")
+        expect(output).toContain("401 Unauthorized")
+    })
+
+    it("truncates a long body", () => {
+        expect(sanitizeUpstreamError(500, "Server Error", "x".repeat(500)).length).toBeLessThanOrEqual(220)
+    })
+
+    it("handles an empty body", () => {
+        expect(sanitizeUpstreamError(502, "Bad Gateway", "   ")).toBe("502 Bad Gateway")
     })
 })

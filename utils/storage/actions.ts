@@ -149,7 +149,7 @@ export async function uploadCafeImageAction(formData: FormData): Promise<UploadR
     }
 
     // Validate file
-    const validation = validateFile(file, STORAGE_BUCKETS.CAFES)
+    const validation = await validateFile(file, STORAGE_BUCKETS.CAFES)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -200,7 +200,7 @@ export async function uploadReviewImageAction(formData: FormData): Promise<Uploa
         return { success: false, error: "No file provided" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.REVIEWS)
+    const validation = await validateFile(file, STORAGE_BUCKETS.REVIEWS)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -238,7 +238,7 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadResp
         return { success: false, error: "No file provided" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.AVATARS)
+    const validation = await validateFile(file, STORAGE_BUCKETS.AVATARS)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -341,7 +341,7 @@ export async function uploadBadgeImageAction(formData: FormData): Promise<Upload
         return { success: false, error: "Badge images must be PNG format" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.BADGES)
+    const validation = await validateFile(file, STORAGE_BUCKETS.BADGES)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -421,7 +421,7 @@ export async function uploadCafeBadgeStampAction(
         return { success: false, error: "Badge stamp images must be PNG format" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.BADGES)
+    const validation = await validateFile(file, STORAGE_BUCKETS.BADGES)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -499,7 +499,7 @@ export async function uploadBlogImageAction(formData: FormData): Promise<UploadR
         return { success: false, error: "No file provided" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.BLOGS)
+    const validation = await validateFile(file, STORAGE_BUCKETS.BLOGS)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -539,7 +539,7 @@ export async function uploadEventImageAction(
         return { success: false, error: "No file provided" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.EVENTS)
+    const validation = await validateFile(file, STORAGE_BUCKETS.EVENTS)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -581,7 +581,7 @@ export async function uploadMenuPhotoAction(
         return { success: false, error: "No file provided" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.MENU_PHOTOS)
+    const validation = await validateFile(file, STORAGE_BUCKETS.MENU_PHOTOS)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }
@@ -618,7 +618,7 @@ export async function uploadOwnershipProofAction(formData: FormData): Promise<Up
         return { success: false, error: "No file provided" }
     }
 
-    const validation = validateFile(file, STORAGE_BUCKETS.OWNERSHIP_PROOFS)
+    const validation = await validateFile(file, STORAGE_BUCKETS.OWNERSHIP_PROOFS)
     if (!validation.valid) {
         return { success: false, error: validation.error }
     }

@@ -19,7 +19,6 @@ import {
     Trash2,
     ChevronDown,
     ChevronUp,
-    AlertCircle,
     Eye,
     FileText,
     Globe,
@@ -48,6 +47,8 @@ import {
 } from "@/app/api/actions/admin"
 import ActionConfirmationModal from "@/components/ui/ActionConfirmationModal"
 import { useActionConfirmation } from "@/hooks/useActionConfirmation"
+import EmptyState from "@/components/ui/EmptyState"
+import SegmentedTabs from "@/components/ui/SegmentedTabs"
 import { type SensitiveAction } from "@/lib/action-confirmation"
 import {
     approveSuggestion,
@@ -618,94 +619,46 @@ cafeName: string) => {
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className='flex gap-2 overflow-x-auto py-1'>
-                <button
-                    onClick={() => setActiveTab("pending")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "pending"
-                            ? "bg-primary text-white"
-                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <FileText className='w-4 h-4' />
-                    Pending ({pendingTotal})
-                </button>
-                <button
-                    onClick={() => setActiveTab("published")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "published"
-                            ? "bg-primary text-white"
-                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <Globe className='w-4 h-4' />
-                    Published ({publishedTotal})
-                </button>
-                <button
-                    onClick={() => setActiveTab("suggestions")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "suggestions"
-                            ? "bg-primary text-white"
-                            : suggestions.length > 0
-                              ? "bg-amber-500/20 text-amber-700 hover:bg-amber-500/30"
-                              : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <Pencil className='w-4 h-4' />
-                    Suggestions ({suggestions.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("claims")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "claims"
-                            ? "bg-primary text-white"
-                            : claims.length > 0
-                              ? "bg-purple-500/20 text-purple-700 hover:bg-purple-500/30"
-                              : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <Store className='w-4 h-4' />
-                    Claims ({claims.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("featured")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "featured"
-                            ? "bg-primary text-white"
-                            : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <Star className='w-4 h-4' />
-                    Featured
-                </button>
-                <button
-                    onClick={() => setActiveTab("mall-verifications")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "mall-verifications"
-                            ? "bg-primary text-white"
-                            : mallVerifications.length > 0
-                              ? "bg-purple-500/20 text-purple-700 hover:bg-purple-500/30"
-                              : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <Store className='w-4 h-4' />
-                    Mall Verifications ({mallVerifications.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("menu-suggestions")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        activeTab === "menu-suggestions"
-                            ? "bg-primary text-white"
-                            : menuSuggestions.length > 0
-                              ? "bg-orange-500/20 text-orange-700 hover:bg-orange-500/30"
-                              : "bg-tertiary/30 text-text/70 hover:bg-tertiary"
-                    }`}
-                >
-                    <UtensilsCrossed className='w-4 h-4' />
-                    Menu ({menuSuggestions.length})
-                </button>
-            </div>
+            <SegmentedTabs
+                ariaLabel='Cafe management sections'
+                variant='solid'
+                colorScheme='primary'
+                value={activeTab}
+                onChange={(id) => setActiveTab(id as TabType)}
+                items={[
+                    { id: "pending", label: "Pending", icon: FileText, badge: pendingTotal },
+                    { id: "published", label: "Published", icon: Globe, badge: publishedTotal },
+                    {
+                        id: "suggestions",
+                        label: "Suggestions",
+                        icon: Pencil,
+                        badge: suggestions.length,
+                        attention: suggestions.length > 0 ? "amber" : undefined,
+                    },
+                    {
+                        id: "claims",
+                        label: "Claims",
+                        icon: Store,
+                        badge: claims.length,
+                        attention: claims.length > 0 ? "purple" : undefined,
+                    },
+                    { id: "featured", label: "Featured", icon: Star },
+                    {
+                        id: "mall-verifications",
+                        label: "Mall Verifications",
+                        icon: Store,
+                        badge: mallVerifications.length,
+                        attention: mallVerifications.length > 0 ? "purple" : undefined,
+                    },
+                    {
+                        id: "menu-suggestions",
+                        label: "Menu",
+                        icon: UtensilsCrossed,
+                        badge: menuSuggestions.length,
+                        attention: menuSuggestions.length > 0 ? "amber" : undefined,
+                    },
+                ]}
+            />
 
             {/* Featured Tab */}
             {activeTab === "featured" && (
@@ -871,16 +824,17 @@ cafeName: string) => {
             {(activeTab === "pending" || activeTab === "published") && (
                 <>
                     {currentCafes.length === 0 ? (
-                        <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <AlertCircle className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
-                            <p className='text-text/60 text-lg'>
-                                {searchQuery
+                        <EmptyState
+                            icon={Coffee}
+                            title={
+                                searchQuery
                                     ? `No cafes found for "${searchQuery}"`
                                     : activeTab === "pending"
                                       ? "No pending submissions"
-                                      : "No published cafes"}
-                            </p>
-                        </div>
+                                      : "No published cafes"
+                            }
+                            description='Try clearing the filters, or switch to another tab.'
+                        />
                     ) : (
                         <div className='space-y-3'>
                             {currentCafes.map((cafe) => {

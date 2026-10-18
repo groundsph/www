@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { events, cafes, profiles, user } from "@/db/schema"
 import { eq, and, gte, lt, lte, desc, asc, count, inArray, or, ilike, sql } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
@@ -127,7 +128,7 @@ function mapEventToSnakeCase(e: {
     createdBy: string | null
     createdAt: Date | null
     updatedAt: Date | null
-}, cafe?: { id: string; name: string; slug: string; thumbnail: string } | null, creator?: { id: string; displayName: string; avatarUrl: string | null } | null): EventWithCafe {
+}, cafe?: { id: string; name: string; slug: string; thumbnail: string | null } | null, creator?: { id: string; displayName: string; avatarUrl: string | null } | null): EventWithCafe {
     return {
         id: e.id,
         title: e.title,
@@ -147,7 +148,7 @@ function mapEventToSnakeCase(e: {
         created_by: e.createdBy,
         created_at: e.createdAt?.toISOString() ?? '',
         updated_at: e.updatedAt?.toISOString() ?? '',
-        cafe: cafe ? { id: cafe.id, name: cafe.name, slug: cafe.slug, thumbnail: cafe.thumbnail } : null,
+        cafe: cafe ? { id: cafe.id, name: cafe.name, slug: cafe.slug, thumbnail: toStoredThumbnail(cafe.thumbnail) } : null,
         creator: creator ? { id: creator.id, display_name: creator.displayName, avatar_url: creator.avatarUrl } : null,
     } as EventWithCafe
 }

@@ -82,9 +82,10 @@ export function useCoverImageUpload(
             const is16by9 = await checkAspectRatio(file)
 
             if (is16by9) {
-                // Image is already 16:9, upload directly
+                // Already 16:9 — skip the cropper, but still compress (B5)
                 setUploading(true)
-                const result = await uploadCafeImage(file)
+                const processed = await compressCoverImage(file)
+                const result = await uploadCafeImage(processed)
                 setUploading(false)
 
                 if (result.success && result.url) {

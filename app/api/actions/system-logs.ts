@@ -33,9 +33,19 @@ export interface SystemLogFilters {
     search?: string
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const NIL_UUID = "00000000-0000-0000-0000-000000000000"
+
+function isUuid(value: unknown): value is string {
+    return typeof value === "string" && UUID_PATTERN.test(value)
+}
+
 /**
  * Log a system action
  * Call this from any management action to record the change
+ *
+ * Never throws: logging is a side effect and must not fail the action being
+ * logged (by that point the real change has usually already been applied).
  */
 export async function logSystemAction(
     action: string,
@@ -53,20 +63,41 @@ export async function logSystemAction(
         ? (metadata as { userAgent?: string }).userAgent
         : null
 
+    // entity_id is a uuid column, so non-uuid identifiers (e.g. storage URLs) are
+    // preserved in metadata and stored against a nil uuid instead of throwing 22P02.
+    let safeEntityId = entityId
+    let safeMetadata = metadata
+    if (!isUuid(entityId)) {
+        console.warn(
+            `logSystemAction: non-uuid entityId "${entityId}" for ${entityType}/${action}; storing it as metadata.entity_id_raw`
+        )
+        safeEntityId = NIL_UUID
+        safeMetadata = {
+            ...(typeof metadata === "object" && metadata !== null
+                ? (metadata as Record<string, unknown>)
+                : { metadata: metadata ?? null }),
+            entity_id_raw: entityId,
+        }
+    }
+
     // Truncate large fields to prevent bloat
     const truncatedBefore = truncateLargeFields(beforeValue)
     const truncatedAfter = truncateLargeFields(afterValue)
 
-    await db.insert(systemLogs).values({
-        userId: user.id,
-        action,
-        entityType,
-        entityId,
-        beforeValue: truncatedBefore,
-        afterValue: truncatedAfter,
-        userAgent,
-        metadata,
-    })
+    try {
+        await db.insert(systemLogs).values({
+            userId: user.id,
+            action,
+            entityType,
+            entityId: safeEntityId,
+            beforeValue: truncatedBefore,
+            afterValue: truncatedAfter,
+            userAgent,
+            metadata: safeMetadata,
+        })
+    } catch (error) {
+        console.error("Failed to write system log:", error)
+    }
 }
 
 /**

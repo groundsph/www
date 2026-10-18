@@ -100,7 +100,7 @@ export const cafes = pgTable(
         name: text("name").notNull(),
         slug: text("slug").notNull().unique(),
         description: text("description"),
-        thumbnail: text("thumbnail").notNull(),
+        thumbnail: text("thumbnail"),
         gallery: text("gallery").array(),
         addressDisplay: text("address_display").notNull(),
         area: text("area"),

@@ -1,6 +1,8 @@
 "use server"
 
+import { toStoredThumbnail } from "@/utils/extras"
 import { db } from "@/db"
+import { PLACEHOLDER_THUMBNAIL } from "@/utils/extras"
 import { getCurrentUser } from "@/lib/auth"
 import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteractions, ownerReviewResponses, featuredSchedules } from "@/db/schema"
 import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray, SQL } from "drizzle-orm"
@@ -30,7 +32,7 @@ function mapCafeToSnakeCase(c: {
     id: string
     name: string
     slug: string
-    thumbnail: string
+    thumbnail: string | null
     description: string | null
     addressDisplay: string
     area: string | null
@@ -88,7 +90,7 @@ function mapCafeToSnakeCase(c: {
         id: c.id,
         name: c.name,
         slug: c.slug,
-        thumbnail: c.thumbnail,
+        thumbnail: toStoredThumbnail(c.thumbnail),
         description: c.description,
         address_display: c.addressDisplay,
         area: c.area,
@@ -1022,7 +1024,7 @@ export async function searchCafesForBlog(query: string) {
         id: cafes.id,
         name: cafes.name,
         slug: cafes.slug,
-        thumbnail: cafes.thumbnail,
+        thumbnail: sql<string>`coalesce(${cafes.thumbnail}, ${PLACEHOLDER_THUMBNAIL})`,
     })
         .from(cafes)
         .where(and(eq(cafes.isPublished, true), ilike(cafes.name, `%${query}%`), ...omitTestCafes([])))

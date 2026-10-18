@@ -192,6 +192,73 @@ export async function compressAvatar(file: File): Promise<File> {
 }
 
 // ============================================================================
+// Purpose-based entry point
+// ============================================================================
+
+/**
+ * Every image upload purpose in the app. Adding a call site means adding a
+ * purpose here, so no path can upload an unprocessed original by accident.
+ */
+export type ImagePurpose =
+    | "cafe-cover"
+    | "cafe-gallery"
+    | "cafe-badge-stamp"
+    | "menu-photo"
+    | "review"
+    | "blog-cover"
+    | "event-cover"
+    | "collection-cover"
+    | "avatar"
+
+/**
+ * Compress a file for its purpose. This is the entry point call sites should
+ * use rather than picking a per-feature function themselves.
+ */
+export async function compressImageFor(purpose: ImagePurpose, file: File): Promise<File> {
+    switch (purpose) {
+        case "cafe-cover":
+            return compressCoverImage(file)
+        case "cafe-gallery":
+        case "menu-photo":
+            return compressGalleryImage(file)
+        case "cafe-badge-stamp":
+            return compressBadgeStamp(file)
+        case "review":
+            return compressReviewImage(file)
+        case "blog-cover":
+            return compressBlogCover(file)
+        case "event-cover":
+            return compressEventCover(file)
+        case "collection-cover":
+            return compressCollectionCover(file)
+        case "avatar":
+            return compressAvatar(file)
+    }
+}
+
+/**
+ * Compress a badge stamp. Badges render as transparent overlays, so PNG is
+ * preserved; only the long edge and the byte budget are reduced.
+ */
+export async function compressBadgeStamp(file: File): Promise<File> {
+    const compressed = await imageCompression(file, {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 512,
+        useWebWorker: true,
+        fileType: "image/png",
+        initialQuality: 0.9,
+    })
+
+    logCompressionResult(file.size, compressed.size, "badgeStamp")
+
+    return new File(
+        [compressed],
+        file.name.replace(/\.[^/.]+$/, "") + ".png",
+        { type: "image/png", lastModified: Date.now() }
+    )
+}
+
+// ============================================================================
 // Legacy functions (kept for backward compatibility)
 // ============================================================================
 

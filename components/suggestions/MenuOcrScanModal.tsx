@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "motion/react"
 import { X as XIcon, Camera, Loader2, Check, Trash2, ScanLine, AlertCircle, ChevronDown, Plus } from "lucide-react"
 import imageCompression from "browser-image-compression"
 import { saveOcrMenuItems } from "@/app/api/actions/menu-ocr"
-import { OCR_PHASE_CONFIG, streamOcrScan, type OcrPhase } from "@/utils/ocr-stream-client"
+import { OCR_PHASE_CONFIG, streamOcrScan, describeEmptyOcrResult, type OcrPhase } from "@/utils/ocr-stream-client"
 import { MENU_CATEGORIES } from "@/utils/types/owner"
 import { cn } from "@/utils/cn"
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
@@ -230,7 +230,7 @@ export default function MenuOcrScanModal({
 
             abortControllerRef.current = new AbortController()
 
-            await streamOcrScan(cafeId, base64, {
+            await streamOcrScan(cafeId, base64, compressed.type, {
                 onStatus: (message) => {
                     setStatusMessage(message)
                 },
@@ -270,6 +270,10 @@ export default function MenuOcrScanModal({
                     )
                     setExtractedItems(editableItems)
                     setDuplicates(data.duplicates ?? [])
+                    const emptyMessage = describeEmptyOcrResult(data.items.length)
+                    if (emptyMessage) {
+                        setError(emptyMessage)
+                    }
                     setTimeout(() => setStep("review"), 300)
                 },
                 onError: (errorMsg) => {

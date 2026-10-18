@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate file
-        const validation = validateFile(file, bucket)
+        const validation = await validateFile(file, bucket)
         if (!validation.valid) {
             return NextResponse.json(
                 { success: false, error: validation.error },
@@ -60,6 +60,15 @@ export async function POST(request: NextRequest) {
         // Generate path based on bucket type
         let path: string
         switch (bucket) {
+            case STORAGE_BUCKETS.CAFES:
+                if (!cafeId) {
+                    return NextResponse.json(
+                        { success: false, error: "cafeId required for cafe images" },
+                        { status: 400 }
+                    )
+                }
+                path = generateCafeFilePath(cafeId, file.name)
+                break
             case STORAGE_BUCKETS.MENU_PHOTOS:
                 if (!cafeId) {
                     return NextResponse.json(

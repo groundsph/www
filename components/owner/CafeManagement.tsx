@@ -36,6 +36,7 @@ import {
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
+import SegmentedTabs from "@/components/ui/SegmentedTabs"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
 import { useState } from "react"
@@ -594,34 +595,19 @@ export default function CafeManagement({
                 </div>
 
                 {/* Tabs */}
-                <div className='border-b border-text/10 mb-6'>
-                    <div className='flex gap-1 overflow-x-auto'>
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon
-                            const isActive = activeTab === tab.id
-
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => handleTabChange(tab.id)}
-                                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                                        isActive
-                                            ? "border-primary text-primary"
-                                            : "border-transparent text-text/60 hover:text-text hover:border-text/20"
-                                    }`}
-                                >
-                                    <Icon className='w-4 h-4' />
-                                    {tab.label}{" "}
-                                    {tab.badge && tab.badge > 0 && (
-                                        <span className='ml-1 px-1.5 py-0.5 text-xs bg-amber-500 text-white rounded-full'>
-                                            {tab.badge}
-                                        </span>
-                                    )}
-                                </button>
-                            )
-                        })}
-                    </div>
-                </div>
+                <SegmentedTabs
+                    ariaLabel='Cafe management tabs'
+                    colorScheme='primary'
+                    value={activeTab}
+                    onChange={(id) => handleTabChange(id as Tab)}
+                    items={tabs.map((tab) => ({
+                        id: tab.id,
+                        label: tab.label,
+                        icon: tab.icon,
+                        badge: tab.badge,
+                    }))}
+                    className='mb-6'
+                />
 
                 {/* Tab Content */}
                 <AnimatePresence mode='wait'>

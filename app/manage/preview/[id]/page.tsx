@@ -26,7 +26,7 @@ export default async function AdminPreviewPage({ params }: Props) {
     const cafe = await getCafeById(id)
 
     if (!cafe) {
-        redirect("/admin")
+        redirect("/manage/cafes")
     }
 
     const menuItems = await getCafeMenuItems(id)

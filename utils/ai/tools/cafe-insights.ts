@@ -1,4 +1,5 @@
 import { db } from "@/db"
+import { toStoredThumbnail } from "@/utils/extras"
 import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, desc, sql, count, isNotNull } from "drizzle-orm"
 import { haversineKm, GeoPoint } from "./cafe-geo"
@@ -300,7 +301,7 @@ function mapToCafeWithRatings(c: {
     id: string
     name: string
     slug: string
-    thumbnail: string
+    thumbnail: string | null
     description: string | null
     addressDisplay: string
     area: string | null
@@ -358,7 +359,7 @@ function mapToCafeWithRatings(c: {
         id: c.id,
         name: c.name,
         slug: c.slug,
-        thumbnail: c.thumbnail,
+        thumbnail: toStoredThumbnail(c.thumbnail),
         description: c.description,
         address_display: c.addressDisplay,
         area: c.area,

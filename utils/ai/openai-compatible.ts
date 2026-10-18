@@ -32,6 +32,38 @@ export function normalizeBaseUrl(url: string): string {
     return url.replace(/\/+$/, "").replace(/\/v1$/i, "")
 }
 
+/**
+ * Build the OpenAI-compatible chat completions URL for a configured base URL.
+ * Callers must not concatenate "/v1/..." themselves — that is how the OCR
+ * streaming route ended up requesting ".../api/v1/v1/chat/completions" (404).
+ */
+export function buildChatCompletionsUrl(baseUrl: string): string {
+    return `${normalizeBaseUrl(baseUrl)}/v1/chat/completions`
+}
+
+const MAX_UPSTREAM_ERROR_LENGTH = 200
+
+/**
+ * Turn a failed upstream HTTP response into a single diagnosable line.
+ * Never leaks credentials: bearer tokens and sk-* keys are redacted.
+ */
+export function sanitizeUpstreamError(status: number, statusText: string, body: string): string {
+    const cleaned = (body ?? "")
+        .replace(/sk-[A-Za-z0-9_\-]+/g, "[REDACTED]")
+        .replace(/Bearer\s+[A-Za-z0-9._\-]+/gi, "Bearer [REDACTED]")
+        .replace(/\s+/g, " ")
+        .trim()
+
+    const head = `${status} ${statusText}`.trim()
+    if (!cleaned) return head
+
+    const truncated = cleaned.length > MAX_UPSTREAM_ERROR_LENGTH
+        ? `${cleaned.slice(0, MAX_UPSTREAM_ERROR_LENGTH)}…`
+        : cleaned
+
+    return `${head}: ${truncated}`
+}
+
 export function extractModelIds(payload: { data?: { id: string }[] }): string[] {
     return (payload.data ?? []).map((m) => m.id)
 }

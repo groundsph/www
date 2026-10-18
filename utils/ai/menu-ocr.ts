@@ -78,7 +78,7 @@ export function parseOcrMenuItems(raw: string): OcrMenuItem[] {
     }
 }
 
-const MENU_EXTRACTION_SYSTEM_PROMPT =
+export const MENU_EXTRACTION_SYSTEM_PROMPT =
     `You are a menu item extractor. Given an image of a cafe/restaurant menu, extract ALL menu items.
 
 AVAILABLE CATEGORIES (use EXACTLY one of these):
@@ -97,6 +97,20 @@ For each item, respond with:
 - calories: Numeric calorie count if visible on the menu (optional)
 
 Respond with a JSON array of objects. If no menu items are found, return an empty array.`
+
+const ALLOWED_IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"] as const
+
+/**
+ * The data URL handed to the model must describe the actual bytes. The client
+ * compresses every image first, so its blob type is authoritative; anything
+ * unrecognised falls back to jpeg for compatibility.
+ */
+export function resolveImageMime(mimeType?: string): string {
+    if (mimeType && (ALLOWED_IMAGE_MIMES as readonly string[]).includes(mimeType)) {
+        return mimeType
+    }
+    return "image/jpeg"
+}
 
 export async function extractMenuItemsFromImage(
     imageBase64: string

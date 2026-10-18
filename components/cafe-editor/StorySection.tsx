@@ -3,6 +3,7 @@
 import { Save, Trash2, Loader2 } from "lucide-react"
 import { type ColorScheme, getColorClasses } from "@/utils/hooks/cafe-form"
 import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
+import { useConfirm } from "@/hooks/useConfirm"
 
 interface StorySectionProps {
     content: string
@@ -25,8 +26,11 @@ export default function StorySection({
 }: StorySectionProps) {
     const colors = getColorClasses(colorScheme)
 
+    const { confirm, dialog } = useConfirm()
+
     return (
         <div className="space-y-4">
+            {dialog}
             <div>
                 <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-text/60">
@@ -37,7 +41,12 @@ export default function StorySection({
                             <button
                                 type="button"
                                 onClick={async () => {
-                                    if (!confirm("Are you sure you want to delete this story?")) return
+                                    if (!(await confirm({
+                                        title: "Delete this story?",
+                                        description: "The cafe story is removed from the public cafe page.",
+                                        confirmLabel: "Delete",
+                                        destructive: true,
+                                    }))) return
                                     await onDelete()
                                 }}
                                 disabled={saving}

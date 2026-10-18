@@ -5,15 +5,53 @@
  * and other storage-related utilities.
  */
 
-import { BUCKET_CONFIGS, type StorageBucket } from "./types"
+import { BUCKET_CONFIGS, STORAGE_BUCKETS, type StorageBucket } from "./types"
+
+const IMAGE_BUCKETS: StorageBucket[] = [
+    STORAGE_BUCKETS.CAFES,
+    STORAGE_BUCKETS.REVIEWS,
+    STORAGE_BUCKETS.AVATARS,
+    STORAGE_BUCKETS.BLOGS,
+    STORAGE_BUCKETS.EVENTS,
+    STORAGE_BUCKETS.MENU_PHOTOS,
+    STORAGE_BUCKETS.BADGES,
+    STORAGE_BUCKETS.COLLECTIONS,
+    STORAGE_BUCKETS.CRAWLS,
+]
 
 /**
- * Validate a file against bucket configuration
+ * Detect an image MIME type from its leading bytes.
+ * Guards against a non-image file renamed to .png/.jpg.
  */
-export function validateFile(
+export function sniffImageMime(bytes: Uint8Array): string | null {
+    const startsWith = (signature: number[]) =>
+        signature.every((byte, index) => bytes[index] === byte)
+
+    if (startsWith([0xff, 0xd8, 0xff])) return "image/jpeg"
+    if (startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png"
+    if (
+        startsWith([0x52, 0x49, 0x46, 0x46]) &&
+        bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+    ) return "image/webp"
+    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) return "image/gif"
+
+    const brand = String.fromCharCode(bytes[4], bytes[5], bytes[6], bytes[7])
+    if (brand === "ftyp") {
+        const compat = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11])
+        if (compat === "avif" || compat === "avis") return "image/avif"
+    }
+
+    return null
+}
+
+/**
+ * Validate a file against bucket configuration.
+ * Async because image buckets are verified by their content, not their name.
+ */
+export async function validateFile(
     file: File,
     bucket: StorageBucket
-): { valid: boolean; error?: string } {
+): Promise<{ valid: boolean; error?: string }> {
     const config = BUCKET_CONFIGS[bucket]
     if (!config) {
         return { valid: false, error: `Unknown bucket: ${bucket}` }
@@ -43,6 +81,18 @@ export function validateFile(
                 valid: false,
                 error: `Invalid file type: ${file.type}`,
             }
+        }
+    }
+
+    // Verify the bytes, not just the name, for image buckets
+    if (IMAGE_BUCKETS.includes(bucket)) {
+        const head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
+        const sniffed = sniffImageMime(head)
+        if (!sniffed) {
+            return { valid: false, error: "File content is not a recognised image" }
+        }
+        if (config.allowedMimeTypes && !config.allowedMimeTypes.includes(sniffed)) {
+            return { valid: false, error: `Image format not allowed: ${sniffed}` }
         }
     }
 

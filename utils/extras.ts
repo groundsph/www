@@ -112,6 +112,18 @@ export const CAFE_PLACEHOLDER_URL = "https://cdn.grounds.ph/cafes/placeholder.jp
  * Resolve cafe thumbnail - returns actual URL or placeholder image URL
  * When thumbnail === "placeholder", returns the actual placeholder image URL
  */
+export const PLACEHOLDER_THUMBNAIL = "placeholder"
+
+/**
+ * Cafe cover images are stored nullable so an admin or owner can genuinely clear
+ * one. Every read that feeds a list, card, feed or AI tool coalesces the null back
+ * to the "placeholder" sentinel, which getCafeThumbnailUrl resolves into the
+ * branded placeholder image. Writers keep the real null.
+ */
+export function toStoredThumbnail(thumbnail: string | null | undefined): string {
+    return thumbnail ?? PLACEHOLDER_THUMBNAIL
+}
+
 export function getCafeThumbnailUrl(thumbnail: string): string {
     if (thumbnail === "placeholder") {
         return CAFE_PLACEHOLDER_URL;

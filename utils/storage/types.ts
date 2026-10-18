@@ -111,6 +111,8 @@ export interface BucketConfig {
     allowedExtensions?: string[]
     /** Allowed MIME types */
     allowedMimeTypes?: string[]
+    /** Maximum number of files a collection-style bucket may hold for one entity */
+    maxFiles?: number
 }
 
 /**
@@ -140,60 +142,71 @@ export const BUCKET_CONFIGS: Record<StorageBucket, BucketConfig> = {
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024, // 5MB
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        maxFiles: 12,
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.REVIEWS]: {
         name: STORAGE_BUCKETS.REVIEWS,
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.AVATARS]: {
         name: STORAGE_BUCKETS.AVATARS,
         isPublic: true,
         maxFileSize: 2 * 1024 * 1024, // 2MB
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.BLOGS]: {
         name: STORAGE_BUCKETS.BLOGS,
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.EVENTS]: {
         name: STORAGE_BUCKETS.EVENTS,
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.MENU_PHOTOS]: {
         name: STORAGE_BUCKETS.MENU_PHOTOS,
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.BADGES]: {
         name: STORAGE_BUCKETS.BADGES,
         isPublic: true,
         maxFileSize: 500 * 1024, // 500KB
         allowedExtensions: ['png'],
+        allowedMimeTypes: ['image/png'],
     },
     [STORAGE_BUCKETS.OWNERSHIP_PROOFS]: {
         name: STORAGE_BUCKETS.OWNERSHIP_PROOFS,
         isPublic: false, // Private bucket - requires signed URLs
         maxFileSize: 10 * 1024 * 1024, // 10MB
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
     },
     [STORAGE_BUCKETS.COLLECTIONS]: {
         name: STORAGE_BUCKETS.COLLECTIONS,
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024, // 5MB
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.CRAWLS]: {
         name: STORAGE_BUCKETS.CRAWLS,
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
 }
 

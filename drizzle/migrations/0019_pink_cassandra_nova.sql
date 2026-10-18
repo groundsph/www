@@ -1,0 +1,1 @@
+ALTER TABLE "cafes" ALTER COLUMN "thumbnail" DROP NOT NULL;
