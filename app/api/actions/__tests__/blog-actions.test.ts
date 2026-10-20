@@ -22,6 +22,9 @@ mock.module("next/headers", () => ({
 let mockUser: { id: string } | null = null
 mock.module("@/lib/auth", () => ({
     getCurrentUser: () => Promise.resolve(mockUser),
+    // blog.ts -> ./system-logs -> ./admin imports `auth` from here, so the mock
+    // must expose it or the module graph fails to link. It is never called.
+    auth: { api: { getSession: () => Promise.resolve(null) } },
 }))
 
 // Create a proper Drizzle-like query builder mock

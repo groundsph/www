@@ -76,7 +76,7 @@ describe("listModels", () => {
         process.env.OPENAI_COMPATIBLE_BASE_URL = ""
         process.env.OPENAI_COMPATIBLE_API_KEY = ""
 
-        expect(listModels()).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
+        await expect(listModels()).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
     })
 
     it("throws error when API returns non-ok response", async () => {
@@ -89,7 +89,7 @@ describe("listModels", () => {
         )
         global.fetch = mockFetch
 
-        expect(listModels()).rejects.toThrow("Failed to fetch models: 401 Unauthorized")
+        await expect(listModels()).rejects.toThrow("Failed to fetch models: 401 Unauthorized")
     })
 })
 
@@ -178,7 +178,7 @@ describe("generateExcerpt", () => {
         process.env.OPENAI_COMPATIBLE_BASE_URL = ""
         process.env.OPENAI_COMPATIBLE_API_KEY = ""
 
-        expect(generateExcerpt("content")).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
+        await expect(generateExcerpt("content")).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
     })
 
     it("throws error when API returns non-ok response", async () => {
@@ -191,7 +191,7 @@ describe("generateExcerpt", () => {
         )
         global.fetch = mockFetch
 
-        expect(generateExcerpt("content")).rejects.toThrow("Failed to generate excerpt: 429 Rate Limited")
+        await expect(generateExcerpt("content")).rejects.toThrow("Failed to generate excerpt: 429 Rate Limited")
     })
 
     it("throws error when no excerpt is generated", async () => {
@@ -205,7 +205,7 @@ describe("generateExcerpt", () => {
         )
         global.fetch = mockFetch
 
-        expect(generateExcerpt("content")).rejects.toThrow("No excerpt generated")
+        await expect(generateExcerpt("content")).rejects.toThrow("No excerpt generated")
     })
 
     it("throws error when choices are missing", async () => {
@@ -217,7 +217,7 @@ describe("generateExcerpt", () => {
         )
         global.fetch = mockFetch
 
-        expect(generateExcerpt("content")).rejects.toThrow("No excerpt generated")
+        await expect(generateExcerpt("content")).rejects.toThrow("No excerpt generated")
     })
 })
 
@@ -275,7 +275,7 @@ describe("checkBlogPost", () => {
         process.env.OPENAI_COMPATIBLE_BASE_URL = ""
         process.env.OPENAI_COMPATIBLE_API_KEY = ""
 
-        expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
+        await expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Missing OPENAI_COMPATIBLE_BASE_URL")
     })
 
     it("throws error when API returns non-ok response", async () => {
@@ -288,7 +288,7 @@ describe("checkBlogPost", () => {
         )
         global.fetch = mockFetch
 
-        expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Failed to check blog post: 500 Internal Server Error")
+        await expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Failed to check blog post: 500 Internal Server Error")
     })
 
     it("throws error when no response content is received", async () => {
@@ -302,7 +302,7 @@ describe("checkBlogPost", () => {
         )
         global.fetch = mockFetch
 
-        expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("No response from AI")
+        await expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("No response from AI")
     })
 
     it("throws generic error when response format is invalid", async () => {
@@ -320,7 +320,7 @@ describe("checkBlogPost", () => {
         )
         global.fetch = mockFetch
 
-        expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Invalid AI response format")
+        await expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Invalid AI response format")
     })
 
     it("throws generic error when response is not valid JSON", async () => {
@@ -336,7 +336,7 @@ describe("checkBlogPost", () => {
         )
         global.fetch = mockFetch
 
-        expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Invalid AI response format")
+        await expect(checkBlogPost("gpt-4", "content")).rejects.toThrow("Invalid AI response format")
     })
 
     it("parses JSON wrapped in markdown code fences", async () => {

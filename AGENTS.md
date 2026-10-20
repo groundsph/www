@@ -7,8 +7,11 @@ bun dev              # HTTPS dev server (self-signed cert; accept browser warnin
 bun run build        # Production build (`bun build` is Bun's own bundler and errors)
 bun start            # Production server
 bun lint             # ESLint (flat config in eslint.config.mjs)
-bun test             # All tests (Bun runner, JSDOM preloaded via bunfig.toml)
+bun run test         # All tests, each file isolated (bun test --isolate; JSDOM via bunfig.toml)
 bun test <file>      # Single test file, e.g. bun test utils/data/__tests__/location-matcher.test.ts
+                     # Always pass --isolate (or use `bun run test`): bun module mocks are
+                     # process-wide, so without it one file's mock.module()/timer stubs leak
+                     # into every file that runs after it.
 bun db:push          # Push schema to DB (dev)
 bun db:generate      # Generate migration files
 bun db:migrate       # Run migrations (prod)

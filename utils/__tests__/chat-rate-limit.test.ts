@@ -90,7 +90,7 @@ describe("chat-rate-limit", () => {
         for (let i = 0; i < 30; i++) {
             await incrementChatUsage(sessionId)
         }
-        expect(incrementChatUsage(sessionId)).rejects.toThrow()
+        await expect(incrementChatUsage(sessionId)).rejects.toThrow()
     })
 
     it("resets window after 7 days", async () => {
