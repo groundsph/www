@@ -1272,9 +1272,15 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
 
         const newCount = (existingVisits[0]?.count ?? 0) + 1
 
-        // Check for visit-based badges (Regular at 5, Loyal Customer at 10)
+        // Check for visit-based badges (Regular at 5, Loyal Customer at 10) and
+        // re-evaluate geographic coverage — checking in at a cafe in a new
+        // island group is what unlocks Island Hopper / Kape-ng Pambansa.
         const { checkAndAwardBadges } = await import("@/utils/badges/badge-logic")
-        const awardedBadges = await checkAndAwardBadges(user.id, { visits: true, cafeId })
+        const awardedBadges = await checkAndAwardBadges(user.id, {
+            visits: true,
+            geographic: true,
+            cafeId,
+        })
 
         // Check for milestone (celebrate at 5, 10, 25, 50, 100 visits)
         const milestones = [5, 10, 25, 50, 100]

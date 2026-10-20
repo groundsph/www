@@ -44,6 +44,8 @@ import ReviewItem from "@/components/reviews/ReviewItem"
 import Passport from "@/components/profile/Passport"
 import VisitHistory from "@/components/profile/VisitHistory"
 import { getLucideIcon } from "@/components/badges/iconUtils"
+import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
+import { checkMyBadges } from "@/app/api/actions/badges"
 import ImageCropper from "@/components/ui/ImageCropper"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import {
@@ -146,6 +148,7 @@ export default function Profile() {
     const { user, refreshProfile } = useAuth()
     const { addNotification } = useNotification()
     const { trigger } = useHaptics()
+    const { showBadgeNotifications } = useBadgeNotification()
 
     // States
     const [profileData, setProfileData] = useState<ProfileWithBadges | null>(
@@ -311,6 +314,47 @@ export default function Profile() {
 
         fetchData()
     }, [user])
+
+    // Self-heal badges on profile load.
+    //
+    // Badge rules run on their natural triggers (check-in, review, cafe approval,
+    // Ko-fi). This catches accounts that were already active before a rule
+    // existed — e.g. travellers who checked in across island groups back when
+    // Island Hopper / Kape-ng Pambansa only counted reviews.
+    const badgeSyncRef = useRef(false)
+    useEffect(() => {
+        if (!user || badgeSyncRef.current) return
+        badgeSyncRef.current = true
+
+        const storageKey = `grounds:badge-sync:${user.id}`
+        const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000
+
+        const syncBadges = async () => {
+            try {
+                const lastSync = Number(
+                    window.localStorage.getItem(storageKey) ?? 0,
+                )
+                if (Date.now() - lastSync < SYNC_INTERVAL_MS) return
+
+                const { awardedBadges } = await checkMyBadges()
+                window.localStorage.setItem(storageKey, String(Date.now()))
+
+                if (!awardedBadges || awardedBadges.length === 0) return
+
+                showBadgeNotifications(awardedBadges)
+
+                const data = await getFullProfileData(user.id, user.id)
+                if (data) {
+                    setProfileData(data.profile)
+                    setAllBadges(data.allBadges)
+                }
+            } catch (error) {
+                console.error("Error syncing badges:", error)
+            }
+        }
+
+        void syncBadges()
+    }, [user, showBadgeNotifications])
 
     // Fetch collections separately (not part of getFullProfileData)
     useEffect(() => {

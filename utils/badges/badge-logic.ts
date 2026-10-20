@@ -1,4 +1,10 @@
-"use server"
+// Server-side badge engine.
+//
+// NOTE: this module must NOT carry a "use server" directive. A "use server"
+// module turns *every* export into a client-callable server action, which would
+// expose `checkAndAwardBadges(userId)` and `backfillBadgesForAllUsers()` to any
+// browser session. The badge logic lives here as plain server code; the
+// client-callable entrypoints live in `app/api/actions/badges.ts`.
 
 import { db } from "@/db"
 import {
@@ -9,77 +15,38 @@ import {
     userBadges,
     cafeVisits,
 } from "@/db/schema"
-import { eq, and, count } from "drizzle-orm"
-import { getCurrentUser } from "@/lib/auth"
+import { eq, and, count, inArray } from "drizzle-orm"
+
+import { getIslandGroupsFromRegions } from "@/utils/badges/island-groups"
+import type { IslandGroup } from "@/utils/badges/island-groups"
+import {
+    BADGE_NAMES,
+    CONNOISSEUR_THRESHOLD,
+    getGeographicBadgesForGroups,
+    SCOUT_THRESHOLDS,
+    VISIT_THRESHOLDS,
+} from "@/utils/badges/badge-catalog"
+import type { ProfilePassport } from "@/utils/types/extra"
+
+// Re-exported so existing call sites keep importing the catalogue from here.
+export {
+    BADGE_NAMES,
+    CONNOISSEUR_THRESHOLD,
+    ISLAND_GROUP_THRESHOLDS,
+    SCOUT_THRESHOLDS,
+    VISIT_THRESHOLDS,
+    getGeographicBadgesForGroups,
+} from "@/utils/badges/badge-catalog"
+export type { BadgeName } from "@/utils/badges/badge-catalog"
 
 // ============================================
-// Island Group Classification
-// ============================================
-
-type IslandGroup = "luzon" | "visayas" | "mindanao"
-
-/**
- * Map Philippine regions to their respective island groups
- * Based on official PSGC region classifications
- */
-const REGION_TO_ISLAND_GROUP: Record<string, IslandGroup> = {
-    // Luzon Island Group
-    "NCR - National Capital Region": "luzon",
-    "Region I - Ilocos Region": "luzon",
-    "Region II - Cagayan Valley": "luzon",
-    "Region III - Central Luzon": "luzon",
-    "Region IV-A - CALABARZON": "luzon",
-    "Region IV-B - MIMAROPA": "luzon",
-    "Region V - Bicol Region": "luzon",
-    "CAR - Cordillera Administrative Region": "luzon",
-
-    // Visayas Island Group
-    "Region VI - Western Visayas": "visayas",
-    "Region VII - Central Visayas": "visayas",
-    "Region VIII - Eastern Visayas": "visayas",
-
-    // Mindanao Island Group
-    "Region IX - Zamboanga Peninsula": "mindanao",
-    "Region X - Northern Mindanao": "mindanao",
-    "Region XI - Davao Region": "mindanao",
-    "Region XII - SOCCSKSARGEN": "mindanao",
-    "Region XIII - Caraga": "mindanao",
-    "BARMM - Bangsamoro": "mindanao",
-}
-
-/**
- * Get the island group for a given region name
- */
-function getIslandGroup(regionName: string): IslandGroup | null {
-    return REGION_TO_ISLAND_GROUP[regionName] || null
-}
-
-// ============================================
-// Badge Name Constants
-// ============================================
-
-const BADGE_NAMES = {
-    SCOUT: "Scout",
-    EXPLORER: "Explorer",
-    PATHFINDER: "Pathfinder",
-    CONNOISSEUR: "Connoisseur",
-    ISLAND_HOPPER: "Island Hopper",
-    KAPE_NG_PAMBANSA: "Kape-ng Pambansa",
-    EYE_SPY: "Eye Spy",
-    GROUNDS_SUPPORTER: "Grounds Supporter",
-    // Visit badges
-    REGULAR: "Regular",
-    LOYAL_CUSTOMER: "Loyal Customer",
-} as const
-
-// ============================================
-// Badge Checking Logic
+// Small primitives
 // ============================================
 
 /**
  * Get badge definition ID by name
  */
-async function getBadgeIdByName(name: string): Promise<string | null> {
+export async function getBadgeIdByName(name: string): Promise<string | null> {
     const result = await db
         .select({ id: badgeDefinitions.id })
         .from(badgeDefinitions)
@@ -92,7 +59,7 @@ async function getBadgeIdByName(name: string): Promise<string | null> {
 /**
  * Check if user already has a specific badge
  */
-async function userHasBadge(userId: string, badgeId: string): Promise<boolean> {
+export async function userHasBadge(userId: string, badgeId: string): Promise<boolean> {
     const result = await db
         .select({ id: userBadges.id })
         .from(userBadges)
@@ -103,32 +70,133 @@ async function userHasBadge(userId: string, badgeId: string): Promise<boolean> {
 }
 
 /**
- * Award a badge to a user (internal helper)
+ * Award a badge to a user (internal helper).
+ * Returns true only when this call actually created the award.
  */
 async function awardBadge(userId: string, badgeId: string): Promise<boolean> {
     try {
-        await db.insert(userBadges).values({
-            userId,
-            badgeId,
-            awardedAt: new Date(),
-        })
+        const inserted = await db
+            .insert(userBadges)
+            .values({ userId, badgeId, awardedAt: new Date() })
+            .onConflictDoNothing({
+                target: [userBadges.userId, userBadges.badgeId],
+            })
+            .returning({ id: userBadges.id })
+
+        if (inserted.length === 0) return false
 
         console.log(`[Badge] Awarded badge ${badgeId} to user ${userId}`)
         return true
     } catch (error) {
-        console.error(`[Badge] Failed to award badge ${badgeId} to ${userId}:`, error)
+        console.error(`[Badge] Failed to award badge ${badgeId} to user ${userId}:`, error)
         return false
     }
 }
 
 /**
+ * Resolve a badge name and award it when the user does not have it yet.
+ * Keeps the per-rule code below short and consistently guarded.
+ */
+async function grantIfEligible(userId: string, name: string): Promise<boolean> {
+    const badgeId = await getBadgeIdByName(name)
+    if (!badgeId) {
+        console.warn(`[Badge] Badge definition missing for "${name}" — skipping award`)
+        return false
+    }
+    if (await userHasBadge(userId, badgeId)) return false
+    return awardBadge(userId, badgeId)
+}
+
+// ============================================
+// Geographic progress
+// ============================================
+
+export interface GeographicProgress {
+    /** Every distinct region the user has set foot in (visits, passport, reviews). */
+    regions: string[]
+    /** Island groups covered by those regions. */
+    islandGroups: IslandGroup[]
+    /** Island groups still missing, useful for "X of 3" progress copy. */
+    missingIslandGroups: IslandGroup[]
+}
+
+/**
+ * Collect every region the user has interacted with.
+ *
+ * The app records "I have been to this cafe" in three places and any one of
+ * them counts as a visit:
+ *   1. `cafe_visits` — the check-in ledger (authoritative going forward)
+ *   2. `profiles.passport.visited_ids` — legacy passport data, plus cafes that
+ *      were imported for the user by `scripts/migrate-visits-data.ts`
+ *   3. `reviews` — writing a review implies you were there
+ *
+ * Geographic badges used to look at reviews only, so anyone who checked in
+ * without reviewing never unlocked Island Hopper / Kape-ng Pambansa.
+ */
+export async function getVisitedRegions(userId: string): Promise<string[]> {
+    const [visitRows, reviewRows, passportResult] = await Promise.all([
+        db
+            .selectDistinct({ region: cafes.region })
+            .from(cafeVisits)
+            .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
+            .where(eq(cafeVisits.userId, userId)),
+        db
+            .selectDistinct({ region: cafes.region })
+            .from(reviews)
+            .innerJoin(cafes, eq(reviews.cafeId, cafes.id))
+            .where(and(eq(reviews.userId, userId), eq(reviews.status, "published"))),
+        db
+            .select({ passport: profiles.passport })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1),
+    ])
+
+    const visitedIds = (passportResult[0]?.passport as ProfilePassport | null)?.visited_ids ?? []
+
+    let passportRows: { region: string }[] = []
+    if (visitedIds.length > 0) {
+        passportRows = await db
+            .selectDistinct({ region: cafes.region })
+            .from(cafes)
+            .where(inArray(cafes.id, visitedIds))
+    }
+
+    const regions = new Set<string>()
+    for (const row of [...visitRows, ...reviewRows, ...passportRows]) {
+        if (row.region) regions.add(row.region)
+    }
+
+    return Array.from(regions)
+}
+
+/**
+ * Island-group coverage for a user. Exported so profiles, admin tooling and
+ * tests can reason about progress without duplicating the travel model.
+ */
+export async function getGeographicProgress(userId: string): Promise<GeographicProgress> {
+    const regions = await getVisitedRegions(userId)
+    const groups = getIslandGroupsFromRegions(regions)
+    const allGroups: IslandGroup[] = ["luzon", "visayas", "mindanao"]
+
+    return {
+        regions,
+        islandGroups: allGroups.filter((group) => groups.has(group)),
+        missingIslandGroups: allGroups.filter((group) => !groups.has(group)),
+    }
+}
+
+// ============================================
+// Per-category checks
+// ============================================
+
+/**
  * Check scouting badges (Scout, Explorer, Pathfinder)
  * Based on number of published cafes contributed by user
  */
-async function checkScoutBadges(userId: string): Promise<string[]> {
+export async function checkScoutBadges(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
-    // Count published cafes contributed by this user
     const result = await db
         .select({ count: count() })
         .from(cafes)
@@ -136,21 +204,9 @@ async function checkScoutBadges(userId: string): Promise<string[]> {
 
     const scoutedCount = result[0]?.count || 0
 
-    // Define thresholds
-    const scoutThresholds = [
-        { count: 5, badge: BADGE_NAMES.SCOUT },
-        { count: 10, badge: BADGE_NAMES.EXPLORER },
-        { count: 20, badge: BADGE_NAMES.PATHFINDER },
-    ]
-
-    for (const threshold of scoutThresholds) {
-        if (scoutedCount >= threshold.count) {
-            const badgeId = await getBadgeIdByName(threshold.badge)
-            if (badgeId && !(await userHasBadge(userId, badgeId))) {
-                if (await awardBadge(userId, badgeId)) {
-                    awardedBadges.push(threshold.badge)
-                }
-            }
+    for (const threshold of SCOUT_THRESHOLDS) {
+        if (scoutedCount >= threshold.count && (await grantIfEligible(userId, threshold.badge))) {
+            awardedBadges.push(threshold.badge)
         }
     }
 
@@ -161,10 +217,9 @@ async function checkScoutBadges(userId: string): Promise<string[]> {
  * Check review badges (Connoisseur)
  * Based on number of published reviews by user
  */
-async function checkReviewBadges(userId: string): Promise<string[]> {
+export async function checkReviewBadges(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
-    // Count published reviews by this user
     const result = await db
         .select({ count: count() })
         .from(reviews)
@@ -172,13 +227,11 @@ async function checkReviewBadges(userId: string): Promise<string[]> {
 
     const reviewCount = result[0]?.count || 0
 
-    if (reviewCount >= 5) {
-        const badgeId = await getBadgeIdByName(BADGE_NAMES.CONNOISSEUR)
-        if (badgeId && !(await userHasBadge(userId, badgeId))) {
-            if (await awardBadge(userId, badgeId)) {
-                awardedBadges.push(BADGE_NAMES.CONNOISSEUR)
-            }
-        }
+    if (
+        reviewCount >= CONNOISSEUR_THRESHOLD &&
+        (await grantIfEligible(userId, BADGE_NAMES.CONNOISSEUR))
+    ) {
+        awardedBadges.push(BADGE_NAMES.CONNOISSEUR)
     }
 
     return awardedBadges
@@ -186,50 +239,15 @@ async function checkReviewBadges(userId: string): Promise<string[]> {
 
 /**
  * Check geographic badges (Island Hopper, Kape-ng Pambansa)
- * Based on regions of cafes the user has reviewed
+ * Based on the island groups of every cafe the user has visited.
  */
-async function checkGeographicBadges(userId: string): Promise<string[]> {
+export async function checkGeographicBadges(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
+    const { islandGroups } = await getGeographicProgress(userId)
 
-    // Get distinct regions from cafes the user has reviewed
-    const reviewsWithCafes = await db
-        .select({ region: cafes.region })
-        .from(reviews)
-        .innerJoin(cafes, eq(reviews.cafeId, cafes.id))
-        .where(and(eq(reviews.userId, userId), eq(reviews.status, "published")))
-
-    if (!reviewsWithCafes || reviewsWithCafes.length === 0) {
-        return awardedBadges
-    }
-
-    // Map regions to island groups
-    const islandGroups = new Set<IslandGroup>()
-    for (const review of reviewsWithCafes) {
-        if (review.region) {
-            const group = getIslandGroup(review.region)
-            if (group) {
-                islandGroups.add(group)
-            }
-        }
-    }
-
-    // Island Hopper: 2+ different island groups
-    if (islandGroups.size >= 2) {
-        const badgeId = await getBadgeIdByName(BADGE_NAMES.ISLAND_HOPPER)
-        if (badgeId && !(await userHasBadge(userId, badgeId))) {
-            if (await awardBadge(userId, badgeId)) {
-                awardedBadges.push(BADGE_NAMES.ISLAND_HOPPER)
-            }
-        }
-    }
-
-    // Kape-ng Pambansa: All 3 island groups
-    if (islandGroups.size >= 3) {
-        const badgeId = await getBadgeIdByName(BADGE_NAMES.KAPE_NG_PAMBANSA)
-        if (badgeId && !(await userHasBadge(userId, badgeId))) {
-            if (await awardBadge(userId, badgeId)) {
-                awardedBadges.push(BADGE_NAMES.KAPE_NG_PAMBANSA)
-            }
+    for (const badge of getGeographicBadgesForGroups(islandGroups)) {
+        if (await grantIfEligible(userId, badge)) {
+            awardedBadges.push(badge)
         }
     }
 
@@ -239,7 +257,7 @@ async function checkGeographicBadges(userId: string): Promise<string[]> {
 /**
  * Check supporter badge
  */
-async function checkSupporterBadge(userId: string): Promise<string[]> {
+export async function checkSupporterBadge(userId: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
     const result = await db
@@ -248,13 +266,8 @@ async function checkSupporterBadge(userId: string): Promise<string[]> {
         .where(eq(profiles.id, userId))
         .limit(1)
 
-    if (result[0]?.isSupporter) {
-        const badgeId = await getBadgeIdByName(BADGE_NAMES.GROUNDS_SUPPORTER)
-        if (badgeId && !(await userHasBadge(userId, badgeId))) {
-            if (await awardBadge(userId, badgeId)) {
-                awardedBadges.push(BADGE_NAMES.GROUNDS_SUPPORTER)
-            }
-        }
+    if (result[0]?.isSupporter && (await grantIfEligible(userId, BADGE_NAMES.GROUNDS_SUPPORTER))) {
+        awardedBadges.push(BADGE_NAMES.GROUNDS_SUPPORTER)
     }
 
     return awardedBadges
@@ -266,7 +279,7 @@ async function checkSupporterBadge(userId: string): Promise<string[]> {
  * @param userId - The user ID to check
  * @param cafeId - Optional specific cafe ID to check (for targeted checks after check-in)
  */
-async function checkVisitBadges(userId: string, cafeId?: string): Promise<string[]> {
+export async function checkVisitBadges(userId: string, cafeId?: string): Promise<string[]> {
     const awardedBadges: string[] = []
 
     // Get visit counts per cafe for this user
@@ -285,23 +298,12 @@ async function checkVisitBadges(userId: string, cafeId?: string): Promise<string
 
     const visitCounts = await query
 
-    // Define thresholds
-    const visitThresholds = [
-        { count: 5, badge: BADGE_NAMES.REGULAR },
-        { count: 10, badge: BADGE_NAMES.LOYAL_CUSTOMER },
-    ]
-
-    for (const threshold of visitThresholds) {
+    for (const threshold of VISIT_THRESHOLDS) {
         // Check if any cafe has enough visits
         const qualifies = visitCounts.some(vc => vc.visitCount >= threshold.count)
 
-        if (qualifies) {
-            const badgeId = await getBadgeIdByName(threshold.badge)
-            if (badgeId && !(await userHasBadge(userId, badgeId))) {
-                if (await awardBadge(userId, badgeId)) {
-                    awardedBadges.push(threshold.badge)
-                }
-            }
+        if (qualifies && (await grantIfEligible(userId, threshold.badge))) {
+            awardedBadges.push(threshold.badge)
         }
     }
 
@@ -323,55 +325,45 @@ export interface BadgeTriggers {
 }
 
 /**
- * Check and award badges to a user based on their activity
+ * Check and award badges to a user based on their activity.
+ *
+ * Every trigger defaults to `false` so a targeted call (e.g. after a check-in)
+ * never pays for unrelated queries. Pass `{}` to run the full sweep.
+ *
  * @param userId - The user ID to check badges for
- * @param triggers - Optional object to specify which badge types to check.
- *                   If not provided, checks all applicable badges.
+ * @param triggers - Which badge families to evaluate
  * @returns Array of badge names that were awarded
  */
 export async function checkAndAwardBadges(
     userId: string,
-    triggers?: BadgeTriggers
+    triggers: BadgeTriggers = {}
 ): Promise<string[]> {
     const awardedBadges: string[] = []
 
     try {
-        // Default to checking scout and geographic if no triggers specified
-        const shouldCheckScout = triggers?.scout ?? true
-        const shouldCheckReviews = triggers?.reviews ?? false
-        const shouldCheckGeographic = triggers?.geographic ?? true
-        const shouldCheckSupporter = triggers?.supporter ?? false
-        const shouldCheckMap = triggers?.map ?? false
-
-        if (shouldCheckScout) {
-            const badges = await checkScoutBadges(userId)
-            awardedBadges.push(...badges)
+        if (triggers.scout) {
+            awardedBadges.push(...(await checkScoutBadges(userId)))
         }
 
-        if (shouldCheckReviews) {
-            const badges = await checkReviewBadges(userId)
-            awardedBadges.push(...badges)
+        if (triggers.reviews) {
+            awardedBadges.push(...(await checkReviewBadges(userId)))
         }
 
-        if (shouldCheckGeographic) {
-            const badges = await checkGeographicBadges(userId)
-            awardedBadges.push(...badges)
+        if (triggers.geographic) {
+            awardedBadges.push(...(await checkGeographicBadges(userId)))
         }
 
-        if (shouldCheckSupporter) {
-            const badges = await checkSupporterBadge(userId)
-            awardedBadges.push(...badges)
+        if (triggers.supporter) {
+            awardedBadges.push(...(await checkSupporterBadge(userId)))
         }
 
-        if (shouldCheckMap) {
-            // Map badge is handled separately via trackMapUsage()
-            // This is just a placeholder for future expansion
+        if (triggers.visits) {
+            awardedBadges.push(...(await checkVisitBadges(userId, triggers.cafeId)))
         }
 
-        // Check visit badges
-        if (triggers?.visits) {
-            const badges = await checkVisitBadges(userId, triggers.cafeId)
-            awardedBadges.push(...badges)
+        // Map badge is awarded via the `trackMapUsage` server action.
+        if (triggers.map) {
+            // Reserved for future expansion.
         }
 
         if (awardedBadges.length > 0) {
@@ -385,28 +377,23 @@ export async function checkAndAwardBadges(
 }
 
 /**
- * Track map usage and award Eye Spy badge
- * Should be called when user interacts with map feature
+ * Award the Eye Spy badge for map usage.
+ * Internal helper — the client-callable wrapper lives in app/api/actions/badges.ts.
  */
-export async function trackMapUsage(): Promise<{ awarded: boolean; badgeName?: string; error?: string }> {
-    const user = await getCurrentUser()
-    if (!user) {
-        return { awarded: false, error: "Not authenticated" }
-    }
-
+export async function awardMapUsageBadge(
+    userId: string
+): Promise<{ awarded: boolean; badgeName?: string; error?: string }> {
     try {
         const badgeId = await getBadgeIdByName(BADGE_NAMES.EYE_SPY)
         if (!badgeId) {
             return { awarded: false, error: "Badge not found" }
         }
 
-        // Check if user already has this badge
-        if (await userHasBadge(user.id, badgeId)) {
+        if (await userHasBadge(userId, badgeId)) {
             return { awarded: false } // Already has badge, no error
         }
 
-        // Award badge
-        const success = await awardBadge(user.id, badgeId)
+        const success = await awardBadge(userId, badgeId)
         return { awarded: success, badgeName: BADGE_NAMES.EYE_SPY }
     } catch (error) {
         console.error("[Badge] Error tracking map usage:", error)
@@ -414,50 +401,30 @@ export async function trackMapUsage(): Promise<{ awarded: boolean; badgeName?: s
     }
 }
 
-
 // ============================================
-// Badge Backfill Function (Admin Only)
+// Backfill (admin)
 // ============================================
 
-/**
- * Backfill badges for all existing users
- * Checks scout, review, geographic, and supporter badges for each user
- * This is an admin-only operation for one-time badge backfill
- */
-export async function backfillBadgesForAllUsers(): Promise<{
+export interface BadgeBackfillResult {
     success: boolean
     usersProcessed: number
     badgesAwarded: number
     errors: string[]
-}> {
-    const user = await getCurrentUser()
-    if (!user) {
-        return { success: false, usersProcessed: 0, badgesAwarded: 0, errors: ["Not authenticated"] }
-    }
+}
 
-    // Verify admin access
-    const profileResult = await db
-        .select({ role: profiles.role })
-        .from(profiles)
-        .where(eq(profiles.id, user.id))
-        .limit(1)
-
-    if (profileResult[0]?.role !== "admin") {
-        return { success: false, usersProcessed: 0, badgesAwarded: 0, errors: ["Unauthorized - Admin only"] }
-    }
-
-    // Get all user IDs
-    const allProfiles = await db
-        .select({ id: profiles.id })
-        .from(profiles)
+/**
+ * Backfill badges for all existing users.
+ *
+ * Safe to re-run: every award is guarded by the unique
+ * (`user_id`, `badge_id`) index, so only genuinely missing badges are added.
+ * Covers the visit + geographic families too, which is what repairs accounts
+ * that checked in before those rules looked at check-ins.
+ */
+export async function backfillBadgesForAllUsersInternal(): Promise<BadgeBackfillResult> {
+    const allProfiles = await db.select({ id: profiles.id }).from(profiles)
 
     if (!allProfiles || allProfiles.length === 0) {
-        return {
-            success: false,
-            usersProcessed: 0,
-            badgesAwarded: 0,
-            errors: ["Failed to fetch users"],
-        }
+        return { success: false, usersProcessed: 0, badgesAwarded: 0, errors: ["No profiles found"] }
     }
 
     let usersProcessed = 0
@@ -468,12 +435,12 @@ export async function backfillBadgesForAllUsers(): Promise<{
 
     for (const userProfile of allProfiles) {
         try {
-            // Check all badge types for this user
             const awardedBadges = await checkAndAwardBadges(userProfile.id, {
                 scout: true,
                 reviews: true,
                 geographic: true,
                 supporter: true,
+                visits: true,
             })
 
             totalBadgesAwarded += awardedBadges.length

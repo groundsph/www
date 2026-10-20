@@ -26,7 +26,7 @@ import Link from "next/link"
 import { BadgeCardFull } from "@/components/badges/BadgeCard"
 import IconPicker from "@/components/badges/IconPicker"
 import AwardBadgeModal from "@/components/admin/AwardBadgeModal"
-import { backfillBadgesForAllUsers } from "@/utils/badges/badge-logic"
+import { backfillBadgesForAllUsers } from "@/app/api/actions/badges"
 
 interface SystemManagementProps {
     badges: BadgeDefinition[]
