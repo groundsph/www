@@ -36,6 +36,8 @@ import {
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import Image from "next/image"
+import EmptyState from "@/components/ui/EmptyState"
+import { SkeletonList } from "@/components/ui/Skeleton"
 import SegmentedTabs from "@/components/ui/SegmentedTabs"
 import { UserAvatar } from "@/components/ui/UserAvatar"
 import Link from "next/link"
@@ -1214,10 +1216,11 @@ export default function CafeManagement({
                             className='space-y-4'
                         >
                             {reviews.length === 0 ? (
-                                <div className='text-center py-12 text-text/60'>
-                                    <MessageSquare className='w-12 h-12 mx-auto mb-3 opacity-30' />
-                                    <p>No reviews yet</p>
-                                </div>
+                                <EmptyState
+                                    icon={MessageSquare}
+                                    title='No reviews yet'
+                                    description='Reviews from your customers will show up here.'
+                                />
                             ) : (
                                 reviews.map((review) => (
                                     <div
@@ -1522,10 +1525,10 @@ export default function CafeManagement({
                                 const categories = [...new Set(filteredItems.map((item) => item.category))]
 
                                 return filteredItems.length === 0 ? (
-                                    <div className='text-center py-12 text-text/60'>
-                                        <UtensilsCrossed className='w-12 h-12 mx-auto mb-3 opacity-30' />
-                                        <p>No menu items match this filter</p>
-                                    </div>
+                                    <EmptyState
+                                        icon={UtensilsCrossed}
+                                        title='No menu items match this filter'
+                                    />
                                 ) : (
                                     <div className='space-y-6'>
                                         {/* Group by category */}
@@ -1801,9 +1804,7 @@ export default function CafeManagement({
                             </div>
 
                             {analyticsLoading ? (
-                                <div className='flex items-center justify-center py-12'>
-                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
-                                </div>
+                                <SkeletonList rows={4} />
                             ) : analytics ? (
                                 <>
                                     {/* Page View Stats */}
@@ -2105,20 +2106,22 @@ export default function CafeManagement({
                             </div>
 
                             {blogLoading ? (
-                                <div className='flex items-center justify-center py-12'>
-                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
-                                </div>
+                                <SkeletonList rows={4} />
                             ) : blogPosts.length === 0 ? (
-                                <div className='text-center py-12 text-text/60'>
-                                    <FileText className='w-12 h-12 mx-auto mb-3 text-text opacity-30' />
-                                    <p className='font-medium'>
-                                        No blog posts yet
-                                    </p>
-                                    <p className='text-sm'>
-                                        Share your cafe&apos;s story with the
-                                        community
-                                    </p>
-                                </div>
+                                <EmptyState
+                                    icon={FileText}
+                                    title='No blog posts yet'
+                                    description="Share your cafe's story with the community"
+                                    action={
+                                        <button
+                                            onClick={() => setShowBlogEditor(true)}
+                                            className='flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-white transition-colors hover:bg-primary/90'
+                                        >
+                                            <Plus className='h-4 w-4' />
+                                            New Post
+                                        </button>
+                                    }
+                                />
                             ) : (
                                 <div className='space-y-3'>
                                     {blogPosts.map((post) => (
@@ -2189,9 +2192,7 @@ export default function CafeManagement({
                                 className='space-y-6'
                             >
                                 {eventsLoading ? (
-                                    <div className='flex items-center justify-center py-12'>
-                                        <Loader2 className='w-8 h-8 animate-spin text-primary' />
-                                    </div>
+                                    <SkeletonList rows={3} />
                                 ) : (
                                     <EventsManagement
                                         initialEvents={events}
@@ -2211,9 +2212,7 @@ export default function CafeManagement({
                             className='space-y-6'
                         >
                             {inventoryLoading ? (
-                                <div className='flex items-center justify-center py-12'>
-                                    <Loader2 className='w-8 h-8 animate-spin text-primary' />
-                                </div>
+                                <SkeletonList rows={4} />
                             ) : (
                                 <InventoryDashboard
                                     cafe={{

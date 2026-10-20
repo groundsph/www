@@ -4,7 +4,7 @@
 
 ```bash
 bun dev              # HTTPS dev server (self-signed cert; accept browser warning)
-bun build            # Production build
+bun run build        # Production build (`bun build` is Bun's own bundler and errors)
 bun start            # Production server
 bun lint             # ESLint (flat config in eslint.config.mjs)
 bun test             # All tests (Bun runner, JSDOM preloaded via bunfig.toml)
@@ -32,7 +32,7 @@ bun merge            # Stale: assumes a `dev` branch that does not exist. See "R
 - **Next.js 16 App Router**, React 19, TypeScript strict.
 - **DB**: PostgreSQL + Drizzle ORM. Schemas in `db/schema/`, migrations in `drizzle/migrations/`.
 - **Auth**: Better Auth with Drizzle-backed sessions. Route at `app/api/auth/[...all]/route.ts`.
-- **Storage**: Cloudflare R2 via presigned URLs. Upload flow: client requests presigned URL → uploads directly to R2.
+- **Storage**: Cloudflare R2 through the server — there are **no** presigned upload URLs. Flow: client posts `FormData` to `app/api/storage/upload/route.ts` (or a storage server action) → `validateFile` (extension, MIME, size, magic-byte sniff) → `PutObjectCommand` → public URL on `cdn.grounds.ph`. `getSignedUrl` is used only for reading private objects (ownership proofs).
 - **Email**: Resend + React Email templates in `emails/`.
 - **Maps**: Leaflet + react-leaflet.
 - **Rich text**: Tiptap editor (blog writer at `app/writer/`).

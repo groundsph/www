@@ -1054,9 +1054,14 @@ export async function bulkMarkAsChain(
 }
 
 /**
- * Extract the cafe id from a cafe storage URL (cafes/<cafeId>/<file>)
+ * Extract the uuid path segment from a cafe storage URL.
+ *
+ * This is the uploader's user id for legacy uploads (<userId>/<file>) and the
+ * cafe id for newer cafe-scoped ones, so it must not be treated as a cafe id.
+ * It exists only to satisfy the uuid type of system_logs.entity_id when no
+ * explicit cafe id was passed.
  */
-function getCafeIdFromImageUrl(imageUrl: string): string | null {
+function getImagePathOwnerId(imageUrl: string): string | null {
     const match = imageUrl.match(/\/cafes\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\//i)
     return match ? match[1] : null
 }
@@ -1088,7 +1093,7 @@ export async function adminDeleteCafeImage(imageUrl: string, cafeId?: string): P
         await logSystemAction(
             "delete",
             "cafe",
-            cafeId ?? getCafeIdFromImageUrl(imageUrl) ?? imageUrl,
+            cafeId ?? getImagePathOwnerId(imageUrl) ?? imageUrl,
             { imageUrl },
             null,
             { reason: "Cafe image deleted by admin", image_url: imageUrl }

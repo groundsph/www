@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/utils/cn"
 import { getColorClasses, type ColorScheme } from "@/utils/hooks/cafe-form"
@@ -33,6 +33,29 @@ export interface SegmentedTabsProps {
     className?: string
 }
 
+/**
+ * Which edges of the strip hide content? Pure so it can be tested without a
+ * layout engine (JSDOM reports zero geometry).
+ */
+export function getScrollFadeState({
+    scrollLeft,
+    scrollWidth,
+    clientWidth,
+    tolerance = 2,
+}: {
+    scrollLeft: number
+    scrollWidth: number
+    clientWidth: number
+    tolerance?: number
+}): { left: boolean; right: boolean } {
+    const maxScroll = scrollWidth - clientWidth
+    if (maxScroll <= tolerance) return { left: false, right: false }
+    return {
+        left: scrollLeft > tolerance,
+        right: scrollLeft < maxScroll - tolerance,
+    }
+}
+
 const ATTENTION_CLASSES: Record<"amber" | "purple", string> = {
     amber: "bg-amber-500/20 text-amber-700 hover:bg-amber-500/30",
     purple: "bg-purple-500/20 text-purple-700 hover:bg-purple-500/30",
@@ -54,6 +77,31 @@ export default function SegmentedTabs({
 }: SegmentedTabsProps) {
     const colors = getColorClasses(colorScheme)
     const listRef = useRef<HTMLDivElement>(null)
+    const [fade, setFade] = useState({ left: false, right: false })
+
+    // Show a fade on whichever edge still hides tabs
+    useEffect(() => {
+        const node = listRef.current
+        if (!node) return
+
+        const update = () => {
+            setFade(getScrollFadeState({
+                scrollLeft: node.scrollLeft,
+                scrollWidth: node.scrollWidth,
+                clientWidth: node.clientWidth,
+            }))
+        }
+
+        update()
+        node.addEventListener("scroll", update, { passive: true })
+        const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null
+        observer?.observe(node)
+
+        return () => {
+            node.removeEventListener("scroll", update)
+            observer?.disconnect()
+        }
+    }, [items.length])
 
     const enabledIndexes = items
         .map((item, index) => (item.disabled ? -1 : index))
@@ -96,6 +144,19 @@ export default function SegmentedTabs({
     const padding = size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"
 
     return (
+        <div className='relative'>
+            {fade.left && (
+                <div
+                    aria-hidden='true'
+                    className='pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent'
+                />
+            )}
+            {fade.right && (
+                <div
+                    aria-hidden='true'
+                    className='pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent'
+                />
+            )}
         <div
             ref={listRef}
             role='tablist'
@@ -158,6 +219,7 @@ export default function SegmentedTabs({
                     </button>
                 )
             })}
+        </div>
         </div>
     )
 }

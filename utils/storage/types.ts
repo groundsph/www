@@ -111,8 +111,6 @@ export interface BucketConfig {
     allowedExtensions?: string[]
     /** Allowed MIME types */
     allowedMimeTypes?: string[]
-    /** Maximum number of files a collection-style bucket may hold for one entity */
-    maxFiles?: number
 }
 
 /**
@@ -142,7 +140,6 @@ export const BUCKET_CONFIGS: Record<StorageBucket, BucketConfig> = {
         isPublic: true,
         maxFileSize: 5 * 1024 * 1024, // 5MB
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-        maxFiles: 12,
         allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'],
     },
     [STORAGE_BUCKETS.REVIEWS]: {

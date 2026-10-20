@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { render, fireEvent } from "@testing-library/react"
-import SegmentedTabs from "@/components/ui/SegmentedTabs"
+import SegmentedTabs, { getScrollFadeState } from "@/components/ui/SegmentedTabs"
 
 const items = [
     { id: "basic", label: "Basic" },
@@ -72,5 +72,32 @@ describe("SegmentedTabs", () => {
 
         const tabs = [...container.querySelectorAll("[role='tab']")]
         expect(tabs.map((tab) => tab.getAttribute("tabindex"))).toEqual(["-1", "0", "-1"])
+    })
+})
+
+describe("getScrollFadeState", () => {
+    it("shows no fades when every tab fits", () => {
+        expect(getScrollFadeState({ scrollLeft: 0, scrollWidth: 300, clientWidth: 300 }))
+            .toEqual({ left: false, right: false })
+    })
+
+    it("fades only the right edge at the start of an overflowing strip", () => {
+        expect(getScrollFadeState({ scrollLeft: 0, scrollWidth: 600, clientWidth: 300 }))
+            .toEqual({ left: false, right: true })
+    })
+
+    it("fades both edges mid-scroll", () => {
+        expect(getScrollFadeState({ scrollLeft: 150, scrollWidth: 600, clientWidth: 300 }))
+            .toEqual({ left: true, right: true })
+    })
+
+    it("fades only the left edge at the end", () => {
+        expect(getScrollFadeState({ scrollLeft: 300, scrollWidth: 600, clientWidth: 300 }))
+            .toEqual({ left: true, right: false })
+    })
+
+    it("treats sub-pixel scroll offsets as flush", () => {
+        expect(getScrollFadeState({ scrollLeft: 1, scrollWidth: 600, clientWidth: 300 }))
+            .toEqual({ left: false, right: true })
     })
 })

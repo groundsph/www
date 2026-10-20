@@ -1,5 +1,12 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, mock } from "bun:test"
 import { render } from "@testing-library/react"
+
+// Declared here so this file never inherits another file's next/link mock; bun
+// module mocks are process-wide, and some suites stub next/link to render only
+// its children (no <a>), which would silently break the back-link assertion.
+mock.module("next/link", () => ({
+    default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
+}))
 import EditorHeader from "@/components/cafe-editor/EditorHeader"
 
 describe("EditorHeader", () => {

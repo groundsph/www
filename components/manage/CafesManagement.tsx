@@ -1224,16 +1224,11 @@ cafeName: string) => {
             {activeTab === "suggestions" && (
                 <>
                     {suggestions.length === 0 ? (
-                        <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <Pencil className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
-                            <h3 className='text-lg font-semibold'>
-                                No pending suggestions
-                            </h3>
-                            <p className='text-text/60 text-sm mt-1'>
-                                User edit suggestions will appear here for
-                                review.
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={Pencil}
+                            title='No pending suggestions'
+                            description='User edit suggestions will appear here for review.'
+                        />
                     ) : (
                         <div className='space-y-3'>
                             {suggestions.map((suggestion) => {
@@ -1476,15 +1471,11 @@ cafeName: string) => {
             {activeTab === "mall-verifications" && (
                 <>
                     {mallVerifications.length === 0 ? (
-                        <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <Store className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
-                            <h3 className='text-lg font-semibold'>
-                                No pending mall verifications
-                            </h3>
-                            <p className='text-text/60 text-sm mt-1'>
-                                Mall cafe verification requests will appear here for review.
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={Store}
+                            title='No pending mall verifications'
+                            description='Mall cafe verification requests will appear here for review.'
+                        />
                     ) : (
                         <div className='space-y-3'>
                             {mallVerifications.map((verification) => {
@@ -1711,15 +1702,11 @@ cafeName: string) => {
             {activeTab === "menu-suggestions" && (
                 <>
                     {menuSuggestions.length === 0 ? (
-                        <div className='text-center py-16 bg-background rounded-xl shadow-sm border border-tertiary/50'>
-                            <UtensilsCrossed className='w-12 h-12 mx-auto text-text opacity-30 mb-4' />
-                            <h3 className='text-lg font-semibold'>
-                                No pending menu suggestions
-                            </h3>
-                            <p className='text-text/60 text-sm mt-1'>
-                                Community-submitted menu item suggestions will appear here for review.
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={UtensilsCrossed}
+                            title='No pending menu suggestions'
+                            description='Community-submitted menu item suggestions will appear here for review.'
+                        />
                     ) : (
                         <div className='space-y-3'>
                             {menuSuggestions.map((suggestion) => {
