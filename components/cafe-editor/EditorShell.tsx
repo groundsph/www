@@ -67,7 +67,10 @@ export default function EditorShell({
                 ? "Unsaved changes"
                 : saveState.lastSavedAt
                     ? `All changes saved · ${formatDistanceToNow(saveState.lastSavedAt)} ago`
-                    : "All changes saved"
+                    : // Nothing has been saved in this session yet, so don't
+                      // claim it has: that was how a silently dropped edit read
+                      // as a successful save.
+                      "No unsaved changes"
 
     return (
         <div className='flex min-h-[70vh] flex-col gap-6'>

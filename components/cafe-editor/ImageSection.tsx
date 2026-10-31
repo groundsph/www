@@ -34,7 +34,7 @@ import { useConfirm } from "@/hooks/useConfirm"
 import { uploadCafeBadgeStamp } from "@/utils/storage/client"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { getOptimizedImageUrl, getResponsiveSrcSet } from "@/utils/cloudflare-image"
-import { downloadImage } from "@/utils/image-download"
+import { downloadAllImages, downloadImage } from "@/utils/image-download"
 import ImageCropper from "@/components/ui/ImageCropper"
 
 interface ImageSectionProps {
@@ -84,6 +84,7 @@ export default function ImageSection({
 }: ImageSectionProps) {
     const colors = getColorClasses(colorScheme)
     const [uploadingBadgeStamp, setUploadingBadgeStamp] = useState(false)
+    const [downloadingAll, setDownloadingAll] = useState(false)
     const { addNotification } = useNotification()
     const { confirm, dialog } = useConfirm()
 
@@ -202,6 +203,37 @@ export default function ImageSection({
         })
     }
 
+    // Cover + gallery in one go, at the same 1920px size the CDN serves.
+    const handleDownloadAllImages = async () => {
+        if (downloadingAll) return
+
+        const images: { url: string; filename: string }[] = []
+        if (thumbnail && thumbnail !== "placeholder") {
+            images.push({
+                url: getOptimizedImageUrl(thumbnail, { width: 1920 }),
+                filename: `${cafeName}-thumbnail.webp`,
+            })
+        }
+        gallery.forEach((url, index) => {
+            images.push({
+                url: getOptimizedImageUrl(url, { width: 1920 }),
+                filename: `${cafeName}-gallery-${index + 1}.webp`,
+            })
+        })
+
+        if (images.length === 0) return
+
+        setDownloadingAll(true)
+        try {
+            await downloadAllImages(images)
+        } catch (error) {
+            console.error("Failed to download cafe images:", error)
+            addNotification("Failed to download images", "error")
+        } finally {
+            setDownloadingAll(false)
+        }
+    }
+
     return (
         <div className='space-y-8'>
             {dialog}
@@ -278,28 +310,47 @@ export default function ImageSection({
 
             {/* Gallery */}
             <div>
-                <div className='flex items-center justify-between mb-4'>
+                <div className='flex flex-wrap items-center justify-between gap-3 mb-4'>
                     <label className='text-sm font-medium text-text/60'>
                         Gallery ({gallery.length} images)
                     </label>
-                    <label
-                        className={`cursor-pointer flex items-center gap-2 px-4 py-2 ${colors.bgLight} ${colors.text} rounded-lg hover:opacity-80 transition`}
-                    >
-                        {uploadQueue.isBusy ? (
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                            <ImagePlus className='w-4 h-4' />
-                        )}
-                        Add Photos
-                        <input
-                            type='file'
-                            accept='image/jpeg,image/png,image/webp,image/gif'
-                            multiple
-                            className='hidden'
-                            disabled={uploadQueue.isBusy}
-                            onChange={handleGalleryUpload}
-                        />
-                    </label>
+                    <div className='flex items-center gap-2'>
+                        <button
+                            type='button'
+                            onClick={handleDownloadAllImages}
+                            disabled={
+                                downloadingAll ||
+                                (gallery.length === 0 && !thumbnail)
+                            }
+                            title='Download the cover and every gallery image'
+                            className='flex items-center gap-2 rounded-lg border border-text/10 px-4 py-2 text-sm transition hover:bg-text/5 disabled:cursor-not-allowed disabled:opacity-40'
+                        >
+                            {downloadingAll ? (
+                                <Loader2 className='h-4 w-4 animate-spin' />
+                            ) : (
+                                <Download className='h-4 w-4' />
+                            )}
+                            Download all images
+                        </button>
+                        <label
+                            className={`cursor-pointer flex items-center gap-2 px-4 py-2 ${colors.bgLight} ${colors.text} rounded-lg hover:opacity-80 transition`}
+                        >
+                            {uploadQueue.isBusy ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                                <ImagePlus className='w-4 h-4' />
+                            )}
+                            Add Photos
+                            <input
+                                type='file'
+                                accept='image/jpeg,image/png,image/webp,image/gif'
+                                multiple
+                                className='hidden'
+                                disabled={uploadQueue.isBusy}
+                                onChange={handleGalleryUpload}
+                            />
+                        </label>
+                    </div>
                 </div>
 
                 {gallery.length > 0 || uploadQueue.items.length > 0 ? (

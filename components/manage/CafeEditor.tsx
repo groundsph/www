@@ -45,6 +45,10 @@ import { OperatingHour, CafeSocial } from "@/utils/types/cafe"
 import { Database } from "@/utils/types/database.types"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import {
+    MAX_CAFE_DESCRIPTION_LENGTH,
+    clampCafeDescription,
+} from "@/utils/validation/cafe-submission"
+import {
     ContactSection,
     LocationSection,
     ImageSection,
@@ -170,11 +174,14 @@ export default function CafeEditor({
 
     const handleSave = async () => {
         setSaving(true)
+        // Optional text fields are sent as null, not undefined: `undefined` is
+        // dropped from the action payload, which made clearing a description
+        // (or phone/website/roaster) impossible — the old value stayed in DB.
         const result = await updateCafe(cafe.id, {
             name: cafe.name,
-            description: cafe.description || undefined,
+            description: cafe.description || null,
             address_display: cafe.address_display,
-            area: cafe.area || undefined,
+            area: cafe.area || null,
             lat: cafe.lat || undefined,
             lng: cafe.lng || undefined,
             region: cafe.region,
@@ -200,11 +207,11 @@ export default function CafeEditor({
             tags: cafe.tags || [],
             brew_methods: cafe.brew_methods || [],
             payment_methods: cafe.payment_methods || "",
-            roaster: cafe.roaster || undefined,
+            roaster: cafe.roaster || null,
             operating_hours: cafe.operating_hours || [],
-            website_url: cafe.website_url || undefined,
-            phone: cafe.phone || undefined,
-            email: cafe.email || undefined,
+            website_url: cafe.website_url || null,
+            phone: cafe.phone || null,
+            email: cafe.email || null,
             socials: cafe.socials || [],
             slug: cafe.slug,
             is_verified: cafe.is_verified || false,
@@ -216,7 +223,11 @@ export default function CafeEditor({
         setSaving(false)
         if (result.success) {
             setHasChanges(false)
+            initialCafeRef.current = cafe
             addNotification("Changes saved", "success")
+            // The row changed server-side; refresh so the editor, the cafe list
+            // and the public page stop serving the pre-save payload.
+            router.refresh()
         } else {
             addNotification(result.error || "Failed to save changes", "error")
         }
@@ -614,15 +625,13 @@ export default function CafeEditor({
                             </label>
                             <textarea
                                 value={cafe.description || ""}
-                                onChange={(e) => {
-                                    if (e.target.value.length <= 300) {
-                                        updateField(
-                                            "description",
-                                            e.target.value
-                                        )
-                                    }
-                                }}
-                                maxLength={300}
+                                onChange={(e) =>
+                                    updateField(
+                                        "description",
+                                        clampCafeDescription(e.target.value)
+                                    )
+                                }
+                                maxLength={MAX_CAFE_DESCRIPTION_LENGTH}
                                 rows={4}
                                 className='w-full px-4 py-3 bg-background border border-text/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none'
                                 placeholder='Tell us about this cafe...'
@@ -630,7 +639,8 @@ export default function CafeEditor({
                             <p
                                 className={`text-xs mt-1 ${(cafe.description?.length || 0) >= 270 ? "text-orange-500" : "text-text/40"}`}
                             >
-                                {300 - (cafe.description?.length || 0)}{" "}
+                                {MAX_CAFE_DESCRIPTION_LENGTH -
+                                    (cafe.description?.length || 0)}{" "}
                                 characters remaining
                             </p>
                         </div>

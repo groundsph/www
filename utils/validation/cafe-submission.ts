@@ -150,3 +150,17 @@ export class CafeSubmissionError {
     }
   }
 }
+
+/**
+ * Cafe descriptions are capped in every editor (admin, owner, submission).
+ *
+ * Keep the limit in one place and clamp instead of dropping the edit: the
+ * previous `if (value.length <= 300)` guards silently discarded input, so a
+ * description that already sat at the limit could not be changed and the
+ * editor kept reporting "All changes saved".
+ */
+export const MAX_CAFE_DESCRIPTION_LENGTH = 300
+
+export function clampCafeDescription(value: string): string {
+    return value.slice(0, MAX_CAFE_DESCRIPTION_LENGTH)
+}

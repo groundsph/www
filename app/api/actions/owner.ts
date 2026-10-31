@@ -264,9 +264,9 @@ export async function updateCafeAsOwner(
     cafeId: string,
     updates: Partial<{
         name: string
-        description: string
+        description: string | null
         address_display: string
-        area: string
+        area: string | null
         region: string
         province: string
         city_municipality: string
@@ -292,11 +292,11 @@ export async function updateCafeAsOwner(
         specialty: string[]
         tags: string[]
         brew_methods: string[]
-        roaster: string
+        roaster: string | null
         operating_hours: unknown
-        website_url: string
-        phone: string
-        email: string
+        website_url: string | null
+        phone: string | null
+        email: string | null
         socials: unknown
         is_hidden_gem: boolean
         finding_hint: string | null
@@ -386,6 +386,13 @@ export async function updateCafeAsOwner(
         console.error('Error updating cafe:', error)
         return { success: false, error: 'Failed to update cafe' }
     }
+
+    // Owner edits change the owner dashboard and the public listing, so drop the
+    // cached payloads; otherwise a saved change still renders from stale data.
+    revalidatePath("/owner/cafes/[slug]/edit", "page")
+    revalidatePath("/owner/cafes")
+    revalidatePath("/cafes/[slug]", "page")
+    revalidatePath("/cafes")
 
     // Log contribution
     if (user) {

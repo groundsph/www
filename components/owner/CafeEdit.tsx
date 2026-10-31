@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import {
     MapPin,
     DollarSign,
@@ -31,6 +32,10 @@ import { Database } from "@/utils/types/database.types"
 import TextField from "@/components/ui/TextField"
 import { useNotification } from "@/components/layout/NotificationProvider"
 import { getCafeThumbnailUrl } from "@/utils/extras"
+import {
+    MAX_CAFE_DESCRIPTION_LENGTH,
+    clampCafeDescription,
+} from "@/utils/validation/cafe-submission"
 import MarkdownEditor from "@/components/ui/markdown-editor/MarkdownEditor"
 import {
     ContactSection,
@@ -58,6 +63,7 @@ export default function CafeEdit({
     cafe: initialCafe,
     menuItems: initialMenuItems,
 }: CafeEditProps) {
+    const router = useRouter()
     const { addNotification } = useNotification()
     const [cafe, setCafe] = useState(initialCafe)
 
@@ -113,9 +119,11 @@ export default function CafeEdit({
         setSaving(true)
         const result = await updateCafeAsOwner(cafe.id, {
             name: cafe.name,
-            description: cafe.description || undefined,
+            // null (not undefined) so the payload actually clears the column;
+            // undefined keys are dropped before the action runs.
+            description: cafe.description || null,
             address_display: cafe.address_display,
-            area: cafe.area || undefined,
+            area: cafe.area || null,
             lat: cafe.lat || undefined,
             lng: cafe.lng || undefined,
             region: cafe.region,
@@ -141,11 +149,11 @@ export default function CafeEdit({
             tags: cafe.tags || [],
             brew_methods: cafe.brew_methods || [],
             payment_methods: cafe.payment_methods || "",
-            roaster: cafe.roaster || undefined,
+            roaster: cafe.roaster || null,
             operating_hours: cafe.operating_hours || [],
-            website_url: cafe.website_url || undefined,
-            phone: cafe.phone || undefined,
-            email: cafe.email || undefined,
+            website_url: cafe.website_url || null,
+            phone: cafe.phone || null,
+            email: cafe.email || null,
             socials: cafe.socials || [],
             is_hidden_gem: cafe.is_hidden_gem || false,
             finding_hint: cafe.finding_hint || null,
@@ -153,7 +161,11 @@ export default function CafeEdit({
         setSaving(false)
         if (result.success) {
             setHasChanges(false)
+            initialCafeRef.current = cafe
             addNotification("Changes saved successfully", "success")
+            // Re-render the page from the database so the owner editor and the
+            // public cafe page show what was just written.
+            router.refresh()
         } else {
             addNotification(result.error || "Failed to save changes", "error")
         }
@@ -337,15 +349,15 @@ export default function CafeEdit({
                                     <MarkdownEditor
                                         mode="description"
                                         value={cafe.description || ""}
-                                        onChange={(value) => {
-                                            if (value.length <= 300) {
-                                                updateField(
-                                                    "description",
-                                                    value
-                                                )
-                                            }
-                                        }}
-                                        maxLength={300}
+                                        onChange={(value) =>
+                                            updateField(
+                                                "description",
+                                                clampCafeDescription(value)
+                                            )
+                                        }
+                                        maxLength={
+                                            MAX_CAFE_DESCRIPTION_LENGTH
+                                        }
                                         showCharCount
                                         placeholder="Tell us about this cafe..."
                                         minHeight={80}

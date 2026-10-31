@@ -1,12 +1,12 @@
 import { describe, it, expect, mock } from "bun:test"
-import { render } from "@testing-library/react"
+import { fireEvent, render } from "@testing-library/react"
 
 // Mock external dependencies
 mock.module("@/components/layout/NotificationProvider", () => ({
     useNotification: () => ({ addNotification: mock() }),
 }))
 mock.module("next/navigation", () => ({
-    useRouter: () => ({ push: mock() }),
+    useRouter: () => ({ push: mock(), refresh: mock() }),
 }))
 mock.module("next/image", () => ({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -43,7 +43,7 @@ mock.module("@/utils/email", () => ({
 mock.module("@/app/api/actions/admin", () => ({
     approveCafe: () => Promise.resolve(),
     rejectCafe: () => Promise.resolve(),
-    updateCafe: () => Promise.resolve(),
+    updateCafe: mock(() => Promise.resolve({ success: true })),
     unpublishCafe: () => Promise.resolve(),
     deleteCafe: () => Promise.resolve(),
     upsertCafeStory: () => Promise.resolve(),
@@ -54,6 +54,7 @@ mock.module("@/app/api/actions/admin", () => ({
     getOwnerProfiles: () => Promise.resolve([]),
 }))
 
+import { updateCafe } from "@/app/api/actions/admin"
 import CafeEditor from "@/components/manage/CafeEditor"
 import type { CafeWithRatings } from "@/utils/types/extra"
 
@@ -133,5 +134,76 @@ describe("CafeEditor — location editing", () => {
 
         // Component should render without error
         expect(container.innerHTML).toContain("Test Cafe")
+    })
+})
+
+describe("CafeEditor — description", () => {
+    /**
+     * Regression: the description input swallowed edits once the value reached
+     * the 300-char limit, and `cafe.description || undefined` dropped the key
+     * from the payload, so a save reported success without writing new text.
+     */
+    const descriptionField = (container: HTMLElement) =>
+        container.querySelector(
+            "textarea[placeholder='Tell us about this cafe...']"
+        ) as HTMLTextAreaElement
+
+    const save = (getByRole: (role: string, options: { name: RegExp }) => HTMLElement) =>
+        fireEvent.click(getByRole("button", { name: /Save changes/i }))
+
+    const lastPayload = () => {
+        const updateCafeMock = updateCafe as unknown as ReturnType<typeof mock>
+        expect(updateCafeMock).toHaveBeenCalled()
+        const [, payload] = updateCafeMock.mock.calls[0] as [
+            string,
+            Record<string, unknown>,
+        ]
+        return payload
+    }
+
+    const reset = () => {
+        ;(updateCafe as unknown as ReturnType<typeof mock>).mockClear()
+    }
+
+    it("sends edited description text in the update payload", () => {
+        reset()
+        const { container, getByRole } = render(
+            <CafeEditor cafe={mockCafe} menuItems={[]} />
+        )
+
+        fireEvent.change(descriptionField(container), {
+            target: { value: "A brand new description." },
+        })
+        save(getByRole)
+
+        expect(lastPayload().description).toBe("A brand new description.")
+    })
+
+    it("clamps input at the limit instead of dropping the edit", () => {
+        reset()
+        const { container, getByRole } = render(
+            <CafeEditor cafe={mockCafe} menuItems={[]} />
+        )
+
+        fireEvent.change(descriptionField(container), {
+            target: { value: "x".repeat(400) },
+        })
+        save(getByRole)
+
+        expect(lastPayload().description).toBe("x".repeat(300))
+    })
+
+    it("sends null so a cleared description is actually removed", () => {
+        reset()
+        const { container, getByRole } = render(
+            <CafeEditor cafe={mockCafe} menuItems={[]} />
+        )
+
+        fireEvent.change(descriptionField(container), {
+            target: { value: "" },
+        })
+        save(getByRole)
+
+        expect(lastPayload().description).toBeNull()
     })
 })

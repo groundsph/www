@@ -839,12 +839,12 @@ export async function updateCafe(
     cafeId: string,
     updates: Partial<{
         name: string
-        description: string
+        description: string | null
         address_display: string
         region: string
         province: string
         city_municipality: string
-        area: string
+        area: string | null
         lat: number
         lng: number
         has_wifi: boolean
@@ -867,11 +867,11 @@ export async function updateCafe(
         tags: string[]
         brew_methods: string[]
         payment_methods: string
-        roaster: string
+        roaster: string | null
         operating_hours: Record<string, unknown>[] | null
-        website_url: string
-        phone: string
-        email: string
+        website_url: string | null
+        phone: string | null
+        email: string | null
         socials: Record<string, unknown>[] | null
         thumbnail: string | null
         gallery: string[] | null
@@ -972,6 +972,13 @@ export async function updateCafe(
         console.error("Error updating cafe:", error)
         return { success: false, error: "Failed to update cafe" }
     }
+
+    // Edits change both the admin surfaces and the public listing, so drop the
+    // cached payloads; without this a successful save still looked unsaved.
+    revalidatePath("/manage/cafes")
+    revalidatePath("/manage/preview/[id]", "page")
+    revalidatePath("/cafes/[slug]", "page")
+    revalidatePath("/cafes")
 
     // Log contribution
     const changedFields = currentCafe ? getChangedFields(currentCafe as Record<string, unknown>, updates as Record<string, unknown>) : Object.keys(updates)

@@ -66,7 +66,11 @@ import {
     uploadOwnershipProofWithProgress,
 } from "@/utils/storage/client"
 import { submitCafe } from "@/app/api/actions/submit"
-import { SubmitError } from "@/utils/validation/cafe-submission"
+import {
+    SubmitError,
+    MAX_CAFE_DESCRIPTION_LENGTH,
+    clampCafeDescription,
+} from "@/utils/validation/cafe-submission"
 import { submitCafeClaim } from "@/app/api/actions/claim"
 import { searchCafesSimple } from "@/app/api/actions/cafe"
 import ImageUpload from "@/components/reviews/ImageUpload"
@@ -1735,17 +1739,17 @@ export default function CafeSubmissionForm({
                                         </label>
                                         <textarea
                                             value={formData.description}
-                                            onChange={(e) => {
-                                                if (
-                                                    e.target.value.length <= 300
-                                                ) {
-                                                    updateFormData(
-                                                        "description",
+                                            onChange={(e) =>
+                                                updateFormData(
+                                                    "description",
+                                                    clampCafeDescription(
                                                         e.target.value,
-                                                    )
-                                                }
-                                            }}
-                                            maxLength={300}
+                                                    ),
+                                                )
+                                            }
+                                            maxLength={
+                                                MAX_CAFE_DESCRIPTION_LENGTH
+                                            }
                                             placeholder='Describe what makes this cafe special...'
                                             rows={4}
                                             className='w-full px-4 py-3 border border-text/20 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none'
@@ -1753,7 +1757,8 @@ export default function CafeSubmissionForm({
                                         <p
                                             className={`text-xs mt-1 ${formData.description.length >= 270 ? "text-orange-500" : "text-text/40"}`}
                                         >
-                                            {300 - formData.description.length}{" "}
+                                            {MAX_CAFE_DESCRIPTION_LENGTH -
+                                                formData.description.length}{" "}
                                             characters remaining
                                         </p>
                                     </div>
