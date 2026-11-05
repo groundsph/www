@@ -17,7 +17,7 @@ import { eq, and, or, desc, asc, sql, ilike, count as drizzleCount, isNull, inAr
 import { revalidatePath } from "next/cache"
 import { getCurrentUser } from "@/lib/auth"
 import { deleteCafeImagesAction, deleteSingleCafeImageAction, cleanupOrphanedImages, processAvatarDeletionQueue } from "@/utils/storage/actions"
-import { sendCafeApprovedEmail, sendCafeRejectedEmail } from "@/utils/email"
+import { sendCafeApprovedEmail, sendCafeRejectedEmail, sendVerificationApprovedEmail } from "@/utils/email"
 import { CafeWithRatings, ProfileStats } from "@/utils/types/extra"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
 import { logContribution, getChangedFields, generateChangeSummary } from "@/utils/contribution-logging"
@@ -3472,7 +3472,12 @@ export async function rejectVerification(requestId: string, reason: string): Pro
 }
 
 /**
- * Send verification email to cafe's listed email
+ * Send the verification-approved email to the user who filed the request.
+ *
+ * The recipient is the requesting user, not the cafe's public contact address:
+ * `owner_verification_requests.userId` references `profiles.id`, and a profile
+ * shares its primary key with the better-auth `user` row (see `approveCafe` and
+ * `approveClaim`, which both join `user.id` on a profile id).
  */
 export async function sendVerificationEmail(requestId: string): Promise<AdminActionResult> {
     const currentUser = await getCurrentUser()
@@ -3488,15 +3493,21 @@ export async function sendVerificationEmail(requestId: string): Promise<AdminAct
         return { success: false, error: "Unauthorized" }
     }
 
-    // Get request with cafe email
+    // Load the request together with the cafe it targets and the email of the
+    // user who submitted it (profiles.id === user.id for the same account).
     const requestResult = await db
         .select({
             id: ownerVerificationRequests.id,
-            cafeEmail: cafes.email,
+            userId: ownerVerificationRequests.userId,
             cafeName: cafes.name,
+            cafeSlug: cafes.slug,
+            ownerEmail: user.email,
+            ownerName: profiles.displayName,
         })
         .from(ownerVerificationRequests)
         .leftJoin(cafes, eq(ownerVerificationRequests.cafeId, cafes.id))
+        .leftJoin(profiles, eq(ownerVerificationRequests.userId, profiles.id))
+        .leftJoin(user, eq(user.id, ownerVerificationRequests.userId))
         .where(eq(ownerVerificationRequests.id, requestId))
         .limit(1)
 
@@ -3505,12 +3516,24 @@ export async function sendVerificationEmail(requestId: string): Promise<AdminAct
         return { success: false, error: "Verification request not found" }
     }
 
-    if (!request.cafeEmail) {
-        return { success: false, error: "Cafe does not have an email address" }
+    if (!request.cafeName || !request.cafeSlug) {
+        return { success: false, error: "Cafe for this verification request no longer exists" }
     }
 
-    // TODO: Implement email sending with verification link
-    console.log(`Would send verification email to ${request.cafeEmail} for request ${requestId}`)
+    if (!request.ownerEmail) {
+        return { success: false, error: "Requester has no email address on file" }
+    }
+
+    const sent = await sendVerificationApprovedEmail(
+        request.ownerEmail,
+        request.cafeName,
+        request.cafeSlug,
+        request.ownerName || undefined
+    )
+
+    if (!sent.success) {
+        return { success: false, error: sent.error || "Failed to send verification email" }
+    }
 
     return { success: true }
 }

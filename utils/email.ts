@@ -6,6 +6,7 @@ import SuggestionApprovedEmail from "@/emails/SuggestionApprovedEmail"
 import SuggestionRejectedEmail from "@/emails/SuggestionRejectedEmail"
 import EventApprovedEmail from "@/emails/EventApprovedEmail"
 import EventRejectedEmail from "@/emails/EventRejectedEmail"
+import VerificationApprovedEmail from "@/emails/VerificationApprovedEmail"
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -192,6 +193,38 @@ export async function sendEventApprovedEmail(
         return { success: true, messageId: data?.id }
     } catch (err) {
         console.error("Error sending event approved email:", err)
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Unknown error",
+        }
+    }
+}
+
+/**
+ * Send an owner verification approval notification email
+ */
+export async function sendVerificationApprovedEmail(
+    to: string,
+    cafeName: string,
+    cafeSlug: string,
+    ownerName?: string
+) {
+    try {
+        const { data, error } = await resend.emails.send({
+            from: FROM_EMAIL,
+            to,
+            subject: `Your ownership verification for "${cafeName}" was approved`,
+            react: VerificationApprovedEmail({ cafeName, cafeSlug, ownerName }),
+        })
+
+        if (error) {
+            console.error("Failed to send verification approved email:", error)
+            return { success: false, error: error.message }
+        }
+
+        return { success: true, messageId: data?.id }
+    } catch (err) {
+        console.error("Error sending verification approved email:", err)
         return {
             success: false,
             error: err instanceof Error ? err.message : "Unknown error",

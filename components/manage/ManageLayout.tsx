@@ -10,6 +10,7 @@ import {
     LayoutDashboard,
     BarChart3,
     ShieldCheck,
+    ClipboardCheck,
     Activity,
 } from "lucide-react"
 
@@ -40,6 +41,11 @@ const navItems: NavItem[] = [
         name: "Moderation",
         href: "/manage/moderation",
         icon: <ShieldCheck className='w-5 h-5' />,
+    },
+    {
+        name: "Verifications",
+        href: "/manage/verifications",
+        icon: <ClipboardCheck className='w-5 h-5' />,
     },
     {
         name: "Content",

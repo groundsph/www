@@ -1,0 +1,129 @@
+import {
+    Body,
+    Button,
+    Container,
+    Head,
+    Heading,
+    Hr,
+    Html,
+    Preview,
+    Section,
+    Text,
+    Tailwind,
+} from "@react-email/components"
+
+interface VerificationApprovedEmailProps {
+    cafeName: string
+    cafeSlug: string
+    ownerName?: string
+}
+
+const tailwindConfig = {
+    theme: {
+        extend: {
+            colors: {
+                primary: "#74512d",
+                secondary: "#af8f6f",
+                tertiary: "#f8f4e1",
+                background: "#f8f4e1",
+                text: "#543310",
+            },
+        },
+    },
+}
+
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
+
+export default function VerificationApprovedEmail({
+    cafeName,
+    cafeSlug,
+    ownerName,
+}: VerificationApprovedEmailProps) {
+    const cafeUrl = `${baseUrl}/cafes/${cafeSlug}`
+    const dashboardUrl = `${baseUrl}/owner`
+
+    return (
+        <Html>
+            <Preview>
+                {`Your ownership verification for "${cafeName}" was approved`}
+            </Preview>
+            <Tailwind config={tailwindConfig}>
+                <Head />
+                <Body className='bg-tertiary font-sans'>
+                    <Container className='mx-auto py-12 px-4 max-w-xl'>
+                        {/* Header */}
+                        <Section className='text-center mb-8'>
+                            <Heading className='text-4xl font-bold text-primary font-serif m-0'>
+                                GroundsPH
+                            </Heading>
+                        </Section>
+
+                        {/* Main Card */}
+                        <Section className='bg-white rounded-2xl p-8 shadow-lg'>
+                            <Heading className='text-2xl font-semibold text-text mt-0 mb-4'>
+                                Ownership Verification Approved
+                            </Heading>
+
+                            <Text className='text-text text-base leading-relaxed'>
+                                {ownerName ? `Hey ${ownerName},` : "Hello,"}
+                            </Text>
+
+                            <Text className='text-text text-base leading-relaxed'>
+                                Good news! Your ownership verification for{" "}
+                                <strong>{cafeName}</strong> has been reviewed and
+                                approved. You now manage this cafe on GroundsPH.
+                            </Text>
+
+                            <Text className='text-text text-base leading-relaxed'>
+                                As the manager of this listing, you can:
+                            </Text>
+
+                            <ul className='text-text text-base leading-relaxed'>
+                                <li>Update your cafe&apos;s information</li>
+                                <li>Respond to customer reviews</li>
+                                <li>Share your cafe&apos;s story</li>
+                            </ul>
+
+                            <Section className='text-center my-8'>
+                                <Button
+                                    href={dashboardUrl}
+                                    className='bg-primary text-white font-semibold py-3 px-6 rounded-lg no-underline'
+                                >
+                                    Go to Owner Dashboard
+                                </Button>
+                            </Section>
+
+                            <Section className='text-center mb-4'>
+                                <Button
+                                    href={cafeUrl}
+                                    className='bg-secondary text-white font-semibold py-2 px-4 rounded-lg no-underline text-sm'
+                                >
+                                    View Your Cafe
+                                </Button>
+                            </Section>
+
+                            <Text className='text-secondary text-sm'>
+                                Thanks for helping keep GroundsPH listings accurate
+                                and owner-run.
+                            </Text>
+                        </Section>
+
+                        {/* Footer */}
+                        <Section className='text-center mt-8'>
+                            <Hr className='border-secondary my-6' />
+                            <Text className='text-secondary text-sm m-0'>
+                                © {new Date().getFullYear()} GroundsPH. All rights
+                                reserved.
+                            </Text>
+                            <Text className='text-secondary text-xs mt-2'>
+                                You received this email because you submitted an
+                                ownership verification request for a cafe on
+                                GroundsPH.
+                            </Text>
+                        </Section>
+                    </Container>
+                </Body>
+            </Tailwind>
+        </Html>
+    )
+}

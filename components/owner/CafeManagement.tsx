@@ -65,6 +65,7 @@ import {
 } from "@/app/api/actions/inventory"
 import type { InventoryStats, InventoryItem } from "@/utils/types/inventory"
 import InventoryDashboard from "./InventoryDashboard"
+import VerificationPanel from "./VerificationPanel"
 import { isBadgeStampFileValid } from "@/utils/validation/badge-stamp"
 import { buildChartSeries, maxViewsOf } from "@/utils/analytics/series"
 import { uploadCafeBadgeStamp } from "@/utils/storage/client"
@@ -2314,6 +2315,15 @@ export default function CafeManagement({
                                     edit it directly or contact us.
                                 </p>
                             </div>
+
+                            {/* Ownership verification lives next to the other
+                                staff-controlled states: it is a request to
+                                GroundsPH staff, not an editable listing field,
+                                so it does not belong in the detail editor. */}
+                            <VerificationPanel
+                                cafeId={cafe.id}
+                                cafeName={cafe.name}
+                            />
                         </motion.div>
                     )}
                 </AnimatePresence>
