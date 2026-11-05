@@ -12,6 +12,7 @@ import {
     FileText,
     Trash2,
 } from "lucide-react"
+import Link from "next/link"
 import { submitCafeClaim } from "@/app/api/actions/claim"
 import { uploadOwnershipProofWithProgress } from "@/utils/storage/client"
 import { useHaptics } from "@/hooks/useHaptics"
@@ -197,7 +198,14 @@ export default function ClaimCafeModal({
                                             the owner or an authorized
                                             representative. It is completely
                                             free to claim and manage your
-                                            business on Grounds.
+                                            business on Grounds.{" "}
+                                            <Link
+                                                href='/for-owners'
+                                                className='font-medium text-primary hover:underline'
+                                            >
+                                                See everything you get
+                                            </Link>
+                                            .
                                         </p>
 
                                         <label className='block text-sm font-medium mb-2'>

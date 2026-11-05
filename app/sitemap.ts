@@ -70,6 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             // Community pages
             { path: "/community", changeFrequency: "daily", priority: 0.8 },
             { path: "/submit", changeFrequency: "monthly", priority: 0.6 },
+            { path: "/for-owners", changeFrequency: "monthly", priority: 0.6 },
             { path: "/donate", changeFrequency: "monthly", priority: 0.5 },
             { path: "/contact", changeFrequency: "monthly", priority: 0.5 },
             { path: "/roadmap", changeFrequency: "monthly", priority: 0.5 },

@@ -113,6 +113,12 @@ export default function Footer() {
                                 Submit a Cafe
                             </Link>
                             <Link
+                                href='/for-owners'
+                                className='text-background/80 hover:text-background transition-colors text-sm'
+                            >
+                                For Cafe Owners
+                            </Link>
+                            <Link
                                 href='/auth'
                                 className='text-background/80 hover:text-background transition-colors text-sm'
                             >
