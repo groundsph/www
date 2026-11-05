@@ -1572,3 +1572,19 @@ describe("Discount Actions", () => {
     })
   })
 })
+
+import * as discountModule from "@/app/api/actions/discount"
+
+describe("dead voucher surface is gone", () => {
+    it("no longer exports issueVoucherToUser", () => {
+        expect(
+            (discountModule as Record<string, unknown>).issueVoucherToUser
+        ).toBeUndefined()
+    })
+
+    it("no longer exports getOwnerCampaigns", () => {
+        expect(
+            (discountModule as Record<string, unknown>).getOwnerCampaigns
+        ).toBeUndefined()
+    })
+})

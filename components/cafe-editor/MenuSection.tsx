@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Coffee, Pencil, Trash2, Users, AlertCircle } from "lucide-react"
+import { Coffee, Pencil, Trash2, Users } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
 import { UseMenuItemsReturn } from "@/utils/hooks/useMenuItems"
 import MenuOcrScanButton from "@/components/suggestions/MenuOcrScanButton"
 
@@ -12,7 +11,6 @@ type FilterType = "all" | "coffee" | "food" | "cold" | "hot" | "vegan"
 interface MenuSectionProps {
     menu: UseMenuItemsReturn
     colorScheme?: "primary" | "accent"
-    pendingSuggestionsCount?: number
     cafeId: string
     cafeName: string
     cafeSlug?: string
@@ -21,7 +19,6 @@ interface MenuSectionProps {
 export default function MenuSection({
     menu,
     colorScheme = "primary",
-    pendingSuggestionsCount = 0,
     cafeId,
     cafeName,
     cafeSlug,
@@ -67,24 +64,6 @@ export default function MenuSection({
 
     return (
         <div className='space-y-6 [&_button]:cursor-pointer'>
-            {/* Pending Suggestions Notice */}
-            {pendingSuggestionsCount > 0 && (
-                <Link
-                    href={cafeSlug ? `/cafes/${cafeSlug}/suggestions` : "#"}
-                    className='flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors'
-                >
-                    <AlertCircle className='w-5 h-5 text-amber-600 shrink-0' />
-                    <div className='flex-1'>
-                        <p className='font-medium text-amber-800'>
-                            {pendingSuggestionsCount} community menu suggestion{pendingSuggestionsCount !== 1 ? "s" : ""} pending review
-                        </p>
-                        <p className='text-sm text-amber-700/70'>
-                            Click to review and approve or reject suggestions
-                        </p>
-                    </div>
-                </Link>
-            )}
-
             {/* Filters */}
             <div className='flex flex-wrap gap-2'>
                 {filterPills.map((filter) => (

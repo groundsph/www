@@ -32,6 +32,7 @@ import { revalidatePath } from "next/cache"
 import { logSystemAction } from "./system-logs"
 import { parseCafeImagesPatch } from "@/utils/validation/cafe-images"
 import { recalculatePriceLevel } from "./price-level"
+import { isOwnerEditableField } from "@/utils/owner/owner-editable-fields"
 
 // ============================================
 // Permission Checks
@@ -313,6 +314,26 @@ export async function updateCafeAsOwner(
         return { success: false, error: 'Not authorized to edit this cafe' }
     }
 
+    // SECURITY: `updates` arrives from the client and the TypeScript signature
+    // disappears at runtime. Without this check, `fieldMap[key] || key` writes
+    // any column of that name — including isVerified, isClaimed, isPublished
+    // and ownerIds. Reject unknown keys loudly rather than dropping them
+    // silently, which would surface as "I saved it and nothing happened".
+    const rejectedKeys = Object.entries(updates)
+        .filter(([key, value]) => value !== undefined && !isOwnerEditableField(key))
+        .map(([key]) => key)
+
+    if (rejectedKeys.length > 0) {
+        console.error(
+            '[updateCafeAsOwner] rejected non-editable fields:',
+            rejectedKeys
+        )
+        return {
+            success: false,
+            error: `Cannot update ${rejectedKeys.join(', ')}`,
+        }
+    }
+
     const user = await getCurrentUser()
 
     // Fetch current cafe data for change detection
@@ -368,7 +389,7 @@ export async function updateCafeAsOwner(
 
     for (const [key, value] of Object.entries(updates)) {
         if (value !== undefined) {
-            const drizzleKey = fieldMap[key] || key
+            const drizzleKey = fieldMap[key] ?? key
             // Payment methods arrive as free text from several surfaces, so keep
             // the stored vocabulary canonical at this single write funnel.
             drizzleUpdates[drizzleKey] =
@@ -1267,9 +1288,12 @@ export async function setCafeBadgeStamp(
             })
             .where(eq(cafes.id, cafeId))
 
-        // Revalidate the cafe profile and public pages
-        revalidatePath(`/cafe/[slug]`, 'page')
-        revalidatePath(`/owner/cafe/${cafeId}`, 'page')
+        // Real routes only: the public cafe page is /cafes/[slug] (plural) and
+        // the owner editor is /owner/cafes/[slug]/edit. The previous targets
+        // did not exist, so the stamp change stayed stale in the cache.
+        revalidatePath('/cafes/[slug]', 'page')
+        revalidatePath('/owner/cafes/[slug]/edit', 'page')
+        revalidatePath('/owner/cafes')
         revalidatePath('/owner', 'page')
     } catch (error) {
         console.error('Error setting badge stamp:', error)
@@ -1298,9 +1322,12 @@ export async function removeCafeBadgeStamp(
             })
             .where(eq(cafes.id, cafeId))
 
-        // Revalidate the cafe profile and public pages
-        revalidatePath(`/cafe/[slug]`, 'page')
-        revalidatePath(`/owner/cafe/${cafeId}`, 'page')
+        // Real routes only: the public cafe page is /cafes/[slug] (plural) and
+        // the owner editor is /owner/cafes/[slug]/edit. The previous targets
+        // did not exist, so the stamp change stayed stale in the cache.
+        revalidatePath('/cafes/[slug]', 'page')
+        revalidatePath('/owner/cafes/[slug]/edit', 'page')
+        revalidatePath('/owner/cafes')
         revalidatePath('/owner', 'page')
     } catch (error) {
         console.error('Error removing badge stamp:', error)

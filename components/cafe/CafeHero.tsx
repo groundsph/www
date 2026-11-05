@@ -2,6 +2,7 @@
 
 import { CafeWithRatings } from "@/utils/types/extra"
 import Image from "next/image"
+import Link from "next/link"
 import { motion } from "motion/react"
 import {
     Heart,
@@ -538,6 +539,25 @@ export default function CafeHero({
                                 </button>
                             </motion.div>
                         )}
+
+                    {/* Anonymous visitors get no claim button (the modal needs a
+                        session), so route them to the benefits page instead. */}
+                    {!cafe.is_claimed && !user && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5, delay: 0.28 }}
+                            className='mt-4'
+                        >
+                            <Link
+                                href='/for-owners'
+                                className='inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg text-sm font-medium hover:bg-white/20 transition-all'
+                            >
+                                <Store className='w-4 h-4' aria-hidden='true' />
+                                Own this cafe? See what you get
+                            </Link>
+                        </motion.div>
+                    )}
                 </div>
             </div>
         </section>

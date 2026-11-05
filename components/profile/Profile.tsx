@@ -989,6 +989,12 @@ export default function Profile() {
                                 <Store className='w-4 h-4' />
                                 Go to Owner Dashboard
                             </Link>
+                            <Link
+                                href='/for-owners'
+                                className='mt-2 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:underline'
+                            >
+                                What owner tools include
+                            </Link>
                         </div>
                     </motion.section>
                 )}

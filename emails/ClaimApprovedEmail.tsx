@@ -70,20 +70,19 @@ export default function ClaimApprovedEmail({
 
                             <Text className='text-text text-base leading-relaxed'>
                                 Great news! Your ownership claim for{" "}
-                                <strong>{cafeName}</strong> has been verified
+                                <strong>{cafeName}</strong> has been reviewed
                                 and approved. You now have full access to manage
                                 your cafe&apos;s listing on GroundsPH!
                             </Text>
 
                             <Text className='text-text text-base leading-relaxed'>
-                                As a verified owner, you can:
+                                As the owner, you can:
                             </Text>
 
                             <ul className='text-text text-base leading-relaxed'>
                                 <li>Update your cafe&apos;s information</li>
                                 <li>Respond to customer reviews</li>
                                 <li>Share your cafe&apos;s story</li>
-                                <li>Get a verified badge on your listing</li>
                             </ul>
 
                             <Section className='text-center my-8'>

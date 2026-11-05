@@ -88,6 +88,12 @@ export default function OwnerDashboard({
                         Browse Cafes to Claim
                     </Link>
                 </div>
+                <Link
+                    href='/for-owners'
+                    className='inline-block mt-4 text-sm font-medium text-primary hover:underline'
+                >
+                    See everything owner tools include
+                </Link>
             </motion.div>
         )
     }

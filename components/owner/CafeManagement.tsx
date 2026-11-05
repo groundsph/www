@@ -66,6 +66,7 @@ import {
 import type { InventoryStats, InventoryItem } from "@/utils/types/inventory"
 import InventoryDashboard from "./InventoryDashboard"
 import { isBadgeStampFileValid } from "@/utils/validation/badge-stamp"
+import { buildChartSeries, maxViewsOf } from "@/utils/analytics/series"
 import { uploadCafeBadgeStamp } from "@/utils/storage/client"
 import {
     setCafeBadgeStamp,
@@ -74,6 +75,7 @@ import {
 import {
     getPendingMenuItemSuggestionsCount,
 } from "@/app/api/actions/menu-suggestions"
+import { exportCafeAnalyticsCSV } from "@/app/api/actions/analytics"
 
 interface CafeManagementProps {
     cafe: CafeWithRatings
@@ -432,6 +434,36 @@ export default function CafeManagement({
         }
     }
 
+    // Export the window the period selector is currently showing.
+    //
+    // The anchor is attached to the document before `.click()`: a detached
+    // anchor's click is a no-op in some browsers. The object URL is revoked
+    // only after the click is dispatched, so repeated exports don't pin blobs
+    // in memory. Failures go through the notification channel this component
+    // already uses for every other action failure.
+    const handleExportAnalytics = async () => {
+        const result = await exportCafeAnalyticsCSV(cafe.id, analyticsPeriod)
+        if (!result.success || !result.data) {
+            addNotification(
+                result.error || "Failed to export analytics",
+                "error",
+            )
+            return
+        }
+
+        const blob = new Blob([result.data.csv], {
+            type: "text/csv;charset=utf-8",
+        })
+        const url = URL.createObjectURL(blob)
+        const anchor = document.createElement("a")
+        anchor.href = url
+        anchor.download = result.data.filename
+        document.body.appendChild(anchor)
+        anchor.click()
+        document.body.removeChild(anchor)
+        URL.revokeObjectURL(url)
+    }
+
     // Load inventory stats for this cafe
     const loadInventory = async () => {
         setInventoryLoading(true)
@@ -501,6 +533,16 @@ export default function CafeManagement({
             )
         }
     }
+
+    // Analytics chart series. Computed once per render -- never inside the
+    // `.map()` -- so the bars are normalised against the series that is
+    // actually drawn. `buildChartSeries` buckets 90d into weeks; the daily
+    // points would be sub-pixel at chart width. Guarded on `analytics`
+    // because the state is null until the tab's data loads.
+    const chartSeries = analytics
+        ? buildChartSeries(analytics.viewsByDay, analyticsPeriod)
+        : []
+    const chartMaxViews = maxViewsOf(chartSeries)
 
     const tabs = [
         { id: "overview" as Tab, label: "Overview", icon: Building2 },
@@ -631,9 +673,10 @@ export default function CafeManagement({
                                     </h3>
                                 </div>
                                 <p className='text-text/60 mb-4'>
-                                    Upload a custom badge stamp to display on
-                                    your cafe page. This is shown as a mark of
-                                    authenticity.
+                                    Upload a custom stamp for your cafe. Visitors
+                                    who check in collect it in their Passport as
+                                    a mark of authenticity. It is not shown on
+                                    your public cafe page.
                                 </p>
 
                                 <div className='flex items-center gap-4'>
@@ -1783,7 +1826,7 @@ export default function CafeManagement({
                                 <h2 className='text-lg font-semibold'>
                                     Page Analytics
                                 </h2>
-                                <div className='flex gap-2'>
+                                <div className='flex items-center gap-2'>
                                     {([7, 30, 90] as const).map((days) => (
                                         <button
                                             key={days}
@@ -1800,6 +1843,13 @@ export default function CafeManagement({
                                             {days}d
                                         </button>
                                     ))}
+                                    <button
+                                        onClick={handleExportAnalytics}
+                                        className='flex items-center gap-2 px-3 py-2 bg-text/5 hover:bg-text/10 rounded-lg text-sm font-medium transition-colors'
+                                    >
+                                        <Download className='w-4 h-4' />
+                                        Download CSV
+                                    </button>
                                 </div>
                             </div>
 
@@ -1859,67 +1909,57 @@ export default function CafeManagement({
                                             Views Trend
                                         </h3>
                                         <div className='h-40 flex items-end gap-1'>
-                                            {analytics.viewsByDay
-                                                .slice(
-                                                    -Math.min(
-                                                        analyticsPeriod,
-                                                        30,
-                                                    ),
-                                                )
-                                                .map((day) => {
-                                                    const maxViews = Math.max(
-                                                        ...analytics.viewsByDay.map(
-                                                            (d) => d.views,
-                                                        ),
-                                                        1,
-                                                    )
-                                                    const height =
-                                                        (day.views / maxViews) *
-                                                        100
-                                                    return (
+                                            {chartSeries.map((point) => {
+                                                const height =
+                                                    (point.views /
+                                                        chartMaxViews) *
+                                                    100
+                                                return (
+                                                    <div
+                                                        key={point.label}
+                                                        className='flex-1 relative group'
+                                                        title={`${analyticsPeriod === 90 ? "Week of " : ""}${point.label}: ${point.views} views`}
+                                                    >
                                                         <div
-                                                            key={day.date}
-                                                            className='flex-1 relative group'
-                                                            title={`${day.date}: ${day.views} views`}
-                                                        >
-                                                            <div
-                                                                className='bg-primary/70 hover:bg-primary rounded-t transition-all'
-                                                                style={{
-                                                                    height: `${Math.max(height, 2)}%`,
-                                                                }}
-                                                            />
-                                                            <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-text text-background text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
-                                                                {new Date(
-                                                                    day.date,
-                                                                ).toLocaleDateString(
-                                                                    "en-US",
-                                                                    {
-                                                                        month: "short",
-                                                                        day: "numeric",
-                                                                    },
-                                                                )}
-                                                                : {day.views}{" "}
-                                                                views
-                                                            </div>
+                                                            className='bg-primary/70 hover:bg-primary rounded-t transition-all'
+                                                            style={{
+                                                                height: `${Math.max(height, 2)}%`,
+                                                            }}
+                                                        />
+                                                        <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-text text-background text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+                                                            {new Date(
+                                                                point.label,
+                                                            ).toLocaleDateString(
+                                                                "en-US",
+                                                                {
+                                                                    month: "short",
+                                                                    day: "numeric",
+                                                                },
+                                                            )}
+                                                            : {point.views}{" "}
+                                                            {analyticsPeriod ===
+                                                            90
+                                                                ? "views that week"
+                                                                : "views"}
                                                         </div>
-                                                    )
-                                                })}
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                         <div className='flex justify-between text-xs text-text/40 mt-2'>
                                             <span>
                                                 {new Date(
-                                                    analytics.viewsByDay[
-                                                        Math.max(
-                                                            0,
-                                                            analytics.viewsByDay
-                                                                .length -
-                                                                analyticsPeriod,
-                                                        )
-                                                    ]?.date || "",
+                                                    chartSeries[0]?.label ||
+                                                        "",
                                                 ).toLocaleDateString("en-US", {
                                                     month: "short",
                                                     day: "numeric",
                                                 })}
+                                            </span>
+                                            <span className='text-text/50'>
+                                                {analyticsPeriod === 90
+                                                    ? "Views per week"
+                                                    : "Views per day"}
                                             </span>
                                             <span>Today</span>
                                         </div>
@@ -2260,18 +2300,19 @@ export default function CafeManagement({
                                 </Link>
                             </div>
 
-                            {/* Danger Zone */}
-                            <div className='p-6 bg-red-50 rounded-xl border border-red-200'>
-                                <h3 className='font-semibold text-red-700 mb-2'>
-                                    Danger Zone
+                            {/* Listing visibility — informational, not destructive.
+                                Owners cannot unpublish or remove a listing; that
+                                stays with GroundsPH staff. The previous card
+                                promised a removal button that was never wired. */}
+                            <div className='p-6 bg-text/5 rounded-xl border border-text/10'>
+                                <h3 className='font-semibold mb-2'>
+                                    Listing visibility
                                 </h3>
-                                <p className='text-red-600/80 text-sm mb-4'>
-                                    Once you remove yourself as owner,
-                                    you&apos;ll lose access to manage this cafe.
+                                <p className='text-text/60 text-sm'>
+                                    Only GroundsPH staff can unpublish or remove
+                                    a listing. To correct something on your page,
+                                    edit it directly or contact us.
                                 </p>
-                                <button className='px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors'>
-                                    Remove My Ownership
-                                </button>
                             </div>
                         </motion.div>
                     )}

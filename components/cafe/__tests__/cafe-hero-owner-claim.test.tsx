@@ -159,14 +159,16 @@ describe("CafeHero claim button", () => {
     })
 
     it("hides claim button when no user", () => {
-        const { queryByText } = render(
+        const { queryByRole } = render(
             <CafeHero
                 cafe={{ ...baseCafe, is_claimed: false, owner_ids: null }}
                 {...baseProps}
                 user={null}
             />
         )
-        expect(queryByText(/Own this cafe/i)).toBeNull()
+        // Scoped to the claim *button*: logged-out visitors now get a
+        // "See what you get" link in the same slot (see the suite below).
+        expect(queryByRole("button", { name: /Own this cafe\? Claim it/i })).toBeNull()
     })
 
     it("hides claim button when no onOpenClaim handler", () => {
@@ -178,5 +180,29 @@ describe("CafeHero claim button", () => {
             />
         )
         expect(queryByText(/Own this cafe/i)).toBeNull()
+    })
+})
+
+describe("CafeHero — anonymous owner entry point", () => {
+    it("shows a benefits link to a logged-out visitor on an unclaimed cafe", () => {
+        const { container } = render(
+            <CafeHero {...baseProps} user={null} cafe={{ ...baseCafe, is_claimed: false }} />
+        )
+        const link = container.querySelector('a[href="/for-owners"]')
+        expect(link).toBeTruthy()
+    })
+
+    it("still hides the claim button when logged out", () => {
+        const { container } = render(
+            <CafeHero {...baseProps} user={null} cafe={{ ...baseCafe, is_claimed: false }} />
+        )
+        expect(container.textContent).not.toContain("Own this cafe? Claim it")
+    })
+
+    it("does not show the benefits link on an already-claimed cafe", () => {
+        const { container } = render(
+            <CafeHero {...baseProps} user={null} cafe={{ ...baseCafe, is_claimed: true }} />
+        )
+        expect(container.querySelector('a[href="/for-owners"]')).toBeNull()
     })
 })

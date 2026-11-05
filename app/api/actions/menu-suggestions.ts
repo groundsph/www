@@ -69,6 +69,18 @@ export async function getMenuItemSuggestionsForCafe(cafeId: string) {
     const user = await getCurrentUser()
     if (!user) return []
 
+    // Suggestions are cafe-scoped moderation data. Only the cafe's own owners
+    // may read the payload; everyone else gets the same empty result as an
+    // anonymous visitor so the response does not disclose that the cafe exists.
+    const ownerCheckResult = await db
+        .select({ ownerIds: cafes.ownerIds })
+        .from(cafes)
+        .where(eq(cafes.id, cafeId))
+        .limit(1)
+
+    const ownsCafe = ownerCheckResult[0]?.ownerIds?.includes(user.id) ?? false
+    if (!ownsCafe) return []
+
     return db
         .select()
         .from(menuItemSuggestions)

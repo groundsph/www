@@ -68,6 +68,7 @@ const SuggestMenuItemModal = dynamic(
 // Hooks
 import { useCafeActions } from "@/hooks/useCafeActions"
 import { trackCafePageView } from "@/utils/analytics"
+import { formatCafeStrawType } from "@/utils/formatters"
 import { useAuth } from "@/components/layout/AuthProvider"
 
 export interface Review {
@@ -301,6 +302,10 @@ export default function CafeDetails({
     // Computed
     const story = cafe.story
     const gallery = useMemo(() => cafe.gallery ?? [], [cafe.gallery])
+    // Null when the cafe records no straw type, so no empty pill is rendered
+    const strawLabel = cafe.straw_type
+        ? formatCafeStrawType(cafe.straw_type, cafe.straw_type_other ?? null)
+        : null
 
     // Find if user has reviewed
     const userReview = user
@@ -759,6 +764,7 @@ export default function CafeDetails({
                         cafe.has_decaf ||
                         cafe.is_work_friendly ||
                         cafe.is_halal_certified ||
+                        cafe.straw_type ||
                         cafe.has_smoking ||
                         cafe.serves_food ||
                         (cafe.brew_methods && cafe.brew_methods.length > 0) ||
@@ -869,6 +875,14 @@ export default function CafeDetails({
                                     )}
                                     {cafe.is_halal_certified && (
                                         <AmenityPill label='Halal Certified' />
+                                    )}
+                                    {strawLabel && (
+                                        <AmenityPill
+                                            icon={
+                                                <Droplet className='w-3.5 h-3.5' />
+                                            }
+                                            label={strawLabel}
+                                        />
                                     )}
                                     {cafe.has_smoking && (
                                         <AmenityPill

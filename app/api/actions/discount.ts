@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/db"
-import { discountCampaigns, discountVouchers, voucherRedemptionLogs, cafes, profiles } from "@/db/schema"
+import { discountCampaigns, discountVouchers, voucherRedemptionLogs, cafes } from "@/db/schema"
 import { eq, and, desc, sql, inArray, lt, gt } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
@@ -12,14 +12,12 @@ import {
   claimVoucherSchema,
   claimVoucherByCodeSchema,
   redeemVoucherSchema,
-  issueVoucherToUserSchema,
   type CreateCampaignInput,
   type UpdateCampaignInput,
   type GenerateVouchersInput,
   type ClaimVoucherInput,
   type ClaimVoucherByCodeInput,
   type RedeemVoucherInput,
-  type IssueVoucherToUserInput,
   type CampaignFiltersInput,
 } from "@/utils/validation/discount"
 import type {
@@ -497,90 +495,6 @@ export async function generateVouchers(
   } catch (error) {
     console.error("[generateVouchers] Error:", error)
     return { success: false, error: "Failed to generate vouchers" }
-  }
-}
-
-/**
- * Issue a voucher directly to a specific user
- */
-export async function issueVoucherToUser(
-  input: IssueVoucherToUserInput
-): Promise<ActionResult<{ voucher: { id: string; code: string } }>> {
-  const currentUser = await getCurrentUser()
-  if (!currentUser) return { success: false, error: "Not authenticated" }
-
-  const validationResult = issueVoucherToUserSchema.safeParse(input)
-  if (!validationResult.success) {
-    return { success: false, error: "Invalid input: " + validationResult.error.message }
-  }
-
-  try {
-    const [campaign] = await db
-      .select()
-      .from(discountCampaigns)
-      .where(eq(discountCampaigns.id, input.campaignId))
-      .limit(1)
-
-    if (!campaign) return { success: false, error: "Campaign not found" }
-
-    const isOwner = await checkCafeOwnership(campaign.cafeId, currentUser.id)
-    if (!isOwner) return { success: false, error: "Not authorized" }
-
-    // Check that target user exists
-    const [targetUser] = await db
-      .select({ id: profiles.id })
-      .from(profiles)
-      .where(eq(profiles.id, input.userId))
-      .limit(1)
-
-    if (!targetUser) return { success: false, error: "Target user not found" }
-
-    // Check max per user
-    const [userVoucherCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(discountVouchers)
-      .where(
-        and(
-          eq(discountVouchers.campaignId, input.campaignId),
-          eq(discountVouchers.userId, input.userId),
-          sql`${discountVouchers.status} IN ('claimed', 'available')`
-        )
-      )
-
-    if (campaign.maxPerUser && (userVoucherCount?.count ?? 0) >= campaign.maxPerUser) {
-      return { success: false, error: "User has reached the maximum vouchers for this campaign" }
-    }
-
-    // Check total capacity
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(discountVouchers)
-      .where(eq(discountVouchers.campaignId, input.campaignId))
-
-    if ((totalResult?.count ?? 0) >= campaign.maxRedemptions) {
-      return { success: false, error: "Campaign has reached maximum redemptions" }
-    }
-
-    const code = generateVoucherCode(campaign.codePrefix ?? "GROUNDS")
-
-    const [voucher] = await db
-      .insert(discountVouchers)
-      .values({
-        campaignId: campaign.id,
-        code,
-        userId: input.userId,
-        status: "claimed",
-        claimedAt: new Date(),
-        expiresAt: campaign.endDate,
-      })
-      .returning({ id: discountVouchers.id, code: discountVouchers.code })
-
-    revalidatePath(`/owner/cafes/${campaign.cafeId}/discounts`)
-
-    return { success: true, data: { voucher: { id: voucher!.id, code: voucher!.code } } }
-  } catch (error) {
-    console.error("[issueVoucherToUser] Error:", error)
-    return { success: false, error: "Failed to issue voucher" }
   }
 }
 
@@ -1240,94 +1154,5 @@ export async function getRedemptionLogs(
   } catch (error) {
     console.error("[getRedemptionLogs] Error:", error)
     return { success: false, error: "Failed to fetch redemption logs" }
-  }
-}
-
-/**
- * Get all campaigns for owner dashboard (across all owned cafes)
- */
-export async function getOwnerCampaigns(): Promise<ActionResult<{ campaigns: DiscountCampaign[] }>> {
-  const currentUser = await getCurrentUser()
-  if (!currentUser) return { success: false, error: "Not authenticated" }
-
-  try {
-    // Get all cafes owned by user
-    const ownedCafes = await db
-      .select({ id: cafes.id })
-      .from(cafes)
-      .where(sql`${cafes.ownerIds} @> ARRAY[${currentUser.id}]::uuid[]`)
-
-    if (ownedCafes.length === 0) return { success: true, data: { campaigns: [] } }
-
-    const cafeIds = ownedCafes.map((c) => c.id)
-
-    const campaigns = await db
-      .select({
-        id: discountCampaigns.id,
-        cafeId: discountCampaigns.cafeId,
-        name: discountCampaigns.name,
-        description: discountCampaigns.description,
-        discountType: discountCampaigns.discountType,
-        discountValue: discountCampaigns.discountValue,
-        freeItemName: discountCampaigns.freeItemName,
-        freeItemDescription: discountCampaigns.freeItemDescription,
-        maxRedemptions: discountCampaigns.maxRedemptions,
-        currentRedemptions: discountCampaigns.currentRedemptions,
-        maxPerUser: discountCampaigns.maxPerUser,
-        minPurchaseAmount: discountCampaigns.minPurchaseAmount,
-        codePrefix: discountCampaigns.codePrefix,
-        startDate: discountCampaigns.startDate,
-        endDate: discountCampaigns.endDate,
-        status: discountCampaigns.status,
-        isPublic: discountCampaigns.isPublic,
-        qrCodeEnabled: discountCampaigns.qrCodeEnabled,
-        termsAndConditions: discountCampaigns.termsAndConditions,
-        imageUrl: discountCampaigns.imageUrl,
-        createdBy: discountCampaigns.createdBy,
-        createdAt: discountCampaigns.createdAt,
-        updatedAt: discountCampaigns.updatedAt,
-        cafeName: cafes.name,
-        cafeSlug: cafes.slug,
-        cafeThumbnail: cafes.thumbnail,
-      })
-      .from(discountCampaigns)
-      .innerJoin(cafes, eq(discountCampaigns.cafeId, cafes.id))
-      .where(inArray(discountCampaigns.cafeId, cafeIds))
-      .orderBy(desc(discountCampaigns.createdAt))
-
-    const serialized: DiscountCampaign[] = campaigns.map((c) => ({
-      id: c.id,
-      cafeId: c.cafeId,
-      name: c.name,
-      description: c.description,
-      discountType: c.discountType as "percentage" | "fixed_amount" | "free_item",
-      discountValue: c.discountValue,
-      freeItemName: c.freeItemName,
-      freeItemDescription: c.freeItemDescription,
-      maxRedemptions: c.maxRedemptions,
-      currentRedemptions: c.currentRedemptions ?? 0,
-      maxPerUser: c.maxPerUser,
-      minPurchaseAmount: c.minPurchaseAmount,
-      codePrefix: c.codePrefix ?? "GROUNDS",
-      startDate: c.startDate?.toISOString() ?? "",
-      endDate: c.endDate?.toISOString() ?? "",
-      status: c.status as DiscountCampaign["status"],
-      isPublic: c.isPublic ?? true,
-      qrCodeEnabled: c.qrCodeEnabled ?? true,
-      termsAndConditions: c.termsAndConditions,
-      imageUrl: c.imageUrl,
-      createdBy: c.createdBy,
-      createdAt: c.createdAt?.toISOString() ?? "",
-      updatedAt: c.updatedAt?.toISOString() ?? "",
-      cafeName: c.cafeName,
-      cafeSlug: c.cafeSlug,
-      // DiscountCampaign models a missing cafe thumbnail as optional, not as the placeholder sentinel
-      cafeThumbnail: c.cafeThumbnail ?? undefined,
-    }))
-
-    return { success: true, data: { campaigns: serialized } }
-  } catch (error) {
-    console.error("[getOwnerCampaigns] Error:", error)
-    return { success: false, error: "Failed to fetch campaigns" }
   }
 }

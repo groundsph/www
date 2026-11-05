@@ -171,3 +171,63 @@ export async function getCafeAnalytics(
         topReferrers,
     }
 }
+
+interface AnalyticsExportResult<T = unknown> {
+    success: boolean
+    error?: string
+    data?: T
+}
+
+const EXPORT_PERIODS = [7, 30, 90] as const
+
+/**
+ * Export page analytics as CSV.
+ *
+ * Rows are always daily for the full period — the chart bucketing in
+ * `utils/analytics/series.ts` is presentational. Per-day unique visitors come
+ * from a server-side visitor-ID set and cannot be re-aggregated into weeks
+ * without re-querying raw views, so the export reports ground truth.
+ *
+ * Authorization is delegated to `getCafeAnalytics`, which returns `null` for
+ * unauthenticated callers and non-owners. Do not add a second ownership check
+ * here: two gates would drift.
+ */
+export async function exportCafeAnalyticsCSV(
+    cafeId: string,
+    days: 7 | 30 | 90
+): Promise<AnalyticsExportResult<{ csv: string; filename: string }>> {
+    if (!EXPORT_PERIODS.includes(days)) {
+        return { success: false, error: "Invalid period" }
+    }
+
+    const analytics = await getCafeAnalytics(cafeId, days)
+    if (!analytics) {
+        return { success: false, error: "Not authorized" }
+    }
+
+    const escapeCsv = (value: string | number) => {
+        const text = String(value)
+        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+    }
+
+    // `getCafeAnalytics` zero-fills an inclusive range that starts `days` ago,
+    // so `viewsByDay` holds `days + 1` entries (8 for 7 days, 91 for 90). Trim
+    // to the window the chart actually draws (`buildChartSeries` also slices)
+    // so the export is exactly `days` rows instead of silently including a
+    // second partial day.
+    const window = analytics.viewsByDay.slice(-days)
+
+    const rows = window.map((point) =>
+        [point.date, point.views, point.uniqueVisitors]
+            .map(escapeCsv)
+            .join(",")
+    )
+
+    const csv = ["date,views,unique_visitors", ...rows].join("\n")
+    const today = new Date().toISOString().split("T")[0]
+
+    return {
+        success: true,
+        data: { csv, filename: `analytics-${cafeId}-${days}d-${today}.csv` },
+    }
+}

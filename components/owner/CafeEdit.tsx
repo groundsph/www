@@ -197,7 +197,7 @@ export default function CafeEdit({
                 header={
                     <EditorHeader
                         title={`Edit ${cafe.name}`}
-                        subtitle='Update your cafe information'
+                        subtitle='Update your cafe information. Only GroundsPH staff can unpublish or remove a listing.'
                         chips={[
                             {
                                 label: cafe.is_published ? "Published" : "Pending review",

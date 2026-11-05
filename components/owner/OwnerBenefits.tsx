@@ -27,12 +27,12 @@ export default function OwnerBenefits() {
                     className='absolute inset-0 pointer-events-none select-none overflow-hidden'
                     aria-hidden='true'
                 >
-                    <Coffee className='absolute -top-6 -right-6 w-48 h-48 text-primary/5 rotate-12' />
-                    <Store className='absolute -bottom-12 -left-12 w-64 h-64 text-accent/5 -rotate-12' />
+                    <Coffee className='absolute -top-6 -right-6 w-48 h-48 text-primary opacity-5 rotate-12' />
+                    <Store className='absolute -bottom-12 -left-12 w-64 h-64 text-accent opacity-5 -rotate-12' />
                     <div className='absolute top-1/4 right-1/4 w-32 h-32 bg-accent/5 rounded-full blur-3xl' />
                 </div>
 
-                <div className='max-w-5xl mx-auto px-4 relative z-10'>
+                <div className='max-w-7xl mx-auto px-4 relative z-10'>
                     <span className='inline-block px-3 py-1 mb-4 bg-background/50 backdrop-blur-sm border border-text/5 rounded-full text-xs font-medium text-text/60 uppercase tracking-wider'>
                         {HERO.eyebrow}
                     </span>
@@ -67,7 +67,7 @@ export default function OwnerBenefits() {
 
             {/* Free pillars */}
             <section className='w-full py-16 px-4'>
-                <div className='max-w-5xl mx-auto'>
+                <div className='max-w-7xl mx-auto'>
                     <h2 className='text-2xl md:text-3xl font-bold font-serif text-text'>
                         {FREE_PILLARS_HEADING}
                     </h2>
@@ -113,7 +113,7 @@ export default function OwnerBenefits() {
                             id={group.id}
                             className='w-full py-12 px-4'
                         >
-                            <div className='max-w-5xl mx-auto'>
+                            <div className='max-w-7xl mx-auto'>
                                 <div className='flex items-start gap-3 mb-6'>
                                     <div className={`p-2 rounded-xl ${group.accent}`}>
                                         <GroupIcon
@@ -197,7 +197,7 @@ export default function OwnerBenefits() {
 
             {/* Included from day one */}
             <section className='w-full py-16 px-4'>
-                <div className='max-w-5xl mx-auto'>
+                <div className='max-w-7xl mx-auto'>
                     <h2 className='text-2xl md:text-3xl font-bold font-serif text-text mb-8'>
                         {INCLUDED_HEADING}
                     </h2>
@@ -289,7 +289,7 @@ export default function OwnerBenefits() {
 
             {/* Legal footnote */}
             <footer className='w-full py-8 px-4'>
-                <p className='max-w-5xl mx-auto text-text/50 text-xs leading-relaxed'>
+                <p className='max-w-7xl mx-auto text-text/50 text-xs leading-relaxed'>
                     Claiming a cafe is subject to our{" "}
                     <Link
                         href='/legal/terms'

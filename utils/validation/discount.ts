@@ -78,11 +78,6 @@ export const redeemVoucherSchema = z.object({
   notes: z.string().max(500).optional(),
 })
 
-export const issueVoucherToUserSchema = z.object({
-  campaignId: z.string().uuid(),
-  userId: z.string().uuid(),
-})
-
 export const campaignFiltersSchema = z.object({
   status: z.enum(["draft", "active", "paused", "expired", "archived"]).optional(),
   search: z.string().optional(),
@@ -94,5 +89,4 @@ export type GenerateVouchersInput = z.infer<typeof generateVouchersSchema>
 export type ClaimVoucherInput = z.infer<typeof claimVoucherSchema>
 export type ClaimVoucherByCodeInput = z.infer<typeof claimVoucherByCodeSchema>
 export type RedeemVoucherInput = z.infer<typeof redeemVoucherSchema>
-export type IssueVoucherToUserInput = z.infer<typeof issueVoucherToUserSchema>
 export type CampaignFiltersInput = z.infer<typeof campaignFiltersSchema>
