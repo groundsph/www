@@ -78,7 +78,8 @@ export default function ClaimCafeModal({
             const response = await submitCafeClaim(
                 cafeId,
                 proofText.trim() || "Document attached",
-                proofUrl
+                proofUrl,
+                proofUrl ? [proofUrl] : undefined
             )
 
             if (response.success) {

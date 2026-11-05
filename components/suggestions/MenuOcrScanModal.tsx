@@ -16,9 +16,17 @@ import Link from "next/link"
 interface MenuOcrScanModalProps {
     isOpen: boolean
     onClose: () => void
-    cafeId: string
-    cafeName: string
-    cafeSlug: string
+    /** Omit when the cafe does not exist yet (new-cafe submission flow). */
+    cafeId?: string
+    cafeName?: string
+    cafeSlug?: string
+    /**
+     * "save" writes the scanned items straight to the cafe menu (needs cafeId).
+     * "collect" hands them back through onItemsExtracted so the caller can
+     * stage them (e.g. inside a not-yet-submitted cafe).
+     */
+    mode?: "save" | "collect"
+    onItemsExtracted?: (items: OcrMenuItem[]) => void
 }
 
 type Step = "upload" | "scanning" | "review" | "saving" | "done"
@@ -125,6 +133,8 @@ export default function MenuOcrScanModal({
     cafeId,
     cafeName,
     cafeSlug,
+    mode = "save",
+    onItemsExtracted,
 }: MenuOcrScanModalProps) {
     const [step, setStep] = useState<Step>("upload")
     const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -327,8 +337,6 @@ export default function MenuOcrScanModal({
     }
 
     const handleSave = async () => {
-        setStep("saving")
-
         const itemsToSave: OcrMenuItem[] = extractedItems.map((item) => ({
             name: item.name,
             category: item.category,
@@ -341,6 +349,20 @@ export default function MenuOcrScanModal({
             is_vegetarian: item.isVegetarian,
             calories: item.calories ? Number(item.calories) : undefined,
         }))
+
+        if (mode === "collect") {
+            onItemsExtracted?.(itemsToSave)
+            resetState()
+            onClose()
+            return
+        }
+
+        if (!cafeId) {
+            setError("Missing cafe reference")
+            return
+        }
+
+        setStep("saving")
 
         const result = await saveOcrMenuItems(cafeId, itemsToSave)
 
@@ -918,13 +940,15 @@ export default function MenuOcrScanModal({
                                         transition={{ delay: 0.9 }}
                                         className="flex gap-3"
                                     >
-                                        <Link
-                                            href={`/cafes/${cafeSlug}/menu`}
-                                            onClick={handleClose}
-                                            className="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-xl transition-colors"
-                                        >
-                                            View menu
-                                        </Link>
+                                        {cafeSlug && (
+                                            <Link
+                                                href={`/cafes/${cafeSlug}/menu`}
+                                                onClick={handleClose}
+                                                className="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-xl transition-colors"
+                                            >
+                                                View menu
+                                            </Link>
+                                        )}
                                         <motion.button
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
@@ -966,7 +990,7 @@ export default function MenuOcrScanModal({
                                             className="flex-1 px-4 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-primary/20"
                                         >
                                             <Check className="w-4 h-4" />
-                                            Save {extractedItems.length > 0 && `(${extractedItems.length})`}
+                                            {mode === "collect" ? "Add" : "Save"} {extractedItems.length > 0 && `(${extractedItems.length})`}
                                         </motion.button>
                                     )}
                                 </motion.div>

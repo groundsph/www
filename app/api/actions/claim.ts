@@ -73,6 +73,7 @@ export interface CafeClaim {
     status: "pending" | "approved" | "rejected"
     proof_text: string
     proof_document_url: string | null
+    proof_document_urls: string[] | null
     admin_notes: string | null
     created_at: string | null
     reviewed_at: string | null
@@ -98,7 +99,8 @@ export interface CafeClaim {
 export async function submitCafeClaim(
     cafeId: string,
     proofText: string,
-    proofDocumentUrl?: string
+    proofDocumentUrl?: string,
+    proofDocumentUrls?: string[]
 ): Promise<{ success: boolean; error?: string; claim?: CafeClaim }> {
     const currentUser = await getCurrentUser()
     if (!currentUser) {
@@ -145,12 +147,14 @@ export async function submitCafeClaim(
         return { success: false, error: "You already have a pending claim for this cafe" }
     }
 
-    // Submit claim
+    // Submit claim — keep every attached proof, not just the primary one.
+    const allProofUrls = (proofDocumentUrls ?? []).filter(Boolean)
     const [inserted] = await db.insert(cafeClaims).values({
         cafeId,
         userId: currentUser.id,
         proofText,
-        proofDocumentUrl: proofDocumentUrl || null,
+        proofDocumentUrl: proofDocumentUrl || allProofUrls[0] || null,
+        proofDocumentUrls: allProofUrls.length > 0 ? allProofUrls : null,
     }).returning()
 
     if (!inserted) {
@@ -182,6 +186,7 @@ export async function submitCafeClaim(
         status: inserted.status as "pending" | "approved" | "rejected",
         proof_text: inserted.proofText,
         proof_document_url: inserted.proofDocumentUrl,
+        proof_document_urls: inserted.proofDocumentUrls,
         admin_notes: inserted.adminNotes,
         created_at: inserted.createdAt?.toISOString() ?? null,
         reviewed_at: inserted.reviewedAt?.toISOString() ?? null,
@@ -206,6 +211,7 @@ export async function getUserClaims(): Promise<CafeClaim[]> {
             status: cafeClaims.status,
             proofText: cafeClaims.proofText,
             proofDocumentUrl: cafeClaims.proofDocumentUrl,
+            proofDocumentUrls: cafeClaims.proofDocumentUrls,
             adminNotes: cafeClaims.adminNotes,
             createdAt: cafeClaims.createdAt,
             reviewedAt: cafeClaims.reviewedAt,
@@ -226,6 +232,7 @@ export async function getUserClaims(): Promise<CafeClaim[]> {
         status: c.status as "pending" | "approved" | "rejected",
         proof_text: c.proofText,
         proof_document_url: c.proofDocumentUrl,
+        proof_document_urls: c.proofDocumentUrls,
         admin_notes: c.adminNotes,
         created_at: c.createdAt?.toISOString() ?? null,
         reviewed_at: c.reviewedAt?.toISOString() ?? null,
@@ -263,6 +270,7 @@ export async function getUserClaimForCafe(cafeId: string): Promise<CafeClaim | n
         status: claim.status as "pending" | "approved" | "rejected",
         proof_text: claim.proofText,
         proof_document_url: claim.proofDocumentUrl,
+        proof_document_urls: claim.proofDocumentUrls,
         admin_notes: claim.adminNotes,
         created_at: claim.createdAt?.toISOString() ?? null,
         reviewed_at: claim.reviewedAt?.toISOString() ?? null,
@@ -306,6 +314,7 @@ export async function getPendingClaims(): Promise<CafeClaim[]> {
             status: cafeClaims.status,
             proofText: cafeClaims.proofText,
             proofDocumentUrl: cafeClaims.proofDocumentUrl,
+            proofDocumentUrls: cafeClaims.proofDocumentUrls,
             adminNotes: cafeClaims.adminNotes,
             createdAt: cafeClaims.createdAt,
             reviewedAt: cafeClaims.reviewedAt,
@@ -330,6 +339,7 @@ export async function getPendingClaims(): Promise<CafeClaim[]> {
         status: c.status as "pending" | "approved" | "rejected",
         proof_text: c.proofText,
         proof_document_url: c.proofDocumentUrl,
+        proof_document_urls: c.proofDocumentUrls,
         admin_notes: c.adminNotes,
         created_at: c.createdAt?.toISOString() ?? null,
         reviewed_at: c.reviewedAt?.toISOString() ?? null,

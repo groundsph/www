@@ -2,14 +2,15 @@
 
 import { db } from "@/db"
 import { cafes, profiles, cafeMenuItems } from "@/db/schema"
-import { eq, and, ilike, sql, or, like } from "drizzle-orm"
+import { eq, and, or, sql, like } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { notifyDiscord, notifyDiscordCritical } from "./notify"
-import { SerializableCafeSubmission } from "@/utils/types/extra"
+import { SerializableCafeSubmission, type SerializableMenuItem } from "@/utils/types/extra"
 import { logContribution } from "@/utils/contribution-logging"
 import { cafeSubmissionSchema, CafeSubmissionError, SubmitError } from "@/utils/validation/cafe-submission"
 import { generateSlug } from "@/utils/slug"
 import { serializePaymentMethods } from "@/utils/payment-methods"
+import { escapeLikePattern } from "@/utils/sql-like"
 
 
 
@@ -60,7 +61,10 @@ export interface SubmitCafeResult {
     cafeId?: string
     slug?: string
     error?: SubmitError
+    /** Non-fatal problems worth telling the submitter about (e.g. one menu item failed to save). */
+    warnings?: string[]
 }
+
 
 interface DuplicateCheckResult {
     isDuplicate: boolean
@@ -99,8 +103,13 @@ async function checkDuplicateCafe(
     lng: number | null
 ): Promise<DuplicateCheckResult> {
     const normalized = name.toLowerCase().trim()
+    // Escape LIKE wildcards so a literal % or _ in a place name cannot widen the match.
+    const escapedCity = escapeLikePattern(cityMunicipality)
+    const escapedProvince = escapeLikePattern(province)
 
-    // Step 1: Name-based check (exact case-insensitive name match in same city)
+    // Step 1: Name-based check (exact case-insensitive name match in same city + province).
+    // The province matters: PH has many same-named municipalities (e.g. San Fernando in
+    // Pampanga and La Union), and matching on city alone blocks legitimate submissions.
     const exactMatches = await db
         .select({
             id: cafes.id,
@@ -113,7 +122,8 @@ async function checkDuplicateCafe(
         .where(
             and(
                 sql`lower(${cafes.name}) = ${normalized}`,
-                ilike(cafes.cityMunicipality, `%${cityMunicipality}%`)
+                sql`${cafes.cityMunicipality} ilike ${`%${escapedCity}%`}`,
+                sql`${cafes.province} ilike ${`%${escapedProvince}%`}`
             )
         )
         .limit(5)
@@ -139,8 +149,8 @@ async function checkDuplicateCafe(
             .from(cafes)
             .where(
                 and(
-                    ilike(cafes.cityMunicipality, `%${cityMunicipality}%`),
-                    ilike(cafes.province, `%${province}%`)
+                    sql`${cafes.cityMunicipality} ilike ${`%${escapedCity}%`}`,
+                    sql`${cafes.province} ilike ${`%${escapedProvince}%`}`
                 )
             )
             .limit(50)
@@ -178,7 +188,7 @@ export async function submitCafe(
     formData: SerializableCafeSubmission,
     thumbnailUrl: string | null,
     galleryUrls: string[],
-    menuItems: { name: string; category: string; price: number; description: string; imageUrl: string | null }[] = []
+    menuItems: Omit<SerializableMenuItem, "id">[] = []
 ): Promise<SubmitCafeResult> {
     // 1. Auth check
     const user = await getCurrentUser()
@@ -305,6 +315,7 @@ export async function submitCafe(
 
             // Details
             priceLevel: validData.price_level,
+            coffeeStyle: validData.coffee_style ?? null,
             paymentMethods: serializePaymentMethods(validData.payment_methods) || null,
             specialty: validData.specialty.length > 0 ? validData.specialty : null,
             tags: validData.tags.length > 0 ? validData.tags : null,
@@ -341,6 +352,8 @@ export async function submitCafe(
         }
 
         // Post-submit hooks (fire-and-forget)
+        const warnings: string[] = []
+
         // Get submitter profile for notification
         const profileResult = await db
             .select({ displayName: profiles.displayName, username: profiles.username })
@@ -373,16 +386,30 @@ export async function submitCafe(
                         description: item.description || null,
                         imageUrl: item.imageUrl,
                         isAvailable: true,
+                        isSignature: item.isSignature ?? false,
+                        isFood: item.isFood ?? false,
+                        isHot: item.isHot ?? false,
+                        isCold: item.isCold ?? false,
+                        isVegan: item.isVegan ?? false,
+                        isVegetarian: item.isVegetarian ?? false,
+                        calories: item.calories ?? null,
+                        sizeOptions: item.sizeOptions && item.sizeOptions.length > 0 ? item.sizeOptions : null,
                         sortOrder: i,
                         lastUpdatedBy: user.id,
                     })
                 } catch (err) {
                     console.error(`[Submit] Menu item "${item.name}" insert failed:`, err)
+                    warnings.push(`"${item.name}" could not be saved to the menu`)
                 }
             }
         }
 
-        return { success: true, cafeId: cafe.id, slug: cafe.slug }
+        return {
+            success: true,
+            cafeId: cafe.id,
+            slug: cafe.slug,
+            ...(warnings.length > 0 && { warnings }),
+        }
 
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err)

@@ -13,6 +13,7 @@ export interface MallCafeVerification {
     submittedBy: string
     verificationType: "owner" | "contributor"
     proofDocumentUrl: string | null
+    proofDocumentUrls: string[] | null
     contractStartDate: Date | null
     contractEndDate: Date | null
     linkedBranchId: string | null
@@ -51,6 +52,8 @@ export interface SubmitMallCafeVerificationInput {
     cafeId: string
     verificationType: "owner" | "contributor"
     proofDocumentUrl?: string | null
+    /** Every proof the submitter attached; proofDocumentUrl stays the primary. */
+    proofDocumentUrls?: string[] | null
     contractStartDate?: Date | null
     contractEndDate?: Date | null
     linkedBranchId?: string | null
@@ -100,6 +103,8 @@ export async function submitMallCafeVerification(
             return { success: false, error: "A pending verification already exists for this cafe" }
         }
 
+        const allProofUrls = (input.proofDocumentUrls ?? []).filter(Boolean)
+
         // Create verification request
         const [verification] = await db
             .insert(mallCafeVerifications)
@@ -107,7 +112,8 @@ export async function submitMallCafeVerification(
                 cafeId: input.cafeId,
                 submittedBy: user.id,
                 verificationType: input.verificationType,
-                proofDocumentUrl: input.proofDocumentUrl || null,
+                proofDocumentUrl: input.proofDocumentUrl || allProofUrls[0] || null,
+                proofDocumentUrls: allProofUrls.length > 0 ? allProofUrls : null,
                 contractStartDate: input.contractStartDate || null,
                 contractEndDate: input.contractEndDate || null,
                 linkedBranchId: input.linkedBranchId || null,
@@ -187,6 +193,7 @@ export async function getPendingMallVerifications(): Promise<{
             submittedBy: r.verification.submittedBy,
             verificationType: r.verification.verificationType as "owner" | "contributor",
             proofDocumentUrl: r.verification.proofDocumentUrl,
+            proofDocumentUrls: r.verification.proofDocumentUrls,
             contractStartDate: r.verification.contractStartDate,
             contractEndDate: r.verification.contractEndDate,
             linkedBranchId: r.verification.linkedBranchId,
@@ -512,6 +519,7 @@ export async function getMallVerificationByCafeId(
             submittedBy: result.verification.submittedBy,
             verificationType: result.verification.verificationType as "owner" | "contributor",
             proofDocumentUrl: result.verification.proofDocumentUrl,
+            proofDocumentUrls: result.verification.proofDocumentUrls,
             contractStartDate: result.verification.contractStartDate,
             contractEndDate: result.verification.contractEndDate,
             linkedBranchId: result.verification.linkedBranchId,

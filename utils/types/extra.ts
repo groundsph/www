@@ -12,6 +12,7 @@ export interface MenuItemSubmission {
     imageFile?: File | null;
     imagePreview?: string | null;
     // Type toggles
+    isSignature?: boolean;
     isFood?: boolean;
     isHot?: boolean;
     isCold?: boolean;
@@ -255,6 +256,14 @@ export interface SerializableMenuItem {
     price: number;
     description: string;
     imageUrl?: string | null;
+    isSignature?: boolean;
+    isFood?: boolean;
+    isHot?: boolean;
+    isCold?: boolean;
+    isVegan?: boolean;
+    isVegetarian?: boolean;
+    calories?: number | null;
+    sizeOptions?: { label: string; price: number }[];
 }
 
 // Serializable version of CafeSubmission for server actions (excludes File objects)

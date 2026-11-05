@@ -5,10 +5,26 @@ mock.module("@/lib/auth", () => ({
     getCurrentUser: async () => ({ id: "user-1" }),
 }))
 
+const dbQueries = { cafeLookups: 0, menuItemQueries: 0 }
+
 mock.module("@/db", () => ({
     db: {
-        query: { cafes: { findFirst: async () => ({ id: "cafe-1" }) } },
-        select: () => ({ from: () => ({ where: async () => [] }) }),
+        query: {
+            cafes: {
+                findFirst: async () => {
+                    dbQueries.cafeLookups += 1
+                    return { id: "cafe-1" }
+                },
+            },
+        },
+        select: () => ({
+            from: () => ({
+                where: async () => {
+                    dbQueries.menuItemQueries += 1
+                    return []
+                },
+            }),
+        }),
     },
 }))
 
@@ -50,6 +66,8 @@ function sseResponse(deltas: string[]): Response {
 }
 
 beforeEach(() => {
+    dbQueries.cafeLookups = 0
+    dbQueries.menuItemQueries = 0
     process.env.OPENAI_COMPATIBLE_BASE_URL = "https://openrouter.ai/api/v1"
     process.env.OPENAI_COMPATIBLE_API_KEY = "test-key"
     process.env.OPENAI_COMPATIBLE_OCR_MODEL = "test-model"
@@ -101,5 +119,34 @@ describe("POST /api/ocr/stream", () => {
 
         expect(text).toContain('"type":"complete"')
         expect(text).toContain('"name":"Latte"')
+    })
+
+    it("scans without a cafeId for a cafe that does not exist yet", async () => {
+        globalThis.fetch = (async () => sseResponse([
+            '[{"name":"Latte","category":"Coffee","price":120}]',
+        ])) as typeof fetch
+
+        const response = await POST(makeRequest({ imageBase64: "aGk=" }))
+        const text = await response.text()
+
+        expect(response.status).toBe(200)
+        expect(text).toContain('"type":"complete"')
+        expect(text).toContain('"name":"Latte"')
+        // Nothing to dedupe against before the cafe exists
+        expect(dbQueries.cafeLookups).toBe(0)
+        expect(dbQueries.menuItemQueries).toBe(0)
+    })
+
+    it("rejects the scan when the supplied cafeId does not exist", async () => {
+        globalThis.fetch = (async () => sseResponse(["[]"])) as typeof fetch
+        // Simulate a lookup miss for this case only
+        const { db } = await import("@/db")
+        const original = db.query.cafes.findFirst
+        db.query.cafes.findFirst = async () => null
+
+        const response = await POST(makeRequest({ cafeId: "missing", imageBase64: "aGk=" }))
+
+        db.query.cafes.findFirst = original
+        expect(response.status).toBe(404)
     })
 })

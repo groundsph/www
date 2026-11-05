@@ -1141,12 +1141,18 @@ cafeName: string) => {
                                                                         }
                                                                     </p>
                                                                 )}
-                                                                {pendingClaim.proof_document_url && (
+                                                                {(pendingClaim.proof_document_urls?.length
+                                                                    ? pendingClaim.proof_document_urls
+                                                                    : pendingClaim.proof_document_url
+                                                                        ? [pendingClaim.proof_document_url]
+                                                                        : []
+                                                                ).map((proofUrl, proofIndex, proofList) => (
                                                                     <button
+                                                                        key={proofUrl}
                                                                         onClick={async () => {
                                                                             const result =
                                                                                 await getOwnershipProofSignedUrl(
-                                                                                    pendingClaim.proof_document_url!
+                                                                                    proofUrl
                                                                                 )
                                                                             if (
                                                                                 result.success &&
@@ -1162,15 +1168,16 @@ cafeName: string) => {
                                                                                 )
                                                                             }
                                                                         }}
-                                                                        className='inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700 hover:underline cursor-pointer'
+                                                                        className='mr-2 inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700 hover:underline cursor-pointer'
                                                                     >
                                                                         <FileText className='w-4 h-4' />
-                                                                        View
                                                                         Proof
-                                                                        Document
+                                                                        {proofList.length > 1
+                                                                            ? ` ${proofIndex + 1}`
+                                                                            : " Document"}
                                                                         <ExternalLink className='w-3 h-3' />
                                                                     </button>
-                                                                )}
+                                                                ))}
                                                             </div>
                                                         )
                                                     })()}
@@ -1599,27 +1606,33 @@ cafeName: string) => {
                                                 </div>
 
                                                 {/* Proof Documents for Owners */}
-                                                {verification.verificationType === 'owner' && verification.proofDocumentUrl && (
+                                                {verification.verificationType === 'owner' && (verification.proofDocumentUrls?.length || verification.proofDocumentUrl) && (
                                                     <div>
                                                         <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
-                                                            Proof Document
+                                                            Proof Documents
                                                         </h4>
                                                         <div className='flex gap-2 flex-wrap'>
-                                                            <button
-                                                                onClick={async () => {
-                                                                    const result = await getMallVerificationProofUrl(verification.proofDocumentUrl!)
-                                                                    if (result.success && result.url) {
-                                                                        window.open(result.url, "_blank")
-                                                                    } else {
-                                                                        alert("Failed to load proof document")
-                                                                    }
-                                                                }}
-                                                                className='px-3 py-1.5 bg-background text-sm text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition inline-flex items-center gap-1 cursor-pointer'
-                                                            >
-                                                                <FileText className='w-4 h-4' />
-                                                                View Proof Document
-                                                                <ExternalLink className='w-3 h-3' />
-                                                            </button>
+                                                            {(verification.proofDocumentUrls?.length
+                                                                ? verification.proofDocumentUrls
+                                                                : [verification.proofDocumentUrl!]
+                                                            ).map((proofDocumentUrl, proofIndex) => (
+                                                                <button
+                                                                    key={proofDocumentUrl}
+                                                                    onClick={async () => {
+                                                                        const result = await getMallVerificationProofUrl(proofDocumentUrl)
+                                                                        if (result.success && result.url) {
+                                                                            window.open(result.url, "_blank")
+                                                                        } else {
+                                                                            alert("Failed to load proof document")
+                                                                        }
+                                                                    }}
+                                                                    className='px-3 py-1.5 bg-background text-sm text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition inline-flex items-center gap-1 cursor-pointer'
+                                                                >
+                                                                    <FileText className='w-4 h-4' />
+                                                                    View Proof {proofIndex + 1}
+                                                                    <ExternalLink className='w-3 h-3' />
+                                                                </button>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 )}

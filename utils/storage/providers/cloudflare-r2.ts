@@ -20,6 +20,7 @@ import {
     GetObjectCommand,
 } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
+import { BUCKET_CONFIGS } from "../types"
 import type {
     StorageProvider,
     StorageBucket,
@@ -97,6 +98,11 @@ export class CloudflareR2Provider implements StorageProvider {
      * Returns: userId/file.jpg
      */
     extractPathFromUrl(url: string, bucket: StorageBucket): string | null {
+        // Private buckets are referenced by their object key, not a public URL
+        if (!url.includes("://")) {
+            return url.split("?")[0] || null
+        }
+
         try {
             const publicUrl = this.config.publicUrl.replace(/\/$/, "")
             const pattern = new RegExp(`^${publicUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${bucket}/(.+)`)
@@ -151,12 +157,14 @@ export class CloudflareR2Provider implements StorageProvider {
 
             await this.client.send(command)
 
-            const publicUrl = this.getPublicUrl(bucket, path)
+            // Never hand out a public URL for a private bucket: R2 prefixes are not
+            // access control, so the owner returns the object key and readers sign it.
+            const isPublic = BUCKET_CONFIGS[bucket]?.isPublic ?? true
 
             return {
                 success: true,
                 path,
-                url: publicUrl,
+                url: isPublic ? this.getPublicUrl(bucket, path) : path,
             }
         } catch (error) {
             console.error(`[R2 Storage] Upload error for ${bucket}/${path}:`, error)

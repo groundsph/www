@@ -249,6 +249,8 @@ export const cafeClaims = pgTable("cafe_claims", {
         .references(() => profiles.id, { onDelete: "cascade" }),
     proofText: text("proof_text").notNull(),
     proofDocumentUrl: text("proof_document_url"),
+    /** Every proof the submitter attached; proofDocumentUrl stays the primary. */
+    proofDocumentUrls: jsonb("proof_document_urls").$type<string[]>(),
     status: text("status").default("pending"),
     adminNotes: text("admin_notes"),
     reviewedBy: uuid("reviewed_by").references(() => profiles.id),
@@ -786,6 +788,8 @@ export const mallCafeVerifications = pgTable("mall_cafe_verifications", {
         .references(() => profiles.id, { onDelete: "cascade" }),
     verificationType: text("verification_type").notNull(), // "owner", "contributor"
     proofDocumentUrl: text("proof_document_url"),
+    /** Every proof the submitter attached; proofDocumentUrl stays the primary. */
+    proofDocumentUrls: jsonb("proof_document_urls").$type<string[]>(),
     contractStartDate: timestamp("contract_start_date", { withTimezone: true }),
     contractEndDate: timestamp("contract_end_date", { withTimezone: true }),
     linkedBranchId: uuid("linked_branch_id").references(() => cafes.id, { onDelete: "set null" }),

@@ -13,6 +13,7 @@ export const cafeSubmissionSchema = z.object({
   lat: z.number().min(-90).max(90).nullable(),
   lng: z.number().min(-180).max(180).nullable(),
   price_level: priceLevelEnum,
+  coffee_style: z.enum(["classic", "artisan"]).nullable().optional(),
   payment_methods: z.string().trim().optional().default(""),
   has_wifi: z.boolean().optional().default(false),
   has_smoking: z.boolean().optional().default(false),

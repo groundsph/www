@@ -1,7 +1,8 @@
 "use client"
 
 import { useHaptics } from "@/hooks/useHaptics"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import dynamic from "next/dynamic"
 import { motion, AnimatePresence } from "motion/react"
 import confetti from "canvas-confetti"
 import {
@@ -40,6 +41,7 @@ import {
     Store,
     X,
     Plus,
+    ScanLine,
 } from "lucide-react"
 
 import { cn } from "@/utils/cn"
@@ -55,7 +57,6 @@ import {
     COFFEE_STYLES,
 } from "@/utils/data/philippines"
 import {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     submitMallCafeVerification,
     searchBranchCafes,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -87,6 +88,14 @@ import { extractCoordsFromGoogleMapsUrl } from "@/app/api/actions/location"
 import { Link } from "lucide-react"
 import { CafeWithRatings } from "@/utils/types/extra"
 import { useNotification } from "@/components/layout/NotificationProvider"
+import SubmissionProgress, { type SubmissionStep } from "@/components/submit/SubmissionProgress"
+import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
+import { ocrItemToMenuItem } from "@/utils/menu-item-mapping"
+
+const MenuOcrScanModal = dynamic(
+    () => import("@/components/suggestions/MenuOcrScanModal"),
+    { ssr: false },
+)
 
 const STEPS = [
     { id: 0, title: "Before We Begin", icon: Search },
@@ -187,11 +196,33 @@ export default function CafeSubmissionForm({
     )
     const [galleryFiles, setGalleryFiles] = useState<File[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [isProcessing, setIsProcessing] = useState(false) // For resizing/compression
     const [uploadProgress, setUploadProgress] = useState<
         Record<string, number>
     >({})
-    const [processingStatus, setProcessingStatus] = useState<string>("")
+    // Per-step submission report (see SubmissionProgress)
+    const [submissionSteps, setSubmissionSteps] = useState<SubmissionStep[]>([])
+    const [submissionWarnings, setSubmissionWarnings] = useState<string[]>([])
+    // Set when we intentionally clear the draft so the save effect doesn't rewrite it
+    const skipDraftSaveRef = useRef(false)
+    // Lets the user dismiss the submission report after a failure
+    const [hideSubmissionReport, setHideSubmissionReport] = useState(false)
+    // One object URL per gallery file, created on selection and revoked when the
+    // file leaves the list (instead of allocating a new URL on every render).
+    const galleryUrlMapRef = useRef(new Map<File, string>())
+    const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
+    useEffect(() => {
+        const urlMap = galleryUrlMapRef.current
+        return () => {
+            for (const url of urlMap.values()) URL.revokeObjectURL(url)
+            urlMap.clear()
+        }
+    }, [])
+    // Never leak the previous cover preview
+    useEffect(() => {
+        if (!thumbnailPreview) return
+        const url = thumbnailPreview
+        return () => URL.revokeObjectURL(url)
+    }, [thumbnailPreview])
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
 
@@ -251,6 +282,9 @@ export default function CafeSubmissionForm({
         sizeOptions: [],
     })
 
+    // Menu photo OCR (used before the cafe exists, so items are staged locally)
+    const [isMenuScanOpen, setIsMenuScanOpen] = useState(false)
+
 
     // Computed state for Step 0 verification
     const isNameVerified =
@@ -309,26 +343,63 @@ export default function CafeSubmissionForm({
 
     // Load draft from localStorage on mount
     useEffect(() => {
+        // Don't let the save effect (which runs right after this one) overwrite
+        // the stored draft with defaults before the restored state lands.
+        skipDraftSaveRef.current = true
         const saved = localStorage.getItem(DRAFT_KEY)
         if (saved) {
             try {
                 const parsed = JSON.parse(saved)
-                // Don't restore file objects, just form data
-                setFormData({ ...DEFAULT_CAFE_SUBMISSION, ...parsed })
+                // File objects and preview URLs do not survive JSON, so drop them:
+                // a restored menu item must not claim to have an uploadable file.
+                const restoredMenuItems = Array.isArray(parsed.menu_items)
+                    ? parsed.menu_items.map((item: Partial<MenuItemSubmission>) => {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- stripping file fields
+                        const { imageFile, imagePreview, ...rest } = item
+                        return {
+                            ...rest,
+                            imageFile: null,
+                            imagePreview: null,
+                        }
+                    })
+                    : []
+                setFormData({
+                    ...DEFAULT_CAFE_SUBMISSION,
+                    ...parsed,
+                    menu_items: restoredMenuItems,
+                })
             } catch (e) {
                 console.error("Failed to load draft:", e)
             }
         }
     }, [])
 
-    // Save draft to localStorage when form data changes
+    // Save draft to localStorage when form data changes.
+    // File objects and blob: previews cannot survive JSON.stringify (a File
+    // becomes {}, a blob URL becomes a dead link), so they are stripped.
     useEffect(() => {
+        if (skipDraftSaveRef.current) {
+            skipDraftSaveRef.current = false
+            return
+        }
+
         // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Destructuring to exclude file fields
-        const { thumbnail, gallery, ...savable } = formData
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(savable))
+        const { thumbnail, gallery, ownership_proof_files, menu_items, ...savable } = formData
+
+        localStorage.setItem(
+            DRAFT_KEY,
+            JSON.stringify({
+                ...savable,
+                menu_items: menu_items.map(({ imageFile, imagePreview, ...item }) => ({
+                    ...item,
+                    imagePreview: null,
+                })),
+            }),
+        )
     }, [formData])
 
     const clearDraft = () => {
+        skipDraftSaveRef.current = true
         localStorage.removeItem(DRAFT_KEY)
     }
 
@@ -337,6 +408,23 @@ export default function CafeSubmissionForm({
             setFormData((prev) => ({ ...prev, [key]: value }))
         },
         [],
+    )
+
+    /** Append OCR-extracted menu items to the staged menu list. */
+    const handleOcrItemsExtracted = useCallback(
+        (items: OcrMenuItem[]) => {
+            if (items.length === 0) return
+
+            const scanned = items.map(ocrItemToMenuItem)
+            updateFormData("menu_items", [...formData.menu_items, ...scanned])
+            setError(null)
+            addNotification(
+                `${scanned.length} menu item${scanned.length === 1 ? "" : "s"} added from your photo`,
+                "success",
+            )
+            trigger("medium")
+        },
+        [formData.menu_items, updateFormData, addNotification, trigger],
     )
 
     const handleLocationMatch = useCallback(
@@ -375,11 +463,15 @@ export default function CafeSubmissionForm({
     const resetForm = () => {
         setFormData(DEFAULT_CAFE_SUBMISSION)
         setThumbnailFile(null)
+        setThumbnailPreview(null)
+        for (const url of galleryUrlMapRef.current.values()) URL.revokeObjectURL(url)
+        galleryUrlMapRef.current.clear()
+        setGalleryPreviews([])
         setGalleryFiles([])
         setOwnershipProofFiles([])
         setUploadProgress({})
-        setProcessingStatus("")
-        setIsProcessing(false)
+        setSubmissionSteps([])
+        setSubmissionWarnings([])
         setSuccess(false)
         setCurrentStep(0)
         setError(null)
@@ -563,13 +655,21 @@ export default function CafeSubmissionForm({
     const checkAspectRatio = (file: File): Promise<boolean> => {
         return new Promise((resolve) => {
             const img = new Image()
+            const url = URL.createObjectURL(file)
+            const done = (result: boolean) => {
+                URL.revokeObjectURL(url)
+                resolve(result)
+            }
             img.onload = () => {
                 const aspect = img.width / img.height
                 // Allow some tolerance for 16:9 (1.77)
                 const is16by9 = Math.abs(aspect - 16 / 9) < 0.05
-                resolve(is16by9)
+                done(is16by9)
             }
-            img.src = URL.createObjectURL(file)
+            // HEIC/corrupt/unsupported files never fire onload — without this the
+            // cover picker silently does nothing. Fall through to the cropper.
+            img.onerror = () => done(false)
+            img.src = url
         })
     }
 
@@ -613,6 +713,27 @@ export default function CafeSubmissionForm({
         setCroppingImage(null)
     }
 
+    /** Keep gallery preview URLs in sync without leaking object URLs. */
+    const handleGalleryFilesChange = useCallback((files: (File | string)[]) => {
+        const nextFiles = files.filter((file): file is File => file instanceof File)
+        const urlMap = galleryUrlMapRef.current
+
+        for (const file of nextFiles) {
+            if (!urlMap.has(file)) {
+                urlMap.set(file, URL.createObjectURL(file))
+            }
+        }
+        for (const [file, url] of urlMap) {
+            if (!nextFiles.includes(file)) {
+                URL.revokeObjectURL(url)
+                urlMap.delete(file)
+            }
+        }
+
+        setGalleryFiles(nextFiles)
+        setGalleryPreviews(nextFiles.map((file) => urlMap.get(file)!))
+    }, [])
+
     const handleGoogleMapsUrl = async () => {
         if (!googleMapsUrl.trim()) return
 
@@ -650,100 +771,175 @@ export default function CafeSubmissionForm({
         setIsSubmitting(true)
         setError(null)
         setUploadProgress({})
-        setProcessingStatus("Preparing images...")
-        setIsProcessing(true)
+        setSubmissionWarnings([])
+        setHideSubmissionReport(false)
         trigger("medium")
+
+        const warnings: string[] = []
+
+        // ---------------------------------------------------------------
+        // Plan the steps we will actually run, so the progress report only
+        // shows work that applies to this submission.
+        // ---------------------------------------------------------------
+        const steps: SubmissionStep[] = [
+            { id: "prepare", label: "Checking submission", state: "active" },
+        ]
+        if (thumbnailFile) {
+            steps.push({ id: "cover", label: "Uploading cover photo", state: "pending" })
+        }
+        if (galleryFiles.length > 0) {
+            steps.push({
+                id: "gallery",
+                label: "Uploading gallery photos",
+                state: "pending",
+                detail: `0 of ${galleryFiles.length}`,
+            })
+        }
+        const menuItemsWithImages = formData.menu_items.filter((item) => item.imageFile)
+        if (menuItemsWithImages.length > 0) {
+            steps.push({
+                id: "menu",
+                label: "Uploading menu item photos",
+                state: "pending",
+                detail: `0 of ${menuItemsWithImages.length}`,
+            })
+        }
+        if (formData.is_owner && ownershipProofFiles.length > 0) {
+            steps.push({
+                id: "proofs",
+                label: "Uploading ownership proofs",
+                state: "pending",
+                detail: `0 of ${ownershipProofFiles.length}`,
+            })
+        }
+        if (isMallCafe && mallProofFiles.length > 0) {
+            steps.push({
+                id: "mall",
+                label: "Uploading mall verification documents",
+                state: "pending",
+                detail: `0 of ${mallProofFiles.length}`,
+            })
+        }
+        steps.push({ id: "cafe", label: "Creating your cafe", state: "pending" })
+        if (formData.is_owner && ownershipProofFiles.length > 0) {
+            steps.push({ id: "claim", label: "Filing ownership claim", state: "pending" })
+        }
+        if (isMallCafe) {
+            steps.push({ id: "mallVerification", label: "Submitting mall verification", state: "pending" })
+        }
+        setSubmissionSteps(steps)
+
+        const startStep = (id: string) =>
+            setSubmissionSteps((prev) =>
+                prev.map((step) =>
+                    step.id === id ? { ...step, state: "active" } : step,
+                ),
+            )
+        const patchStep = (id: string, changes: Partial<SubmissionStep>) =>
+            setSubmissionSteps((prev) =>
+                prev.map((step) => (step.id === id ? { ...step, ...changes } : step)),
+            )
+        const finishStep = (id: string, detail?: string) =>
+            patchStep(id, { state: "done", progress: 100, ...(detail ? { detail } : {}) })
+        const failStep = (id: string) => patchStep(id, { state: "error" })
 
         try {
             console.log("[Cafe Submit] Starting submission...")
 
-            // Validate ownership proof if claiming ownership
+            // Up-front checks — fail before uploading anything
             if (formData.is_owner && ownershipProofFiles.length === 0) {
                 throw new Error(
                     "At least one proof document is required when claiming ownership",
                 )
             }
+            if (isMallCafe && !mallVerificationType) {
+                throw new Error(
+                    "Choose how you are connected to this mall cafe (owner or contributor)",
+                )
+            }
+            if (isMallCafe && mallProofFiles.length === 0) {
+                throw new Error(
+                    "At least one proof document is required to verify a mall cafe",
+                )
+            }
+            finishStep("prepare")
 
-            // 1. Process Thumbnail (optional)
+            // 1. Cover photo
             let thumbnailUrl: string | null = null
             if (thumbnailFile) {
-                setProcessingStatus("Compressing cover image...")
-                // Compress cover image (250KB JPEG for Satori OG compatibility)
-                const processedThumbnail =
-                    await compressCoverImage(thumbnailFile)
-
-                setIsProcessing(false)
-                setProcessingStatus("Uploading images...")
-
-                // 2. Upload Thumbnail
-                console.log("[Cafe Submit] Uploading thumbnail...")
+                startStep("cover")
+                const processedThumbnail = await compressCoverImage(thumbnailFile)
                 setUploadProgress((prev) => ({ ...prev, thumbnail: 0 }))
 
                 const thumbnailResult = await uploadCafeImageWithProgress(
                     processedThumbnail,
                     (progress: number) => {
-                        setUploadProgress((prev) => ({
-                            ...prev,
-                            thumbnail: progress,
-                        }))
+                        setUploadProgress((prev) => ({ ...prev, thumbnail: progress }))
+                        patchStep("cover", { progress })
                     },
                 )
 
                 if (!thumbnailResult.success || !thumbnailResult.url) {
+                    failStep("cover")
                     throw new Error(
-                        thumbnailResult.error || "Failed to upload thumbnail",
+                        thumbnailResult.error || "Failed to upload the cover photo",
                     )
                 }
                 thumbnailUrl = thumbnailResult.url
-            } else {
-                setIsProcessing(false)
-                setProcessingStatus("Uploading images...")
+                finishStep("cover")
             }
 
-            // 3. Process Gallery Images
-            setProcessingStatus(
-                `Compressing ${galleryFiles.length} gallery images...`,
-            )
-            const processedGalleryFiles: File[] = []
-            for (let i = 0; i < galleryFiles.length; i++) {
-                const file = galleryFiles[i]
-                // Compress gallery image (120KB WebP)
-                const processed = await compressGalleryImage(file)
-                processedGalleryFiles.push(processed)
-            }
-
-            // 4. Upload Gallery Images
-            console.log("[Cafe Submit] Uploading gallery images...")
+            // 2. Gallery photos — every photo must land, otherwise the user
+            // ends up with a silently incomplete gallery.
             const galleryUrls: string[] = []
-
-            for (let i = 0; i < processedGalleryFiles.length; i++) {
-                const file = processedGalleryFiles[i]
-                const key = `gallery-${i}`
-                setUploadProgress((prev) => ({ ...prev, [key]: 0 }))
-
-                const result = await uploadCafeImageWithProgress(
-                    file,
-                    (progress: number) => {
-                        setUploadProgress((prev) => ({
-                            ...prev,
-                            [key]: progress,
-                        }))
-                    },
-                )
-
-                if (result.success && result.url) {
-                    galleryUrls.push(result.url)
+            if (galleryFiles.length > 0) {
+                startStep("gallery")
+                const processedGalleryFiles: File[] = []
+                for (let i = 0; i < galleryFiles.length; i++) {
+                    patchStep("gallery", {
+                        detail: `compressing ${i + 1} of ${galleryFiles.length}`,
+                    })
+                    processedGalleryFiles.push(await compressGalleryImage(galleryFiles[i]))
                 }
+                patchStep("gallery", { detail: `0 of ${processedGalleryFiles.length}` })
+
+                const failures: string[] = []
+                for (let i = 0; i < processedGalleryFiles.length; i++) {
+                    const key = `gallery-${i}`
+                    setUploadProgress((prev) => ({ ...prev, [key]: 0 }))
+
+                    const result = await uploadCafeImageWithProgress(
+                        processedGalleryFiles[i],
+                        (progress: number) => {
+                            setUploadProgress((prev) => ({ ...prev, [key]: progress }))
+                            patchStep("gallery", { detail: `${i + 1} of ${processedGalleryFiles.length}` })
+                        },
+                    )
+
+                    if (result.success && result.url) {
+                        galleryUrls.push(result.url)
+                        patchStep("gallery", {
+                            progress: Math.round(((i + 1) / processedGalleryFiles.length) * 100),
+                            detail: `${i + 1} of ${processedGalleryFiles.length}`,
+                        })
+                    } else {
+                        failures.push(result.error || `photo ${i + 1}`)
+                    }
+                }
+
+                if (failures.length > 0) {
+                    failStep("gallery")
+                    throw new Error(
+                        `${failures.length} of ${processedGalleryFiles.length} gallery photos failed to upload (${failures[0]}). Nothing was submitted — please retry.`,
+                    )
+                }
+                finishStep("gallery", `${galleryUrls.length} of ${galleryUrls.length}`)
             }
 
-            // 5. Upload Ownership Proof Files (if owner)
+            // 3. Ownership proofs (private bucket — stored as object keys)
             const proofUrls: string[] = []
             if (formData.is_owner && ownershipProofFiles.length > 0) {
-                setProcessingStatus("Uploading ownership proof documents...")
-                console.log(
-                    "[Cafe Submit] Uploading ownership proofs...",
-                    ownershipProofFiles.length,
-                )
+                startStep("proofs")
 
                 for (let i = 0; i < ownershipProofFiles.length; i++) {
                     const file = ownershipProofFiles[i]
@@ -753,55 +949,110 @@ export default function CafeSubmissionForm({
                     const result = await uploadOwnershipProofWithProgress(
                         file,
                         (progress: number) => {
-                            setUploadProgress((prev) => ({
-                                ...prev,
-                                [key]: progress,
-                            }))
+                            setUploadProgress((prev) => ({ ...prev, [key]: progress }))
+                            patchStep("proofs", { detail: `${i + 1} of ${ownershipProofFiles.length}` })
                         },
                     )
 
                     if (result.success && result.url) {
                         proofUrls.push(result.url)
                     } else {
-                        console.error(
-                            "[Cafe Submit] Failed to upload proof:",
-                            result.error,
-                        )
+                        console.error("[Cafe Submit] Failed to upload proof:", result.error)
+                        warnings.push(`Proof document "${file.name}" could not be uploaded.`)
                     }
                 }
 
                 if (proofUrls.length === 0) {
-                    throw new Error(
-                        "Failed to upload ownership proof documents",
-                    )
+                    failStep("proofs")
+                    throw new Error("Failed to upload ownership proof documents")
                 }
+                finishStep("proofs", `${proofUrls.length} of ${ownershipProofFiles.length}`)
             }
 
-            // 6. Upload Menu Item Images
-            setProcessingStatus("Uploading menu item images...")
-            const menuItemsWithUrls: { name: string; category: string; price: number; description: string; imageUrl: string | null }[] = []
+            // 4. Mall verification documents
+            const mallProofUrls: string[] = []
+            if (isMallCafe && mallProofFiles.length > 0) {
+                startStep("mall")
+
+                for (let i = 0; i < mallProofFiles.length; i++) {
+                    const file = mallProofFiles[i]
+                    const key = `mall-proof-${i}`
+                    setUploadProgress((prev) => ({ ...prev, [key]: 0 }))
+
+                    const result = await uploadOwnershipProofWithProgress(
+                        file,
+                        (progress: number) => {
+                            setUploadProgress((prev) => ({ ...prev, [key]: progress }))
+                            patchStep("mall", { detail: `${i + 1} of ${mallProofFiles.length}` })
+                        },
+                    )
+
+                    if (result.success && result.url) {
+                        mallProofUrls.push(result.url)
+                    } else {
+                        console.error("[Cafe Submit] Failed to upload mall proof:", result.error)
+                    }
+                }
+
+                if (mallProofUrls.length === 0) {
+                    failStep("mall")
+                    throw new Error(
+                        "Failed to upload the mall verification documents. Nothing was submitted — please retry.",
+                    )
+                }
+                finishStep("mall", `${mallProofUrls.length} of ${mallProofFiles.length}`)
+            }
+
+            // 5. Menu item photos
+            const menuItemsWithUrls: {
+                name: string
+                category: string
+                price: number
+                description: string
+                imageUrl: string | null
+                isSignature: boolean
+                isFood: boolean
+                isHot: boolean
+                isCold: boolean
+                isVegan: boolean
+                isVegetarian: boolean
+                calories: number | null
+                sizeOptions: { label: string; price: number }[]
+            }[] = []
+            let menuPhotosUploaded = 0
 
             for (let i = 0; i < formData.menu_items.length; i++) {
                 const item = formData.menu_items[i]
                 let imageUrl: string | null = null
 
                 if (item.imageFile) {
+                    startStep("menu")
                     const key = `menu-item-${i}`
                     setUploadProgress((prev) => ({ ...prev, [key]: 0 }))
 
                     const result = await uploadCafeImageWithProgress(
                         item.imageFile,
                         (progress: number) => {
-                            setUploadProgress((prev) => ({
-                                ...prev,
-                                [key]: progress,
-                            }))
+                            setUploadProgress((prev) => ({ ...prev, [key]: progress }))
+                            patchStep("menu", {
+                                detail: `${menuPhotosUploaded + 1} of ${menuItemsWithImages.length}`,
+                            })
                         },
                     )
 
                     if (result.success && result.url) {
                         imageUrl = result.url
+                    } else {
+                        warnings.push(
+                            `The photo for "${item.name}" could not be uploaded — the item was saved without it.`,
+                        )
                     }
+
+                    menuPhotosUploaded += 1
+                    patchStep("menu", {
+                        progress: Math.round((menuPhotosUploaded / menuItemsWithImages.length) * 100),
+                        detail: `${menuPhotosUploaded} of ${menuItemsWithImages.length}`,
+                    })
                 }
 
                 menuItemsWithUrls.push({
@@ -809,13 +1060,22 @@ export default function CafeSubmissionForm({
                     category: item.category,
                     price: item.price,
                     description: item.description,
-                    imageUrl: imageUrl,
+                    imageUrl,
+                    isSignature: item.isSignature ?? false,
+                    isFood: item.isFood ?? false,
+                    isHot: item.isHot ?? false,
+                    isCold: item.isCold ?? false,
+                    isVegan: item.isVegan ?? false,
+                    isVegetarian: item.isVegetarian ?? false,
+                    calories: item.calories ?? null,
+                    sizeOptions: item.sizeOptions ?? [],
                 })
             }
+            if (menuItemsWithImages.length > 0) {
+                finishStep("menu", `${menuPhotosUploaded} of ${menuItemsWithImages.length}`)
+            }
 
-            setProcessingStatus("Finalizing submission...")
-
-            // 7. Submit cafe data
+            // 6. Submit cafe data
             console.log("[Cafe Submit] Submitting to server...")
             const {
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -829,19 +1089,15 @@ export default function CafeSubmissionForm({
                 ...restFormData
             } = formData
 
-            // Build serializable form data with menu items (without File objects)
             const serializableFormData = {
                 ...restFormData,
-                menu_items: menuItemsWithUrls.map(item => ({
+                menu_items: menuItemsWithUrls.map((item) => ({
                     id: crypto.randomUUID(),
-                    name: item.name,
-                    category: item.category,
-                    price: item.price,
-                    description: item.description,
-                    imageUrl: item.imageUrl,
+                    ...item,
                 })),
             }
 
+            startStep("cafe")
             const result = await submitCafe(
                 serializableFormData,
                 thumbnailUrl,
@@ -850,6 +1106,7 @@ export default function CafeSubmissionForm({
             )
 
             if (!result.success) {
+                failStep("cafe")
                 // Handle structured SubmitError from server
                 const submitError: SubmitError | undefined = result.error
                 const errorMessage = submitError?.message || "Something went wrong"
@@ -866,25 +1123,66 @@ export default function CafeSubmissionForm({
                 }
                 return
             }
+            finishStep("cafe")
+            if (result.warnings?.length) {
+                warnings.push(...result.warnings)
+            }
 
-            // 7. Create ownership claim if owner
+            // 7. Ownership claim — the cafe already exists at this point, so a
+            // failure here must never look like a failed submission.
             if (formData.is_owner && result.cafeId && proofUrls.length > 0) {
-                console.log("[Cafe Submit] Creating ownership claim...")
-                const proofText =
-                    "Submitted during cafe registration with proof documents."
-                // Use the first proof URL as the document URL
-                const claimResult = await submitCafeClaim(
-                    result.cafeId,
-                    proofText,
-                    proofUrls[0], // Primary proof document
-                )
-
-                if (!claimResult.success) {
-                    console.error(
-                        "[Cafe Submit] Failed to create claim:",
-                        claimResult.error,
+                startStep("claim")
+                try {
+                    const claimResult = await submitCafeClaim(
+                        result.cafeId,
+                        "Submitted during cafe registration with proof documents.",
+                        proofUrls[0],
+                        proofUrls,
                     )
-                    // Don't throw - cafe was already created, just log the warning
+
+                    if (claimResult.success) {
+                        finishStep("claim")
+                    } else {
+                        failStep("claim")
+                        warnings.push(
+                            `Ownership claim not filed: ${claimResult.error ?? "unknown error"}. The cafe was still submitted — you can claim it from the cafe page once it is approved.`,
+                        )
+                    }
+                } catch (claimError) {
+                    console.error("[Cafe Submit] Claim failed:", claimError)
+                    failStep("claim")
+                    warnings.push(
+                        "The cafe was submitted, but the ownership claim could not be filed. You can claim it from the cafe page once it is approved.",
+                    )
+                }
+            }
+
+            // 8. Mall verification (same rule: never fail the submission)
+            if (isMallCafe && result.cafeId && mallVerificationType) {
+                startStep("mallVerification")
+                try {
+                    const mallResult = await submitMallCafeVerification({
+                        cafeId: result.cafeId,
+                        verificationType: mallVerificationType,
+                        proofDocumentUrl: mallProofUrls[0] ?? null,
+                        proofDocumentUrls: mallProofUrls,
+                        linkedBranchId: selectedLinkedBranch?.id ?? null,
+                    })
+
+                    if (mallResult.success) {
+                        finishStep("mallVerification")
+                    } else {
+                        failStep("mallVerification")
+                        warnings.push(
+                            `Mall verification not filed: ${mallResult.error ?? "unknown error"}. The cafe was still submitted.`,
+                        )
+                    }
+                } catch (mallError) {
+                    console.error("[Cafe Submit] Mall verification failed:", mallError)
+                    failStep("mallVerification")
+                    warnings.push(
+                        "The cafe was submitted, but the mall verification could not be filed.",
+                    )
                 }
             }
 
@@ -892,6 +1190,7 @@ export default function CafeSubmissionForm({
             console.log("[Cafe Submit] Success!")
             trigger("success")
             clearDraft()
+            setSubmissionWarnings(warnings)
             setSuccess(true)
 
             confetti({
@@ -912,10 +1211,14 @@ export default function CafeSubmissionForm({
                 err instanceof Error ? err.message : "An error occurred"
             setError(errorMessage)
             addNotification(errorMessage, "error")
+            // Mark whatever was still running as failed so the report is truthful
+            setSubmissionSteps((prev) =>
+                prev.map((step) =>
+                    step.state === "active" ? { ...step, state: "error" } : step,
+                ),
+            )
         } finally {
             setIsSubmitting(false)
-            setIsProcessing(false)
-            setProcessingStatus("")
         }
     }
 
@@ -964,6 +1267,19 @@ export default function CafeSubmissionForm({
                         is now under review. We&apos;ll notify you once it&apos;s
                         approved and live on platform.
                     </p>
+                    {submissionWarnings.length > 0 && (
+                        <div className='mt-6 max-w-md mx-auto text-left p-4 bg-amber-50 border border-amber-200 rounded-xl'>
+                            <p className='flex items-center gap-2 text-sm font-medium text-amber-800'>
+                                <AlertTriangle className='w-4 h-4 shrink-0' />
+                                A few things need your attention
+                            </p>
+                            <ul className='mt-2 space-y-1 list-disc list-inside text-xs text-amber-700'>
+                                {submissionWarnings.map((warning) => (
+                                    <li key={warning}>{warning}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </motion.div>
                 <button
                     onClick={resetForm}
@@ -1236,11 +1552,11 @@ export default function CafeSubmissionForm({
                                                                     className='flex items-center gap-3 p-2 bg-white/80 hover:bg-white rounded-lg border border-yellow-100 hover:border-yellow-300 transition-colors group'
                                                                 >
                                                                     <div className='w-10 h-10 bg-gray-100 rounded-md overflow-hidden shrink-0'>
-                                                                        {cafe.thumbnail_url ? (
+                                                                        {cafe.thumbnail ? (
                                                                             /* eslint-disable-next-line @next/next/no-img-element */
                                                                             <img
                                                                                 src={
-                                                                                    cafe.thumbnail_url
+                                                                                    cafe.thumbnail
                                                                                 }
                                                                                 alt={
                                                                                     cafe.name
@@ -1687,11 +2003,11 @@ export default function CafeSubmissionForm({
                                                                         className='flex items-center gap-3 p-2 bg-white/60 hover:bg-white rounded-lg border border-yellow-100 hover:border-yellow-300 transition-colors group'
                                                                     >
                                                                         <div className='w-10 h-10 bg-gray-100 rounded-md overflow-hidden shrink-0'>
-                                                                            {cafe.thumbnail_url ? (
+                                                                            {cafe.thumbnail ? (
                                                                                 /* eslint-disable-next-line @next/next/no-img-element -- External URL from search results */
                                                                                 <img
                                                                                     src={
-                                                                                        cafe.thumbnail_url
+                                                                                        cafe.thumbnail
                                                                                     }
                                                                                     alt={
                                                                                         cafe.name
@@ -1786,9 +2102,10 @@ export default function CafeSubmissionForm({
                                                 />
                                                 <button
                                                     type='button'
-                                                    onClick={() =>
+                                                    onClick={() => {
                                                         setThumbnailFile(null)
-                                                    }
+                                                        setThumbnailPreview(null)
+                                                    }}
                                                     className='absolute top-3 right-3 px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5'
                                                 >
                                                     <svg
@@ -1869,14 +2186,7 @@ export default function CafeSubmissionForm({
                                         </label>
                                         <ImageUpload
                                             value={galleryFiles}
-                                            onChange={(files) =>
-                                                setGalleryFiles(
-                                                    files.filter(
-                                                        (f): f is File =>
-                                                            f instanceof File,
-                                                    ),
-                                                )
-                                            }
+                                            onChange={handleGalleryFilesChange}
                                             progress={
                                                 // Convert "gallery-i" keys to numeric index keys for ImageUpload
                                                 Object.entries(uploadProgress)
@@ -2504,6 +2814,35 @@ export default function CafeSubmissionForm({
                                     </div>
                                 </div>
 
+                                {/* Menu photo OCR */}
+                                <div className='p-5 bg-background border border-text/10 rounded-xl'>
+                                    <div className='flex items-start gap-3'>
+                                        <div className='p-2 bg-primary/10 rounded-full text-primary shrink-0'>
+                                            <ScanLine className='w-4 h-4' />
+                                        </div>
+                                        <div className='flex-1 min-w-0'>
+                                            <h4 className='font-medium text-sm text-text/70'>
+                                                Scan a menu photo
+                                            </h4>
+                                            <p className='text-xs text-text/60 mt-1'>
+                                                Take or upload a photo of this
+                                                cafe&apos;s menu and we&apos;ll
+                                                read the items for you. You can
+                                                review and edit everything
+                                                before adding it.
+                                            </p>
+                                            <button
+                                                type='button'
+                                                onClick={() => setIsMenuScanOpen(true)}
+                                                className='mt-3 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition-colors'
+                                            >
+                                                <ScanLine className='w-4 h-4' />
+                                                Scan menu
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Add Menu Item Form */}
                                 <div className='p-5 bg-background border border-text/10 rounded-xl space-y-4'>
                                     <h4 className='font-medium text-sm text-text/70'>
@@ -2655,6 +2994,10 @@ export default function CafeSubmissionForm({
                                                     <button
                                                         type='button'
                                                         onClick={() => {
+                                                            const removed = formData.menu_items[index]
+                                                            if (removed?.imagePreview) {
+                                                                URL.revokeObjectURL(removed.imagePreview)
+                                                            }
                                                             updateFormData(
                                                                 'menu_items',
                                                                 formData.menu_items.filter((_, i) => i !== index)
@@ -2772,12 +3115,10 @@ export default function CafeSubmissionForm({
                                 <div className='bg-background rounded-2xl border border-text/10 overflow-hidden shadow-lg'>
                                     {/* Hero Header with Background Image */}
                                     <div className='relative h-64 md:h-80 bg-text/10'>
-                                        {thumbnailFile ? (
+                                        {thumbnailFile && thumbnailPreview ? (
                                             /* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */
                                             <img
-                                                src={URL.createObjectURL(
-                                                    thumbnailFile,
-                                                )}
+                                                src={thumbnailPreview}
                                                 alt={
                                                     formData.name ||
                                                     "Cafe preview"
@@ -3058,9 +3399,7 @@ export default function CafeSubmissionForm({
                                                             >
                                                                 {/* eslint-disable-next-line @next/next/no-img-element -- Blob URL from file input, next/image doesn't support */}
                                                                 <img
-                                                                    src={URL.createObjectURL(
-                                                                        file,
-                                                                    )}
+                                                                    src={galleryPreviews[idx] ?? ""}
                                                                     alt={`Gallery ${idx + 1}`}
                                                                     className='w-full h-full object-cover'
                                                                 />
@@ -3400,11 +3739,7 @@ export default function CafeSubmissionForm({
                         {isSubmitting ? (
                             <>
                                 <Loader2 className='w-4 h-4 animate-spin' />
-                                <span>
-                                    {isProcessing
-                                        ? processingStatus || "Processing..."
-                                        : "Uploading..."}
-                                </span>
+                                <span>Submitting...</span>
                             </>
                         ) : (
                             <>
@@ -3425,6 +3760,28 @@ export default function CafeSubmissionForm({
                     setCropperOpen(false)
                     setCroppingImage(null)
                 }}
+            />
+
+            {/* Live per-step submission report */}
+            <AnimatePresence>
+                {submissionSteps.length > 0 && !hideSubmissionReport && (
+                    <div className='fixed bottom-4 right-4 z-40 w-[min(20rem,calc(100vw-2rem))]'>
+                        <SubmissionProgress
+                            steps={submissionSteps}
+                            error={error}
+                            onDismiss={() => setHideSubmissionReport(true)}
+                        />
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Menu photo OCR (stages items locally until the cafe is submitted) */}
+            <MenuOcrScanModal
+                isOpen={isMenuScanOpen}
+                onClose={() => setIsMenuScanOpen(false)}
+                mode='collect'
+                cafeName={formData.name || "this cafe"}
+                onItemsExtracted={handleOcrItemsExtracted}
             />
         </div>
     )

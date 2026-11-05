@@ -9,7 +9,8 @@ import { deduplicateMenuItems } from "@/app/api/actions/menu-ocr"
 import { z } from "zod"
 
 const requestSchema = z.object({
-    cafeId: z.string().min(1),
+    // Omitted when the cafe does not exist yet (new-cafe submission flow).
+    cafeId: z.string().min(1).optional(),
     imageBase64: z.string().min(1),
     mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]).optional(),
 })
@@ -40,15 +41,30 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const cafe = await db.query.cafes.findFirst({
-            where: eq(cafes.id, validated.data.cafeId),
-        })
+        const cafeId = validated.data.cafeId
+        // Only dedupe against stored items when scanning for an existing cafe.
+        let existingItems: Array<{ name: string; category: string; price: number }> = []
 
-        if (!cafe) {
-            return new Response(
-                JSON.stringify({ type: "error", error: "Cafe not found" }),
-                { status: 404, headers: { "Content-Type": "application/json" } }
-            )
+        if (cafeId) {
+            const cafe = await db.query.cafes.findFirst({
+                where: eq(cafes.id, cafeId),
+            })
+
+            if (!cafe) {
+                return new Response(
+                    JSON.stringify({ type: "error", error: "Cafe not found" }),
+                    { status: 404, headers: { "Content-Type": "application/json" } }
+                )
+            }
+
+            existingItems = await db
+                .select({
+                    name: cafeMenuItems.name,
+                    category: cafeMenuItems.category,
+                    price: cafeMenuItems.price,
+                })
+                .from(cafeMenuItems)
+                .where(eq(cafeMenuItems.cafeId, cafeId))
         }
 
         const { baseUrl, apiKey } = getConfig()
@@ -166,15 +182,6 @@ export async function POST(request: NextRequest) {
                     send({ type: "status", message: "Processing results..." })
 
                     const items = parseOcrMenuItems(accumulated)
-
-                    const existingItems = await db
-                        .select({
-                            name: cafeMenuItems.name,
-                            category: cafeMenuItems.category,
-                            price: cafeMenuItems.price,
-                        })
-                        .from(cafeMenuItems)
-                        .where(eq(cafeMenuItems.cafeId, validated.data.cafeId))
 
                     const deduplicated = await deduplicateMenuItems(items, existingItems)
                     const duplicateNames = items

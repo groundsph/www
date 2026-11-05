@@ -38,7 +38,8 @@ export function describeEmptyOcrResult(itemCount: number): string | null {
 }
 
 export async function streamOcrScan(
-    cafeId: string,
+    /** Omit before the cafe exists (new-cafe submission) — items are returned, not stored. */
+    cafeId: string | undefined,
     imageBase64: string,
     mimeType: string | undefined,
     callbacks: OcrStreamCallbacks,

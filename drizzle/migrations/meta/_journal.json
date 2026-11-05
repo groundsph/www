@@ -141,6 +141,13 @@
       "when": 1792236444772,
       "tag": "0019_pink_cassandra_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793845667486,
+      "tag": "0020_windy_franklin_richards",
+      "breakpoints": true
     }
   ]
 }
