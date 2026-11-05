@@ -61,13 +61,12 @@ export async function POST(request: NextRequest) {
         let path: string
         switch (bucket) {
             case STORAGE_BUCKETS.CAFES:
-                if (!cafeId) {
-                    return NextResponse.json(
-                        { success: false, error: "cafeId required for cafe images" },
-                        { status: 400 }
-                    )
-                }
-                path = generateCafeFilePath(cafeId, file.name)
+                // Cafe images are uploaded before the cafe row exists during
+                // submission, so fall back to a user-namespaced path (same
+                // convention as uploadCafeImageAction).
+                path = cafeId
+                    ? generateCafeFilePath(cafeId, file.name)
+                    : generateFilePath(user.id, file.name)
                 break
             case STORAGE_BUCKETS.MENU_PHOTOS:
                 if (!cafeId) {
