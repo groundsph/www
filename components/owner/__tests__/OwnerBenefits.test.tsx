@@ -143,10 +143,16 @@ describe("OwnerBenefits — inclusions", () => {
     })
 
     it("lists every included feature", () => {
-        render(<OwnerBenefits />)
+        const { container } = render(<OwnerBenefits />)
         expect(screen.getByText(INCLUDED_HEADING)).toBeTruthy()
+        // Each inclusion renders as a bold lead plus a muted detail line, so the
+        // full sentence is asserted against the item's text content rather than
+        // a single text node.
+        const lineTexts = Array.from(container.querySelectorAll("li")).map(
+            (item) => (item.textContent ?? "").replace(/\s+/g, " ").trim()
+        )
         for (const feature of INCLUDED_FEATURES) {
-            expect(screen.getByText(feature)).toBeTruthy()
+            expect(lineTexts).toContain(feature)
         }
     })
 

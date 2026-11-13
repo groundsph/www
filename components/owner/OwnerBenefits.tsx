@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { Check, ChevronDown, Coffee, MapPin, Store } from "lucide-react"
+import { BenefitPreview, HeroScreen } from "@/components/owner/OwnerScreenPreview"
+import { cn } from "@/utils/cn"
 import {
     BENEFIT_GROUPS,
     CLAIM_STEPS,
@@ -18,11 +20,28 @@ import {
     SECONDARY_CTA,
 } from "@/components/owner/owner-benefits-content"
 
+/**
+ * Splits an inclusion line on its em dash so the key part can lead and the
+ * detail can sit under it in a lighter weight. The rendered text is identical
+ * to the source string, which keeps the copy greppable and the reading order
+ * intact.
+ */
+function InclusionLine({ text }: { text: string }) {
+    const [lead, ...detail] = text.split(" — ")
+
+    return (
+        <span className='text-[13px] leading-relaxed'>
+            <span className='block font-semibold text-text'>{lead} —</span>{" "}
+            <span className='block text-text/55'>{detail.join(" — ")}</span>
+        </span>
+    )
+}
+
 export default function OwnerBenefits() {
     return (
         <main className='w-full min-h-screen bg-background'>
             {/* Hero */}
-            <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-20 overflow-hidden'>
+            <section className='relative bg-linear-to-br from-primary/10 via-secondary/5 to-tertiary/10 py-16 md:py-20 overflow-hidden'>
                 <div
                     className='absolute inset-0 pointer-events-none select-none overflow-hidden'
                     aria-hidden='true'
@@ -33,34 +52,55 @@ export default function OwnerBenefits() {
                 </div>
 
                 <div className='max-w-7xl mx-auto px-4 relative z-10'>
-                    <span className='inline-block px-3 py-1 mb-4 bg-background/50 backdrop-blur-sm border border-text/5 rounded-full text-xs font-medium text-text/60 uppercase tracking-wider'>
-                        {HERO.eyebrow}
-                    </span>
-                    <h1 className='text-4xl md:text-6xl font-bold font-serif text-text mb-6 tracking-tight max-w-3xl'>
-                        {HERO.heading}
-                    </h1>
-                    <p className='text-lg md:text-xl text-text/70 max-w-2xl leading-relaxed mb-6'>
-                        {HERO.lede}
-                    </p>
-                    <p className='text-sm font-semibold text-primary mb-8'>
-                        {HERO.reassurance}
-                    </p>
+                    <div className='grid items-center gap-12 lg:grid-cols-2 lg:gap-16'>
+                        <div>
+                            <span className='inline-block px-3 py-1 mb-4 bg-background/50 backdrop-blur-sm border border-text/5 rounded-full text-xs font-medium text-text/60 uppercase tracking-wider'>
+                                {HERO.eyebrow}
+                            </span>
+                            <h1 className='text-4xl md:text-6xl font-bold font-serif text-text mb-6 tracking-tight'>
+                                {HERO.heading}
+                            </h1>
+                            <p className='text-lg md:text-xl text-text/70 max-w-2xl leading-relaxed mb-6'>
+                                {HERO.lede}
+                            </p>
+                            <p className='text-sm font-semibold text-primary mb-8'>
+                                {HERO.reassurance}
+                            </p>
 
-                    <div className='flex flex-col sm:flex-row gap-3'>
-                        <Link
-                            href={PRIMARY_CTA.href}
-                            className='inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
-                        >
-                            <Store className='w-5 h-5' aria-hidden='true' />
-                            {PRIMARY_CTA.label}
-                        </Link>
-                        <Link
-                            href={SECONDARY_CTA.href}
-                            className='inline-flex items-center justify-center gap-2 px-6 py-3 bg-text/10 text-text font-semibold rounded-lg hover:bg-text/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
-                        >
-                            <MapPin className='w-5 h-5' aria-hidden='true' />
-                            {SECONDARY_CTA.label}
-                        </Link>
+                            <div className='flex flex-col sm:flex-row gap-3'>
+                                <Link
+                                    href={PRIMARY_CTA.href}
+                                    className='inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                                >
+                                    <Store
+                                        className='w-5 h-5'
+                                        aria-hidden='true'
+                                    />
+                                    {PRIMARY_CTA.label}
+                                </Link>
+                                <Link
+                                    href={SECONDARY_CTA.href}
+                                    className='inline-flex items-center justify-center gap-2 px-6 py-3 bg-text/10 text-text font-semibold rounded-lg hover:bg-text/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                                >
+                                    <MapPin
+                                        className='w-5 h-5'
+                                        aria-hidden='true'
+                                    />
+                                    {SECONDARY_CTA.label}
+                                </Link>
+                            </div>
+                        </div>
+
+                        <div className='relative'>
+                            <p className='sr-only'>
+                                A preview of a claimed cafe page on Grounds,
+                                with its rating, amenities, menu and a live
+                                discount campaign.
+                            </p>
+                            <div aria-hidden='true'>
+                                <HeroScreen />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -71,25 +111,38 @@ export default function OwnerBenefits() {
                     <h2 className='text-2xl md:text-3xl font-bold font-serif text-text'>
                         {FREE_PILLARS_HEADING}
                     </h2>
+                    <p className='text-text/60 mt-2 max-w-2xl leading-relaxed'>
+                        Nothing to buy, nothing to unlock, nothing taken.
+                    </p>
 
-                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8'>
-                        {FREE_PILLARS.map((pillar) => {
+                    <div className='mt-8 grid grid-cols-1 gap-6 rounded-2xl bg-text/5 px-6 py-7 sm:grid-cols-2 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:divide-text/10'>
+                        {FREE_PILLARS.map((pillar, index) => {
                             const Icon = pillar.icon
                             return (
                                 <div
                                     key={pillar.title}
-                                    className='p-5 bg-text/5 border border-text/10 rounded-xl'
+                                    className={cn(
+                                        "lg:px-6",
+                                        index === 0 && "lg:pl-0",
+                                        index === FREE_PILLARS.length - 1 &&
+                                            "lg:pr-0"
+                                    )}
                                 >
-                                    <div className='w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3'>
-                                        <Icon
-                                            className='w-5 h-5 text-primary'
-                                            aria-hidden='true'
-                                        />
+                                    <div className='flex items-center gap-2.5'>
+                                        <div className='w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0'>
+                                            <Icon
+                                                className='w-4 h-4 text-primary'
+                                                aria-hidden='true'
+                                            />
+                                        </div>
+                                        <h3 className='font-semibold text-text'>
+                                            {pillar.title}
+                                        </h3>
                                     </div>
-                                    <h3 className='font-semibold text-text mb-1'>
-                                        {pillar.title}
-                                    </h3>
-                                    <p className='text-text/60 text-sm leading-relaxed'>
+                                    <p className='mt-3 text-sm font-semibold text-primary'>
+                                        {pillar.highlight}
+                                    </p>
+                                    <p className='mt-1 text-[13px] text-text/60 leading-relaxed'>
                                         {pillar.description}
                                     </p>
                                 </div>
@@ -105,8 +158,10 @@ export default function OwnerBenefits() {
 
             {/* Benefit groups */}
             <div className='w-full'>
-                {BENEFIT_GROUPS.map((group) => {
+                {BENEFIT_GROUPS.map((group, groupIndex) => {
                     const GroupIcon = group.icon
+                    const isPreviewFirst = groupIndex % 2 === 1
+
                     return (
                         <section
                             key={group.id}
@@ -115,7 +170,9 @@ export default function OwnerBenefits() {
                         >
                             <div className='max-w-7xl mx-auto'>
                                 <div className='flex items-start gap-3 mb-6'>
-                                    <div className={`p-2 rounded-xl ${group.accent}`}>
+                                    <div
+                                        className={`p-2 rounded-xl ${group.accent}`}
+                                    >
                                         <GroupIcon
                                             className='w-5 h-5'
                                             aria-hidden='true'
@@ -131,33 +188,61 @@ export default function OwnerBenefits() {
                                     </div>
                                 </div>
 
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                    {group.items.map((item) => {
-                                        const ItemIcon = item.icon
-                                        return (
-                                            <div
-                                                key={item.title}
-                                                className='p-5 bg-text/5 border border-text/10 rounded-xl hover:border-text/20 transition-colors'
-                                            >
-                                                <div className='flex items-start gap-4'>
-                                                    <div className='p-2 bg-background rounded-lg text-primary shrink-0'>
+                                <div className='grid gap-6 lg:grid-cols-5 lg:items-start'>
+                                    <div
+                                        className={cn(
+                                            "min-w-0 lg:col-span-2",
+                                            isPreviewFirst
+                                                ? "lg:order-1"
+                                                : "lg:order-2"
+                                        )}
+                                    >
+                                        <div className='lg:sticky lg:top-24'>
+                                            <p className='sr-only'>
+                                                A preview of the Grounds owner
+                                                dashboard for{" "}
+                                                {group.title.toLowerCase()}.
+                                            </p>
+                                            <BenefitPreview
+                                                groupId={group.id}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        className={cn(
+                                            "grid min-w-0 grid-cols-1 gap-x-10 gap-y-7 sm:grid-cols-2 lg:col-span-3",
+                                            isPreviewFirst
+                                                ? "lg:order-2"
+                                                : "lg:order-1"
+                                        )}
+                                    >
+                                        {group.items.map((item) => {
+                                            const ItemIcon = item.icon
+                                            return (
+                                                <div
+                                                    key={item.title}
+                                                    className='border-t border-text/10 pt-5'
+                                                >
+                                                    <div className='flex items-center gap-3'>
                                                         <ItemIcon
-                                                            className='w-5 h-5'
+                                                            className='w-5 h-5 shrink-0 text-primary'
                                                             aria-hidden='true'
                                                         />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className='font-semibold text-text mb-1'>
+                                                        <h3 className='font-semibold text-text leading-snug'>
                                                             {item.title}
                                                         </h3>
-                                                        <p className='text-text/60 text-sm leading-relaxed'>
-                                                            {item.description}
-                                                        </p>
                                                     </div>
+                                                    <p className='mt-3 text-[13px] font-semibold text-primary'>
+                                                        {item.highlight}
+                                                    </p>
+                                                    <p className='mt-1 text-[13px] text-text/60 leading-relaxed'>
+                                                        {item.description}
+                                                    </p>
                                                 </div>
-                                            </div>
-                                        )
-                                    })}
+                                            )
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -182,10 +267,13 @@ export default function OwnerBenefits() {
                                     {index + 1}
                                 </span>
                                 <div>
-                                    <h3 className='font-semibold text-text mb-1'>
+                                    <h3 className='font-semibold text-text'>
                                         {step.title}
                                     </h3>
-                                    <p className='text-text/60 text-sm leading-relaxed'>
+                                    <p className='mt-2 text-sm font-semibold text-primary'>
+                                        {step.highlight}
+                                    </p>
+                                    <p className='mt-1 text-[13px] text-text/60 leading-relaxed'>
                                         {step.description}
                                     </p>
                                 </div>
@@ -202,19 +290,17 @@ export default function OwnerBenefits() {
                         {INCLUDED_HEADING}
                     </h2>
 
-                    <ul className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <ul className='grid grid-cols-1 gap-x-10 gap-y-4 rounded-2xl bg-text/5 px-6 py-7 md:grid-cols-2'>
                         {INCLUDED_FEATURES.map((feature) => (
                             <li
                                 key={feature}
-                                className='flex items-start gap-3 p-4 bg-text/5 border border-text/10 rounded-xl text-text/70'
+                                className='flex items-start gap-3'
                             >
                                 <Check
-                                    className='w-5 h-5 text-primary shrink-0 mt-0.5'
+                                    className='w-4 h-4 text-primary shrink-0 mt-0.5'
                                     aria-hidden='true'
                                 />
-                                <span className='text-sm leading-relaxed'>
-                                    {feature}
-                                </span>
+                                <InclusionLine text={feature} />
                             </li>
                         ))}
                     </ul>

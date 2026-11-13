@@ -7,6 +7,7 @@ const read = (path: string) =>
 
 const PAGE_FILES = [
     "components/owner/OwnerBenefits.tsx",
+    "components/owner/OwnerScreenPreview.tsx",
     "components/owner/owner-benefits-content.ts",
     "app/for-owners/page.tsx",
 ]
@@ -67,11 +68,18 @@ describe("owner benefits page — styling conventions", () => {
         }
     })
 
-    it("includes no images", () => {
+    it("loads photos through next/image only, from the cafe CDN", () => {
         for (const file of PAGE_FILES) {
-            const source = read(file)
-            expect(source.includes("next/image")).toBe(false)
-            expect(source.includes("<img")).toBe(false)
+            expect(read(file).includes("<img")).toBe(false)
+        }
+
+        const preview = read("components/owner/OwnerScreenPreview.tsx")
+        expect(preview.includes('from "next/image"')).toBe(true)
+
+        const remoteUrls = preview.match(/https:\/\/[^"'`\s]+/g) ?? []
+        expect(remoteUrls.length).toBeGreaterThan(0)
+        for (const url of remoteUrls) {
+            expect(url.startsWith("https://cdn.grounds.ph/")).toBe(true)
         }
     })
 })

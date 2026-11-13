@@ -103,6 +103,35 @@ describe("owner benefits content — benefit groups", () => {
     })
 })
 
+describe("owner benefits content — emphasised lines", () => {
+    const emphasisPairs = [
+        ...FREE_PILLARS.map((pillar) => [pillar.highlight, pillar.description]),
+        ...BENEFIT_GROUPS.flatMap((group) =>
+            group.items.map((item) => [item.highlight, item.description])
+        ),
+        ...CLAIM_STEPS.map((step) => [step.highlight, step.description]),
+    ]
+
+    it("gives every card, bullet and step its own highlighted line", () => {
+        for (const [highlight] of emphasisPairs) {
+            expect(highlight.length).toBeGreaterThan(10)
+        }
+    })
+
+    it("does not restate the description in the highlighted line", () => {
+        for (const [highlight, description] of emphasisPairs) {
+            expect(
+                description.toLowerCase().includes(highlight.toLowerCase())
+            ).toBe(false)
+        }
+    })
+
+    it("keeps the highlighted lines distinct from each other", () => {
+        const lines = emphasisPairs.map(([highlight]) => highlight)
+        expect(new Set(lines).size).toBe(lines.length)
+    })
+})
+
 describe("owner benefits content — claim steps", () => {
     it("describes the four-step claim flow in order", () => {
         expect(CLAIM_STEPS.length).toBe(4)
