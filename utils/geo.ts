@@ -67,3 +67,16 @@ export function formatDistance(km: number): string {
     }
     return `${km.toFixed(1)}km`
 }
+
+/**
+ * Format a distance as a walking time estimate.
+ *
+ * "4 min walk" answers the question a visitor is actually asking ("is it worth
+ * getting up?") in a way "300m" does not. Assumes a leisurely 80 m/min so the
+ * estimate errs towards arriving early.
+ */
+export function formatWalkTime(km: number): string {
+    const metres = Math.max(0, km * 1000)
+    const minutes = Math.max(1, Math.round(metres / 80))
+    return `${minutes} min walk`
+}

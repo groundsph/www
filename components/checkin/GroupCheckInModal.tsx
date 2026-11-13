@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { motion } from "motion/react"
+import Image from "next/image"
+import Link from "next/link"
 import {
     X,
     MapPin,
@@ -11,11 +14,25 @@ import {
     Coffee,
     Sparkles,
     Trophy,
+    Wifi,
+    Plug,
+    Snowflake,
+    PawPrint,
+    Sun,
+    Star,
+    Bike,
 } from "lucide-react"
 import CompanionSelector from "./CompanionSelector"
 import type { CheckInResult } from "@/app/api/actions/profile"
+import type { NearbyCafeDetail } from "@/app/api/actions/nearby"
 import { useBadgeNotification } from "@/components/badges/BadgeNotificationContext"
 import { useHaptics } from "@/hooks/useHaptics"
+import {
+    getCafeThumbnailUrl,
+    getPriceLevel,
+    isOpenNow,
+} from "@/utils/extras"
+import { formatWalkTime } from "@/utils/geo"
 
 export interface UserResult {
     id: string
@@ -38,6 +55,32 @@ interface GroupCheckInModalProps {
     visitedToday?: boolean
     visitCount?: number
     initialCompanions?: UserResult[]
+    /**
+     * Optional cafe detail. When present the modal leads with a rich card
+     * (photo, status, amenities) instead of the name-only header.
+     */
+    cafe?: NearbyCafeDetail | null
+    /** Shown as a quiet "Not here" escape hatch when provided. */
+    onDismiss?: () => void
+    /** Overrides the primary button label, e.g. "Yes, I'm here" for an auto-open. */
+    confirmLabel?: string
+}
+
+interface Amenity {
+    label: string
+    icon: React.ComponentType<{ className?: string }>
+}
+
+/** Only amenity flags that are explicitly true, capped so the row stays one line. */
+function buildAmenities(cafe: NearbyCafeDetail): Amenity[] {
+    const amenities: Amenity[] = []
+    if (cafe.hasWifi) amenities.push({ label: "Wi-Fi", icon: Wifi })
+    if (cafe.hasSockets) amenities.push({ label: "Power", icon: Plug })
+    if (cafe.hasAircon) amenities.push({ label: "Aircon", icon: Snowflake })
+    if (cafe.isWorkFriendly) amenities.push({ label: "Work-friendly", icon: Coffee })
+    if (cafe.hasOutdoorSeating) amenities.push({ label: "Outdoor", icon: Sun })
+    if (cafe.isPetFriendly) amenities.push({ label: "Pet-friendly", icon: PawPrint })
+    return amenities.slice(0, 4)
 }
 
 export default function GroupCheckInModal({
@@ -50,6 +93,9 @@ export default function GroupCheckInModal({
     visitedToday = false,
     visitCount = 0,
     initialCompanions = [],
+    cafe = null,
+    onDismiss,
+    confirmLabel,
 }: GroupCheckInModalProps) {
     const [selectedCompanions, setSelectedCompanions] =
         useState<UserResult[]>(initialCompanions)
@@ -161,6 +207,15 @@ export default function GroupCheckInModal({
 
     if (!isOpen) return null
 
+    // Derived display data for the rich header. Computed after the early return
+    // so a closed modal does no work.
+    const openStatus = cafe ? isOpenNow(cafe.operatingHours) : { isOpen: false }
+    const amenities = cafe ? buildAmenities(cafe) : []
+    const walkTime = cafe ? formatWalkTime(cafe.distance / 1000) : null
+    const primaryLabel =
+        confirmLabel ??
+        (visitedToday && onUpdateCheckIn ? "Update Check-in" : "Check In")
+
     return (
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
             {/* Backdrop */}
@@ -170,27 +225,44 @@ export default function GroupCheckInModal({
             />
 
             {/* Modal */}
-            <div className='relative bg-background rounded-2xl shadow-xl w-full max-w-md'>
-                {/* Header */}
-                <div className='flex items-center justify-between px-5 py-4 border-b border-text/10 rounded-t-2xl'>
-                    <div className='flex items-center gap-3 flex-1'>
-                        <div className='w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center'>
-                            <MapPin className='w-5 h-5 text-primary' />
+            <motion.div
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+                role='dialog'
+                aria-modal='true'
+                aria-label={`Check in at ${cafeName}`}
+                className='relative bg-background rounded-2xl shadow-xl w-full max-w-md max-h-[92vh] overflow-y-auto custom-scrollbar'
+            >
+                {cafe ? (
+                    <RichCafeHeader
+                        cafe={cafe}
+                        cafeName={cafeName}
+                        walkTime={walkTime}
+                        openStatus={openStatus}
+                        amenities={amenities}
+                        onClose={handleClose}
+                    />
+                ) : (
+                    <div className='flex items-center justify-between px-5 py-4 border-b border-text/10 rounded-t-2xl'>
+                        <div className='flex items-center gap-3 flex-1'>
+                            <div className='w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center'>
+                                <MapPin className='w-5 h-5 text-primary' />
+                            </div>
+                            <div className='flex-1'>
+                                <h2 className='font-bold text-lg'>Check In</h2>
+                                <p className='text-sm text-text/60'>{cafeName}</p>
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <h2 className='font-bold text-lg'>Check In</h2>
-                            <p className='text-sm text-text/60'>
-                                {cafeName}
-                            </p>
-                        </div>
+                        <button
+                            onClick={handleClose}
+                            aria-label='Close'
+                            className='p-2 hover:bg-text/5 rounded-full transition-colors'
+                        >
+                            <X className='w-5 h-5' />
+                        </button>
                     </div>
-                    <button
-                        onClick={handleClose}
-                        className='p-2 hover:bg-text/5 rounded-full transition-colors'
-                    >
-                        <X className='w-5 h-5' />
-                    </button>
-                </div>
+                )}
 
                 {/* Content */}
                 <div className='p-5 space-y-4'>
@@ -322,30 +394,59 @@ export default function GroupCheckInModal({
                 {/* Footer */}
                 <div className='px-5 py-4 border-t border-text/10 bg-text/5 rounded-b-2xl'>
                     {!result ? (
-                        <button
-                            onClick={handleCheckIn}
-                            disabled={
-                                (visitedToday && !onUpdateCheckIn) ||
-                                isSubmitting
-                            }
-                            className='w-full py-3 px-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                    Checking in...
-                                </>
-                            ) : (
-                                <>
-                                    <MapPin className='w-4 h-4 hidden md:block' />
-                                    {visitedToday && onUpdateCheckIn
-                                        ? "Update Check-in"
-                                        : "Check In"}
-                                    {selectedCompanions.length > 0 &&
-                                        ` with ${selectedCompanions.length} companion${selectedCompanions.length > 1 ? "s" : ""}`}
-                                </>
+                        <>
+                            <button
+                                onClick={handleCheckIn}
+                                disabled={
+                                    (visitedToday && !onUpdateCheckIn) ||
+                                    isSubmitting
+                                }
+                                className='w-full py-3 px-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className='w-4 h-4 animate-spin' />
+                                        Checking in...
+                                    </>
+                                ) : (
+                                    <>
+                                        <MapPin className='w-4 h-4 hidden md:block' />
+                                        {primaryLabel}
+                                        {selectedCompanions.length > 0 &&
+                                            ` with ${selectedCompanions.length} companion${selectedCompanions.length > 1 ? "s" : ""}`}
+                                    </>
+                                )}
+                            </button>
+
+                            {/* Escape hatch. Declining must be as easy to find
+                                as accepting, or the prompt feels pushy. */}
+                            {(onDismiss || cafe) && (
+                                <div className='flex items-center justify-center gap-3 mt-3 text-sm'>
+                                    {cafe && (
+                                        <Link
+                                            href={`/cafes/${cafe.slug}`}
+                                            className='text-text/60 hover:text-text underline-offset-2 hover:underline transition-colors'
+                                        >
+                                            View cafe
+                                        </Link>
+                                    )}
+                                    {cafe && onDismiss && (
+                                        <span className='text-text/20'>·</span>
+                                    )}
+                                    {onDismiss && (
+                                        <button
+                                            onClick={() => {
+                                                onDismiss()
+                                                handleClose()
+                                            }}
+                                            className='text-text/60 hover:text-text underline-offset-2 hover:underline transition-colors'
+                                        >
+                                            Not here
+                                        </button>
+                                    )}
+                                </div>
                             )}
-                        </button>
+                        </>
                     ) : (
                         <button
                             onClick={handleDone}
@@ -355,6 +456,130 @@ export default function GroupCheckInModal({
                         </button>
                     )}
                 </div>
+            </motion.div>
+        </div>
+    )
+}
+
+interface RichCafeHeaderProps {
+    cafe: NearbyCafeDetail
+    cafeName: string
+    walkTime: string | null
+    openStatus: { isOpen: boolean; closesAt?: string; opensAt?: string }
+    amenities: Amenity[]
+    onClose: () => void
+}
+
+/**
+ * Photo-led header for a cafe we can actually describe: where it is, whether it
+ * is open, how it rates, and what it offers. Emphasis order is deliberate —
+ * photo, then name, then the one status line that answers "should I go now?".
+ */
+function RichCafeHeader({
+    cafe,
+    cafeName,
+    walkTime,
+    openStatus,
+    amenities,
+    onClose,
+}: RichCafeHeaderProps) {
+    const rating = cafe.averageRating
+    const priceLevel = cafe.priceLevel ? getPriceLevel(cafe.priceLevel) : null
+
+    return (
+        <div className='relative'>
+            <div className='relative aspect-[16/9] w-full overflow-hidden rounded-t-2xl bg-secondary/20'>
+                <Image
+                    src={getCafeThumbnailUrl(cafe.thumbnail)}
+                    alt={cafeName}
+                    fill
+                    className='object-cover'
+                    sizes='(max-width: 768px) 100vw, 28rem'
+                    priority={false}
+                />
+                <div className='absolute inset-0 bg-linear-to-t from-black/85 via-black/35 to-black/20' />
+
+                <button
+                    onClick={onClose}
+                    aria-label='Close'
+                    className='absolute top-3 right-3 p-2 rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60 transition-colors'
+                >
+                    <X className='w-4 h-4' />
+                </button>
+
+                <div className='absolute inset-x-0 bottom-0 p-4'>
+                    {cafe.city && (
+                        <p className='text-[11px] font-medium uppercase tracking-[0.14em] text-white/70'>
+                            {cafe.city}
+                        </p>
+                    )}
+                    <h2 className='text-2xl font-bold font-serif leading-tight text-white'>
+                        {cafeName}
+                    </h2>
+                </div>
+            </div>
+
+            <div className='px-5 py-4 space-y-3 border-b border-text/10'>
+                {/* Status strip — the "should I go now?" answers, in one line */}
+                <div className='flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm'>
+                    <span
+                        className={`inline-flex items-center gap-1.5 font-semibold ${
+                            openStatus.isOpen ? "text-green-700" : "text-text/50"
+                        }`}
+                    >
+                        <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                                openStatus.isOpen ? "bg-green-600" : "bg-text/30"
+                            }`}
+                        />
+                        {openStatus.isOpen
+                            ? openStatus.closesAt
+                                ? `Open until ${openStatus.closesAt}`
+                                : "Open now"
+                            : openStatus.opensAt
+                              ? `Opens ${openStatus.opensAt}`
+                              : "Closed"}
+                    </span>
+
+                    {rating != null && (
+                        <span className='inline-flex items-center gap-1 font-medium'>
+                            <Star className='w-3.5 h-3.5 fill-amber-400 text-amber-400' />
+                            {rating.toFixed(1)}
+                            {cafe.totalReviews ? (
+                                <span className='text-text/40 font-normal'>
+                                    ({cafe.totalReviews})
+                                </span>
+                            ) : null}
+                        </span>
+                    )}
+
+                    {priceLevel && (
+                        <span className='font-medium text-secondary'>
+                            {priceLevel}
+                        </span>
+                    )}
+
+                    {walkTime && (
+                        <span className='inline-flex items-center gap-1 text-text/60'>
+                            <Bike className='w-3.5 h-3.5' />
+                            {walkTime}
+                        </span>
+                    )}
+                </div>
+
+                {amenities.length > 0 && (
+                    <div className='flex flex-wrap gap-1.5'>
+                        {amenities.map(({ label, icon: Icon }) => (
+                            <span
+                                key={label}
+                                className='inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/15 text-[11px] font-medium text-text/70'
+                            >
+                                <Icon className='w-3 h-3' />
+                                {label}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     )

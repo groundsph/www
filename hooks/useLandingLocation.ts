@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef } from "react"
 import { getLocationFeatured } from "@/app/api/actions/cafe"
-import { getNearbyCafes, NearbyCafe } from "@/app/api/actions/nearby"
+import type { UseCafePresenceReturn } from "@/hooks/useCafePresence"
 import { CafeWithRatings } from "@/utils/types/extra"
 import {
     useUserLocation,
     GeolocationError,
-    LocationSource
+    LocationSource,
 } from "@/hooks/useUserLocation"
+import { useCafePresence } from "@/hooks/useCafePresence"
 import { useNotification } from "@/components/layout/NotificationProvider"
 
 // ============================================================================
@@ -23,16 +24,6 @@ interface CachedLocationData {
     timestamp: number
 }
 
-export interface UseLandingLocationReturn {
-    featured: CafeWithRatings | null
-    isLocalFeatured: boolean
-    locationName: string | null
-    isEstimate: boolean
-    loading: boolean
-    nearbyCafe: NearbyCafe | null
-    source: LocationSource
-}
-
 // ============================================================================
 // Constants
 // ============================================================================
@@ -40,9 +31,19 @@ export interface UseLandingLocationReturn {
 const CACHE_KEY = "grounds_location"
 const CACHE_MAX_AGE = 5 * 60 * 1000 // 5 minutes
 
-// ============================================================================
-// Hook
-// ============================================================================
+export interface UseLandingLocationReturn {
+    featured: CafeWithRatings | null
+    isLocalFeatured: boolean
+    locationName: string | null
+    isEstimate: boolean
+    loading: boolean
+    source: LocationSource
+    /**
+     * "Are you at <cafe>?" state and the handlers that record what the visitor
+     * did about it. Owned by `useCafePresence`.
+     */
+    presence: UseCafePresenceReturn
+}
 
 /**
  * Hook specifically for the landing page that:
@@ -50,6 +51,7 @@ const CACHE_MAX_AGE = 5 * 60 * 1000 // 5 minutes
  * - Fetches featured cafes based on location
  * - Manages sessionStorage caching
  * - Shows notifications for location errors
+ * - Delegates "are you at <cafe>?" presence detection to useCafePresence
  */
 export function useLandingLocation(
     initialFeatured: CafeWithRatings | null
@@ -62,7 +64,6 @@ export function useLandingLocation(
     const [locationName, setLocationName] = useState<string | null>(null)
     const [isEstimate, setIsEstimate] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
-    const [nearbyCafe, setNearbyCafe] = useState<NearbyCafe | null>(null)
 
     // Track if we've shown a notification to avoid duplicates
     const hasShownNotificationRef = useRef(false)
@@ -84,14 +85,19 @@ export function useLandingLocation(
         // and only notify if that also fails
     }
 
+    const userLocation = useUserLocation({
+        onError: handleLocationError,
+    })
     const {
         location,
         loading: locationLoading,
         isEstimate: locationIsEstimate,
         source,
-    } = useUserLocation({
-        onError: handleLocationError,
-    })
+    } = userLocation
+
+    // Presence detection lives in its own hook. We hand it our location state so
+    // the page does not fire a second GPS request and a second Nominatim lookup.
+    const presence = useCafePresence({ userLocation })
 
     // Check cache on mount
     useEffect(() => {
@@ -155,33 +161,13 @@ export function useLandingLocation(
         fetchFeatured()
     }, [location, locationLoading, locationIsEstimate, hasFetched])
 
-    // Automatically fetch nearby cafes if source is GPS
-    useEffect(() => {
-        // Only fetch if we have GPS source and valid coordinates
-        if (source === "gps" && location.lat && location.lng) {
-            const fetchNearby = async () => {
-                try {
-                    // Search within 150m for check-ins
-                    const nearby = await getNearbyCafes(location.lat!, location.lng!, 1, 150)
-                    if (nearby.length > 0) {
-                        setNearbyCafe(nearby[0])
-                    }
-                } catch (err) {
-                    console.error("[LandingLocation] Failed to fetch nearby cafe:", err)
-                }
-            }
-
-            fetchNearby()
-        }
-    }, [source, location.lat, location.lng])
-
     return {
         featured,
         isLocalFeatured,
         locationName,
         isEstimate,
         loading: locationLoading && !hasFetched,
-        nearbyCafe,
         source,
+        presence,
     }
 }

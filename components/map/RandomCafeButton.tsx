@@ -10,6 +10,8 @@ import {
     Navigation,
     RefreshCw,
     Loader2,
+    CloudSun,
+    Coffee,
 } from "lucide-react"
 import Image from "next/image"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -18,6 +20,7 @@ import { useUserLocation } from "@/hooks/useUserLocation"
 import { useHaptics } from "@/hooks/useHaptics"
 import { getCafeThumbnailUrl, getPriceLevel, isOpenNow } from "@/utils/extras"
 import { getAllCafes } from "@/app/api/actions/cafe"
+import { getSurprisePick, type SurprisePick } from "@/app/api/actions/weather"
 
 interface RandomCafeButtonProps {
     cafes?: CafeWithRatings[]
@@ -45,6 +48,12 @@ export default function RandomCafeButton({
     const [isSpinning, setIsSpinning] = useState(false)
     const [fetchedCafes, setFetchedCafes] = useState<CafeWithRatings[]>([])
     const [isFetchingCafes, setIsFetchingCafes] = useState(false)
+    // Keyed by cafe id so re-rolling never shows the previous cafe's pick while
+    // the new one loads — the stale value is simply not "active".
+    const [context, setContext] = useState<{
+        cafeId: string
+        data: SurprisePick | null
+    } | null>(null)
 
     // Use prop cafes if provided, otherwise use fetched cafes
     const cafes = propCafes ?? fetchedCafes
@@ -103,6 +112,36 @@ export default function RandomCafeButton({
             pickRandom()
         }
     }, [isOpen, nearbyCafes.length, selectedCafe, isSpinning, pickRandom])
+
+    // Weather + menu context for whichever cafe was rolled. Failure is silent:
+    // a missing forecast must never block or clutter the random flow.
+    useEffect(() => {
+        if (!selectedCafe) return
+
+        const cafeId = selectedCafe.id
+        let cancelled = false
+
+        getSurprisePick(cafeId, location.lat, location.lng)
+            .then((result) => {
+                if (cancelled) return
+                setContext({ cafeId, data: result ?? null })
+            })
+            .catch(() => {
+                if (cancelled) return
+                // Record the miss so the loading hint resolves instead of
+                // spinning forever on a cafe with no forecast.
+                setContext({ cafeId, data: null })
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [selectedCafe, location.lat, location.lng])
+
+    const contextIsCurrent =
+        !!context && !!selectedCafe && context.cafeId === selectedCafe.id
+    const activeContext = contextIsCurrent ? context.data : null
+    const isPendingContext = !!selectedCafe && !contextIsCurrent
 
     const handleClick = () => {
         trigger("medium")
@@ -169,19 +208,26 @@ export default function RandomCafeButton({
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className='fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-md bg-background rounded-2xl shadow-2xl z-50 overflow-hidden'
+                            className='fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-md bg-background rounded-2xl shadow-2xl z-50 overflow-y-auto custom-scrollbar max-h-[92vh]'
                         >
                             {/* Header */}
                             <div className='flex items-center justify-between px-5 py-4 border-b border-text/10'>
-                                <div className='flex items-center gap-2'>
-                                    <Dices className='w-5 h-5 text-secondary' />
-                                    <h3 className='font-semibold text-lg'>
+                                <div className='flex items-center gap-2 min-w-0'>
+                                    <Dices className='w-5 h-5 shrink-0 text-secondary' />
+                                    <h3 className='font-semibold text-lg whitespace-nowrap'>
                                         Random Cafe
                                     </h3>
+                                    {activeContext?.weather && (
+                                        <span className='flex flex-row items-center gap-1 ml-1 px-2 py-0.5 rounded-full bg-secondary/15 text-xs font-medium text-text/70 whitespace-nowrap overflow-hidden text-ellipsis'>
+                                            <CloudSun className='w-3 h-3 shrink-0' />
+                                            {activeContext.weather.label}
+                                        </span>
+                                    )}
                                 </div>
                                 <button
                                     onClick={handleClose}
-                                    className='p-1 rounded-full hover:bg-text/10 transition-colors cursor-pointer'
+                                    aria-label='Close'
+                                    className='p-1 rounded-full hover:bg-text/10 transition-colors cursor-pointer shrink-0'
                                 >
                                     <X className='w-5 h-5' />
                                 </button>
@@ -320,6 +366,39 @@ export default function RandomCafeButton({
                                                 )}
                                             </div>
                                         </div>
+
+                                        {/* Weather-matched pick. This is the
+                                            reason the roll feels considered
+                                            instead of arbitrary. */}
+                                        {activeContext?.pick && (
+                                            <div className='flex items-start gap-2.5 rounded-xl border border-secondary/30 bg-secondary/10 px-3 py-2.5'>
+                                                <Coffee className='w-4 h-4 mt-0.5 shrink-0 text-secondary' />
+                                                <div className='min-w-0'>
+                                                    <p className='text-[11px] font-semibold uppercase tracking-wider text-text/50'>
+                                                        Today&apos;s pick
+                                                    </p>
+                                                    <p className='text-sm font-bold text-text truncate'>
+                                                        {activeContext.pick.item.name}
+                                                        <span className='ml-1.5 font-medium text-text/50'>
+                                                            ₱
+                                                            {Math.round(
+                                                                activeContext.pick.item.price
+                                                            )}
+                                                        </span>
+                                                    </p>
+                                                    <p className='text-xs text-text/60'>
+                                                        {activeContext.pick.reason}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isPendingContext && (
+                                            <div className='flex items-center gap-2 text-xs text-text/40'>
+                                                <Loader2 className='w-3 h-3 animate-spin' />
+                                                Checking the weather...
+                                            </div>
+                                        )}
 
                                         {/* Actions */}
                                         <div className='flex gap-3 pt-2'>

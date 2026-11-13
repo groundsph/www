@@ -20,7 +20,7 @@ const MotionLink = motion.create(Link)
 export default function LandingHero({
     featured: initialFeatured,
 }: LandingHeroProps) {
-    const { featured, isLocalFeatured, locationName, isEstimate, nearbyCafe } =
+    const { featured, isLocalFeatured, locationName, isEstimate, presence } =
         useLandingLocation(initialFeatured)
     const { trigger } = useHaptics()
 
@@ -69,8 +69,16 @@ export default function LandingHero({
                             Discover the finest cafes across the archipelago
                         </motion.span>
 
-                        {/* Simple check-in prompt - only shows if GPS is active and cafe is nearby */}
-                        <HeroLocationCheckIn nearbyCafe={nearbyCafe} />
+                        {/* Check-in prompt. Stays a quiet inline line until the
+                            presence gate is confident, at which point it opens
+                            the check-in modal once. */}
+                        <HeroLocationCheckIn
+                            nearbyCafe={presence.nearbyCafe}
+                            shouldPrompt={presence.shouldPrompt}
+                            onPromptShown={presence.markPromptShown}
+                            onDismiss={presence.dismiss}
+                            onManualPrompt={presence.markManualPrompt}
+                        />
                     </div>
                     <div className='flex-1 flex flex-col'>
                         {featured && (

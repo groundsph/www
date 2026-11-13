@@ -2,8 +2,10 @@
 
 import { db } from "@/db"
 import { toStoredThumbnail } from "@/utils/extras"
-import { cafes } from "@/db/schema"
-import { and, between, eq, sql } from "drizzle-orm"
+import { cafeRatingStats, cafes } from "@/db/schema"
+import { and, between, eq, isNotNull, sql } from "drizzle-orm"
+import type { OperatingHours } from "@/utils/types/cafe"
+import type { Database } from "@/utils/types/database.types"
 
 export interface NearbyCafe {
     id: string
@@ -12,6 +14,26 @@ export interface NearbyCafe {
     thumbnail: string
     distance: number
     address: string
+}
+
+/**
+ * The detail a check-in prompt needs to describe the cafe convincingly:
+ * where it is, whether it is open, how good it is, and what it offers.
+ */
+export interface NearbyCafeDetail extends NearbyCafe {
+    city: string | null
+    lat: number | null
+    lng: number | null
+    priceLevel: Database["public"]["Enums"]["price_level"] | null
+    averageRating: number | null
+    totalReviews: number | null
+    operatingHours: OperatingHours | null
+    hasWifi: boolean | null
+    hasSockets: boolean | null
+    hasAircon: boolean | null
+    isPetFriendly: boolean | null
+    hasOutdoorSeating: boolean | null
+    isWorkFriendly: boolean | null
 }
 
 /**
@@ -27,7 +49,7 @@ export async function getNearbyCafes(
     lng: number,
     limit: number = 5,
     radiusInMeters: number = 150
-): Promise<NearbyCafe[]> {
+): Promise<NearbyCafeDetail[]> {
     try {
         // 1 degree of latitude is approximately 111km (111,000 meters)
         // We can use a rough bounding box to filter significantly.
@@ -48,8 +70,19 @@ export async function getNearbyCafes(
                 slug: cafes.slug,
                 thumbnail: cafes.thumbnail,
                 address: cafes.addressDisplay,
+                city: cafes.cityMunicipality,
                 lat: cafes.lat,
                 lng: cafes.lng,
+                priceLevel: cafes.priceLevel,
+                operatingHours: cafes.operatingHours,
+                hasWifi: cafes.hasWifi,
+                hasSockets: cafes.hasSockets,
+                hasAircon: cafes.hasAircon,
+                isPetFriendly: cafes.isPetFriendly,
+                hasOutdoorSeating: cafes.hasOutdoorSeating,
+                isWorkFriendly: cafes.isWorkFriendly,
+                averageRating: cafeRatingStats.averageRating,
+                totalReviews: cafeRatingStats.totalReviews,
                 // We calculate distance in the query
                 distance: sql<number>`
                     (
@@ -62,8 +95,13 @@ export async function getNearbyCafes(
                 `,
             })
             .from(cafes)
+            .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
             .where(
                 and(
+                    // acos() over a null coordinate yields NaN, and a NaN sort key
+                    // can float an unusable row to the front of the results.
+                    isNotNull(cafes.lat),
+                    isNotNull(cafes.lng),
                     between(cafes.lat, minLat, maxLat),
                     between(cafes.lng, minLng, maxLng),
                     eq(cafes.isPublished, true),
@@ -91,6 +129,19 @@ export async function getNearbyCafes(
                 thumbnail: toStoredThumbnail(r.thumbnail),
                 distance: Math.round(r.distance), // Round to nearest meter
                 address: r.address,
+                city: r.city ?? null,
+                lat: r.lat ?? null,
+                lng: r.lng ?? null,
+                priceLevel: r.priceLevel ?? null,
+                averageRating: r.averageRating ?? null,
+                totalReviews: r.totalReviews ?? null,
+                operatingHours: (r.operatingHours as OperatingHours | null) ?? null,
+                hasWifi: r.hasWifi ?? null,
+                hasSockets: r.hasSockets ?? null,
+                hasAircon: r.hasAircon ?? null,
+                isPetFriendly: r.isPetFriendly ?? null,
+                hasOutdoorSeating: r.hasOutdoorSeating ?? null,
+                isWorkFriendly: r.isWorkFriendly ?? null,
             }))
     } catch (error) {
         console.error("Error fetching nearby cafes:", error)

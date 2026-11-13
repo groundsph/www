@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { motion } from "motion/react"
-import { NearbyCafe } from "@/app/api/actions/nearby"
+import { NearbyCafeDetail } from "@/app/api/actions/nearby"
 import GroupCheckInModal, { UserResult as Companion } from "@/components/checkin/GroupCheckInModal"
 import { recordVisit, getTodayCheckIn, getVisitCount, updateCheckIn } from "@/app/api/actions/profile"
 import { useAuth } from "@/components/layout/AuthProvider"
@@ -11,11 +11,26 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 interface HeroLocationCheckInProps {
-    nearbyCafe: NearbyCafe | null
+    nearbyCafe: NearbyCafeDetail | null
+    /**
+     * True once the presence gate is confident enough to offer the prompt
+     * unprompted. The parent owns the gate; this component only reacts to it.
+     */
+    shouldPrompt?: boolean
+    /** Called when the auto-open prompt is actually shown. */
+    onPromptShown?: () => void
+    /** Called when the visitor declines the auto-open prompt. */
+    onDismiss?: () => void
+    /** Called after an explicit tap so the same cafe is not auto-offered today. */
+    onManualPrompt?: () => void
 }
 
 export default function HeroLocationCheckIn({
     nearbyCafe,
+    shouldPrompt = false,
+    onPromptShown,
+    onDismiss,
+    onManualPrompt,
 }: HeroLocationCheckInProps) {
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false)
     const [hasCheckedIn, setHasCheckedIn] = useState(false)
@@ -27,14 +42,23 @@ export default function HeroLocationCheckIn({
     const { trigger } = useHaptics()
     const router = useRouter()
     const prevCafeIdRef = useRef<string | null>(null)
+    /** Tracks whether the currently open modal was opened by the presence gate. */
+    const [openedAutomatically, setOpenedAutomatically] = useState(false)
 
-    const refreshVisitStatus = useCallback(async () => {
+    /**
+     * Returns today's visit state as well as storing it, so callers that need to
+     * decide *before* rendering (the auto-open path) do not have to wait a
+     * render to read fresh React state.
+     */
+    const refreshVisitStatus = useCallback(async (): Promise<{
+        visitedToday: boolean
+    }> => {
         if (!nearbyCafe || !user) {
             setHasCheckedIn(false)
             setVisitedToday(false)
             setVisitCount(0)
             setInitialCompanions([])
-            return
+            return { visitedToday: false }
         }
 
         setIsCheckingStatus(true)
@@ -47,8 +71,10 @@ export default function HeroLocationCheckIn({
             setHasCheckedIn(!!todayCheckIn)
             setInitialCompanions(todayCheckIn?.companions ?? [])
             setVisitCount(countResult.count ?? 0)
+            return { visitedToday: !!todayCheckIn }
         } catch (error) {
             console.error("Failed to refresh visit status:", error)
+            return { visitedToday: false }
         } finally {
             setIsCheckingStatus(false)
         }
@@ -66,6 +92,41 @@ export default function HeroLocationCheckIn({
         }
     }, [nearbyCafe?.id, user?.id])
 
+    // ------------------------------------------------------------------
+    // Auto-open
+    //
+    // Signed-out visitors are excluded on purpose: the modal would only lead
+    // to an auth redirect, which is a worse interruption than no interruption.
+    // ------------------------------------------------------------------
+    useEffect(() => {
+        if (!shouldPrompt || isCheckInModalOpen || hasCheckedIn) return
+        if (!nearbyCafe || !user) return
+
+        let cancelled = false
+
+        const open = async () => {
+            const status = await refreshRef.current()
+            if (cancelled) return
+
+            // Already checked in here today: the inline line already says so, and
+            // opening a modal just to announce it would be a wasted interruption.
+            if (status.visitedToday) return
+
+            setIsCheckInModalOpen(true)
+            setOpenedAutomatically(true)
+            onPromptShown?.()
+            trigger("light")
+        }
+
+        open()
+
+        return () => {
+            cancelled = true
+        }
+        // `refreshRef` is stable by design; the gate values are the real inputs.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shouldPrompt, nearbyCafe?.id, user?.id, hasCheckedIn, isCheckInModalOpen])
+
     // Don't render anything if no nearby cafe (this means user either
     // hasn't granted GPS permission or isn't near a registered cafe)
     if (!nearbyCafe) return null
@@ -76,8 +137,21 @@ export default function HeroLocationCheckIn({
             router.push("/auth?callbackUrl=/cafes/" + nearbyCafe.slug)
             return
         }
+        onManualPrompt?.()
         await refreshVisitStatus()
+        setOpenedAutomatically(false)
         setIsCheckInModalOpen(true)
+    }
+
+    const handleCloseModal = () => {
+        setIsCheckInModalOpen(false)
+        setOpenedAutomatically(false)
+    }
+
+    const handleDismissPrompt = () => {
+        trigger("soft")
+        onDismiss?.()
+        handleCloseModal()
     }
 
     return (
@@ -86,20 +160,21 @@ export default function HeroLocationCheckIn({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-                className="flex items-center gap-3 text-text/80"
+                className='flex items-center gap-3 text-text/80'
+                aria-live='polite'
             >
-                <span className="text-sm">
+                <span className='text-sm'>
                     {hasCheckedIn ? "You are at " : "Are you at "}
                     <Link
                         href={`/cafes/${nearbyCafe.slug}`}
-                        className="font-bold text-primary hover:underline underline-offset-2 transition-all"
+                        className='font-bold text-primary hover:underline underline-offset-2 transition-all'
                     >
                         {nearbyCafe.name}
                     </Link>
                     {hasCheckedIn ? (
                         <>
                             .{" "}
-                            <span className="font-bold text-primary">
+                            <span className='font-bold text-primary'>
                                 Checked in today ✓
                             </span>
                         </>
@@ -109,7 +184,7 @@ export default function HeroLocationCheckIn({
                             <button
                                 onClick={handleCheckInClick}
                                 disabled={isCheckingStatus}
-                                className="font-bold text-primary hover:underline underline-offset-2 transition-all disabled:opacity-60"
+                                className='font-bold text-primary hover:underline underline-offset-2 transition-all disabled:opacity-60'
                             >
                                 {isCheckingStatus ? "Checking..." : "Check In"}
                             </button>
@@ -121,8 +196,13 @@ export default function HeroLocationCheckIn({
             {/* Check-in Modal */}
             <GroupCheckInModal
                 isOpen={isCheckInModalOpen}
-                onClose={() => setIsCheckInModalOpen(false)}
+                onClose={handleCloseModal}
                 cafeName={nearbyCafe.name}
+                cafe={nearbyCafe}
+                confirmLabel={
+                    visitedToday ? "Update Check-in" : "Yes, I'm here"
+                }
+                onDismiss={openedAutomatically ? handleDismissPrompt : undefined}
                 onCheckIn={async (companions) => {
                     const result = await recordVisit(nearbyCafe.id, companions)
                     if (result?.alreadyVisitedToday) {
@@ -142,6 +222,7 @@ export default function HeroLocationCheckIn({
                 initialCompanions={initialCompanions}
                 onComplete={() => {
                     setIsCheckInModalOpen(false)
+                    setOpenedAutomatically(false)
                     setHasCheckedIn(true)
                     setVisitedToday(true)
                 }}
