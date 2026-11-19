@@ -3,6 +3,9 @@ import {
     currentDayKey,
     currentMonthKey,
     formatYearMonth,
+    getManilaDayOfYear,
+    getManilaTimeParts,
+    getManilaWeekdayKey,
     formatYearMonthKey,
     getLastNMonths,
     getMonthWindow,
@@ -181,5 +184,49 @@ describe("formatYearMonth", () => {
 
     it("passes invalid input through unchanged", () => {
         expect(formatYearMonth("invalid")).toBe("invalid")
+    })
+})
+
+describe("getManilaWeekdayKey", () => {
+    it("is the Manila weekday, not the UTC one", () => {
+        // 2026-11-19 is a Thursday. 15:59:59Z is 23:59 that evening in Manila.
+        expect(getManilaWeekdayKey(new Date("2026-11-19T15:59:59.000Z"))).toBe("thu")
+        // One second later Manila is into Friday the 20th.
+        expect(getManilaWeekdayKey(new Date("2026-11-19T16:00:00.000Z"))).toBe("fri")
+        expect(getManilaWeekdayKey(new Date("2026-11-19T16:30:00.000Z"))).toBe("fri")
+        // 2026-11-20 15:30Z is still Friday evening in Manila; 16:00Z is Saturday.
+        expect(getManilaWeekdayKey(new Date("2026-11-20T15:30:00.000Z"))).toBe("fri")
+        expect(getManilaWeekdayKey(new Date("2026-11-20T16:00:00.000Z"))).toBe("sat")
+    })
+})
+
+describe("getManilaDayOfYear", () => {
+    it("counts days on the Manila calendar", () => {
+        expect(getManilaDayOfYear(new Date("2026-01-01T00:00:00.000Z"))).toBe(1)
+        expect(getManilaDayOfYear(new Date("2026-12-31T00:00:00.000Z"))).toBe(365)
+    })
+
+    it("uses the Manila date around the boundary", () => {
+        // 2026-01-31T16:00Z is already 1 February in Manila.
+        expect(getManilaDayOfYear(new Date("2026-01-31T16:00:00.000Z"))).toBe(32)
+        // One millisecond earlier it is still 31 January.
+        expect(getManilaDayOfYear(new Date("2026-01-31T15:59:59.999Z"))).toBe(31)
+    })
+
+    it("accounts for a leap year", () => {
+        expect(getManilaDayOfYear(new Date("2028-12-31T00:00:00.000Z"))).toBe(366)
+    })
+})
+
+describe("getManilaTimeParts", () => {
+    it("reports Manila wall-clock time", () => {
+        expect(getManilaTimeParts(new Date("2026-11-19T00:00:00.000Z"))).toEqual({
+            hours: 8,
+            minutes: 0,
+        })
+        expect(getManilaTimeParts(new Date("2026-11-19T16:30:00.000Z"))).toEqual({
+            hours: 0,
+            minutes: 30,
+        })
     })
 })

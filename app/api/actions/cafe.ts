@@ -6,16 +6,14 @@ import { PLACEHOLDER_THUMBNAIL } from "@/utils/extras"
 import { getCurrentUser } from "@/lib/auth"
 import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteractions, ownerReviewResponses, featuredSchedules } from "@/db/schema"
 import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray, SQL } from "drizzle-orm"
-import { getDayOfYear, getPHTime } from "@/utils/featured"
+import { getManilaDayOfYear, getManilaWeekdayKey } from "@/utils/date/leaderboard-months"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
 import { omitTestCafes, publicCafeConditions } from "@/utils/filters"
 import { parsePaymentMethodFilter } from "@/utils/payment-methods"
 
-// Helper to get current day key from PH time
+/** The Manila weekday a filter applies to. */
 function getCurrentDayKey(): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
-    const phNow = getPHTime()
-    const days: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"> = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-    return days[phNow.getDay()]
+    return getManilaWeekdayKey()
 }
 
 // Helper to check if a cafe is open 24 hours on a specific day
@@ -257,7 +255,10 @@ export async function getCafeBySlug(slug: string, options: { includeTest?: boole
 }
 
 export async function getDailyFeatured() {
-    const now = getPHTime()
+    // The schedule window is stored as timestamptz, so it is compared against the
+    // real instant. It used to be compared against a Manila-shifted `Date`, which
+    // made a slot start eight hours early on a UTC server.
+    const now = new Date()
 
     // 1. Priority: Manual Schedule
     const scheduledResult = await db
@@ -412,7 +413,7 @@ export async function getDailyFeatured() {
 
     if (!cafesResult.length) return null
 
-    const dayOfYear = getDayOfYear()
+    const dayOfYear = getManilaDayOfYear()
     const selected = cafesResult[dayOfYear % cafesResult.length]
 
     return mapCafeToSnakeCase(selected)
@@ -424,8 +425,8 @@ export async function getDailyFeatured() {
 export async function getLocationFeatured(city?: string, region?: string): Promise<CafeWithRatings | null> {
     if (!city && !region) return null
 
-    const now = getPHTime()
-    const dayOfYear = getDayOfYear()
+    const now = new Date()
+    const dayOfYear = getManilaDayOfYear()
 
     // Check schedules in order: city, region, global
     const scheduleConditions = []
@@ -559,32 +560,68 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
 }
 
 /**
- * Ids of cafes the public must not see, for the one query path that cannot carry
- * a `where` clause: the `search_cafes` database function.
- *
- * Post-filtering is a workaround, not the design. It is small (test cafes are a
- * handful of rows) and it is explicit, so it is easy to delete once the function
- * itself filters.
+ * The column set a cafe card needs. Shared by the search path and its ILIKE
+ * fallback so the two cannot drift — they used to select different columns, and
+ * one of them hand-mapped the result while the other used `mapCafeToSnakeCase`.
  */
-async function getHiddenCafeIds(): Promise<Set<string>> {
-    const conditions = publicCafeConditions()
-    // Nothing to hide in a development build: an empty condition list means the
-    // helper declined to restrict anything.
-    if (conditions.length === 0) return new Set()
-
-    const hidden = await db
-        .select({ id: cafes.id })
-        .from(cafes)
-        .where(
-            or(
-                ...conditions
-                    .filter((condition): condition is SQL => Boolean(condition))
-                    .map(condition => sql`not (${condition})`)
-            )
-        )
-
-    return new Set(hidden.map(row => row.id))
-}
+const cafeListColumns = {
+    id: cafes.id,
+    name: cafes.name,
+    slug: cafes.slug,
+    thumbnail: cafes.thumbnail,
+    description: cafes.description,
+    addressDisplay: cafes.addressDisplay,
+    area: cafes.area,
+    cityMunicipality: cafes.cityMunicipality,
+    province: cafes.province,
+    region: cafes.region,
+    lat: cafes.lat,
+    lng: cafes.lng,
+    priceLevel: cafes.priceLevel,
+    coffeeStyle: cafes.coffeeStyle,
+    roaster: cafes.roaster,
+    brewMethods: cafes.brewMethods,
+    specialty: cafes.specialty,
+    milkOptions: cafes.milkOptions,
+    tags: cafes.tags,
+    operatingHours: cafes.operatingHours,
+    socials: cafes.socials,
+    phone: cafes.phone,
+    email: cafes.email,
+    websiteUrl: cafes.websiteUrl,
+    paymentMethods: cafes.paymentMethods,
+    hasWifi: cafes.hasWifi,
+    hasSmoking: cafes.hasSmoking,
+    hasSockets: cafes.hasSockets,
+    hasAircon: cafes.hasAircon,
+    hasParking: cafes.hasParking,
+    hasOutdoorSeating: cafes.hasOutdoorSeating,
+    hasIndoorSeating: cafes.hasIndoorSeating,
+    hasRestroom: cafes.hasRestroom,
+    hasBidet: cafes.hasBidet,
+    hasNonDairy: cafes.hasNonDairy,
+    hasDecaf: cafes.hasDecaf,
+    isPetFriendly: cafes.isPetFriendly,
+    isWorkFriendly: cafes.isWorkFriendly,
+    servesFood: cafes.servesFood,
+    isActive: cafes.isActive,
+    isPublished: cafes.isPublished,
+    isVerified: cafes.isVerified,
+    isClaimed: cafes.isClaimed,
+    ownerIds: cafes.ownerIds,
+    contributorId: cafes.contributorId,
+    featuredUntil: cafes.featuredUntil,
+    isHiddenGem: cafes.isHiddenGem,
+    findingHint: cafes.findingHint,
+    isChain: cafes.isChain,
+    isHalalCertified: cafes.isHalalCertified,
+    strawType: cafes.strawType,
+    strawTypeOther: cafes.strawTypeOther,
+    createdAt: cafes.createdAt,
+    updatedAt: cafes.updatedAt,
+    averageRating: cafeRatingStats.averageRating,
+    totalReviews: cafeRatingStats.totalReviews,
+} as const
 
 export async function getAllCafes(
     page: number = 1,
@@ -593,141 +630,65 @@ export async function getAllCafes(
 ) {
     const offset = (page - 1) * limit
 
-    // Use RPC for Full-Text Search if query exists, with ILIKE fallback
+    // Full-text search, built here rather than through the `search_cafes`
+    // Postgres function. That function was `select * from cafes where
+    // search_vector @@ ... and is_published = true`: it could not carry the
+    // public visibility rules, it returned every column including `is_test`, and
+    // it never joined the rating stats, so search results always showed a null
+    // rating. Building the query here puts `publicCafeConditions()` in the same
+    // `where`, selects named columns, and joins the stats.
     if (filters.search) {
-        // First try full-text search
-        const searchResults = await db.execute(sql`SELECT * FROM search_cafes(${filters.search})`)
-        let rows = searchResults.rows as Record<string, unknown>[]
+        const term = filters.search
+        const tsQuery = sql`plainto_tsquery('english', ${term})`
 
-        // `search_cafes` is a database function and its result shape carries no
-        // visibility columns, so the predicate cannot be pushed into it from
-        // here. Post-filter instead: the set of hidden cafes is tiny, and a leak
-        // through the main catalogue search is the most visible one there is.
-        // Proper fix: add the filter inside `search_cafes` itself.
-        const hiddenIds = await getHiddenCafeIds()
-        if (hiddenIds.size > 0) {
-            rows = rows.filter(row => !hiddenIds.has(String(row.id)))
+        const fullTextResults = await db
+            .select(cafeListColumns)
+            .from(cafes)
+            .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
+            .where(
+                and(
+                    sql`${cafes.searchVector} @@ ${tsQuery}`,
+                    filters.isHalalCertified ? eq(cafes.isHalalCertified, true) : undefined,
+                    ...publicCafeConditions()
+                )
+            )
+            .orderBy(sql`ts_rank(${cafes.searchVector}, ${tsQuery}) DESC`)
+            .limit(limit)
+            .offset(offset)
+
+        type CafeListRow = Parameters<typeof mapCafeToSnakeCase>[0]
+
+        const applyPostFilters = (cafes_: CafeListRow[]) => {
+            let result = cafes_
+            if (filters.is_24_7) {
+                const currentDay = getCurrentDayKey()
+                result = result.filter(cafe =>
+                    isCafe24hForDay(cafe.operatingHours, currentDay)
+                )
+            }
+            if (filters.isHalalCertified) {
+                result = result.filter(cafe => cafe.isHalalCertified === true)
+            }
+            return result.map(cafe => mapCafeToSnakeCase(cafe))
         }
 
-        // Filter to only 24-hour cafes for current day if is_24_7 is true
-        if (filters.is_24_7) {
-            const currentDay = getCurrentDayKey()
-            rows = rows.filter(row => isCafe24hForDay(row.operating_hours, currentDay))
-        }
-
-        // Filter for Halal certified cafes
-        if (filters.isHalalCertified) {
-            rows = rows.filter(row => row.is_halal_certified === true)
+        if (fullTextResults.length > 0) {
+            return applyPostFilters(fullTextResults)
         }
 
         // If full-text search returns no results, fallback to ILIKE search on name
-        if (rows.length === 0) {
-            const ilikeTerm = `%${filters.search}%`
+        const ilikeTerm = `%${filters.search}%`
 
-            // Build conditions for ILIKE fallback
-            const ilikConditions = [
-                ilike(cafes.name, ilikeTerm),
-                ...publicCafeConditions(),
-            ]
+        const fallbackResults = await db
+            .select(cafeListColumns)
+            .from(cafes)
+            .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
+            .where(and(ilike(cafes.name, ilikeTerm), ...publicCafeConditions()))
+            .orderBy(desc(cafes.createdAt))
+            .limit(limit)
+            .offset(offset)
 
-            const fallbackResults = await db
-                .select({
-                    id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail,
-                    description: cafes.description, addressDisplay: cafes.addressDisplay, area: cafes.area,
-                    cityMunicipality: cafes.cityMunicipality, province: cafes.province, region: cafes.region,
-                    lat: cafes.lat, lng: cafes.lng, priceLevel: cafes.priceLevel, coffeeStyle: cafes.coffeeStyle,
-                    roaster: cafes.roaster, brewMethods: cafes.brewMethods,
-                    specialty: cafes.specialty, milkOptions: cafes.milkOptions, tags: cafes.tags,
-                    operatingHours: cafes.operatingHours, socials: cafes.socials, phone: cafes.phone,
-                    email: cafes.email, websiteUrl: cafes.websiteUrl, paymentMethods: cafes.paymentMethods,
-                    hasWifi: cafes.hasWifi, hasSmoking: cafes.hasSmoking, hasSockets: cafes.hasSockets, hasAircon: cafes.hasAircon,
-                    hasParking: cafes.hasParking, hasOutdoorSeating: cafes.hasOutdoorSeating,
-                    hasIndoorSeating: cafes.hasIndoorSeating, hasRestroom: cafes.hasRestroom,
-                    hasBidet: cafes.hasBidet, hasNonDairy: cafes.hasNonDairy, hasDecaf: cafes.hasDecaf, isPetFriendly: cafes.isPetFriendly,
-                    isWorkFriendly: cafes.isWorkFriendly, servesFood: cafes.servesFood, isActive: cafes.isActive,
-                    isPublished: cafes.isPublished, isVerified: cafes.isVerified, isClaimed: cafes.isClaimed,
-                    ownerIds: cafes.ownerIds, contributorId: cafes.contributorId, featuredUntil: cafes.featuredUntil,
-                    isHiddenGem: cafes.isHiddenGem, findingHint: cafes.findingHint, isChain: cafes.isChain,
-                    isHalalCertified: cafes.isHalalCertified, strawType: cafes.strawType, strawTypeOther: cafes.strawTypeOther,
-                    createdAt: cafes.createdAt, updatedAt: cafes.updatedAt,
-                    averageRating: cafeRatingStats.averageRating, totalReviews: cafeRatingStats.totalReviews,
-                })
-                .from(cafes)
-                .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-                .where(and(...ilikConditions))
-                .orderBy(desc(cafes.createdAt))
-                .limit(limit)
-                .offset(offset)
-
-            if (filters.is_24_7) {
-                const currentDay = getCurrentDayKey()
-                return fallbackResults.filter(cafe => isCafe24hForDay(cafe.operatingHours, currentDay)).map(c => mapCafeToSnakeCase(c))
-            }
-
-            if (filters.isHalalCertified) {
-                return fallbackResults.filter(cafe => cafe.isHalalCertified === true).map(c => mapCafeToSnakeCase(c))
-            }
-
-            return fallbackResults.map(c => mapCafeToSnakeCase(c))
-        }
-
-        // Map full-text search results to snake_case format
-        return rows.slice(offset, offset + limit).map(row => ({
-            id: row.id as string,
-            name: row.name as string,
-            slug: row.slug as string,
-            thumbnail: row.thumbnail as string,
-            description: row.description as string | null,
-            address_display: row.address_display as string,
-            area: row.area as string | null,
-            city_municipality: row.city_municipality as string,
-            province: row.province as string,
-            region: row.region as string,
-            lat: row.lat as number | null,
-            lng: row.lng as number | null,
-            price_level: row.price_level as string | null,
-            coffee_style: row.coffee_style as string | null,
-            roaster: row.roaster as string | null,
-            brew_methods: row.brew_methods as string[] | null,
-            specialty: row.specialty as string[] | null,
-            milk_options: row.milk_options as string[] | null,
-            tags: row.tags as string[] | null,
-            operating_hours: row.operating_hours as unknown,
-            socials: row.socials as unknown,
-            phone: row.phone as string | null,
-            email: row.email as string | null,
-            website_url: row.website_url as string | null,
-            payment_methods: row.payment_methods as string | null,
-            has_wifi: row.has_wifi as boolean | null,
-            has_smoking: row.has_smoking as boolean | null,
-            has_sockets: row.has_sockets as boolean | null,
-            has_aircon: row.has_aircon as boolean | null,
-            has_parking: row.has_parking as boolean | null,
-            has_outdoor_seating: row.has_outdoor_seating as boolean | null,
-            has_indoor_seating: row.has_indoor_seating as boolean | null,
-            has_restroom: row.has_restroom as boolean | null,
-            has_bidet: row.has_bidet as boolean | null,
-            has_non_dairy: row.has_non_dairy as boolean | null,
-            has_decaf: row.has_decaf as boolean | null,
-            is_pet_friendly: row.is_pet_friendly as boolean | null,
-            is_work_friendly: row.is_work_friendly as boolean | null,
-            serves_food: row.serves_food as boolean | null,
-            is_active: row.is_active as boolean | null,
-            is_published: row.is_published as boolean | null,
-            is_verified: row.is_verified as boolean | null,
-            is_claimed: row.is_claimed as boolean | null,
-            owner_ids: row.owner_ids as string[] | null,
-            contributor_id: row.contributor_id as string | null,
-            featured_until: row.featured_until as string | null,
-            is_hidden_gem: row.is_hidden_gem as boolean | null,
-            finding_hint: row.finding_hint as string | null,
-            is_chain: row.is_chain as boolean | null,
-            is_halal_certified: row.is_halal_certified as boolean | null,
-            created_at: row.created_at as string | null,
-            updated_at: row.updated_at as string | null,
-            average_rating: null,
-            total_reviews: null,
-        })) as CafeWithRatings[]
+        return applyPostFilters(fallbackResults)
     }
 
     // Build query conditions

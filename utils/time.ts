@@ -1,19 +1,15 @@
+import { getManilaTimeParts, getManilaWeekdayKey } from "@/utils/date/leaderboard-months"
+
 export type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
 
+/** Kept as the name callers use; the arithmetic lives in the Manila module. */
 export function getPHDayKey(): DayKey {
-    // PH is UTC+8
-    const phDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }))
-    const days: DayKey[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-    return days[phDate.getDay()]
+    return getManilaWeekdayKey()
 }
 
+/** Wall-clock time of day in Manila. */
 export function getPHTime(): { hours: number; minutes: number } {
-    // PH is UTC+8
-    const phDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }))
-    return {
-        hours: phDate.getHours(),
-        minutes: phDate.getMinutes(),
-    }
+    return getManilaTimeParts()
 }
 
 export function isCafeOpenNow(

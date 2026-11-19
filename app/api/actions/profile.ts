@@ -1082,9 +1082,6 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
     if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
 
     try {
-        // Check if user already visited this cafe today (PH time)
-        // Convert PH time bounds to UTC for DB comparison
-        // getPHTodayStart() returns Shifted UTC (e.g. 00:00). Subtract 8h to get Real UTC (e.g. Prev Day 16:00)
         // Manila day bounds as UTC instants. Hand-shifting a local midnight is
         // only correct on a machine that happens to run UTC; this is correct
         // everywhere, and it is the same day the leaderboards count.

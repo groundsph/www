@@ -4,7 +4,7 @@ import { db } from "@/db"
 import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, or, gte, lte, isNull, sql } from "drizzle-orm"
 import { CafeWithRatings } from "@/utils/types/extra"
-import { getPHTime } from "@/utils/featured"
+import { getManilaWeekdayKey } from "@/utils/date/leaderboard-months"
 import { publicCafeConditions } from "@/utils/filters"
 
 export interface MapBounds {
@@ -17,11 +17,9 @@ export interface MapBounds {
     isHalalCertified?: boolean
 }
 
-// Helper to get current day key from PH time
+/** The Manila weekday a filter applies to. */
 function getCurrentDayKey(): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
-    const phNow = getPHTime()
-    const days: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"> = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-    return days[phNow.getDay()]
+    return getManilaWeekdayKey()
 }
 
 export async function getCafesInBounds(bounds: MapBounds): Promise<CafeWithRatings[]> {

@@ -1,10 +1,10 @@
 /**
- * Leaderboard month selection utilities.
+ * Manila calendar arithmetic — months, days and wall-clock parts.
  *
  * Everything here is anchored to Asia/Manila (UTC+8, no DST). The rule this
- * module exists to enforce: a "month" in this product is a Manila calendar
- * month, never a UTC one and never the calendar of whatever machine happens to
- * be running the code.
+ * module exists to enforce: a month, a day and a day-of-year in this product are
+ * Manila calendar facts, never UTC ones and never the calendar of whatever
+ * machine happens to be running the code.
  *
  * The bug it replaces: month boundaries used to be computed with
  * `new Date(year, month - 1, 1)` — server-local midnights — and each caller then
@@ -82,7 +82,11 @@ export function formatYearMonthKey(yearMonth: YearMonth): string {
  * A UTC instant as a wall-clock reading in Manila. Read with `getUTC*` so the
  * result does not depend on the runtime's timezone.
  */
-function manilaParts(instant: Date): { year: number; month: number; day: number } {
+export function getManilaParts(instant: Date = new Date()): {
+    year: number
+    month: number
+    day: number
+} {
     const shifted = new Date(instant.getTime() + MANILA_OFFSET_MS)
     return {
         year: shifted.getUTCFullYear(),
@@ -96,7 +100,7 @@ function manilaParts(instant: Date): { year: number; month: number; day: number 
  * @param now - Injectable clock, for tests.
  */
 export function currentMonthKey(now: Date = new Date()): string {
-    return formatYearMonthKey(manilaParts(now))
+    return formatYearMonthKey(getManilaParts(now))
 }
 
 /**
@@ -105,8 +109,39 @@ export function currentMonthKey(now: Date = new Date()): string {
  * @param now - Injectable clock, for tests.
  */
 export function currentDayKey(now: Date = new Date()): string {
-    const { year, month, day } = manilaParts(now)
+    const { year, month, day } = getManilaParts(now)
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+}
+
+/** Weekday initial for the Manila calendar day: "mon" … "sun". */
+export function getManilaWeekdayKey(
+    now: Date = new Date()
+): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
+    const shifted = new Date(now.getTime() + MANILA_OFFSET_MS)
+    const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
+    return days[shifted.getUTCDay()]
+}
+
+/**
+ * Day of the year (1-366) on the Manila calendar.
+ *
+ * Used to rotate the daily featured cafe. Derived from the Manila date rather
+ * than from a shifted `Date`'s local getters, which are only correct on a
+ * machine that runs UTC.
+ */
+export function getManilaDayOfYear(now: Date = new Date()): number {
+    const { year, month, day } = getManilaParts(now)
+    const startOfYear = Date.UTC(year, 0, 1)
+    const thisDay = Date.UTC(year, month - 1, day)
+    return Math.floor((thisDay - startOfYear) / (24 * 60 * 60 * 1000)) + 1
+}
+
+/** Wall-clock time of day in Manila, for opening-hours comparisons. */
+export function getManilaTimeParts(
+    now: Date = new Date()
+): { hours: number; minutes: number } {
+    const shifted = new Date(now.getTime() + MANILA_OFFSET_MS)
+    return { hours: shifted.getUTCHours(), minutes: shifted.getUTCMinutes() }
 }
 
 /**
@@ -120,7 +155,7 @@ export function getManilaDayWindow(now: Date = new Date()): {
     startUtc: Date
     endUtc: Date
 } {
-    const { year, month, day } = manilaParts(now)
+    const { year, month, day } = getManilaParts(now)
 
     const startUtc = new Date(
         Date.UTC(year, month - 1, day) - MANILA_OFFSET_MS
@@ -173,7 +208,7 @@ export function getLastNMonths(n: number, now: Date = new Date()): string[] {
         return []
     }
 
-    const { year: currentYear, month: currentMonth } = manilaParts(now)
+    const { year: currentYear, month: currentMonth } = getManilaParts(now)
     const months: string[] = []
 
     for (let i = 0; i < n; i++) {
@@ -203,7 +238,7 @@ export function isFutureMonth(
     yearMonth: YearMonth,
     now: Date = new Date()
 ): boolean {
-    const current = manilaParts(now)
+    const current = getManilaParts(now)
 
     if (yearMonth.year > current.year) {
         return true

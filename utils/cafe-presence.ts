@@ -106,7 +106,7 @@ export interface StorageLike {
 
 const PH_OFFSET_MS = 8 * 60 * 60 * 1000
 
-/** Start of the current Philippine day, in real epoch ms. Matches `getPHTodayStart()`. */
+/** Start of the current Philippine day, in real epoch ms. Matches `getManilaDayWindow()`. */
 export function phDayStartEpoch(now: number): number {
     const ph = now + PH_OFFSET_MS
     const startOfDayPH = ph - (ph % (24 * 60 * 60 * 1000))

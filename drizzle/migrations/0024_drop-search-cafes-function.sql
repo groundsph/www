@@ -1,0 +1,20 @@
+-- `search_cafes` is gone from the application: `getAllCafes` builds the same
+-- full-text query in Drizzle so the public visibility rules can live in the same
+-- `where` (see app/api/actions/cafe.ts).
+--
+-- The function it replaces was:
+--
+--   CREATE FUNCTION public.search_cafes(query_text text) RETURNS SETOF cafes
+--   LANGUAGE plpgsql SECURITY DEFINER AS $$
+--   BEGIN
+--     RETURN QUERY SELECT * FROM cafes
+--     WHERE search_vector @@ plainto_tsquery('english', query_text)
+--       AND is_published = true
+--     ORDER BY ts_rank(search_vector, plainto_tsquery('english', query_text)) DESC;
+--   END; $$;
+--
+-- It returned `is_test` rows, ran as DEFINER, and returned every column.
+-- Kept here so it can be recreated verbatim if anything turns out to depend on
+-- it. Apply only after the code above is deployed, so a live caller never sees a
+-- missing function.
+DROP FUNCTION IF EXISTS public.search_cafes(text);
