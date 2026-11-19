@@ -6,7 +6,7 @@ import { eq, and, ilike, or } from "drizzle-orm"
 import { buildMetadata } from "@/utils/seo/landing-metadata"
 import { buildItemListJsonLd, buildItemListElement } from "@/utils/seo/jsonld"
 import { buildBreadcrumbList } from "@/utils/seo/breadcrumbs"
-import { omitTestCafes } from "@/utils/filters"
+import { publicCafeConditions } from "@/utils/filters"
 import Link from "next/link"
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
@@ -31,9 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .select({ id: cafes.id })
     .from(cafes)
     .where(and(
-      eq(cafes.isPublished, true),
       eq(cafes.isHiddenGem, false),
-      ...omitTestCafes([]),
+      ...publicCafeConditions(),
       or(
         ilike(cafes.cityMunicipality, `%${city}%`),
         ilike(cafes.province, `%${province}%`)
@@ -63,9 +62,8 @@ export default async function CityLandingPage({ params }: Props) {
     })
     .from(cafes)
     .where(and(
-      eq(cafes.isPublished, true),
       eq(cafes.isHiddenGem, false),
-      ...omitTestCafes([]),
+      ...publicCafeConditions(),
       or(
         ilike(cafes.cityMunicipality, `%${city}%`),
         ilike(cafes.province, `%${province}%`)

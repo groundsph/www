@@ -3,18 +3,17 @@ import { db } from '@/db'
 import { cafes, blogPosts, cafeMenuItems, collections, cafeCrawls, profiles } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { buildSitemapEntries } from '@/utils/seo/sitemap'
-import { getProductionFilter } from '@/utils/filters'
+import { publicCafeConditions } from '@/utils/filters'
 
 export const dynamic = "force-dynamic"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://grounds.ph"
 
-    const testFilter = getProductionFilter()
     const cafeResults = await db
         .select({ slug: cafes.slug, updatedAt: cafes.updatedAt, createdAt: cafes.createdAt })
         .from(cafes)
-        .where(testFilter ? and(eq(cafes.isPublished, true), testFilter) : eq(cafes.isPublished, true))
+        .where(and(...publicCafeConditions()))
 
     const blogResults = await db
         .select({ slug: blogPosts.slug, updatedAt: blogPosts.updatedAt, publishedAt: blogPosts.publishedAt })
@@ -28,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         })
         .from(cafeMenuItems)
         .innerJoin(cafes, eq(cafeMenuItems.cafeId, cafes.id))
-        .where(eq(cafeMenuItems.isAvailable, true))
+        .where(and(eq(cafeMenuItems.isAvailable, true), ...publicCafeConditions()))
 
     const menuCafeSlugs = new Set<string>()
     const menuResults: Array<{ slug: string; updatedAt: Date | null }> = []

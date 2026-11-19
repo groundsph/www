@@ -26,22 +26,16 @@ export function useCafeActions(cafeId: string) {
         avatarUrl: string | null
     }[]>([])
 
-    // Fetch visit count and today status
+    // Fetch visit count and today status. One round trip: the count and "did they
+    // check in today" are always wanted together, and `hasVisitedToday` was asking
+    // the same question as `getTodayCheckIn` with a third request.
     const fetchVisitData = useCallback(async () => {
         try {
-            const [{ getVisitCount }, { hasVisitedToday }, { getTodayCheckIn }] = await Promise.all([
-                import("@/app/api/actions/profile"),
-                import("@/app/api/actions/profile"),
-                import("@/app/api/actions/profile"),
-            ])
-            const [countResult, todayResult, checkInResult] = await Promise.all([
-                getVisitCount(cafeId),
-                hasVisitedToday(cafeId),
-                getTodayCheckIn(cafeId),
-            ])
-            setVisitCount(countResult.count)
-            setVisitedToday(todayResult)
-            setCurrentCompanions(checkInResult?.companions ?? [])
+            const { getCafeVisitStatus } = await import("@/app/api/actions/profile")
+            const status = await getCafeVisitStatus(cafeId)
+            setVisitCount(status.visitCount)
+            setVisitedToday(!!status.todayCheckIn)
+            setCurrentCompanions(status.todayCheckIn?.companions ?? [])
         } catch (error) {
             console.error("Failed to fetch visit data", error)
         }

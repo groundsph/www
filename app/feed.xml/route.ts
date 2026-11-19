@@ -10,6 +10,9 @@ export async function GET() {
     let posts: BlogPost[] = []
     try {
         // Latest published posts (server action maps authors + cafes).
+        // The action's own query excludes posts attached to a test cafe, so the
+        // feed cannot emit a post whose cafe is hidden from visitors — this feed
+        // must not re-derive that set with a second, looser query.
         const result = await getPublishedBlogPosts({ page: 1, pageSize: 25 })
         posts = result.posts
     } catch (error) {

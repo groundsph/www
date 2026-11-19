@@ -5,6 +5,7 @@ import { profiles, userFollows, cafeVisits, cafes, followRequests } from "@/db/s
 import { getCurrentUser } from "@/lib/auth"
 import { canViewProfile } from "@/app/api/actions/profile"
 import { and, eq, desc, inArray, ilike, or, count, ne } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 
 
 // ============================================================================
@@ -532,7 +533,7 @@ export async function getFollowedUsersCheckIns(limit: number = 50): Promise<{
             .from(cafeVisits)
             .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
             .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-            .where(inArray(cafeVisits.userId, followingIds))
+            .where(and(inArray(cafeVisits.userId, followingIds), ...publicCafeConditions()))
             .orderBy(desc(cafeVisits.visitedAt))
             .limit(limit)
 
@@ -691,7 +692,7 @@ export async function getLandingFeedGroupedByCafe(limit: number = 10): Promise<{
             .from(cafeVisits)
             .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
             .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
-            .where(inArray(cafeVisits.userId, followingIds))
+            .where(and(inArray(cafeVisits.userId, followingIds), ...publicCafeConditions()))
             .orderBy(desc(cafeVisits.visitedAt))
             .limit(50) // Fetch more to allow for grouping
 

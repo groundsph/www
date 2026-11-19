@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { toStoredThumbnail } from "@/utils/extras"
 import { events, cafes, profiles, user } from "@/db/schema"
 import { eq, and, gte, lt, lte, desc, asc, count, inArray, or, ilike, sql } from "drizzle-orm"
+import { excludeTestCafeReferences, shouldShowTestCafes } from "@/utils/filters"
 import { getCurrentUser } from "@/lib/auth"
 import { logSystemAction } from "./system-logs"
 import { Event, EventWithCafe, EventFilters, EventStatus } from "@/utils/types/extra"
@@ -66,6 +67,25 @@ async function isCafeOwner(cafeId: string): Promise<boolean> {
 async function getCurrentUserId(): Promise<string | null> {
     const user = await getCurrentUser()
     return user?.id || null
+}
+
+/**
+ * Whether `cafeId` may be attached to an event at all.
+ *
+ * A test cafe only exists in a development build. An event attached to one
+ * would be invisible to every visitor, so the write is rejected rather than
+ * silently creating a row nobody can reach. Unknown cafe ids fail the same way.
+ */
+async function isAssignableCafe(cafeId: string): Promise<boolean> {
+    if (shouldShowTestCafes()) return true
+
+    const result = await db
+        .select({ id: cafes.id })
+        .from(cafes)
+        .where(and(eq(cafes.id, cafeId), excludeTestCafeReferences(cafes.id)))
+        .limit(1)
+
+    return Boolean(result[0])
 }
 
 async function canManageEvent(event: Event): Promise<boolean> {
@@ -206,6 +226,15 @@ export async function getEvents(
         if (searchCondition) conditions.push(searchCondition)
     }
 
+    // An event attached to a test cafe is hidden outright: the cafe is
+    // unreachable for visitors, so the event goes with it rather than rendering
+    // as a card with a missing cafe. The list and its pagination count share
+    // this `where`, so the total always agrees with the rows on the page.
+    const visibleConditions = [
+        ...conditions,
+        excludeTestCafeReferences(events.cafeId),
+    ]
+
     const [eventsResult, countResult] = await Promise.all([
         db.select({
             id: events.id, title: events.title, description: events.description,
@@ -216,14 +245,16 @@ export async function getEvents(
             createdAt: events.createdAt, updatedAt: events.updatedAt,
         })
             .from(events)
-            .where(and(...conditions))
+            .where(and(...visibleConditions))
             .orderBy(asc(events.startDate))
             .limit(pageSize)
             .offset(offset),
-        db.select({ count: count() }).from(events).where(and(...conditions)),
+        db.select({ count: count() }).from(events).where(and(...visibleConditions)),
     ])
 
-    // Fetch cafe and creator for each event
+    // Fetch cafe and creator for each event. The rows above already exclude
+    // events attached to a test cafe; the guard keeps the decoration honest if
+    // that ever regresses, so a leaked id resolves to no cafe.
     const eventIds = eventsResult.map(e => e.id)
     if (eventIds.length === 0) return { events: [], total: countResult[0]?.count ?? 0 }
 
@@ -232,7 +263,7 @@ export async function getEvents(
 
     const [cafesResult, creatorsResult] = await Promise.all([
         cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
-            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+            .from(cafes).where(and(inArray(cafes.id, cafeIds), excludeTestCafeReferences(cafes.id))) : Promise.resolve([]),
         creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
             .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
     ])
@@ -268,7 +299,7 @@ export async function getUpcomingEvents(limit: number = 10): Promise<EventWithCa
         createdAt: events.createdAt, updatedAt: events.updatedAt,
     })
         .from(events)
-        .where(and(eq(events.status, "published"), gte(events.startDate, now)))
+        .where(and(eq(events.status, "published"), gte(events.startDate, now), excludeTestCafeReferences(events.cafeId)))
         .orderBy(asc(events.startDate))
         .limit(limit)
 
@@ -280,7 +311,7 @@ export async function getUpcomingEvents(limit: number = 10): Promise<EventWithCa
 
     const [cafesResult, creatorsResult] = await Promise.all([
         cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
-            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+            .from(cafes).where(and(inArray(cafes.id, cafeIds), excludeTestCafeReferences(cafes.id))) : Promise.resolve([]),
         creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
             .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
     ])
@@ -321,7 +352,7 @@ export async function getEventsForMonth(
         createdAt: events.createdAt, updatedAt: events.updatedAt,
     })
         .from(events)
-        .where(and(...conditions))
+        .where(and(...conditions, excludeTestCafeReferences(events.cafeId)))
         .orderBy(asc(events.startDate))
 
     return result.map(e => ({
@@ -373,7 +404,7 @@ export async function getLocalEvents(city?: string, region?: string, limit: numb
         createdAt: events.createdAt, updatedAt: events.updatedAt,
     })
         .from(events)
-        .where(and(...conditions))
+        .where(and(...conditions, excludeTestCafeReferences(events.cafeId)))
         .orderBy(asc(events.startDate))
         .limit(limit)
 
@@ -384,7 +415,7 @@ export async function getLocalEvents(city?: string, region?: string, limit: numb
 
     const [cafesResult, creatorsResult] = await Promise.all([
         cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
-            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+            .from(cafes).where(and(inArray(cafes.id, cafeIds), excludeTestCafeReferences(cafes.id))) : Promise.resolve([]),
         creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
             .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
     ])
@@ -410,7 +441,7 @@ export async function getNationalEvents(limit: number = 10): Promise<EventWithCa
         createdAt: events.createdAt, updatedAt: events.updatedAt,
     })
         .from(events)
-        .where(and(eq(events.status, "published"), eq(events.isNational, true), gte(events.startDate, now)))
+        .where(and(eq(events.status, "published"), eq(events.isNational, true), gte(events.startDate, now), excludeTestCafeReferences(events.cafeId)))
         .orderBy(asc(events.startDate))
         .limit(limit)
 
@@ -421,7 +452,7 @@ export async function getNationalEvents(limit: number = 10): Promise<EventWithCa
 
     const [cafesResult, creatorsResult] = await Promise.all([
         cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
-            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+            .from(cafes).where(and(inArray(cafes.id, cafeIds), excludeTestCafeReferences(cafes.id))) : Promise.resolve([]),
         creatorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl })
             .from(profiles).where(inArray(profiles.id, creatorIds)) : Promise.resolve([]),
     ])
@@ -448,6 +479,10 @@ export async function createEvent(input: EventInput): Promise<EventActionResult>
 
     if (!canCreate) {
         return { success: false, error: "You don't have permission to create events" }
+    }
+
+    if (input.cafe_id && !(await isAssignableCafe(input.cafe_id))) {
+        return { success: false, error: "That cafe is not available" }
     }
 
     const [inserted] = await db.insert(events).values({
@@ -507,6 +542,10 @@ export async function updateEvent(eventId: string, input: Partial<EventInput>): 
 
     if (!(await canManageEvent(eventForCheck))) {
         return { success: false, error: "You don't have permission to update this event" }
+    }
+
+    if (input.cafe_id && !(await isAssignableCafe(input.cafe_id))) {
+        return { success: false, error: "That cafe is not available" }
     }
 
     const updateData: Partial<typeof events.$inferInsert> = { updatedAt: new Date() }

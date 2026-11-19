@@ -1,7 +1,8 @@
 import { db } from "@/db"
 import { cafes, cafeRatingStats } from "@/db/schema"
-import { eq, and, or, desc, ilike, sql, isNull } from "drizzle-orm"
+import { eq, and, or, desc, ilike, sql, isNull, type SQL } from "drizzle-orm"
 import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
+import { publicCafeConditions } from "@/utils/filters"
 import type { OperatingHours } from "@/utils/types/cafe"
 import {
     sortByDistance,
@@ -160,10 +161,12 @@ export async function runCafeQuery(
 }
 
 function buildConditions(params: CafeQueryInput) {
-    const conditions: ReturnType<typeof eq>[] = []
+    const conditions: (SQL | undefined)[] = []
 
-    // Default to published cafes only
-    conditions.push(eq(cafes.isPublished, true))
+    // Default to public cafes only: this is the generic query path behind
+    // `query_cafes` and `find_cafes_with_feature`, both reachable from the
+    // public chat, so drafts, deactivated and test cafes must not surface.
+    conditions.push(...publicCafeConditions())
 
     // Location filters
     if (params.city) {

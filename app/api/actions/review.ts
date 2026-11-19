@@ -8,6 +8,7 @@ import { deleteReviewImagesAction } from "@/utils/storage/actions"
 import { notifyDiscordReviewReport } from "./notify"
 import { revalidatePath } from "next/cache"
 import { checkAndAwardBadges } from "@/utils/badges/badge-logic"
+import { publicCafeConditions } from "@/utils/filters"
 import { ProfilePassport } from "@/utils/types/extra"
 
 export async function createReview(
@@ -361,7 +362,14 @@ export async function getRecentReviews(limit: number = 6): Promise<{
             .from(reviews)
             .innerJoin(profiles, eq(reviews.userId, profiles.id))
             .innerJoin(cafes, eq(reviews.cafeId, cafes.id))
-            .where(eq(reviews.status, "published"))
+            // `includeDrafts: true` on purpose: this hydrates the cafe attached to
+            // an already-published review. The review stays valid content even if
+            // the cafe was later unpublished or deactivated (the owner may be
+            // reworking it; hiding the review would silently delete a user's
+            // contribution from the landing page). A test cafe is different in
+            // kind — it is not a real listing at all, so it is the only thing we
+            // drop here.
+            .where(and(eq(reviews.status, "published"), ...publicCafeConditions({ includeDrafts: true })))
             .orderBy(desc(reviews.createdAt))
             .limit(limit)
 

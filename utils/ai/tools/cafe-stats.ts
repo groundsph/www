@@ -1,6 +1,7 @@
 import { db } from "@/db"
 import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, avg, count, ilike, isNotNull } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 
 export interface CafeStats {
     totalCafes: number
@@ -28,7 +29,7 @@ export async function getCafeStats(
     try {
         if (city) {
             const conditions = [
-                eq(cafes.isPublished, true),
+                ...publicCafeConditions(),
                 ilike(cafes.cityMunicipality, `%${city}%`),
             ]
 
@@ -59,12 +60,16 @@ export async function getCafeStats(
             }
         }
 
+        // Every aggregate below is a public-facing number, so the visibility
+        // predicates go into each `where`, not just the total.
+        const publicConditions = publicCafeConditions()
+
         const [totalResult, cityCountResult, ratingResult, featureCounts] = await Promise.all([
-            db.select({ count: count() }).from(cafes).where(eq(cafes.isPublished, true)),
+            db.select({ count: count() }).from(cafes).where(and(...publicConditions)),
             db
                 .select({ count: count() })
                 .from(cafes)
-                .where(eq(cafes.isPublished, true))
+                .where(and(...publicConditions))
                 .groupBy(cafes.cityMunicipality),
             db
                 .select({ avgRating: avg(cafeRatingStats.averageRating) })
@@ -72,17 +77,17 @@ export async function getCafeStats(
                 .innerJoin(cafes, eq(cafes.id, cafeRatingStats.cafeId))
                 .where(
                     and(
-                        eq(cafes.isPublished, true),
+                        ...publicConditions,
                         isNotNull(cafeRatingStats.averageRating)
                     )
                 ),
             Promise.all([
-                db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), eq(cafes.hasWifi, true))),
-                db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), eq(cafes.hasAircon, true))),
-                db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), eq(cafes.isPetFriendly, true))),
-                db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), eq(cafes.isWorkFriendly, true))),
-                db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, true))),
-                db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), eq(cafes.isVerified, true))),
+                db.select({ count: count() }).from(cafes).where(and(...publicConditions, eq(cafes.hasWifi, true))),
+                db.select({ count: count() }).from(cafes).where(and(...publicConditions, eq(cafes.hasAircon, true))),
+                db.select({ count: count() }).from(cafes).where(and(...publicConditions, eq(cafes.isPetFriendly, true))),
+                db.select({ count: count() }).from(cafes).where(and(...publicConditions, eq(cafes.isWorkFriendly, true))),
+                db.select({ count: count() }).from(cafes).where(and(...publicConditions, eq(cafes.isHiddenGem, true))),
+                db.select({ count: count() }).from(cafes).where(and(...publicConditions, eq(cafes.isVerified, true))),
             ]),
         ])
 

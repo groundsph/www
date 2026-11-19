@@ -12,6 +12,7 @@ import {
     customType,
     doublePrecision,
 } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 
 import * as enums from "./enums"
 
@@ -237,7 +238,24 @@ export const cafeVisits = pgTable("cafe_visits", {
     visitedAt: timestamp("visited_at", { withTimezone: true }).defaultNow().notNull(),
     companions: uuid("companions").array(), // Array of user IDs who joined this check-in
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-})
+}, (t) => ({
+    // One visit per person per cafe per Manila day. A Visit is a day out, not a
+    // tap, so the second check-in of the day is the same visit — which is what
+    // every count and leaderboard already assumes. Enforced here as well as in
+    // `recordVisit` because application-level only is how it drifted.
+    //
+    // Note: revisits are deliberately not modelled yet. If same-day revisits are
+    // ever wanted, this index is the thing to change.
+    oneVisitPerManilaDayIdx: uniqueIndex("cafe_visits_one_per_manila_day_idx").on(
+        t.userId,
+        t.cafeId,
+        // AT TIME ZONE with a literal zone is IMMUTABLE, which is what Postgres
+        // requires of an index expression. `+ interval '8 hours'` looks
+        // equivalent but is only STABLE (the later cast reads the session
+        // TimeZone), so it cannot be indexed.
+        sql`((${t.visitedAt} AT TIME ZONE 'Asia/Manila')::date)`
+    ),
+}))
 
 export const cafeClaims = pgTable("cafe_claims", {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -738,6 +756,8 @@ export const monthlyLeaderboardSnapshots = pgTable(
         rank: integer("rank").notNull(),
         score: integer("score").notNull(),
         visitCount: integer("visit_count").default(0),
+        /** Distinct cafes visited. A different measure from visitCount. */
+        cafesVisited: integer("cafes_visited"),
         reviewCount: integer("review_count").default(0),
         avgRating: doublePrecision("avg_rating"),
         likesReceived: integer("likes_received").default(0),
@@ -747,7 +767,18 @@ export const monthlyLeaderboardSnapshots = pgTable(
         createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     },
     (t) => ({
-        typeYearMonthIdx: uniqueIndex("mls_type_year_month_idx").on(t.type, t.yearMonth, t.region, t.userId, t.cafeId),
+        // One row per (type, month, region, subject). The original index included
+        // `region`, `user_id` and `cafe_id` raw; PostgreSQL treats NULLs as
+        // distinct, so it never fired for global rows (region IS NULL) and both
+        // the read path and the cron could insert the same entry twice. COALESCE
+        // makes the NULL cases collide the way they were always meant to.
+        typeYearMonthIdx: uniqueIndex("mls_type_year_month_idx").on(
+            t.type,
+            t.yearMonth,
+            sql`coalesce(${t.region}, '')`,
+            sql`coalesce(${t.userId}::text, '')`,
+            sql`coalesce(${t.cafeId}::text, '')`
+        ),
     })
 )
 

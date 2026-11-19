@@ -8,7 +8,7 @@ import { UserAvatar } from "@/components/ui/UserAvatar"
 import { getMonthlyLeaderboard } from "@/app/api/actions/profile"
 import CafeMonthlyLeaderboard from "./CafeMonthlyLeaderboard"
 import { useUserLocation } from "@/hooks/useUserLocation"
-import { getLastNMonths, formatYearMonth } from "@/utils/date/leaderboard-months"
+import { formatYearMonth, getMonthsEndingAt } from "@/utils/date/leaderboard-months"
 import { groupByRank } from "./leaderboard-utils"
 import ExpandableRankCard from "./ExpandableRankCard"
 import { PH_REGIONS } from "@/utils/ph-regions"
@@ -19,7 +19,10 @@ interface LeaderboardEntry {
     username: string
     displayName: string
     avatarUrl: string | null
+    /** Visit days: days out, not taps. */
     visitCount: number
+    /** Distinct cafes. Shown alongside visitCount, never instead of it. */
+    cafesVisited: number
     score: number
 }
 
@@ -43,11 +46,22 @@ export default function MonthlyLeaderboard({
     const [showRegionDropdown, setShowRegionDropdown] = useState(false)
     const [showMonthDropdown, setShowMonthDropdown] = useState(false)
     const [selectedMonth, setSelectedMonth] = useState<string>("")
+    /**
+     * The newest month that exists, as decided by the server. The browser's
+     * clock is not authoritative here: a visitor in UTC+13 is already in next
+     * month while Manila is not, and the list must not offer a month that has
+     * not happened yet.
+     */
+    const [latestMonth, setLatestMonth] = useState<string>("")
     const dropdownRef = useRef<HTMLDivElement>(null)
     const monthDropdownRef = useRef<HTMLDivElement>(null)
+    /** Guards against refetching the same params twice — the effect also runs
+     *  when the server tells us which month it is, which would otherwise double
+     *  the first request. */
+    const lastFetchKeyRef = useRef<string>("")
 
-    // Get available months (last 12 months)
-    const availableMonths = getLastNMonths(12)
+    // Derived from the server's month, not from the browser's clock.
+    const availableMonths = latestMonth ? getMonthsEndingAt(latestMonth, 12) : []
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -125,26 +139,27 @@ export default function MonthlyLeaderboard({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.region, locationLoading, userPreferredRegion])
 
-    // Initialize selected month to current month
-    useEffect(() => {
-        if (!selectedMonth) {
-            const now = new Date()
-            const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`
-            setSelectedMonth(currentMonth)
-        }
-    }, [selectedMonth])
-
     // Fetch leaderboard when region, month, or mode changes
     useEffect(() => {
-        const fetchLeaderboard = async () => {
-            if (!selectedMonth) return
+        const fetchKey = `${selectedRegion ?? ""}|${selectedMonth}|${mode}`
+        if (lastFetchKeyRef.current === fetchKey) return
+        lastFetchKeyRef.current = fetchKey
 
+        const fetchLeaderboard = async () => {
             setIsLoading(true)
             try {
                 if (mode === "users") {
-                    const result = await getMonthlyLeaderboard(selectedRegion, 20, selectedMonth)
+                    // No month on the first call: let the server decide which
+                    // month it is, then adopt the answer.
+                    const result = await getMonthlyLeaderboard(selectedRegion, 20, selectedMonth || null)
                     setLeaderboard(result.leaderboard)
                     setUserRank(result.userRank)
+                    // Functional updates so this effect does not have to read
+                    // the state it writes.
+                    setLatestMonth((previous) => previous || result.selectedMonth)
+                    setSelectedMonth((previous) =>
+                        previous === result.selectedMonth ? previous : result.selectedMonth
+                    )
                 } else {
                     // Cafe leaderboard is handled by the CafeMonthlyLeaderboard component
                     // We just clear user-specific state when switching to cafes
@@ -442,6 +457,7 @@ export default function MonthlyLeaderboard({
                                                 points
                                             </span>
                                             <p className='text-xs text-text/40'>
+                                                {entry.cafesVisited} cafes ·{" "}
                                                 {entry.visitCount} visits
                                             </p>
                                         </div>

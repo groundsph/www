@@ -2,8 +2,8 @@ import { getMonthlyLeaderboard } from "@/app/api/actions/profile"
 import { getCafeMonthlyLeaderboard } from "@/app/api/actions/leaderboard"
 import { db } from "@/db"
 import { monthlyLeaderboardSnapshots } from "@/db/schema"
-import { eq, and } from "drizzle-orm"
-import { getPHTime } from "@/utils/featured"
+import { eq, and, isNull } from "drizzle-orm"
+import { currentMonthKey, getLastNMonths } from "@/utils/date/leaderboard-months"
 import { PH_REGIONS } from "@/utils/ph-regions"
 
 export interface LeaderboardSnapshotsResult {
@@ -19,61 +19,84 @@ export interface LeaderboardSnapshotsResult {
 }
 
 /**
- * Snapshot monthly leaderboard data for users and cafes
- * This is idempotent - subsequent runs return early if already snapshotted
+ * The month a daily run snapshots: the one that just ended on the Manila
+ * calendar.
+ *
+ * Derived in Manila on purpose. The previous implementation built a local `Date`
+ * and subtracted a month, which on a UTC server pointed at the wrong month for
+ * the first eight hours of every month — the window in which the cron normally
+ * runs.
  */
-export async function runLeaderboardSnapshots(): Promise<LeaderboardSnapshotsResult> {
-    // Compute previous month in PH time
-    const nowPH = getPHTime()
-    const prevMonthDate = new Date(nowPH.getFullYear(), nowPH.getMonth() - 1, 1)
-    const yearMonth = `${prevMonthDate.getFullYear()}-${(prevMonthDate.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}`
+function previousMonthKey(): string {
+    // getLastNMonths is newest-first, so index 1 is the month before this one.
+    return getLastNMonths(2, new Date())[1] ?? currentMonthKey()
+}
 
-    console.log(`[Leaderboard Snapshot Cron] Starting snapshot for ${yearMonth}...`)
-
-    // Check if snapshot already exists for this month
-    const existingSnapshot = await db
+/** Has this exact slice — this month, this type, this region — been written? */
+async function sliceExists(
+    yearMonth: string,
+    type: "user" | "cafe",
+    region: string | null
+): Promise<boolean> {
+    const existing = await db
         .select({ id: monthlyLeaderboardSnapshots.id })
         .from(monthlyLeaderboardSnapshots)
         .where(
             and(
                 eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth),
-                eq(monthlyLeaderboardSnapshots.type, "user")
+                eq(monthlyLeaderboardSnapshots.type, type),
+                region
+                    ? eq(monthlyLeaderboardSnapshots.region, region)
+                    : isNull(monthlyLeaderboardSnapshots.region)
             )
         )
         .limit(1)
 
-    if (existingSnapshot.length > 0) {
-        console.log(`[Leaderboard Snapshot Cron] Snapshot already exists for ${yearMonth}`)
-        return {
-            success: true,
-            message: "already snapshotted",
-            yearMonth,
-            summary: {
-                userCount: 0,
-                cafeCount: 0,
-                regionsSnapshotted: 0,
-                regionNames: [],
-            },
-        }
-    }
+    return existing.length > 0
+}
 
-    // Generate snapshots for user and cafe leaderboards
-    const regionsToSnapshot = [null, ...PH_REGIONS]
+/**
+ * Snapshot monthly leaderboard data for users and cafes.
+ *
+ * This is the only writer of `monthly_leaderboard_snapshots`. Reads compute live
+ * and never insert, which is what stops a month being written twice.
+ *
+ * Idempotency is per (type, month, region): a run that only managed the global
+ * user slice last time still has to do the cafes and every region, so the guard
+ * cannot be "anything exists for this month" — that is what silently skipped
+ * every cafe snapshot whenever one region's users had already been written.
+ */
+export async function runLeaderboardSnapshots(): Promise<LeaderboardSnapshotsResult> {
+    const yearMonth = previousMonthKey()
+
+    console.log(`[Leaderboard Snapshot Cron] Starting snapshot for ${yearMonth}...`)
+
+    // null is the global leaderboard; each region is snapshotted separately.
+    const regionsToSnapshot: (string | null)[] = [null, ...PH_REGIONS]
     let totalUserSnapshots = 0
     let totalCafeSnapshots = 0
     const snapshottedRegions: string[] = []
 
-    // Snapshot user leaderboards
+    // ------------------------------------------------------------------
+    // Users
+    //
+    // computeLive is required: for a past month the read path prefers a stored
+    // snapshot, and asking it for the snapshot it is about to create returns an
+    // empty list, so the loop used to `continue` and never write anything.
+    // ------------------------------------------------------------------
     for (const region of regionsToSnapshot) {
-        const result = await getMonthlyLeaderboard(region, 100, yearMonth)
+        if (await sliceExists(yearMonth, "user", region)) {
+            continue
+        }
+
+        const result = await getMonthlyLeaderboard(region, 100, yearMonth, {
+            computeLive: true,
+        })
 
         if (result.leaderboard.length === 0) {
             continue
         }
 
-        // Insert snapshot entries
         const entries = result.leaderboard.map((entry) => ({
             yearMonth,
             type: "user" as const,
@@ -81,13 +104,15 @@ export async function runLeaderboardSnapshots(): Promise<LeaderboardSnapshotsRes
             rank: entry.rank,
             score: entry.score,
             visitCount: entry.visitCount,
+            cafesVisited: entry.cafesVisited,
             region,
         }))
 
-        await db.insert(monthlyLeaderboardSnapshots).values(entries)
+        // onConflictDoNothing needs the unique index on (type, month, region, subject)
+        await db.insert(monthlyLeaderboardSnapshots).values(entries).onConflictDoNothing()
 
         totalUserSnapshots += entries.length
-        if (region) {
+        if (region && !snapshottedRegions.includes(region)) {
             snapshottedRegions.push(region)
         }
 
@@ -96,15 +121,20 @@ export async function runLeaderboardSnapshots(): Promise<LeaderboardSnapshotsRes
         )
     }
 
-    // Snapshot cafe leaderboards
+    // ------------------------------------------------------------------
+    // Cafes
+    // ------------------------------------------------------------------
     for (const region of regionsToSnapshot) {
+        if (await sliceExists(yearMonth, "cafe", region)) {
+            continue
+        }
+
         const result = await getCafeMonthlyLeaderboard(region, 100, yearMonth)
 
         if (result.leaderboard.length === 0) {
             continue
         }
 
-        // Insert snapshot entries
         const entries = result.leaderboard.map((entry) => ({
             yearMonth,
             type: "cafe" as const,
@@ -117,7 +147,7 @@ export async function runLeaderboardSnapshots(): Promise<LeaderboardSnapshotsRes
             region,
         }))
 
-        await db.insert(monthlyLeaderboardSnapshots).values(entries)
+        await db.insert(monthlyLeaderboardSnapshots).values(entries).onConflictDoNothing()
 
         totalCafeSnapshots += entries.length
         if (region && !snapshottedRegions.includes(region)) {

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { motion } from "motion/react"
 import { NearbyCafeDetail } from "@/app/api/actions/nearby"
 import GroupCheckInModal, { UserResult as Companion } from "@/components/checkin/GroupCheckInModal"
-import { recordVisit, getTodayCheckIn, getVisitCount, updateCheckIn } from "@/app/api/actions/profile"
+import { recordVisit, getCafeVisitStatus, updateCheckIn } from "@/app/api/actions/profile"
 import { useAuth } from "@/components/layout/AuthProvider"
 import { useHaptics } from "@/hooks/useHaptics"
 import { useRouter } from "next/navigation"
@@ -63,15 +63,14 @@ export default function HeroLocationCheckIn({
 
         setIsCheckingStatus(true)
         try {
-            const [todayCheckIn, countResult] = await Promise.all([
-                getTodayCheckIn(nearbyCafe.id),
-                getVisitCount(nearbyCafe.id),
-            ])
-            setVisitedToday(!!todayCheckIn)
-            setHasCheckedIn(!!todayCheckIn)
-            setInitialCompanions(todayCheckIn?.companions ?? [])
-            setVisitCount(countResult.count ?? 0)
-            return { visitedToday: !!todayCheckIn }
+            // One round trip, not two: the status and the count are always
+            // wanted together, and this runs on every cafe-id change.
+            const status = await getCafeVisitStatus(nearbyCafe.id)
+            setVisitedToday(!!status.todayCheckIn)
+            setHasCheckedIn(!!status.todayCheckIn)
+            setInitialCompanions(status.todayCheckIn?.companions ?? [])
+            setVisitCount(status.visitCount ?? 0)
+            return { visitedToday: !!status.todayCheckIn }
         } catch (error) {
             console.error("Failed to refresh visit status:", error)
             return { visitedToday: false }

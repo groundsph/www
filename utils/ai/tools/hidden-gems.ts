@@ -2,6 +2,7 @@ import { db } from "@/db"
 import { toStoredThumbnail } from "@/utils/extras"
 import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, desc, ilike } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 
 export interface HiddenGemResult {
     id: string
@@ -23,7 +24,7 @@ export async function findHiddenGems(
 ): Promise<{ gems: HiddenGemResult[]; total: number } | { error: string }> {
     try {
         const conditions = [
-            eq(cafes.isPublished, true),
+            ...publicCafeConditions(),
             eq(cafes.isHiddenGem, true),
         ]
 

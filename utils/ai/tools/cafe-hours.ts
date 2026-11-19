@@ -1,6 +1,7 @@
 import { db } from "@/db"
 import { cafes } from "@/db/schema"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 
 interface DayHours {
     day: string
@@ -60,7 +61,7 @@ export async function getCafeHours(
                 operatingHours: cafes.operatingHours,
             })
             .from(cafes)
-            .where(eq(cafes.slug, cafeSlug))
+            .where(and(...publicCafeConditions(), eq(cafes.slug, cafeSlug)))
             .limit(1)
 
         if (!result[0]) {

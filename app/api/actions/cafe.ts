@@ -8,7 +8,7 @@ import { cafes, cafeRatingStats, cafeStories, profiles, reviews, reviewInteracti
 import { eq, and, or, desc, gte, lte, ne, isNull, ilike, count, sql, inArray, SQL } from "drizzle-orm"
 import { getDayOfYear, getPHTime } from "@/utils/featured"
 import { CafeFilters, CafeWithRatings } from "@/utils/types/extra"
-import { omitTestCafes } from "@/utils/filters"
+import { omitTestCafes, publicCafeConditions } from "@/utils/filters"
 import { parsePaymentMethodFilter } from "@/utils/payment-methods"
 
 // Helper to get current day key from PH time
@@ -157,9 +157,10 @@ function mapCafeToSnakeCase(c: {
 export async function getCafeBySlug(slug: string, options: { includeTest?: boolean; includeUnpublished?: boolean } = {}) {
     const { includeTest = false, includeUnpublished = false } = options
 
-    const conditions: (SQL<unknown> | undefined)[] = [eq(cafes.slug, slug)]
-    if (!includeTest) conditions.push(...omitTestCafes([]))
-    if (!includeUnpublished) conditions.push(eq(cafes.isPublished, true))
+    const conditions: (SQL<unknown> | undefined)[] = [
+        eq(cafes.slug, slug),
+        ...publicCafeConditions({ includeDrafts: includeUnpublished, includeTest }),
+    ]
 
     // Get cafe with rating stats
     const cafeResult = await db
@@ -333,7 +334,14 @@ export async function getDailyFeatured() {
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.id, scheduledResult[0].cafeId), or(eq(cafes.isChain, false), isNull(cafes.isChain))))
+            .where(and(
+                eq(cafes.id, scheduledResult[0].cafeId),
+                or(eq(cafes.isChain, false), isNull(cafes.isChain)),
+                // A scheduled slot is admin-created; the cafe it points at still
+                // has to be a catalogue cafe. This branch used to render whatever
+                // the schedule named on the landing hero.
+                ...publicCafeConditions()
+            ))
             .limit(1)
 
         if (cafeResult[0]) {
@@ -398,7 +406,7 @@ export async function getDailyFeatured() {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ...omitTestCafes([])))
+        .where(and(eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ...publicCafeConditions()))
         .orderBy(desc(cafeRatingStats.averageRating))
         .limit(10)
 
@@ -468,7 +476,14 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
                 })
                 .from(cafes)
                 .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-                .where(and(eq(cafes.id, scheduledResult[0].cafeId), or(eq(cafes.isChain, false), isNull(cafes.isChain))))
+                .where(and(
+                eq(cafes.id, scheduledResult[0].cafeId),
+                or(eq(cafes.isChain, false), isNull(cafes.isChain)),
+                // A scheduled slot is admin-created; the cafe it points at still
+                // has to be a catalogue cafe. This branch used to render whatever
+                // the schedule named on the landing hero.
+                ...publicCafeConditions()
+            ))
                 .limit(1)
 
             if (cafeResult[0]) return mapCafeToSnakeCase(cafeResult[0])
@@ -499,7 +514,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`), ...omitTestCafes([])))
+            .where(and(eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.cityMunicipality, `%${city}%`), ...publicCafeConditions()))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -531,7 +546,7 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(and(eq(cafes.isPublished, true), eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`), ...omitTestCafes([])))
+            .where(and(eq(cafes.isHiddenGem, false), eq(cafes.isChain, false), ne(cafes.thumbnail, "placeholder"), ilike(cafes.region, `%${region}%`), ...publicCafeConditions()))
             .orderBy(desc(cafeRatingStats.averageRating))
             .limit(10)
 
@@ -541,6 +556,34 @@ export async function getLocationFeatured(city?: string, region?: string): Promi
     }
 
     return null
+}
+
+/**
+ * Ids of cafes the public must not see, for the one query path that cannot carry
+ * a `where` clause: the `search_cafes` database function.
+ *
+ * Post-filtering is a workaround, not the design. It is small (test cafes are a
+ * handful of rows) and it is explicit, so it is easy to delete once the function
+ * itself filters.
+ */
+async function getHiddenCafeIds(): Promise<Set<string>> {
+    const conditions = publicCafeConditions()
+    // Nothing to hide in a development build: an empty condition list means the
+    // helper declined to restrict anything.
+    if (conditions.length === 0) return new Set()
+
+    const hidden = await db
+        .select({ id: cafes.id })
+        .from(cafes)
+        .where(
+            or(
+                ...conditions
+                    .filter((condition): condition is SQL => Boolean(condition))
+                    .map(condition => sql`not (${condition})`)
+            )
+        )
+
+    return new Set(hidden.map(row => row.id))
 }
 
 export async function getAllCafes(
@@ -555,6 +598,16 @@ export async function getAllCafes(
         // First try full-text search
         const searchResults = await db.execute(sql`SELECT * FROM search_cafes(${filters.search})`)
         let rows = searchResults.rows as Record<string, unknown>[]
+
+        // `search_cafes` is a database function and its result shape carries no
+        // visibility columns, so the predicate cannot be pushed into it from
+        // here. Post-filter instead: the set of hidden cafes is tiny, and a leak
+        // through the main catalogue search is the most visible one there is.
+        // Proper fix: add the filter inside `search_cafes` itself.
+        const hiddenIds = await getHiddenCafeIds()
+        if (hiddenIds.size > 0) {
+            rows = rows.filter(row => !hiddenIds.has(String(row.id)))
+        }
 
         // Filter to only 24-hour cafes for current day if is_24_7 is true
         if (filters.is_24_7) {
@@ -572,10 +625,10 @@ export async function getAllCafes(
             const ilikeTerm = `%${filters.search}%`
 
             // Build conditions for ILIKE fallback
-            const ilikConditions = omitTestCafes([
-                eq(cafes.isPublished, true),
-                ilike(cafes.name, ilikeTerm)
-            ])
+            const ilikConditions = [
+                ilike(cafes.name, ilikeTerm),
+                ...publicCafeConditions(),
+            ]
 
             const fallbackResults = await db
                 .select({
@@ -678,7 +731,7 @@ export async function getAllCafes(
     }
 
     // Build query conditions
-    const conditions = omitTestCafes([eq(cafes.isPublished, true)])
+    const conditions = publicCafeConditions()
 
     // Payment methods live in a comma-separated text column, so match whole
     // tokens rather than substrings — a LIKE '%card%' would also hit unrelated
@@ -988,7 +1041,7 @@ export async function getReviewsByCafeIdPaginated(
  * Get the count of published cafes
  */
 export async function getPublishedCafeCount(): Promise<number> {
-    const result = await db.select({ count: count() }).from(cafes).where(and(eq(cafes.isPublished, true), ...omitTestCafes([])))
+    const result = await db.select({ count: count() }).from(cafes).where(and(...publicCafeConditions()))
     return result[0]?.count ?? 0
 }
 
@@ -1244,9 +1297,8 @@ export async function getAllPublishedCafes(): Promise<CafeWithRatings[]> {
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
         .where(
             and(
-                eq(cafes.isPublished, true),
                 eq(cafes.isHiddenGem, false),
-                ...omitTestCafes([]),
+                ...publicCafeConditions(),
             )
         )
         .orderBy(desc(cafes.createdAt))

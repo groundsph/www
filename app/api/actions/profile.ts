@@ -1,6 +1,5 @@
 "use server"
 
-import { getPHTime, getPHTodayStart } from "@/utils/featured"
 import { db } from "@/db"
 import { toStoredThumbnail } from "@/utils/extras"
 import { profiles, userBadges, badgeDefinitions, cafes, cafeRatingStats, reviews, reviewInteractions, cafeVisits, collections, monthlyLeaderboardSnapshots, userFollows } from "@/db/schema"
@@ -8,7 +7,8 @@ import { eq, and, ne, desc, inArray, arrayContains, count, sql, asc } from "driz
 import { getCurrentUser } from "@/lib/auth"
 import { CafeWithRatings, ProfilePassport, ProfileStats, ProfileWithBadges, Tables } from "@/utils/types/extra"
 import { applyTieRanking } from "@/utils/leaderboard"
-import { parseYearMonth, isFutureMonth, getMonthDateRange } from "@/utils/date/leaderboard-months"
+import { currentMonthKey, formatYearMonthKey, getManilaDayWindow, getMonthWindow, resolveLeaderboardMonth } from "@/utils/date/leaderboard-months"
+import { omitTestCafes, publicCafeConditions } from "@/utils/filters"
 
 // Types for consolidated profile data
 export interface FullProfileData {
@@ -193,7 +193,8 @@ export async function getFullProfileData(
             const passportCafesResult = await db
                 .select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
                 .from(cafes)
-                .where(inArray(cafes.id, uniqueIds))
+                // A passport is public; a test cafe pinned to it must not be.
+                .where(and(inArray(cafes.id, uniqueIds), ...omitTestCafes([])))
 
             const cafeMap = new Map(passportCafesResult.map((c) => [c.id, c]))
 
@@ -410,12 +411,12 @@ export async function getPublicProfileData(profile: ProfileWithBadges, viewerId?
 
         // Passport - favorite cafes
         passport?.favorite_ids?.length
-            ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(inArray(cafes.id, passport.favorite_ids))
+            ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(and(inArray(cafes.id, passport.favorite_ids), ...omitTestCafes([])))
             : Promise.resolve([]),
 
         // Passport - wishlist cafes
         passport?.wishlist_ids?.length
-            ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(inArray(cafes.id, passport.wishlist_ids))
+            ? db.select({ name: cafes.name, slug: cafes.slug }).from(cafes).where(and(inArray(cafes.id, passport.wishlist_ids), ...omitTestCafes([])))
             : Promise.resolve([]),
 
         // Collections - public collections by this user
@@ -707,7 +708,7 @@ export async function getCafesByIds(ids: string[]): Promise<CafeWithRatings[]> {
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(inArray(cafes.id, ids))
+        .where(and(inArray(cafes.id, ids), ...omitTestCafes([])))
 
     return results.map((c) => ({
         id: c.id,
@@ -1084,9 +1085,10 @@ export async function recordVisit(cafeId: string, companionIds?: string[]): Prom
         // Check if user already visited this cafe today (PH time)
         // Convert PH time bounds to UTC for DB comparison
         // getPHTodayStart() returns Shifted UTC (e.g. 00:00). Subtract 8h to get Real UTC (e.g. Prev Day 16:00)
-        const todayPH = getPHTodayStart()
-        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
-        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
+        // Manila day bounds as UTC instants. Hand-shifting a local midnight is
+        // only correct on a machine that happens to run UTC; this is correct
+        // everywhere, and it is the same day the leaderboards count.
+        const { startUtc: todayUTC, endUtc: tomorrowUTC } = getManilaDayWindow()
 
         const existingTodayVisit = await db
             .select({ id: cafeVisits.id })
@@ -1310,9 +1312,10 @@ export async function getTodayCheckIn(cafeId: string): Promise<{
     if (!user) return null
 
     try {
-        const todayPH = getPHTodayStart()
-        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
-        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
+        // Manila day bounds as UTC instants. Hand-shifting a local midnight is
+        // only correct on a machine that happens to run UTC; this is correct
+        // everywhere, and it is the same day the leaderboards count.
+        const { startUtc: todayUTC, endUtc: tomorrowUTC } = getManilaDayWindow()
 
         const result = await db
             .select({
@@ -1371,9 +1374,10 @@ export async function updateCheckIn(cafeId: string, companionIds: string[]): Pro
     if (!user) return { success: false, visitCount: 0, isFirstVisit: false, milestone: null, error: "Unauthorized" }
 
     try {
-        const todayPH = getPHTodayStart()
-        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
-        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
+        // Manila day bounds as UTC instants. Hand-shifting a local midnight is
+        // only correct on a machine that happens to run UTC; this is correct
+        // everywhere, and it is the same day the leaderboards count.
+        const { startUtc: todayUTC, endUtc: tomorrowUTC } = getManilaDayWindow()
 
         // Get existing visit
         const existingVisitResult = await db
@@ -1627,9 +1631,10 @@ export async function getTodayVisitors(cafeId: string): Promise<{
             return { visitors: [] }
         }
 
-        const todayPH = getPHTodayStart()
-        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
-        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
+        // Manila day bounds as UTC instants. Hand-shifting a local midnight is
+        // only correct on a machine that happens to run UTC; this is correct
+        // everywhere, and it is the same day the leaderboards count.
+        const { startUtc: todayUTC, endUtc: tomorrowUTC } = getManilaDayWindow()
 
         const result = await db
             .select({
@@ -1737,38 +1742,6 @@ export async function getUserVisitHistory(): Promise<{
 }
 
 /**
- * Check if user has already visited a cafe today
- */
-export async function hasVisitedToday(cafeId: string): Promise<boolean> {
-    const user = await getCurrentUser()
-    if (!user) return false
-
-    try {
-        const todayPH = getPHTodayStart()
-        const todayUTC = new Date(todayPH.getTime() - 8 * 60 * 60 * 1000)
-        const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000)
-
-        const result = await db
-            .select({ id: cafeVisits.id })
-            .from(cafeVisits)
-            .where(
-                and(
-                    eq(cafeVisits.userId, user.id),
-                    eq(cafeVisits.cafeId, cafeId),
-                    sql`${cafeVisits.visitedAt} >= ${todayUTC.toISOString()}`,
-                    sql`${cafeVisits.visitedAt} < ${tomorrowUTC.toISOString()}`
-                )
-            )
-            .limit(1)
-
-        return result.length > 0
-    } catch (error) {
-        console.error("Error checking today's visit:", error)
-        return false
-    }
-}
-
-/**
  * Get user's preferred region based on most-visited cafes
  */
 export async function getUserPreferredRegion(): Promise<string | null> {
@@ -1816,60 +1789,96 @@ async function computeUserLeaderboardLive(
     username: string
     displayName: string
     avatarUrl: string | null
+    /** Visit days: how often they went out. Two check-ins at one cafe in one day count once. */
     visitCount: number
+    /** Distinct cafes. A different measure from visitCount, and never labelled "visits". */
+    cafesVisited: number
     score: number
 }>> {
-    // Get date range for the selected month
-    const { startDate: monthStartPH, endDate: monthEndPH } = getMonthDateRange(selectedYearMonth)
-    const monthStartUTC = new Date(monthStartPH.getTime() - 8 * 60 * 60 * 1000)
-    const monthEndUTC = new Date(monthEndPH.getTime() - 8 * 60 * 60 * 1000)
+    const window = getMonthWindow(formatYearMonthKey(selectedYearMonth))
+    if (!window) return []
 
-    // Build composite score query
-    // Compute per-user stats: uniqueVisits, reviewCount, likesReceived, photoCount, verifiedCount, regionDiversity
-    const baseQuery = db
+    // Visits, counted from the visit rows alone. Kept in its own subquery because
+    // joining reviews onto visit rows multiplies the review side by the number of
+    // visits to that cafe — the inflation that made every score on this board
+    // wrong.
+    const userVisits = db
         .select({
             userId: cafeVisits.userId,
-            username: profiles.username,
-            displayName: profiles.displayName,
-            avatarUrl: profiles.avatarUrl,
-            uniqueVisits: sql<number>`count(distinct ${cafeVisits.cafeId})`.as("uniqueVisits"),
-            reviewCount: sql<number>`count(distinct ${reviews.id}) filter (where ${reviews.status} = 'published')`.as("reviewCount"),
-            likesReceived: sql<number>`coalesce(sum(${reviews.likesCount}) filter (where ${reviews.status} = 'published'), 0)`.as("likesReceived"),
-            photoCount: sql<number>`coalesce(sum(array_length(${reviews.images}, 1)) filter (where ${reviews.status} = 'published'), 0)`.as("photoCount"),
-            verifiedCount: sql<number>`count(*) filter (where ${reviews.isVerifiedVisit} = true and ${reviews.status} = 'published')`.as("verifiedCount"),
-            regionDiversity: sql<number>`count(distinct ${cafes.region})`.as("regionDiversity"),
+            cafesVisited: sql<number>`count(distinct ${cafeVisits.cafeId})`.as("cafes_visited"),
+            // Distinct Manila days on which this person visited anything. One
+            // person at three cafes in one afternoon is one visit.
+            visitDays: sql<number>`count(distinct (${cafeVisits.visitedAt} AT TIME ZONE 'Asia/Manila')::date)`.as("visit_days"),
+            regionDiversity: sql<number>`count(distinct ${cafes.region})`.as("region_diversity"),
         })
         .from(cafeVisits)
-        .innerJoin(profiles, eq(cafeVisits.userId, profiles.id))
-        .leftJoin(reviews, and(
-            eq(reviews.userId, cafeVisits.userId),
-            eq(reviews.cafeId, cafeVisits.cafeId),
-            sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
-            sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
-        ))
         .innerJoin(cafes, eq(cafeVisits.cafeId, cafes.id))
         .where(
             and(
-                sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-                sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`,
+                sql`${cafeVisits.visitedAt} >= ${window.startIso}`,
+                sql`${cafeVisits.visitedAt} < ${window.endIso}`,
+                ...publicCafeConditions(),
                 region ? eq(cafes.region, region) : undefined
             )
         )
-        .groupBy(cafeVisits.userId, profiles.id, profiles.username, profiles.displayName, profiles.avatarUrl)
+        .groupBy(cafeVisits.userId)
+        .as("user_visits")
 
-    const results = await baseQuery
+    const userReviews = db
+        .select({
+            userId: reviews.userId,
+            reviewCount: sql<number>`count(distinct ${reviews.id})`.as("review_count"),
+            likesReceived: sql<number>`coalesce(sum(${reviews.likesCount}), 0)`.as("likes_received"),
+            photoCount: sql<number>`coalesce(sum(array_length(${reviews.images}, 1)), 0)`.as("photo_count"),
+            // `count(*)` here counted every published review and so duplicated
+            // reviewCount. This counts only reviews whose visit was verified —
+            // the thing the term means.
+            verifiedCount: sql<number>`count(*) filter (where ${reviews.isVerifiedVisit} = true)`.as("verified_count"),
+        })
+        .from(reviews)
+        // Same visibility rule as the visit subquery: a review of a cafe the
+        // public cannot see must not earn points or inflate the count.
+        .innerJoin(cafes, eq(reviews.cafeId, cafes.id))
+        .where(
+            and(
+                eq(reviews.status, "published"),
+                sql`${reviews.createdAt} >= ${window.startIso}`,
+                sql`${reviews.createdAt} < ${window.endIso}`,
+                ...publicCafeConditions()
+            )
+        )
+        .groupBy(reviews.userId)
+        .as("user_reviews")
 
-    // Calculate composite score and build leaderboard entries
+    const results = await db
+        .select({
+            userId: userVisits.userId,
+            username: profiles.username,
+            displayName: profiles.displayName,
+            avatarUrl: profiles.avatarUrl,
+            cafesVisited: userVisits.cafesVisited,
+            visitDays: userVisits.visitDays,
+            regionDiversity: userVisits.regionDiversity,
+            reviewCount: sql<number>`coalesce(${userReviews.reviewCount}, 0)`,
+            likesReceived: sql<number>`coalesce(${userReviews.likesReceived}, 0)`,
+            photoCount: sql<number>`coalesce(${userReviews.photoCount}, 0)`,
+            verifiedCount: sql<number>`coalesce(${userReviews.verifiedCount}, 0)`,
+        })
+        .from(userVisits)
+        .innerJoin(profiles, eq(userVisits.userId, profiles.id))
+        .leftJoin(userReviews, eq(userReviews.userId, userVisits.userId))
+
     const scoredResults = results.map((r) => {
-        const uniqueVisits = Number(r.uniqueVisits) || 0
+        const cafesVisited = Number(r.cafesVisited) || 0
+        const visitDays = Number(r.visitDays) || 0
+        const regionDiversity = Number(r.regionDiversity) || 0
         const reviewCount = Number(r.reviewCount) || 0
         const likesReceived = Number(r.likesReceived) || 0
         const photoCount = Number(r.photoCount) || 0
         const verifiedCount = Number(r.verifiedCount) || 0
-        const regionDiversity = Number(r.regionDiversity) || 0
 
         const score =
-            uniqueVisits * 3 +
+            cafesVisited * 3 +
             reviewCount * 5 +
             likesReceived * 1 +
             photoCount * 2 +
@@ -1881,19 +1890,24 @@ async function computeUserLeaderboardLive(
             username: r.username,
             displayName: r.displayName,
             avatarUrl: r.avatarUrl,
-            visitCount: uniqueVisits,
-            score,
+            visitCount: visitDays,
+            cafesVisited,
+            // Rank on the number the visitor sees, so two people who both render
+            // "42" cannot be ordered 1st and 2nd.
+            score: Math.round(score),
         }
     })
 
-    // Sort by score DESC, then username ASC for tie-breaking
     scoredResults.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score
         return a.username.localeCompare(b.username)
     })
 
-    // Apply tie ranking (dense ranking: 1, 1, 2)
-    const rankedResults = applyTieRanking(scoredResults.slice(0, limit))
+    // rank on the sorted key: this used to rank on visitCount while sorting on
+    // score, which produced two "1st" cards and a wrong third place.
+    const rankedResults = applyTieRanking(scoredResults.slice(0, limit), {
+        scoreKey: "score",
+    })
 
     return rankedResults.map((r) => ({
         rank: r.rank,
@@ -1902,6 +1916,7 @@ async function computeUserLeaderboardLive(
         displayName: r.displayName as string,
         avatarUrl: r.avatarUrl as string | null,
         visitCount: r.visitCount as number,
+        cafesVisited: r.cafesVisited as number,
         score: r.score as number,
     }))
 }
@@ -1919,29 +1934,25 @@ export async function getMonthlyLeaderboard(
         displayName: string
         avatarUrl: string | null
         visitCount: number
+        cafesVisited: number
         score: number
     }[]
     userRank: number | null
     region: string | null
     selectedMonth: string
 }> {
-    const user = await getCurrentUser()
+    // The viewer is only used to decorate the board with "your rank". Callers
+    // outside a request scope (the offline snapshot rebuild) cannot resolve one,
+    // and that must not cost them the leaderboard itself.
+    const user = await getCurrentUser().catch(() => null)
 
     try {
-        // Parse and validate yearMonth, default to current month
-        let selectedYearMonth = parseYearMonth(yearMonth || "")
-        if (!selectedYearMonth || isFutureMonth(selectedYearMonth)) {
-            const nowPH = getPHTime()
-            selectedYearMonth = {
-                year: nowPH.getFullYear(),
-                month: nowPH.getMonth() + 1,
-            }
-        }
+        // A missing or future month clamps to the current Manila month, through
+        // the same helper the cafe board uses.
+        const selectedYearMonth = resolveLeaderboardMonth(yearMonth)
 
-        const selectedMonthStr = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
-        const nowPH = getPHTime()
-        const currentYearMonth = `${nowPH.getFullYear()}-${(nowPH.getMonth() + 1).toString().padStart(2, "0")}`
-        const isCurrentMonth = selectedMonthStr === currentYearMonth
+        const selectedMonthStr = formatYearMonthKey(selectedYearMonth)
+        const isCurrentMonth = selectedMonthStr === currentMonthKey()
 
         // For past months, read from snapshot unless computeLive is true (for backfill)
         if (!isCurrentMonth && !options?.computeLive) {
@@ -1953,6 +1964,7 @@ export async function getMonthlyLeaderboard(
                     displayName: profiles.displayName,
                     avatarUrl: profiles.avatarUrl,
                     visitCount: monthlyLeaderboardSnapshots.visitCount,
+                    cafesVisited: monthlyLeaderboardSnapshots.cafesVisited,
                     score: monthlyLeaderboardSnapshots.score,
                 })
                 .from(monthlyLeaderboardSnapshots)
@@ -1967,55 +1979,52 @@ export async function getMonthlyLeaderboard(
                 .orderBy(asc(monthlyLeaderboardSnapshots.rank))
                 .limit(limit)
 
-            // If no snapshot exists for that month, return empty leaderboard (unless computing live)
-            if (snapshotResults.length === 0) {
+            // A month with no snapshot yet — the cron has not run for it, or it is
+            // the first hours of the new month — falls through to a live compute
+            // instead of showing an empty board for a month that has data. Reads
+            // never write: the cron owns snapshot creation.
+            if (snapshotResults.length > 0) {
+                const leaderboard = snapshotResults.map((r) => ({
+                    rank: r.rank,
+                    userId: r.userId!,
+                    username: r.username,
+                    displayName: r.displayName,
+                    avatarUrl: r.avatarUrl,
+                    visitCount: r.visitCount || 0,
+                    cafesVisited: r.cafesVisited ?? 0,
+                    score: r.score,
+                }))
+
+                // Find current user's rank if logged in
+                let userRank: number | null = null
+                if (user) {
+                    const userEntry = leaderboard.find((e) => e.userId === user.id)
+                    if (userEntry) {
+                        userRank = userEntry.rank
+                    } else {
+                        // Query user's rank from snapshot
+                        const userSnapshot = await db
+                            .select({ rank: monthlyLeaderboardSnapshots.rank })
+                            .from(monthlyLeaderboardSnapshots)
+                            .where(
+                                and(
+                                    eq(monthlyLeaderboardSnapshots.type, "user"),
+                                    eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonthStr),
+                                    eq(monthlyLeaderboardSnapshots.userId, user.id),
+                                    region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
+                                )
+                            )
+                            .limit(1)
+                        userRank = userSnapshot[0]?.rank || null
+                    }
+                }
+
                 return {
-                    leaderboard: [],
-                    userRank: null,
+                    leaderboard,
+                    userRank,
                     region: region || null,
                     selectedMonth: selectedMonthStr,
                 }
-            }
-
-            const leaderboard = snapshotResults.map((r) => ({
-                rank: r.rank,
-                userId: r.userId!,
-                username: r.username,
-                displayName: r.displayName,
-                avatarUrl: r.avatarUrl,
-                visitCount: r.visitCount || 0,
-                score: r.score,
-            }))
-
-            // Find current user's rank if logged in
-            let userRank: number | null = null
-            if (user) {
-                const userEntry = leaderboard.find((e) => e.userId === user.id)
-                if (userEntry) {
-                    userRank = userEntry.rank
-                } else {
-                    // Query user's rank from snapshot
-                    const userSnapshot = await db
-                        .select({ rank: monthlyLeaderboardSnapshots.rank })
-                        .from(monthlyLeaderboardSnapshots)
-                        .where(
-                            and(
-                                eq(monthlyLeaderboardSnapshots.type, "user"),
-                                eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonthStr),
-                                eq(monthlyLeaderboardSnapshots.userId, user.id),
-                                region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
-                            )
-                        )
-                        .limit(1)
-                    userRank = userSnapshot[0]?.rank || null
-                }
-            }
-
-            return {
-                leaderboard,
-                userRank,
-                region: region || null,
-                selectedMonth: selectedMonthStr,
             }
         }
 
@@ -2039,14 +2048,38 @@ export async function getMonthlyLeaderboard(
         }
     } catch (error) {
         console.error("Error getting monthly leaderboard:", error)
-        const nowPH = getPHTime()
-        const fallbackMonth = `${nowPH.getFullYear()}-${(nowPH.getMonth() + 1).toString().padStart(2, "0")}`
         return {
             leaderboard: [],
             userRank: null,
             region: region || null,
-            selectedMonth: fallbackMonth,
+            selectedMonth: currentMonthKey(),
         }
+    }
+}
+
+/**
+ * Everything the check-in prompt needs about this viewer at this cafe, in one
+ * round trip.
+ *
+ * The prompt used to fire `getTodayCheckIn` and `getVisitCount` as two separate
+ * server actions on every cafe-id change, which is two authenticated round trips
+ * to answer one question. Both halves stay available individually for other
+ * callers; this one just asks them together.
+ */
+export async function getCafeVisitStatus(cafeId: string): Promise<{
+    todayCheckIn: Awaited<ReturnType<typeof getTodayCheckIn>>
+    visitCount: number
+    lastVisit: string | null
+}> {
+    const [todayCheckIn, visitCount] = await Promise.all([
+        getTodayCheckIn(cafeId),
+        getVisitCount(cafeId),
+    ])
+
+    return {
+        todayCheckIn,
+        visitCount: visitCount.count,
+        lastVisit: visitCount.lastVisit,
     }
 }
 

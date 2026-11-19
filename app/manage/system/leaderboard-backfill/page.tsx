@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { isAdmin, getUserRole } from "@/app/api/actions/admin"
 import { LeaderboardBackfillClient } from "@/components/manage/LeaderboardBackfillClient"
+import { currentMonthKey, getLastNMonths } from "@/utils/date/leaderboard-months"
 
 export const metadata = {
     title: "Leaderboard Backfill | Manage",
@@ -18,6 +19,10 @@ export default async function LeaderboardBackfillPage() {
         redirect("/manage")
     }
 
+    // The newest month that can be snapshotted: last month on the Manila
+    // calendar. Computed here so the tool does not depend on the admin's clock.
+    const latestMonth = getLastNMonths(2)[1] ?? currentMonthKey()
+
     return (
         <div className='space-y-8'>
             <div>
@@ -29,7 +34,7 @@ export default async function LeaderboardBackfillPage() {
                 </p>
             </div>
 
-            <LeaderboardBackfillClient />
+            <LeaderboardBackfillClient latestMonth={latestMonth} />
         </div>
     )
 }

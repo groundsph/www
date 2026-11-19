@@ -1,6 +1,7 @@
 import { db } from "@/db"
 import { cafes, blogPosts, cafeCrawls, profiles } from "@/db/schema"
-import { eq, count } from "drizzle-orm"
+import { and, eq, count } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 
 export interface GroundsInfo {
     platform: string
@@ -33,7 +34,7 @@ export async function getGroundsInfo(): Promise<GroundsInfo> {
 
     try {
         const [cafeCount, blogCount, crawlCount, userCount] = await Promise.all([
-            db.select({ count: count() }).from(cafes).where(eq(cafes.isPublished, true)),
+            db.select({ count: count() }).from(cafes).where(and(...publicCafeConditions())),
             db.select({ count: count() }).from(blogPosts).where(eq(blogPosts.status, "published")),
             db.select({ count: count() }).from(cafeCrawls).where(eq(cafeCrawls.status, "published")),
             db.select({ count: count() }).from(profiles),

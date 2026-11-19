@@ -2,6 +2,7 @@
 
 import { db } from "@/db"
 import { toStoredThumbnail } from "@/utils/extras"
+import { excludeTestCafeReferences, shouldShowTestCafes } from "@/utils/filters"
 import { blogPosts, profiles, cafes } from "@/db/schema"
 import { eq, and, desc, count, sql, ne, inArray, or, ilike } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
@@ -64,6 +65,25 @@ async function isCafeOwner(cafeId: string): Promise<boolean> {
 async function getCurrentUserId(): Promise<string | null> {
     const user = await getCurrentUser()
     return user?.id ?? null
+}
+
+/**
+ * Whether `cafeId` may be attached to a post at all.
+ *
+ * A test cafe only exists in a development build. Attaching one elsewhere would
+ * create a post the public can never reach, so the write is rejected instead of
+ * silently producing an invisible row. Unknown cafe ids fail the same check.
+ */
+async function isAssignableCafe(cafeId: string): Promise<boolean> {
+    if (shouldShowTestCafes()) return true
+
+    const result = await db
+        .select({ id: cafes.id })
+        .from(cafes)
+        .where(and(eq(cafes.id, cafeId), excludeTestCafeReferences(cafes.id)))
+        .limit(1)
+
+    return Boolean(result[0])
 }
 
 function normalizeSearchQuery(search: string): string {
@@ -198,6 +218,15 @@ export async function getPublishedBlogPosts(
     if (cafeId) conditions.push(eq(blogPosts.cafeId, cafeId))
     if (featured !== undefined) conditions.push(eq(blogPosts.featured, featured))
 
+    // A post attached to a test cafe is hidden outright: the cafe is
+    // unreachable for visitors, so keeping the post would render a card with a
+    // hole in it. The list, its pagination count and the RSS feed share this
+    // `where`, so the total always agrees with the rows on the page.
+    const visibleConditions = [
+        ...conditions,
+        excludeTestCafeReferences(blogPosts.cafeId),
+    ]
+
     // Handle search with tsquery + ilike fallback
     let postsResult
     let countResult
@@ -213,11 +242,11 @@ export async function getPublishedBlogPosts(
                 publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
             })
             .from(blogPosts)
-            .where(and(...conditions, searchCondition))
+            .where(and(...visibleConditions, searchCondition))
             .orderBy(desc(blogPosts.publishedAt))
             .limit(pageSize)
             .offset(offset)
-        countResult = await db.select({ count: count() }).from(blogPosts).where(and(...conditions, searchCondition))
+        countResult = await db.select({ count: count() }).from(blogPosts).where(and(...visibleConditions, searchCondition))
     } else {
         [postsResult, countResult] = await Promise.all([
             db.select({
@@ -229,11 +258,11 @@ export async function getPublishedBlogPosts(
                 publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
             })
                 .from(blogPosts)
-                .where(and(...conditions))
+                .where(and(...visibleConditions))
                 .orderBy(desc(blogPosts.publishedAt))
                 .limit(pageSize)
                 .offset(offset),
-            db.select({ count: count() }).from(blogPosts).where(and(...conditions)),
+            db.select({ count: count() }).from(blogPosts).where(and(...visibleConditions)),
         ])
     }
 
@@ -241,7 +270,9 @@ export async function getPublishedBlogPosts(
         return { posts: [], total: countResult[0]?.count ?? 0, page, pageSize, hasMore: false }
     }
 
-    // Fetch authors and cafes
+    // Fetch authors and cafes. The rows above already exclude posts attached to
+    // a test cafe; the guard here only keeps the decoration honest if that ever
+    // regresses, so a leaked id resolves to no cafe instead of a test cafe.
     const authorIds = [...new Set(postsResult.map(p => p.authorId).filter(Boolean))] as string[]
     const cafeIds = [...new Set(postsResult.map(p => p.cafeId).filter(Boolean))] as string[]
 
@@ -249,7 +280,7 @@ export async function getPublishedBlogPosts(
         authorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
             .from(profiles).where(inArray(profiles.id, authorIds)) : Promise.resolve([]),
         cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
-            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+            .from(cafes).where(and(inArray(cafes.id, cafeIds), excludeTestCafeReferences(cafes.id))) : Promise.resolve([]),
     ])
 
     const authorMap = new Map(authorsResult.map(a => [a.id, a]))
@@ -274,7 +305,7 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
     })
         .from(blogPosts)
-        .where(eq(blogPosts.slug, slug))
+        .where(and(eq(blogPosts.slug, slug), excludeTestCafeReferences(blogPosts.cafeId)))
         .limit(1)
 
     const post = result[0]
@@ -384,7 +415,7 @@ export async function getFeaturedPosts(limit: number = 5): Promise<BlogPost[]> {
         publishedAt: blogPosts.publishedAt, createdAt: blogPosts.createdAt, updatedAt: blogPosts.updatedAt,
     })
         .from(blogPosts)
-        .where(and(eq(blogPosts.status, "published"), eq(blogPosts.featured, true)))
+        .where(and(eq(blogPosts.status, "published"), eq(blogPosts.featured, true), excludeTestCafeReferences(blogPosts.cafeId)))
         .orderBy(desc(blogPosts.publishedAt))
         .limit(limit)
 
@@ -397,7 +428,7 @@ export async function getFeaturedPosts(limit: number = 5): Promise<BlogPost[]> {
         authorIds.length > 0 ? db.select({ id: profiles.id, displayName: profiles.displayName, avatarUrl: profiles.avatarUrl, username: profiles.username })
             .from(profiles).where(inArray(profiles.id, authorIds)) : Promise.resolve([]),
         cafeIds.length > 0 ? db.select({ id: cafes.id, name: cafes.name, slug: cafes.slug, thumbnail: cafes.thumbnail })
-            .from(cafes).where(inArray(cafes.id, cafeIds)) : Promise.resolve([]),
+            .from(cafes).where(and(inArray(cafes.id, cafeIds), excludeTestCafeReferences(cafes.id))) : Promise.resolve([]),
     ])
 
     const authorMap = new Map(authorsResult.map(a => [a.id, a]))
@@ -619,6 +650,12 @@ export async function createBlogPost(input: BlogPostInput): Promise<BlogActionRe
     const isAdminMod = await isAdminOrModerator()
     const isOwner = input.cafe_id ? await isCafeOwner(input.cafe_id) : false
 
+    // Checked before the role branches so no role can attach a post to a cafe
+    // that is hidden from visitors.
+    if (input.cafe_id && !(await isAssignableCafe(input.cafe_id))) {
+        return { success: false, error: "That cafe is not available" }
+    }
+
     // Fetch role for non-admin/mod users
     let userRole: string | null = null
     if (!isAdminMod) {
@@ -744,6 +781,10 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     // must not silently rewrite someone else's writing.
     if (!isAuthor && !isOwner) {
         return { success: false, error: "Not authorized to edit this post" }
+    }
+
+    if (input.cafe_id && !(await isAssignableCafe(input.cafe_id))) {
+        return { success: false, error: "That cafe is not available" }
     }
 
     const resolved = resolveContentAndBlocks({

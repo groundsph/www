@@ -5,60 +5,135 @@ import { toStoredThumbnail } from "@/utils/extras"
 import { cafes, cafeVisits, reviews, cafePageViews, monthlyLeaderboardSnapshots } from "@/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { applyTieRanking } from "@/utils/leaderboard"
-import { parseYearMonth, isFutureMonth, getMonthDateRange } from "@/utils/date/leaderboard-months"
-import { getPHTime } from "@/utils/featured"
+import {
+    currentMonthKey,
+    formatYearMonthKey,
+    getMonthWindow,
+    resolveLeaderboardMonth,
+    type YearMonth,
+} from "@/utils/date/leaderboard-months"
+import { omitTestCafes, publicCafeConditions } from "@/utils/filters"
 import { CafeLeaderboardEntry } from "@/utils/types/leaderboard"
 
 /**
- * Internal helper: compute cafe leaderboard live for any given month.
- * Used by getCafeMonthlyLeaderboard for the current month and for on-demand backfills.
+ * Which Manila month a call is asking about, defaulting to the one it is in and
+ * refusing to serve a month that has not happened yet.
+ *
+ * The default comes from `currentMonthKey()` rather than a local `Date`, because
+ * "current month" is a Manila question. A browser (or server) in another
+ * timezone would otherwise pick the wrong month for eight hours around each
+ * boundary.
+ */
+/** Per-cafe activity for one month, aggregated in its own subquery. */
+function monthlyCafeActivity(startIso: string, endIso: string) {
+    const visits = db
+        .select({
+            cafeId: cafeVisits.cafeId,
+            visitCount: sql<number>`count(${cafeVisits.id})`.as("visit_count"),
+            uniqueVisitors: sql<number>`count(distinct ${cafeVisits.userId})`.as("unique_visitors"),
+        })
+        .from(cafeVisits)
+        .where(
+            and(
+                sql`${cafeVisits.visitedAt} >= ${startIso}`,
+                sql`${cafeVisits.visitedAt} < ${endIso}`
+            )
+        )
+        .groupBy(cafeVisits.cafeId)
+        .as("monthly_visits")
+
+    const monthlyReviews = db
+        .select({
+            cafeId: reviews.cafeId,
+            reviewCount: sql<number>`count(distinct ${reviews.id}) filter (where ${reviews.status} = 'published')`.as("review_count"),
+            avgRating: sql<number | null>`avg(${reviews.rating}) filter (where ${reviews.status} = 'published')`.as("avg_rating"),
+            likesCount: sql<number>`coalesce(sum(${reviews.likesCount}) filter (where ${reviews.status} = 'published'), 0)`.as("likes_count"),
+        })
+        .from(reviews)
+        .where(
+            and(
+                sql`${reviews.createdAt} >= ${startIso}`,
+                sql`${reviews.createdAt} < ${endIso}`
+            )
+        )
+        .groupBy(reviews.cafeId)
+        .as("monthly_reviews")
+
+    const monthlyViews = db
+        .select({
+            cafeId: cafePageViews.cafeId,
+            pageViews: sql<number>`count(distinct ${cafePageViews.visitorId})`.as("page_views"),
+        })
+        .from(cafePageViews)
+        .where(
+            and(
+                sql`${cafePageViews.viewedAt} >= ${startIso}`,
+                sql`${cafePageViews.viewedAt} < ${endIso}`
+            )
+        )
+        .groupBy(cafePageViews.cafeId)
+        .as("monthly_page_views")
+
+    return { visits, monthlyReviews, monthlyViews }
+}
+
+/**
+ * Compute the cafe leaderboard live for a given month.
+ *
+ * Each activity table is aggregated in its own subquery before being joined.
+ * The previous version left-joined `cafe_visits`, `reviews` and `cafe_page_views`
+ * all off `cafes.id` in one query, which fans out: a cafe with four visits, two
+ * reviews and thirty pageviews produced `count(visits) = 240`. Every score on the
+ * board was popularity multiplied by itself.
  */
 async function computeCafeLeaderboardLive(
-    selectedYearMonth: { year: number; month: number },
+    selectedYearMonth: YearMonth,
     region: string | null | undefined,
-    limit: number
+    limit: number,
+    /**
+     * Historical months relax to the test-cafe rule only: a cafe that was
+     * published in October and has since been deactivated earned its October
+     * rank. A month with no snapshot is recomputed with the same scope as one
+     * that has a snapshot, so the answer cannot depend on whether a snapshot
+     * happens to exist.
+     */
+    historical = false
 ): Promise<CafeLeaderboardEntry[]> {
-    const { startDate: monthStartUTC, endDate: monthEndUTC } = getMonthDateRange(selectedYearMonth)
+    const window = getMonthWindow(formatYearMonthKey(selectedYearMonth))
+    if (!window) return []
 
-    const baseQuery = db
+    const { visits, monthlyReviews, monthlyViews } = monthlyCafeActivity(
+        window.startIso,
+        window.endIso
+    )
+
+    const results = await db
         .select({
             cafeId: cafes.id,
             name: cafes.name,
             slug: cafes.slug,
             thumbnail: cafes.thumbnail,
             region: cafes.region,
-            visitCount: sql<number>`count(${cafeVisits.id})`.as("visitCount"),
-            uniqueVisitors: sql<number>`count(distinct ${cafeVisits.userId})`.as("uniqueVisitors"),
-            reviewCount: sql<number>`count(distinct case when ${reviews.status} = 'published' then ${reviews.id} end)`.as("reviewCount"),
-            avgRating: sql<number | null>`avg(case when ${reviews.status} = 'published' then ${reviews.rating} end)`.as("avgRating"),
-            likesCount: sql<number>`coalesce(sum(${reviews.likesCount}), 0)`.as("likesCount"),
-            pageViews: sql<number>`count(distinct ${cafePageViews.visitorId})`.as("pageViews"),
+            visitCount: sql<number>`coalesce(${visits.visitCount}, 0)`,
+            uniqueVisitors: sql<number>`coalesce(${visits.uniqueVisitors}, 0)`,
+            reviewCount: sql<number>`coalesce(${monthlyReviews.reviewCount}, 0)`,
+            avgRating: monthlyReviews.avgRating,
+            likesCount: sql<number>`coalesce(${monthlyReviews.likesCount}, 0)`,
+            pageViews: sql<number>`coalesce(${monthlyViews.pageViews}, 0)`,
         })
         .from(cafes)
-        .leftJoin(cafeVisits, and(
-            eq(cafeVisits.cafeId, cafes.id),
-            sql`${cafeVisits.visitedAt} >= ${monthStartUTC.toISOString()}`,
-            sql`${cafeVisits.visitedAt} < ${monthEndUTC.toISOString()}`
-        ))
-        .leftJoin(reviews, and(
-            eq(reviews.cafeId, cafes.id),
-            sql`${reviews.createdAt} >= ${monthStartUTC.toISOString()}`,
-            sql`${reviews.createdAt} < ${monthEndUTC.toISOString()}`
-        ))
-        .leftJoin(cafePageViews, and(
-            eq(cafePageViews.cafeId, cafes.id),
-            sql`${cafePageViews.viewedAt} >= ${monthStartUTC.toISOString()}`,
-            sql`${cafePageViews.viewedAt} < ${monthEndUTC.toISOString()}`
-        ))
+        .leftJoin(visits, eq(visits.cafeId, cafes.id))
+        .leftJoin(monthlyReviews, eq(monthlyReviews.cafeId, cafes.id))
+        .leftJoin(monthlyViews, eq(monthlyViews.cafeId, cafes.id))
         .where(
             and(
-                eq(cafes.isPublished, true),
-                region ? eq(cafes.region, region) : undefined
+                ...(historical ? omitTestCafes([]) : publicCafeConditions()),
+                region ? eq(cafes.region, region) : undefined,
+                // A cafe nobody visited did not make the board. Without this the
+                // tail fills with zero-score cafes ranked by nothing.
+                sql`coalesce(${visits.visitCount}, 0) > 0`
             )
         )
-
-    const results = await baseQuery
-        .groupBy(cafes.id, cafes.name, cafes.slug, cafes.thumbnail, cafes.region)
 
     const scoredResults = results.map((r) => {
         const visitCount = Number(r.visitCount) || 0
@@ -82,7 +157,9 @@ async function computeCafeLeaderboardLive(
             slug: r.slug,
             thumbnail: r.thumbnail,
             region: r.region,
-            score,
+            // Rank on the number the visitor sees, so two cafes that both render
+            // "12" cannot be ordered 1st and 2nd.
+            score: Math.round(score),
             visitCount,
             reviewCount,
             avgRating,
@@ -94,19 +171,14 @@ async function computeCafeLeaderboardLive(
         return a.name.localeCompare(b.name)
     })
 
-    const rankedResults = applyTieRanking(
-        scoredResults.slice(0, limit),
-        { scoreKey: "score" }
-    )
-
-    return rankedResults.map((r) => ({
+    return applyTieRanking(scoredResults.slice(0, limit), { scoreKey: "score" }).map((r) => ({
         rank: r.rank,
         cafeId: r.cafeId as string,
         name: r.name as string,
         slug: r.slug as string,
         thumbnail: r.thumbnail as string,
         region: r.region as string,
-        score: Math.round(r.score as number),
+        score: r.score as number,
         visitCount: r.visitCount as number,
         reviewCount: r.reviewCount as number,
         avgRating: r.avgRating as number | null,
@@ -114,110 +186,90 @@ async function computeCafeLeaderboardLive(
 }
 
 /**
- * Internal helper: get leaderboard entries without nationwide rank lookup.
- * Used by getCafeMonthlyLeaderboard to compute both regional and nationwide rankings.
+ * Cafe leaderboard entries for a month: live for the current month, from the
+ * stored snapshot for a past one.
+ *
+ * Reads never write. A past month with no snapshot is computed live and returned
+ * un-stored; the daily cron owns snapshot creation. The previous implementation
+ * inserted a snapshot from this path *and* the cron inserted the same rows,
+ * which double-counted every backfilled month.
  */
 async function computeCafeLeaderboardCore(
     region: string | null,
     limit: number,
-    yearMonth: string | null
+    yearMonth: string | null,
+    options?: { computeLive?: boolean }
 ): Promise<CafeLeaderboardEntry[]> {
-    // Parse and validate yearMonth, default to current month (in PH time)
-    let selectedYearMonth = parseYearMonth(yearMonth || "")
-    const nowPH = getPHTime()
-    const currentMonth = {
-        year: nowPH.getFullYear(),
-        month: nowPH.getMonth() + 1, // 1-12
+    const resolved = resolveLeaderboardMonth(yearMonth)
+    const selectedMonth = formatYearMonthKey(resolved)
+    const isCurrentMonth = selectedMonth === currentMonthKey()
+
+    // A backfill must recompute from the raw tables. Without this the caller
+    // reads the stored snapshot it is about to replace and rewrites the same
+    // wrong numbers.
+    if (isCurrentMonth || options?.computeLive) {
+        return await computeCafeLeaderboardLive(resolved, region, limit)
     }
 
-    if (!selectedYearMonth || isFutureMonth(selectedYearMonth)) {
-        selectedYearMonth = currentMonth
-    }
-
-    const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
-    const isCurrentMonth = selectedYearMonth.year === currentMonth.year && selectedYearMonth.month === currentMonth.month
-
-    // For past months, read from snapshot (backfill on-demand if missing)
-    if (!isCurrentMonth) {
-        const snapshotResults = await db
-            .select({
-                rank: monthlyLeaderboardSnapshots.rank,
-                cafeId: monthlyLeaderboardSnapshots.cafeId,
-                name: cafes.name,
-                slug: cafes.slug,
-                thumbnail: cafes.thumbnail,
-                region: cafes.region,
-                score: monthlyLeaderboardSnapshots.score,
-                visitCount: monthlyLeaderboardSnapshots.visitCount,
-                reviewCount: monthlyLeaderboardSnapshots.reviewCount,
-                avgRating: monthlyLeaderboardSnapshots.avgRating,
-            })
-            .from(monthlyLeaderboardSnapshots)
-            .innerJoin(cafes, eq(monthlyLeaderboardSnapshots.cafeId, cafes.id))
-            .where(
-                and(
-                    eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
-                    eq(monthlyLeaderboardSnapshots.type, "cafe"),
-                    region ? eq(monthlyLeaderboardSnapshots.region, region) : sql`${monthlyLeaderboardSnapshots.region} IS NULL`
-                )
+    const snapshotResults = await db
+        .select({
+            rank: monthlyLeaderboardSnapshots.rank,
+            cafeId: monthlyLeaderboardSnapshots.cafeId,
+            name: cafes.name,
+            slug: cafes.slug,
+            thumbnail: cafes.thumbnail,
+            region: cafes.region,
+            score: monthlyLeaderboardSnapshots.score,
+            visitCount: monthlyLeaderboardSnapshots.visitCount,
+            reviewCount: monthlyLeaderboardSnapshots.reviewCount,
+            avgRating: monthlyLeaderboardSnapshots.avgRating,
+        })
+        .from(monthlyLeaderboardSnapshots)
+        .innerJoin(cafes, eq(monthlyLeaderboardSnapshots.cafeId, cafes.id))
+        .where(
+            and(
+                eq(monthlyLeaderboardSnapshots.yearMonth, selectedMonth),
+                eq(monthlyLeaderboardSnapshots.type, "cafe"),
+                region
+                    ? eq(monthlyLeaderboardSnapshots.region, region)
+                    : sql`${monthlyLeaderboardSnapshots.region} IS NULL`,
+                // Only the test-cafe half of the visibility rules applies to
+                // history: a cafe that was published in October and has since
+                // been deactivated genuinely earned its October rank, but a test
+                // cafe was never part of the story.
+                ...omitTestCafes([])
             )
-            .orderBy(monthlyLeaderboardSnapshots.rank)
-            .limit(limit)
+        )
+        .orderBy(monthlyLeaderboardSnapshots.rank)
+        .limit(limit)
 
-        // If no snapshot exists, compute live and backfill
-        if (snapshotResults.length === 0) {
-            console.log(`[Leaderboard] No snapshot for ${selectedMonth} (cafe, region=${region ?? "global"}), backfilling...`)
-            const liveResult = await computeCafeLeaderboardLive(selectedYearMonth, region, 100)
-
-            if (liveResult.length > 0) {
-                const entries = liveResult.map((entry) => ({
-                    yearMonth: selectedMonth,
-                    type: "cafe" as const,
-                    cafeId: entry.cafeId,
-                    rank: entry.rank,
-                    score: entry.score,
-                    visitCount: entry.visitCount,
-                    reviewCount: entry.reviewCount,
-                    region: region ?? null,
-                }))
-
-                try {
-                    await db.insert(monthlyLeaderboardSnapshots).values(entries)
-                    console.log(`[Leaderboard] Backfilled ${entries.length} cafe entries for ${selectedMonth}`)
-                } catch (err) {
-                    console.error("[Leaderboard] Backfill insert failed:", err)
-                }
-            }
-
-            return liveResult.slice(0, limit)
-        }
-
-        // Deduplicate by cafeId (safety check for data integrity)
-        const seenCafeIds = new Set<string>()
-        const leaderboard: CafeLeaderboardEntry[] = []
-        
-        for (const r of snapshotResults) {
-            if (!r.cafeId || seenCafeIds.has(r.cafeId)) continue
-            seenCafeIds.add(r.cafeId)
-            leaderboard.push({
-                rank: r.rank,
-                cafeId: r.cafeId,
-                name: r.name,
-                slug: r.slug,
-                thumbnail: toStoredThumbnail(r.thumbnail),
-                region: r.region,
-                score: Math.round(r.score),
-                visitCount: r.visitCount || 0,
-                reviewCount: r.reviewCount || 0,
-                avgRating: r.avgRating ?? null,
-            })
-        }
-
-        return leaderboard
+    if (snapshotResults.length === 0) {
+        return await computeCafeLeaderboardLive(resolved, region, limit, true)
     }
 
-    // For current month, calculate composite score live
-    return await computeCafeLeaderboardLive(selectedYearMonth, region, limit)
+    // Deduplicate by cafeId: the snapshot table has no working unique key yet,
+    // so a month backfilled by two writers can hold the same cafe twice.
+    const seenCafeIds = new Set<string>()
+    const leaderboard: CafeLeaderboardEntry[] = []
+
+    for (const r of snapshotResults) {
+        if (!r.cafeId || seenCafeIds.has(r.cafeId)) continue
+        seenCafeIds.add(r.cafeId)
+        leaderboard.push({
+            rank: r.rank,
+            cafeId: r.cafeId,
+            name: r.name,
+            slug: r.slug,
+            thumbnail: toStoredThumbnail(r.thumbnail),
+            region: r.region,
+            score: Math.round(r.score),
+            visitCount: r.visitCount || 0,
+            reviewCount: r.reviewCount || 0,
+            avgRating: r.avgRating ?? null,
+        })
+    }
+
+    return leaderboard
 }
 
 /**
@@ -232,34 +284,33 @@ async function computeCafeLeaderboardCore(
 export async function getCafeMonthlyLeaderboard(
     region?: string | null,
     limit: number = 20,
-    yearMonth?: string | null
+    yearMonth?: string | null,
+    options?: { computeLive?: boolean }
 ): Promise<{
     leaderboard: CafeLeaderboardEntry[]
     selectedMonth: string
     region: string | null
 }> {
+    const resolved = resolveLeaderboardMonth(yearMonth)
+    const selectedMonth = formatYearMonthKey(resolved)
+
     try {
-        // Parse and validate yearMonth to get selectedMonth
-        let selectedYearMonth = parseYearMonth(yearMonth || "")
-        const nowPH = getPHTime()
-        const currentMonth = {
-            year: nowPH.getFullYear(),
-            month: nowPH.getMonth() + 1, // 1-12
-        }
-
-        if (!selectedYearMonth || isFutureMonth(selectedYearMonth)) {
-            selectedYearMonth = currentMonth
-        }
-
-        const selectedMonth = `${selectedYearMonth.year}-${selectedYearMonth.month.toString().padStart(2, "0")}`
-
-        // Get regional leaderboard
-        const leaderboard = await computeCafeLeaderboardCore(region || null, limit, yearMonth || null)
+        const leaderboard = await computeCafeLeaderboardCore(
+            region || null,
+            limit,
+            selectedMonth,
+            options
+        )
 
         // If viewing a regional leaderboard, also fetch nationwide rankings
         const nationwideRankMap = new Map<string, number>()
         if (region) {
-            const nationwideLeaderboard = await computeCafeLeaderboardCore(null, 100, yearMonth || null)
+            const nationwideLeaderboard = await computeCafeLeaderboardCore(
+                null,
+                100,
+                selectedMonth,
+                options
+            )
             nationwideLeaderboard.forEach((entry) => {
                 nationwideRankMap.set(entry.cafeId, entry.rank)
             })
@@ -277,7 +328,7 @@ export async function getCafeMonthlyLeaderboard(
         console.error("Error fetching cafe leaderboard:", error)
         return {
             leaderboard: [],
-            selectedMonth: yearMonth || "",
+            selectedMonth,
             region: region || null,
         }
     }

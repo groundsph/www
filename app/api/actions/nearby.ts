@@ -3,6 +3,7 @@
 import { db } from "@/db"
 import { toStoredThumbnail } from "@/utils/extras"
 import { cafeRatingStats, cafes } from "@/db/schema"
+import { publicCafeConditions } from "@/utils/filters"
 import { and, between, eq, isNotNull, sql } from "drizzle-orm"
 import type { OperatingHours } from "@/utils/types/cafe"
 import type { Database } from "@/utils/types/database.types"
@@ -104,8 +105,10 @@ export async function getNearbyCafes(
                     isNotNull(cafes.lng),
                     between(cafes.lat, minLat, maxLat),
                     between(cafes.lng, minLng, maxLng),
-                    eq(cafes.isPublished, true),
-                    eq(cafes.isActive, true)
+                    // Visitors reach this through the landing page's check-in
+                    // prompt, so it is a public surface: a test cafe must never
+                    // be the cafe we ask "are you here?" about.
+                    ...publicCafeConditions()
                 )
             )
             .orderBy(sql`

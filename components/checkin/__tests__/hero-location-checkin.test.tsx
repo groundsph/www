@@ -9,23 +9,27 @@ describe("HeroLocationCheckIn", () => {
     callCount = 0
   })
 
-  // Mock returns null on first call (no check-in yet), then returns check-in on subsequent calls
-  const mockGetTodayCheckIn = mock(async () => {
+  // The prompt asks for status and count together, in one round trip. First call
+  // reports no check-in yet, later calls report one.
+  const mockGetCafeVisitStatus = mock(async () => {
     callCount++
     if (callCount === 1) {
-      return null
+      return { todayCheckIn: null, visitCount: 2, lastVisit: null }
     }
     return {
-      id: "visit-1",
-      visitedAt: new Date().toISOString(),
-      companions: [],
+      todayCheckIn: {
+        id: "visit-1",
+        visitedAt: new Date().toISOString(),
+        companions: [],
+      },
+      visitCount: 2,
+      lastVisit: null,
     }
   })
 
   mock.module("@/app/api/actions/profile", () => ({
-    getTodayCheckIn: mockGetTodayCheckIn,
+    getCafeVisitStatus: mockGetCafeVisitStatus,
     recordVisit: mock(async () => ({ success: true, visitCount: 1, isFirstVisit: true })),
-    getVisitCount: mock(async () => ({ count: 2 })),
     updateCheckIn: mock(async () => ({ success: true, visitCount: 2, isFirstVisit: false })),
   }))
 
@@ -50,7 +54,7 @@ describe("HeroLocationCheckIn", () => {
   }))
 
   it("refreshes visit status before opening modal", async () => {
-    mockGetTodayCheckIn.mockClear()
+    mockGetCafeVisitStatus.mockClear()
     
     render(
       <HeroLocationCheckIn
@@ -68,7 +72,7 @@ describe("HeroLocationCheckIn", () => {
 
     // Wait for the refresh to complete (at least 2 calls: mount + click)
     await waitFor(() => {
-      expect(mockGetTodayCheckIn.mock.calls.length).toBeGreaterThanOrEqual(2)
+      expect(mockGetCafeVisitStatus.mock.calls.length).toBeGreaterThanOrEqual(2)
     })
 
     // After refresh finds existing check-in, UI should show "Checked in today"

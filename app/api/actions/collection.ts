@@ -7,6 +7,7 @@ import { eq, and, desc, sql, inArray } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
+import { publicCafeConditions } from "@/utils/filters"
 
 // Helper to generate a URL-friendly slug from title
 function generateSlug(title: string): string {
@@ -269,7 +270,9 @@ export async function getCollectionBySlug(slug: string) {
             })
             .from(cafes)
             .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-            .where(inArray(cafes.id, cafeIds))
+            // Collection pages are public, so a cafe card must pass the same gate
+            // as any other visitor-facing cafe read.
+            .where(and(inArray(cafes.id, cafeIds), ...publicCafeConditions()))
     }
 
     // Map cafes to items order

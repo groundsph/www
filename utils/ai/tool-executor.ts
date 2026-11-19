@@ -8,6 +8,7 @@ import {
 } from "@/utils/ai/tools/cafe-insights"
 import { CafeQueryInput } from "@/utils/ai/tools/cafe-query"
 import { GeoPoint } from "@/utils/ai/tools/cafe-geo"
+import { publicCafeConditions } from "@/utils/filters"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getArg(parsed: unknown, key: string): any {
@@ -85,7 +86,7 @@ export async function executeTool(toolName: string, args: string): Promise<unkno
             const { buildComparison } = await import("@/utils/menu-comparison")
             const { db } = await import("@/db")
             const { cafeMenuItems, cafes } = await import("@/db/schema/tables")
-            const { inArray, eq } = await import("drizzle-orm")
+            const { and, inArray, eq } = await import("drizzle-orm")
 
             const itemIds = getArg(parsed, "itemIds") as string[]
             const results = await db
@@ -110,7 +111,12 @@ export async function executeTool(toolName: string, args: string): Promise<unkno
                 })
                 .from(cafeMenuItems)
                 .innerJoin(cafes, eq(cafeMenuItems.cafeId, cafes.id))
-                .where(inArray(cafeMenuItems.id, itemIds))
+                .where(
+                    and(
+                        inArray(cafeMenuItems.id, itemIds),
+                        ...publicCafeConditions()
+                    )
+                )
 
             const items = results.map((row) => ({
                 id: row.id,

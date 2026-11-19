@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
     Dices,
@@ -20,7 +20,9 @@ import { useUserLocation } from "@/hooks/useUserLocation"
 import { useHaptics } from "@/hooks/useHaptics"
 import { getCafeThumbnailUrl, getPriceLevel, isOpenNow } from "@/utils/extras"
 import { getAllCafes } from "@/app/api/actions/cafe"
-import { getSurprisePick, type SurprisePick } from "@/app/api/actions/weather"
+import { getCafeMenuItems } from "@/app/api/actions/weather"
+import { useWeather } from "@/components/weather/WeatherProvider"
+import { rankMenuItemsForWeather, type RankableMenuItem } from "@/utils/weather-picks"
 
 interface RandomCafeButtonProps {
     cafes?: CafeWithRatings[]
@@ -41,6 +43,8 @@ export default function RandomCafeButton({
         refresh: refreshLocation,
     } = useUserLocation()
     const { trigger } = useHaptics()
+    const { weather, isLoading: isWeatherLoading, setLocation: setWeatherLocation } =
+        useWeather()
     const [isOpen, setIsOpen] = useState(false)
     const [selectedCafe, setSelectedCafe] = useState<CafeWithDistance | null>(
         null
@@ -48,12 +52,14 @@ export default function RandomCafeButton({
     const [isSpinning, setIsSpinning] = useState(false)
     const [fetchedCafes, setFetchedCafes] = useState<CafeWithRatings[]>([])
     const [isFetchingCafes, setIsFetchingCafes] = useState(false)
-    // Keyed by cafe id so re-rolling never shows the previous cafe's pick while
-    // the new one loads — the stale value is simply not "active".
-    const [context, setContext] = useState<{
+    // The rolled cafe's menu. Weather comes from context, so a roll only costs a
+    // menu read — and only the first time that cafe is rolled.
+    const [menu, setMenu] = useState<{
         cafeId: string
-        data: SurprisePick | null
+        items: RankableMenuItem[]
     } | null>(null)
+    /** Cafes rolled this session, so re-rolling does not re-read their menu. */
+    const menuCache = useRef(new Map<string, RankableMenuItem[]>())
 
     // Use prop cafes if provided, otherwise use fetched cafes
     const cafes = propCafes ?? fetchedCafes
@@ -113,35 +119,54 @@ export default function RandomCafeButton({
         }
     }, [isOpen, nearbyCafes.length, selectedCafe, isSpinning, pickRandom])
 
-    // Weather + menu context for whichever cafe was rolled. Failure is silent:
-    // a missing forecast must never block or clutter the random flow.
+    // Keep the provider pointed at wherever the visitor is. Repeated calls for the
+    // same grid cell are free, so this cannot cause a refetch loop.
+    useEffect(() => {
+        setWeatherLocation(location.lat, location.lng)
+    }, [location.lat, location.lng, setWeatherLocation])
+
+    // Menu for whichever cafe was rolled. Failure is silent: a missing menu must
+    // never block or clutter the random flow.
     useEffect(() => {
         if (!selectedCafe) return
 
         const cafeId = selectedCafe.id
+        const cached = menuCache.current.get(cafeId)
+        if (cached) {
+            setMenu({ cafeId, items: cached })
+            return
+        }
+
         let cancelled = false
 
-        getSurprisePick(cafeId, location.lat, location.lng)
-            .then((result) => {
+        getCafeMenuItems(cafeId)
+            .then((items) => {
                 if (cancelled) return
-                setContext({ cafeId, data: result ?? null })
+                menuCache.current.set(cafeId, items)
+                setMenu({ cafeId, items })
             })
             .catch(() => {
                 if (cancelled) return
-                // Record the miss so the loading hint resolves instead of
-                // spinning forever on a cafe with no forecast.
-                setContext({ cafeId, data: null })
+                // Record the miss so the hint resolves, instead of spinning
+                // forever on a cafe with no menu.
+                setMenu({ cafeId, items: [] })
             })
 
         return () => {
             cancelled = true
         }
-    }, [selectedCafe, location.lat, location.lng])
+    }, [selectedCafe])
 
-    const contextIsCurrent =
-        !!context && !!selectedCafe && context.cafeId === selectedCafe.id
-    const activeContext = contextIsCurrent ? context.data : null
-    const isPendingContext = !!selectedCafe && !contextIsCurrent
+    // Derived, not a flag: a superseded request can be cancelled, and a second
+    // boolean tracking "loading" would then never be cleared.
+    const menuIsCurrent = !!menu && !!selectedCafe && menu.cafeId === selectedCafe.id
+
+    // Ranking is a pure function and runs against the weather already in context,
+    // so it re-evaluates instantly when either the cafe or the forecast changes.
+    const pick = useMemo(() => {
+        if (!menuIsCurrent || !menu || !weather) return null
+        return rankMenuItemsForWeather(menu.items, weather.weather)
+    }, [menuIsCurrent, menu, weather])
 
     const handleClick = () => {
         trigger("medium")
@@ -217,10 +242,10 @@ export default function RandomCafeButton({
                                     <h3 className='font-semibold text-lg whitespace-nowrap'>
                                         Random Cafe
                                     </h3>
-                                    {activeContext?.weather && (
+                                    {weather && (
                                         <span className='flex flex-row items-center gap-1 ml-1 px-2 py-0.5 rounded-full bg-secondary/15 text-xs font-medium text-text/70 whitespace-nowrap overflow-hidden text-ellipsis'>
                                             <CloudSun className='w-3 h-3 shrink-0' />
-                                            {activeContext.weather.label}
+                                            {weather.label}
                                         </span>
                                     )}
                                 </div>
@@ -370,7 +395,7 @@ export default function RandomCafeButton({
                                         {/* Weather-matched pick. This is the
                                             reason the roll feels considered
                                             instead of arbitrary. */}
-                                        {activeContext?.pick && (
+                                        {pick && (
                                             <div className='flex items-start gap-2.5 rounded-xl border border-secondary/30 bg-secondary/10 px-3 py-2.5'>
                                                 <Coffee className='w-4 h-4 mt-0.5 shrink-0 text-secondary' />
                                                 <div className='min-w-0'>
@@ -378,25 +403,31 @@ export default function RandomCafeButton({
                                                         Today&apos;s pick
                                                     </p>
                                                     <p className='text-sm font-bold text-text truncate'>
-                                                        {activeContext.pick.item.name}
+                                                        {pick.item.name}
                                                         <span className='ml-1.5 font-medium text-text/50'>
                                                             ₱
                                                             {Math.round(
-                                                                activeContext.pick.item.price
+                                                                pick.item.price
                                                             )}
                                                         </span>
                                                     </p>
                                                     <p className='text-xs text-text/60'>
-                                                        {activeContext.pick.reason}
+                                                        {pick.reason}
                                                     </p>
                                                 </div>
                                             </div>
                                         )}
 
-                                        {isPendingContext && (
+                                        {/* Only a first look should show a hint: once
+                                            an observation is held, the pick resolves
+                                            from context without a spinner. */}
+                                        {((selectedCafe && !menuIsCurrent) ||
+                                            (isWeatherLoading && !weather)) && (
                                             <div className='flex items-center gap-2 text-xs text-text/40'>
                                                 <Loader2 className='w-3 h-3 animate-spin' />
-                                                Checking the weather...
+                                                {selectedCafe && !menuIsCurrent
+                                                    ? "Reading the menu..."
+                                                    : "Checking the weather..."}
                                             </div>
                                         )}
 

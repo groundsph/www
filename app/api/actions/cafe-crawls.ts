@@ -16,6 +16,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 import { and, eq, desc, inArray, or, sql, count as drizzleCount } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 import {
     createCafeCrawlSchema,
     updateCafeCrawlSchema,
@@ -320,7 +321,10 @@ export async function getCafeCrawlById(id: string): Promise<CafeCrawlDetail | nu
         .from(cafeCrawlItems)
         .innerJoin(cafes, eq(cafeCrawlItems.cafeId, cafes.id))
         .leftJoin(cafeRatingStats, eq(cafeCrawlItems.cafeId, cafeRatingStats.cafeId))
-        .where(eq(cafeCrawlItems.crawlId, crawl.id))
+        // A crawl's cafe list is rendered on /community/crawls/[slug] and in blog
+        // crawl blocks, so every item must pass the same visibility gate as any
+        // other public cafe read. Test cafes are the specific leak this closes.
+        .where(and(eq(cafeCrawlItems.crawlId, crawl.id), ...publicCafeConditions()))
         .orderBy(cafeCrawlItems.sortOrder)
 
     // Check if user has saved or liked
@@ -476,7 +480,7 @@ export async function getCafeCrawlBySlug(slug: string): Promise<CafeCrawlDetail 
         .from(cafeCrawlItems)
         .innerJoin(cafes, eq(cafeCrawlItems.cafeId, cafes.id))
         .leftJoin(cafeRatingStats, eq(cafeCrawlItems.cafeId, cafeRatingStats.cafeId))
-        .where(eq(cafeCrawlItems.crawlId, crawl.id))
+        .where(and(eq(cafeCrawlItems.crawlId, crawl.id), ...publicCafeConditions()))
         .orderBy(cafeCrawlItems.sortOrder)
 
     // Check if user has saved or liked

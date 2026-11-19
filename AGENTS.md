@@ -30,6 +30,20 @@ bun merge            # Stale: assumes a `dev` branch that does not exist. See "R
 - AI features are optional—leave `OPENAI_COMPATIBLE_*` empty to disable.
 - `NEXT_PUBLIC_*` vars are inlined into the client bundle at **build** time, so they must also be set in Dokploy (the build platform), not only on the running server. This includes `NEXT_PUBLIC_CARTO_API_KEY`.
 
+### Database environments
+
+Two PostgreSQL databases, both reachable only over the private NetBird network. **Local `.env.local` points at the dev database, not prod.**
+
+| | Database | Purpose |
+|---|---|---|
+| Local | `gph-dev` | Empty scratch database for local development. `bun db:push` creates the schema. Free to break, wipe and re-push. |
+| Prod | `groundsph` | Live data. Never the target of a local script, a `db:push`, or an exploratory query. |
+
+- Connection strings live **only** in `.env.local` (gitignored; `.env.*` is excluded apart from `.env.example`). Never write one, with its password, into a tracked file: `github.com/groundsph/www` is a **public** repository.
+- To switch a machine between the two, edit `DATABASE_URL` in `.env.local`. The prod URL is kept there commented out for reference.
+- `bun db:push` mirrors the schema into whichever database `DATABASE_URL` names — that is why local must never point at prod. Prod schema changes go through `bun db:migrate` with a committed migration.
+- Both databases run `Etc/UTC`. Anything that reasons about calendar months or days must therefore anchor to Asia/Manila explicitly; see the Testing note below.
+
 ## Architecture
 
 - **Next.js 16 App Router**, React 19, TypeScript strict.
@@ -77,6 +91,8 @@ Add new components to the matching domain folder. Create a new domain only if no
 - Tests live in `__tests__/` next to source files.
 - JSDOM environment is preloaded via `bunfig.toml` → `test-setup.ts` (provides `document`, `window`, `navigator`, `requestAnimationFrame`, `scrollIntoView`).
 - Test files are excluded from `tsconfig.json` compilation.
+- **There is no CI.** Tests run only when someone runs them, so a green suite is only ever as trustworthy as the machine that ran it.
+- **Timezone matters, and the databases do not share your clock.** The DB and prod servers run `Etc/UTC`; a developer machine is often somewhere else entirely. Code that derives a calendar day or month from ambient local time passes locally and fails in prod (and vice versa). Two rules: anchor month/day boundaries to Asia/Manila with explicit offset arithmetic rather than `new Date(y, m, d)`, and assert absolute instants (`2026-09-30T16:00:00Z`) rather than local getters. Run the suite twice — `bun run test` and `TZ=UTC bun run test` — before trusting a change to date logic.
 
 ## Remotes & deploys
 

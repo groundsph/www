@@ -1,6 +1,7 @@
 import { db } from "@/db"
 import { cafes, cafeMenuItems } from "@/db/schema"
 import { eq, and, asc } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 
 export interface MenuItem {
     id: string
@@ -29,7 +30,7 @@ export async function getCafeMenu(
         const cafe = await db
             .select({ id: cafes.id, name: cafes.name, slug: cafes.slug })
             .from(cafes)
-            .where(eq(cafes.slug, cafeSlug))
+            .where(and(...publicCafeConditions(), eq(cafes.slug, cafeSlug)))
             .limit(1)
 
         if (!cafe[0]) {

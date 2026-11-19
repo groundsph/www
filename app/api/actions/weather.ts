@@ -3,28 +3,28 @@
 import { db } from "@/db"
 import { cafeMenuItems } from "@/db/schema"
 import { and, eq, isNotNull } from "drizzle-orm"
-import {
-    rankMenuItemsForWeather,
-    weatherLabel,
-    type RankableMenuItem,
-    type WeatherPick,
-    type WeatherSummary,
-} from "@/utils/weather-picks"
+import { weatherLabel, type RankableMenuItem, type WeatherSummary } from "@/utils/weather-picks"
 
 /**
- * Weather lookups and the "Surprise Me" recommendation that depends on them.
+ * Weather lookups, and the menu data the client needs to pick a drink to match.
  *
  * The provider is wttr.in: no API key, no signup, and it accepts a coordinate
  * path directly (`/10.31,123.88?format=j1`), which is exactly the shape we have.
+ *
+ * Weather is cached on the **client** (see `components/weather/WeatherProvider`),
+ * not here. This module deliberately does no time-based caching: the visitor's
+ * browser holds one observation for its location and refreshes it on a timer, so
+ * caching here would only add a second, invisible staleness on top of the first.
+ * What remains is a burst guard — if twenty people in one grid cell ask at the
+ * same moment, they share one upstream request.
  */
 
 const WTTR_ENDPOINT = "https://wttr.in"
 const FETCH_TIMEOUT_MS = 6000
-/** 15 minutes — long enough to collapse a burst of visitors, short enough to track the afternoon. */
-const WEATHER_REVALIDATE_SECONDS = 900
 /**
  * Snap coordinates to a ~5km grid before requesting. Every visitor in one city
- * then shares a single cache entry instead of one entry per GPS fix.
+ * then asks the same question, and `WeatherProvider` uses the same grid to
+ * decide whether the visitor has actually moved.
  */
 const COORD_GRID = 0.05
 
@@ -34,10 +34,8 @@ export interface WeatherResult {
     label: string
 }
 
-export interface SurprisePick {
-    weather: WeatherResult | null
-    pick: WeatherPick<RankableMenuItem> | null
-}
+/** In-flight upstream requests, keyed by grid cell. Cleared as soon as they settle. */
+const inFlight = new Map<string, Promise<WeatherResult | null>>()
 
 function snap(value: number): number {
     return Math.round(value / COORD_GRID) * COORD_GRID
@@ -90,20 +88,10 @@ function parseCondition(
     }
 }
 
-/**
- * Get the current weather for a coordinate. Returns `null` on any failure —
- * callers degrade to "no weather context" rather than surfacing an error,
- * because a missing forecast must never block the random cafe flow.
- */
-export async function getCurrentWeather(
-    lat: number,
-    lng: number
+async function requestWeather(
+    requestLat: string,
+    requestLng: string
 ): Promise<WeatherResult | null> {
-    if (!isFiniteCoordinate(lat, lng)) return null
-
-    const requestLat = snap(lat).toFixed(4)
-    const requestLng = snap(lng).toFixed(4)
-
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
@@ -113,7 +101,8 @@ export async function getCurrentWeather(
             {
                 signal: controller.signal,
                 headers: { "User-Agent": "GroundsPH/1.0 (+https://grounds.ph)" },
-                next: { revalidate: WEATHER_REVALIDATE_SECONDS },
+                // No revalidate: the client owns the refresh cadence.
+                cache: "no-store",
             }
         )
 
@@ -139,7 +128,40 @@ export async function getCurrentWeather(
     }
 }
 
-async function getRankableMenuItems(cafeId: string): Promise<RankableMenuItem[]> {
+/**
+ * Get the current weather for a coordinate. Returns `null` on any failure —
+ * callers degrade to "no weather context" rather than surfacing an error,
+ * because a missing forecast must never block the random cafe flow.
+ */
+export async function getCurrentWeather(
+    lat: number,
+    lng: number
+): Promise<WeatherResult | null> {
+    if (!isFiniteCoordinate(lat, lng)) return null
+
+    const requestLat = snap(lat).toFixed(4)
+    const requestLng = snap(lng).toFixed(4)
+    const key = `${requestLat},${requestLng}`
+
+    // Coalesce a burst of visitors into one upstream request. This is request
+    // dedupe, not a cache: the entry disappears the moment the request settles.
+    const existing = inFlight.get(key)
+    if (existing) return existing
+
+    const request = requestWeather(requestLat, requestLng).finally(() => {
+        inFlight.delete(key)
+    })
+
+    inFlight.set(key, request)
+    return request
+}
+
+/**
+ * The menu rows a caller needs to rank a drink against the weather. Ranking
+ * itself is a pure function the client runs, so one roll costs one indexed DB
+ * read and no network call.
+ */
+export async function getCafeMenuItems(cafeId: string): Promise<RankableMenuItem[]> {
     if (!cafeId) return []
 
     try {
@@ -165,35 +187,5 @@ async function getRankableMenuItems(cafeId: string): Promise<RankableMenuItem[]>
     } catch (error) {
         console.error("[weather] menu lookup failed:", error)
         return []
-    }
-}
-
-/**
- * Everything "Surprise Me" needs for the cafe it just rolled: the weather at the
- * visitor's location and the best-matching drink on that cafe's menu.
- *
- * Deliberately one round trip. Both halves are optional — a missing forecast or
- * an empty menu degrades to the other half rather than failing the call. With no
- * coordinates we skip the forecast entirely rather than guessing a city.
- */
-export async function getSurprisePick(
-    cafeId: string,
-    lat?: number | null,
-    lng?: number | null
-): Promise<SurprisePick> {
-    const [weather, menuItems] = await Promise.all([
-        isFiniteCoordinate(lat, lng)
-            ? getCurrentWeather(lat as number, lng as number)
-            : Promise.resolve(null),
-        getRankableMenuItems(cafeId),
-    ])
-
-    if (!weather || menuItems.length === 0) {
-        return { weather, pick: null }
-    }
-
-    return {
-        weather,
-        pick: rankMenuItemsForWeather(menuItems, weather.weather),
     }
 }

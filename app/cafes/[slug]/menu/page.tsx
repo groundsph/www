@@ -7,6 +7,7 @@ import { eq, and, asc } from "drizzle-orm"
 import { notFound } from "next/navigation"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { buildBreadcrumbList } from "@/utils/seo/breadcrumbs"
+import { publicCafeConditions } from "@/utils/filters"
 import MenuContent from "@/components/menu/MenuContent"
 
 interface MenuPageProps {
@@ -27,7 +28,7 @@ export async function generateMetadata({
             thumbnail: cafes.thumbnail,
         })
         .from(cafes)
-        .where(and(eq(cafes.slug, slug), eq(cafes.isPublished, true)))
+        .where(and(eq(cafes.slug, slug), ...publicCafeConditions()))
         .limit(1)
 
     const cafe = cafeResult[0]
@@ -80,7 +81,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
             addressDisplay: cafes.addressDisplay,
         })
         .from(cafes)
-        .where(and(eq(cafes.slug, slug), eq(cafes.isPublished, true)))
+        .where(and(eq(cafes.slug, slug), ...publicCafeConditions()))
         .limit(1)
 
     const cafe = cafeResult[0]

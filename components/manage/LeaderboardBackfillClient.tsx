@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { getLeaderboardSnapshotStatus, backfillLeaderboardSnapshots, backfillAllMissingLeaderboardSnapshots, deleteLeaderboardSnapshots } from "@/app/api/actions/admin"
 import { RefreshCw, Loader2, Trophy, AlertCircle, CheckCircle2, Trash2, Play, RotateCcw, Info, X } from "lucide-react"
+import { getMonthsBetween } from "@/utils/date/leaderboard-months"
 
 interface MonthStatus {
     yearMonth: string
@@ -19,23 +20,19 @@ interface BackfillResult {
     warnings?: string[]
 }
 
-function getMonthsFromLaunch(): string[] {
-    const months: string[] = []
-    // GroundsPH started December 2025
-    const startDate = new Date(2025, 11, 1) // December 2025
-    const now = new Date()
-    
-    const current = new Date(now.getFullYear(), now.getMonth(), 1)
-    
-    while (current >= startDate) {
-        months.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`)
-        current.setMonth(current.getMonth() - 1)
-    }
-    
-    return months
-}
+/** GroundsPH started December 2025. */
+const LAUNCH_MONTH = "2025-12"
 
-export function LeaderboardBackfillClient() {
+export function LeaderboardBackfillClient({
+    latestMonth,
+}: {
+    /**
+     * The newest month that can be snapshotted (last month on the Manila
+     * calendar), computed on the server so the tool does not depend on the
+     * admin's clock.
+     */
+    latestMonth: string
+}) {
     const [months, setMonths] = useState<MonthStatus[]>([])
     const [loaded, setLoaded] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -43,7 +40,10 @@ export function LeaderboardBackfillClient() {
     const [forceMode, setForceMode] = useState(false)
     const [result, setResult] = useState<BackfillResult | null>(null)
 
-    const monthList = useMemo(() => getMonthsFromLaunch(), [])
+    const monthList = useMemo(
+        () => getMonthsBetween(LAUNCH_MONTH, latestMonth),
+        [latestMonth]
+    )
 
     const fetchStatus = useCallback(async () => {
         const result = await getLeaderboardSnapshotStatus(monthList)

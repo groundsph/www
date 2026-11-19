@@ -2,6 +2,7 @@ import { db } from "@/db"
 import { cafeMenuItems, cafes } from "@/db/schema/tables"
 import { eq, ilike, and } from "drizzle-orm"
 import type { ComparableMenuItem, ComparisonResult } from "./types/menu-comparison"
+import { publicCafeConditions } from "@/utils/filters"
 
 /**
  * Search for menu items across all cafes for comparison
@@ -24,7 +25,10 @@ export async function searchMenuItemsForComparison(
 		.where(
 			and(
 				ilike(cafeMenuItems.name, searchPattern),
-				eq(cafeMenuItems.isAvailable, true)
+				eq(cafeMenuItems.isAvailable, true),
+				// Backs the public /compare page as well as an AI tool, so the
+				// joined cafe must be publicly visible.
+				...publicCafeConditions()
 			)
 		)
 		.limit(limit)

@@ -1,50 +1,81 @@
 import { describe, it, expect, afterEach } from "bun:test"
+import { and } from "drizzle-orm"
+import { db } from "@/db"
+import { cafes } from "@/db/schema"
+import { publicCafeConditions } from "@/utils/filters"
 
-describe("test-cafe filtering integration", () => {
-  let originalEnv: string | undefined
+/**
+ * The unit tests in `utils/__tests__/filters.test.ts` cover the helper's own
+ * behaviour. This file covers the thing that actually broke: whether a query
+ * built the intended way ends up carrying the predicates in its SQL.
+ *
+ * It renders the `where` clause Drizzle would send, so a predicate that is
+ * silently dropped (a spread forgotten, a condition overwritten) fails here
+ * rather than on the landing page.
+ */
 
-  afterEach(() => {
-    if (originalEnv !== undefined) {
-      process.env.NODE_ENV = originalEnv
+const originalNodeEnv = process.env.NODE_ENV
+
+function setNodeEnv(value: string | undefined) {
+    if (value === undefined) {
+        delete (process.env as Record<string, string | undefined>).NODE_ENV
+    } else {
+        process.env.NODE_ENV = value
     }
-  })
+}
 
-  it("production filter excludes isTest=true cafes", async () => {
-    originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "production"
+afterEach(() => {
+    setNodeEnv(originalNodeEnv)
+})
 
-    const { getProductionFilter } = await import("@/utils/filters")
-    const filter = getProductionFilter()
-    expect(filter).toBeDefined()
-    expect(typeof filter).toBe("object")
-  })
+function renderWhere(includeDrafts = false, includeTest = false): string {
+    const query = db
+        .select({ id: cafes.id })
+        .from(cafes)
+        .where(
+            and(...publicCafeConditions({ includeDrafts, includeTest }))
+        )
 
-  it("dev mode includes test cafes", async () => {
-    originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "development"
+    return query.toSQL().sql
+}
 
-    const { getProductionFilter } = await import("@/utils/filters")
-    const filter = getProductionFilter()
-    expect(filter).toBeUndefined()
-  })
+describe("public cafe reads", () => {
+    it("filter test cafes, drafts and deactivated listings in production", () => {
+        setNodeEnv("production")
+        const sql = renderWhere()
 
-  it("omitTestCafes appends filter in production", async () => {
-    originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "production"
+        expect(sql).toContain("is_test")
+        expect(sql).toContain("is_published")
+        expect(sql).toContain("is_active")
+    })
 
-    const { omitTestCafes } = await import("@/utils/filters")
-    const conditions: unknown[] = []
-    omitTestCafes(conditions)
-    expect(conditions.length).toBe(1)
-  })
+    it("still filter test cafes under the test runner", () => {
+        setNodeEnv("test")
+        expect(renderWhere()).toContain("is_test")
+    })
 
-  it("omitTestCafes does nothing in development", async () => {
-    originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "development"
+    it("stop filtering test cafes only in a development build", () => {
+        setNodeEnv("development")
+        const sql = renderWhere()
 
-    const { omitTestCafes } = await import("@/utils/filters")
-    const conditions: unknown[] = []
-    omitTestCafes(conditions)
-    expect(conditions.length).toBe(0)
-  })
+        expect(sql).not.toContain("is_test")
+        expect(sql).toContain("is_published")
+    })
+
+    it("keep the test-cafe predicate when only drafts are relaxed", () => {
+        setNodeEnv("production")
+        const sql = renderWhere(true)
+
+        expect(sql).not.toContain("is_published")
+        expect(sql).toContain("is_test")
+    })
+
+    it("keep draft filtering when only test cafes are relaxed", () => {
+        setNodeEnv("production")
+        const sql = renderWhere(false, true)
+
+        expect(sql).toContain("is_published")
+        expect(sql).toContain("is_active")
+        expect(sql).not.toContain("is_test")
+    })
 })

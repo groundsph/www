@@ -1,6 +1,7 @@
 import { db } from "@/db"
 import { reviews, profiles } from "@/db/schema"
 import { eq, and, desc } from "drizzle-orm"
+import { publicCafeConditions } from "@/utils/filters"
 
 export interface CafeReview {
     id: string
@@ -34,7 +35,7 @@ export async function getCafeReviews(
         const cafe = await db
             .select({ id: cafes.id })
             .from(cafes)
-            .where(eq(cafes.slug, cafeSlug))
+            .where(and(...publicCafeConditions(), eq(cafes.slug, cafeSlug)))
             .limit(1)
 
         if (!cafe[0]) {

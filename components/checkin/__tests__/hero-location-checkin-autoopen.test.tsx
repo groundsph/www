@@ -16,9 +16,12 @@ const mockRecordVisit = mock(async () => ({
 
 // A cafe where the visitor has NOT checked in today.
 mock.module("@/app/api/actions/profile", () => ({
-    getTodayCheckIn: mock(async () => null),
+    getCafeVisitStatus: mock(async () => ({
+        todayCheckIn: null,
+        visitCount: 0,
+        lastVisit: null,
+    })),
     recordVisit: mockRecordVisit,
-    getVisitCount: mock(async () => ({ count: 0 })),
     updateCheckIn: mock(async () => ({ success: true, visitCount: 1, isFirstVisit: false })),
 }))
 
@@ -89,13 +92,16 @@ describe("HeroLocationCheckIn auto-open", () => {
     it("does not open when the visitor already checked in today", async () => {
         // Re-mock to report an existing visit for this cafe.
         mock.module("@/app/api/actions/profile", () => ({
-            getTodayCheckIn: mock(async () => ({
-                id: "visit-1",
-                visitedAt: new Date().toISOString(),
-                companions: [],
+            getCafeVisitStatus: mock(async () => ({
+                todayCheckIn: {
+                    id: "visit-1",
+                    visitedAt: new Date().toISOString(),
+                    companions: [],
+                },
+                visitCount: 1,
+                lastVisit: null,
             })),
             recordVisit: mockRecordVisit,
-            getVisitCount: mock(async () => ({ count: 1 })),
             updateCheckIn: mock(async () => ({ success: true, visitCount: 1, isFirstVisit: false })),
         }))
 

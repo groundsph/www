@@ -31,6 +31,7 @@ export function reportWebVitals(metric: WebVitalsMetric) {
 }
 import LayoutWrapper from "@/components/layout/LayoutWrapper"
 import NotificationProvider from "@/components/layout/NotificationProvider"
+import WeatherProvider from "@/components/weather/WeatherProvider"
 import BadgeNotificationProvider from "@/components/badges/BadgeNotificationContext"
 import AnalyticsBanner from "@/components/ui/AnalyticsBanner"
 import NavigationProgress from "@/components/ui/NavigationProgress"
@@ -176,7 +177,11 @@ export default function RootLayout({
                 <NotificationProvider>
                     <BadgeNotificationProvider>
                         <AuthProvider>
-                            <LayoutWrapper>{children}</LayoutWrapper>
+                            {/* One observation per visitor, keyed by location and
+                                refreshed on a timer — see WeatherProvider. */}
+                            <WeatherProvider>
+                                <LayoutWrapper>{children}</LayoutWrapper>
+                            </WeatherProvider>
                         </AuthProvider>
                     </BadgeNotificationProvider>
                 </NotificationProvider>

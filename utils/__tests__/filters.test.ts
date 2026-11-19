@@ -1,67 +1,126 @@
 import { describe, it, expect, afterEach } from "bun:test"
-import { getProductionFilter, omitTestCafes } from "@/utils/filters"
-import { cafes } from "@/db/schema"
-import { eq, SQL } from "drizzle-orm"
+import {
+    getTestCafeFilter,
+    omitTestCafes,
+    publicCafeConditions,
+    shouldShowTestCafes,
+} from "@/utils/filters"
 
-describe("getProductionFilter", () => {
-  afterEach(() => {
-    // Reset NODE_ENV
-  })
+/**
+ * The gate is inverted on purpose: test cafes are hidden by default and only a
+ * development build shows them. These tests therefore assert the *default* is
+ * hidden for every other environment, including `test` and an unset NODE_ENV —
+ * the two cases the old implementation let through.
+ */
 
-  it("returns isTest=false filter in production", () => {
-    const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "production"
-    
-    const filter = getProductionFilter()
-    expect(filter).not.toBeUndefined()
-    
-    process.env.NODE_ENV = originalEnv
-  })
+const originalNodeEnv = process.env.NODE_ENV
 
-  it("returns undefined in development", () => {
-    const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "development"
-    
-    const filter = getProductionFilter()
-    expect(filter).toBeUndefined()
-    
-    process.env.NODE_ENV = originalEnv
-  })
+function setNodeEnv(value: string | undefined) {
+    if (value === undefined) {
+        delete (process.env as Record<string, string | undefined>).NODE_ENV
+    } else {
+        process.env.NODE_ENV = value
+    }
+}
 
-  it("returns undefined when NODE_ENV is not set", () => {
-    const originalEnv = process.env.NODE_ENV
-    delete (process.env as Record<string, string | undefined>).NODE_ENV
-    
-    const filter = getProductionFilter()
-    expect(filter).toBeUndefined()
-    
-    process.env.NODE_ENV = originalEnv
-  })
+afterEach(() => {
+    setNodeEnv(originalNodeEnv)
+})
+
+describe("shouldShowTestCafes", () => {
+    it("is true only in a development build", () => {
+        setNodeEnv("development")
+        expect(shouldShowTestCafes()).toBe(true)
+    })
+
+    it("is false in production", () => {
+        setNodeEnv("production")
+        expect(shouldShowTestCafes()).toBe(false)
+    })
+
+    it("is false when NODE_ENV is unset", () => {
+        setNodeEnv(undefined)
+        expect(shouldShowTestCafes()).toBe(false)
+    })
+
+    it("is false under the test runner", () => {
+        setNodeEnv("test")
+        expect(shouldShowTestCafes()).toBe(false)
+    })
+})
+
+describe("getTestCafeFilter", () => {
+    it("returns a predicate outside development", () => {
+        for (const env of ["production", "test", undefined]) {
+            setNodeEnv(env)
+            expect(getTestCafeFilter()).toBeDefined()
+        }
+    })
+
+    it("returns undefined in development", () => {
+        setNodeEnv("development")
+        expect(getTestCafeFilter()).toBeUndefined()
+    })
 })
 
 describe("omitTestCafes", () => {
-  it("adds isTest=false to existing conditions array in production", () => {
-    const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "production"
+    it("appends exactly one condition outside development", () => {
+        setNodeEnv("production")
+        expect(omitTestCafes([])).toHaveLength(1)
+    })
 
-    const conditions: (SQL | undefined)[] = [eq(cafes.isPublished, true)]
-    const result = omitTestCafes(conditions)
-    
-    expect(result.length).toBe(2)
-    
-    process.env.NODE_ENV = originalEnv
-  })
+    it("is a no-op in development", () => {
+        setNodeEnv("development")
+        expect(omitTestCafes([])).toHaveLength(0)
+    })
 
-  it("does not modify conditions array in development", () => {
-    const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = "development"
+    it("keeps the conditions it was given", () => {
+        setNodeEnv("production")
+        const existing = omitTestCafes([])
+        const marker = existing[0]
+        const result = omitTestCafes(existing)
+        expect(result).toHaveLength(2)
+        expect(result[0]).toBe(marker)
+    })
+})
 
-    const conditions: (SQL | undefined)[] = [eq(cafes.isPublished, true)]
-    const before = conditions.length
-    const result = omitTestCafes(conditions)
-    
-    expect(result.length).toBe(before)
-    
-    process.env.NODE_ENV = originalEnv
-  })
+describe("publicCafeConditions", () => {
+    it("hides test, draft and deactivated cafes by default", () => {
+        setNodeEnv("production")
+        expect(publicCafeConditions()).toHaveLength(3)
+    })
+
+    it("hides test cafes under the test runner", () => {
+        setNodeEnv("test")
+        expect(publicCafeConditions()).toHaveLength(3)
+    })
+
+    it("drops the test predicate in development but keeps draft filtering", () => {
+        setNodeEnv("development")
+        expect(publicCafeConditions()).toHaveLength(2)
+    })
+
+    it("relaxes draft filtering for owner and admin surfaces", () => {
+        setNodeEnv("production")
+        expect(publicCafeConditions({ includeDrafts: true })).toHaveLength(1)
+    })
+
+    it("relaxes test filtering for internal tooling", () => {
+        setNodeEnv("production")
+        expect(publicCafeConditions({ includeTest: true })).toHaveLength(2)
+    })
+
+    it("returns nothing when fully relaxed", () => {
+        setNodeEnv("production")
+        expect(
+            publicCafeConditions({ includeDrafts: true, includeTest: true })
+        ).toHaveLength(0)
+    })
+
+    it("returns a fresh array per call so callers cannot corrupt each other", () => {
+        setNodeEnv("production")
+        const first = publicCafeConditions()
+        first.push(undefined)
+        expect(publicCafeConditions()).toHaveLength(3)
+    })
 })

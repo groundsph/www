@@ -4203,11 +4203,44 @@ export async function backfillLeaderboardSnapshots(
 
         // If force mode, delete existing snapshots first
         let deletedCount = 0
-        if (options?.force && hasExistingData) {
-            await db
-                .delete(monthlyLeaderboardSnapshots)
-                .where(eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth))
-            deletedCount = existingSnapshots.length
+
+        /**
+         * Replace one slice — this month, this type, this region — atomically.
+         *
+         * The previous implementation deleted the *whole month* up front and then
+         * ran up to 62 live aggregations; one failure halfway left that month
+         * empty with nothing to show for it. Deleting a slice immediately before
+         * rewriting it means a failure costs one slice, never the month.
+         */
+        const replaceSlice = async (
+            type: "user" | "cafe",
+            region: string | null,
+            entries: (typeof monthlyLeaderboardSnapshots.$inferInsert)[]
+        ) => {
+            await db.transaction(async (tx) => {
+                if (options?.force) {
+                    const removed = await tx
+                        .delete(monthlyLeaderboardSnapshots)
+                        .where(
+                            and(
+                                eq(monthlyLeaderboardSnapshots.yearMonth, yearMonth),
+                                eq(monthlyLeaderboardSnapshots.type, type),
+                                region
+                                    ? eq(monthlyLeaderboardSnapshots.region, region)
+                                    : isNull(monthlyLeaderboardSnapshots.region)
+                            )
+                        )
+                        .returning({ id: monthlyLeaderboardSnapshots.id })
+                    deletedCount += removed.length
+                }
+
+                // The unique index on (type, month, region, subject) makes a
+                // re-run a no-op instead of a duplicate set.
+                await tx
+                    .insert(monthlyLeaderboardSnapshots)
+                    .values(entries)
+                    .onConflictDoNothing()
+            })
         }
 
         let totalUserSnapshots = 0
@@ -4237,17 +4270,22 @@ export async function backfillLeaderboardSnapshots(
                 rank: entry.rank,
                 score: entry.score,
                 visitCount: entry.visitCount,
+                cafesVisited: entry.cafesVisited,
                 region,
             }))
 
-            await db.insert(monthlyLeaderboardSnapshots).values(entries)
+            await replaceSlice("user", region, entries)
             totalUserSnapshots += entries.length
             processedUserRegions.push(region ?? "global")
         }
 
         // Process cafe leaderboards
         for (const region of cafeRegionsToProcess) {
-            const result = await getCafeMonthlyLeaderboard(region, 100, yearMonth)
+            // computeLive: a backfill recomputes from the raw tables instead of
+            // reading the snapshot it is about to replace.
+            const result = await getCafeMonthlyLeaderboard(region, 100, yearMonth, {
+                computeLive: true,
+            })
 
             // Validation: warn if suspicious data
             if (result.leaderboard.length === 0) {
@@ -4271,7 +4309,7 @@ export async function backfillLeaderboardSnapshots(
                 region,
             }))
 
-            await db.insert(monthlyLeaderboardSnapshots).values(entries)
+            await replaceSlice("cafe", region, entries)
             totalCafeSnapshots += entries.length
             processedCafeRegions.push(region ?? "global")
         }

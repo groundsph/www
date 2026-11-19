@@ -1,7 +1,8 @@
 import { db } from "@/db"
 import { profiles, cafes } from "@/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { NextResponse } from "next/server"
+import { omitTestCafes } from "@/utils/filters"
 
 export async function GET(
     request: Request,
@@ -22,10 +23,20 @@ export async function GET(
         }
 
         // Check if user owns any cafes
+        // Narrow `omitTestCafes` on purpose, not `publicCafeConditions()`: this is
+        // a stat on the owner's own public profile, so their unpublished and
+        // deactivated listings still belong in the count (it reads as "this person
+        // runs N cafes"). A test cafe is QA scaffolding, not a real listing, so it
+        // is the only thing excluded.
         const ownedCafesResult = await db
             .select({ count: sql<number>`count(*)::int` })
             .from(cafes)
-            .where(sql`${cafes.ownerIds} @> ARRAY[${userId}]::uuid[]`)
+            .where(
+                and(
+                    sql`${cafes.ownerIds} @> ARRAY[${userId}]::uuid[]`,
+                    ...omitTestCafes([])
+                )
+            )
 
         const ownedCafeCount = ownedCafesResult[0]?.count ?? 0
 

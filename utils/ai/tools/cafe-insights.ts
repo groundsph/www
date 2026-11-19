@@ -1,5 +1,6 @@
 import { db } from "@/db"
 import { toStoredThumbnail } from "@/utils/extras"
+import { publicCafeConditions } from "@/utils/filters"
 import { cafes, cafeRatingStats } from "@/db/schema"
 import { eq, and, desc, sql, count, isNotNull } from "drizzle-orm"
 import { haversineKm, GeoPoint } from "./cafe-geo"
@@ -31,7 +32,7 @@ export async function listCitiesWithCounts(): Promise<CityCount[]> {
             count: count(),
         })
         .from(cafes)
-        .where(eq(cafes.isPublished, true))
+        .where(and(...publicCafeConditions()))
         .groupBy(cafes.cityMunicipality, cafes.province)
         .orderBy(desc(count()))
 
@@ -107,7 +108,7 @@ export async function getCafeBySlug(slug: string): Promise<CafeWithRatings | nul
         })
         .from(cafes)
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
-        .where(eq(cafes.slug, slug))
+        .where(and(...publicCafeConditions(), eq(cafes.slug, slug)))
         .limit(1)
 
     if (!result[0]) return null
@@ -198,7 +199,7 @@ export async function getNearbyCafes(
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
         .where(
             and(
-                eq(cafes.isPublished, true),
+                ...publicCafeConditions(),
                 isNotNull(cafes.lat),
                 isNotNull(cafes.lng)
             )
@@ -286,7 +287,7 @@ export async function getTopRatedCafes(
         .leftJoin(cafeRatingStats, eq(cafes.id, cafeRatingStats.cafeId))
         .where(
             and(
-                eq(cafes.isPublished, true),
+                ...publicCafeConditions(),
                 sql`LOWER(${cafes.cityMunicipality}) = LOWER(${city})`
             )
         )
