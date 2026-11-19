@@ -129,9 +129,19 @@ async function computeCafeLeaderboardLive(
             and(
                 ...(historical ? omitTestCafes([]) : publicCafeConditions()),
                 region ? eq(cafes.region, region) : undefined,
-                // A cafe nobody visited did not make the board. Without this the
-                // tail fills with zero-score cafes ranked by nothing.
-                sql`coalesce(${visits.visitCount}, 0) > 0`
+                // A cafe with no activity at all this month does not make the
+                // board — without this the tail fills with every published cafe
+                // ranked by nothing, which is what made the board look populated
+                // in months where nothing happened.
+                //
+                // "Activity" is any of the three things the score counts, not
+                // visits alone: most months have browsing but few check-ins, and
+                // requiring a visit emptied months that genuinely had traffic.
+                sql`(
+                    coalesce(${visits.visitCount}, 0)
+                    + coalesce(${monthlyReviews.reviewCount}, 0)
+                    + coalesce(${monthlyViews.pageViews}, 0)
+                ) > 0`
             )
         )
 
