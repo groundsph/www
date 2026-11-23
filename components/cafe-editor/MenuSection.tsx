@@ -13,7 +13,12 @@ interface MenuSectionProps {
     colorScheme?: "primary" | "accent"
     cafeId: string
     cafeName: string
-    cafeSlug?: string
+    /**
+     * The Cafe's public slug. Required: the scan affordance sends an anonymous
+     * visitor through auth and back to this Cafe, so there is no honest empty
+     * value to fall back to.
+     */
+    cafeSlug: string
 }
 
 export default function MenuSection({
@@ -87,7 +92,7 @@ export default function MenuSection({
                     <MenuOcrScanButton
                         cafeId={cafeId}
                         cafeName={cafeName}
-                        cafeSlug={cafeSlug ?? ""}
+                        cafeSlug={cafeSlug}
                         variant='default'
                     />
                     <button

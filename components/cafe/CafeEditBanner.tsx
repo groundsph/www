@@ -7,14 +7,31 @@ import { Pencil, X } from "lucide-react"
 
 interface CafeEditBannerProps {
     cafeId: string
+    cafeSlug: string
     cafeName: string
-    role: "admin" | "moderator"
+    role: "admin" | "moderator" | "owner"
 }
 
-export default function CafeEditBanner({ cafeId, cafeName, role }: CafeEditBannerProps) {
+const ROLE_LABELS: Record<CafeEditBannerProps["role"], string> = {
+    admin: "Admin",
+    moderator: "Moderator",
+    owner: "Owner",
+}
+
+/**
+ * Where each role maintains a Cafe. Staff work from the moderation preview;
+ * an owner maintains their own listing from the owner area of the site.
+ */
+function editHref(role: CafeEditBannerProps["role"], cafeId: string, cafeSlug: string): string {
+    return role === "owner"
+        ? `/owner/cafes/${cafeSlug}/edit`
+        : `/manage/preview/${cafeId}`
+}
+
+export default function CafeEditBanner({ cafeId, cafeSlug, cafeName, role }: CafeEditBannerProps) {
     const [isVisible, setIsVisible] = useState(true)
 
-    const roleLabel = role === "admin" ? "Admin" : "Moderator"
+    const roleLabel = ROLE_LABELS[role]
 
     return (
         <AnimatePresence>
@@ -42,7 +59,7 @@ export default function CafeEditBanner({ cafeId, cafeName, role }: CafeEditBanne
                         </div>
                         <div className='flex items-center gap-2 shrink-0'>
                             <Link
-                                href={`/manage/preview/${cafeId}`}
+                                href={editHref(role, cafeId, cafeSlug)}
                                 className='text-xs font-semibold text-primary hover:text-primary/80 transition-colors bg-primary/10 hover:bg-primary/15 px-3 py-1.5 rounded-lg'
                             >
                                 Edit Cafe

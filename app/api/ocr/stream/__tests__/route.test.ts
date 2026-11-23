@@ -58,6 +58,15 @@ function makeRequest(body: Record<string, unknown>): NextRequest {
     }) as unknown as NextRequest
 }
 
+const MB = 1024 * 1024
+
+/**
+ * The scan path compresses to a 1.5 MB target and posts the result as base64,
+ * which is about a third larger again. Written out here rather than imported:
+ * the point is the size a real scan sends, not the constant's spelling.
+ */
+const COMPRESSED_IMAGE_BASE64 = "A".repeat(Math.ceil((1.5 * MB * 4) / 3))
+
 function sseResponse(deltas: string[]): Response {
     const body = deltas
         .map((content) => `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`)
@@ -148,5 +157,67 @@ describe("POST /api/ocr/stream", () => {
 
         db.query.cafes.findFirst = original
         expect(response.status).toBe(404)
+    })
+
+    it("accepts a photo at the scan's compressed budget and sends it whole to the model", async () => {
+        let sentBody: {
+            messages: Array<{ content: Array<{ image_url: { url: string; detail?: string } }> }>
+        } | undefined
+
+        globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+            sentBody = JSON.parse(String(init?.body))
+            return sseResponse(['[{"name":"Latte","category":"Coffee","price":120}]'])
+        }) as typeof fetch
+
+        const response = await POST(makeRequest({
+            cafeId: "cafe-1",
+            imageBase64: COMPRESSED_IMAGE_BASE64,
+            mimeType: "image/jpeg",
+        }))
+        const text = await response.text()
+
+        expect(response.status).toBe(200)
+        expect(text).toContain('"type":"complete"')
+
+        const imageUrl = sentBody!.messages[1].content[0].image_url
+        // The whole image arrives: a ceiling anywhere on the way would have
+        // truncated it or refused the request outright.
+        expect(imageUrl.url).toBe(`data:image/jpeg;base64,${COMPRESSED_IMAGE_BASE64}`)
+        // A 1600 px menu is only legible to the model if it is not downsized to
+        // a single low-detail tile on the way out.
+        expect(imageUrl.detail).toBe("high")
+    })
+
+    it("still refuses a format outside the wider accepted set", async () => {
+        let reachedModel = false
+        globalThis.fetch = (async () => {
+            reachedModel = true
+            return sseResponse(["[]"])
+        }) as typeof fetch
+
+        const response = await POST(makeRequest({
+            cafeId: "cafe-1",
+            imageBase64: "aGk=",
+            mimeType: "image/bmp",
+        }))
+
+        expect(response.status).toBe(400)
+        expect((await response.json() as { error: string }).error).toBe("Invalid request")
+        expect(reachedModel).toBe(false)
+    })
+
+    it("keeps the wider accepted MIME set working", async () => {
+        for (const mimeType of ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]) {
+            globalThis.fetch = (async () => sseResponse(["[]"])) as typeof fetch
+
+            const response = await POST(makeRequest({
+                cafeId: "cafe-1",
+                imageBase64: "aGk=",
+                mimeType,
+            }))
+            await response.text()
+
+            expect(response.status).toBe(200)
+        }
     })
 })

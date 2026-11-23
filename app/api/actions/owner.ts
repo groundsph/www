@@ -33,6 +33,7 @@ import { logSystemAction } from "./system-logs"
 import { parseCafeImagesPatch } from "@/utils/validation/cafe-images"
 import { recalculatePriceLevel } from "./price-level"
 import { isOwnerEditableField } from "@/utils/owner/owner-editable-fields"
+import { isCafeOwner } from "@/utils/owner/cafe-ownership"
 
 // ============================================
 // Permission Checks
@@ -45,16 +46,7 @@ export async function isOwnerOfCafe(cafeId: string): Promise<boolean> {
     const user = await getCurrentUser()
     if (!user) return false
 
-    const result = await db
-        .select({ ownerIds: cafes.ownerIds })
-        .from(cafes)
-        .where(eq(cafes.id, cafeId))
-        .limit(1)
-
-    const cafe = result[0]
-    if (!cafe || !cafe.ownerIds) return false
-
-    return cafe.ownerIds.includes(user.id)
+    return isCafeOwner(cafeId, user.id)
 }
 
 /**

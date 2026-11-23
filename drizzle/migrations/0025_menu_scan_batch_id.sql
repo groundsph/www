@@ -1,0 +1,1 @@
+ALTER TABLE "menu_item_suggestions" ADD COLUMN "batch_id" uuid;

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import { ScanLine } from "lucide-react"
 import { useAuth } from "@/components/layout/AuthProvider"
 
@@ -26,19 +27,31 @@ export default function MenuOcrScanButton({
     const { user } = useAuth()
     const [isModalOpen, setIsModalOpen] = useState(false)
 
+    const affordanceClasses =
+        variant === "compact"
+            ? "flex items-center gap-2 text-sm text-text/50 hover:text-primary transition-colors"
+            : "flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+
+    // If not logged in, show the same affordance as a link to auth, exactly like
+    // the neighbouring contribution buttons. The scan itself never opens without
+    // a session; the server still decides whether a scan may be written.
     if (!user) {
-        return null
+        return (
+            <Link
+                href={`/auth?redirect=/cafes/${cafeSlug}`}
+                className={affordanceClasses}
+            >
+                <ScanLine className='w-3.5 h-3.5' />
+                <span>Scan Menu</span>
+            </Link>
+        )
     }
 
     return (
         <>
             <button
                 onClick={() => setIsModalOpen(true)}
-                className={`flex items-center gap-2 transition-colors cursor-pointer ${
-                    variant === "compact"
-                        ? "text-sm text-text/50 hover:text-primary"
-                        : "px-3 py-1.5 text-sm font-medium text-text/60 hover:text-primary hover:bg-primary/10 rounded-lg"
-                }`}
+                className={`${affordanceClasses} cursor-pointer`}
             >
                 <ScanLine className='w-3.5 h-3.5' />
                 <span>Scan Menu</span>

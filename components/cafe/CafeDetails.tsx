@@ -116,7 +116,7 @@ export default function CafeDetails({
     /** Server-rendered hero image for better LCP */
     heroImage?: React.ReactNode
     canEdit?: boolean
-    editRole?: "admin" | "moderator" | null
+    editRole?: "admin" | "moderator" | "owner" | null
 }) {
     // Auth
     const authUser = useAuth().user
@@ -439,10 +439,11 @@ export default function CafeDetails({
                 heroImage={heroImage}
             />
 
-            {/* Edit Banner - shown for admins/moderators */}
+            {/* Edit Banner - server-decided; shown for the owner, admins and moderators */}
             {canEdit && editRole && (
                 <CafeEditBanner
                     cafeId={cafe.id}
+                    cafeSlug={cafe.slug}
                     cafeName={cafe.name}
                     role={editRole}
                 />

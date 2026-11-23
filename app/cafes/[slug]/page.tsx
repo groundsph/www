@@ -1,7 +1,7 @@
 import CafeDetails from "@/components/cafe/CafeDetails"
 import CafeHeroImage from "@/components/cafe/CafeHeroImage"
-import Link from "next/link"
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { getCafeBySlug, getReviewsByCafeIdPaginated } from "@/app/api/actions/cafe"
 import { getCafeMenuItems } from "@/app/api/actions/owner"
 import { getCafeEditPermission } from "@/app/api/actions/cafe-edit-permission"
@@ -178,35 +178,20 @@ export default async function CafePage({
     // getCafeBySlug filters unpublished cafes (includeUnpublished defaults to false)
     // Cafe details page will show 404 if the cafe is unpublished
     const cafe = await getCafeBySlug(slug)
-    const [{ reviews: initialReviews, hasMore: initialHasMore }, menuItems] = await Promise.all([
-        cafe ? getReviewsByCafeIdPaginated(cafe.id, 1, 10) : { reviews: [], hasMore: false },
-        cafe ? getCafeMenuItems(cafe.id) : [],
-    ])
 
-    // Check if user can edit this cafe
-    const editPermission = cafe
-        ? await getCafeEditPermission(cafe.id)
-        : { canEdit: false, role: null }
+    // A missing cafe and an unpublished one both resolve to null here (the read
+    // applies the public visibility rule), so both leave through the segment's
+    // not-found boundary with identical output. Neither case is rendered here.
+    if (!cafe) {
+        notFound()
+    }
 
-    if (!cafe)
-        return (
-            <section
-                id='not-found'
-                className='w-full h-full flex flex-col items-center justify-center flex-1'
-            >
-                <h1 className='text-5xl font-bold'>404</h1>
-                <p className='text-2xl font-semibold'>Page Not Found</p>
-                <p className='text-xl'>
-                    The page you are looking for does not exist.
-                </p>
-                <Link
-                    href='/'
-                    className='text-sm font-semibold underline transition-colors hover:text-text/60'
-                >
-                    Go Back Home
-                </Link>
-            </section>
-        )
+    const [{ reviews: initialReviews, hasMore: initialHasMore }, menuItems, editPermission] =
+        await Promise.all([
+            getReviewsByCafeIdPaginated(cafe.id, 1, 10),
+            getCafeMenuItems(cafe.id),
+            getCafeEditPermission(cafe.id),
+        ])
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://grounds.ph"
 

@@ -2,12 +2,14 @@
 
 import { getCurrentUser } from "@/lib/auth"
 import { db } from "@/db"
-import { cafeMenuItems, cafes } from "@/db/schema/tables"
+import { cafeMenuItems, cafes, menuItemSuggestions } from "@/db/schema/tables"
 import { desc, eq } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
+import { revalidateCafePages } from "@/utils/cafe-routes"
+import { canWriteMenuDirectly } from "@/utils/menu/trusted-menu-write"
 import { recalculatePriceLevel } from "./price-level"
 import { extractMenuItemsFromImage } from "@/utils/ai/menu-ocr"
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
+import type { MenuItemSuggestionData } from "./menu-suggestions"
 
 export interface OcrResult {
     success: boolean
@@ -155,10 +157,75 @@ export async function scanMenuImage(
     }
 }
 
+export interface SaveOcrMenuResult {
+    success: boolean
+    /** Menu items written straight into the Menu by a trusted caller. */
+    saved?: number
+    /** Menu suggestions queued for review — one per extracted item. */
+    queued?: number
+    /** The Menu scan batch every queued suggestion belongs to. */
+    batchId?: string
+    /**
+     * True when nothing was written and the scan waits for review. The caller
+     * must say so in its own words, not as a saved confirmation.
+     */
+    underReview?: boolean
+    error?: string
+}
+
+/**
+ * A scan from someone who may not write this Cafe's Menu directly becomes one
+ * Menu scan batch: every extracted item is an ordinary Menu suggestion, and all
+ * of them share a freshly assigned batch id.
+ */
+async function queueMenuScanForReview(
+    cafeId: string,
+    userId: string,
+    items: OcrMenuItem[]
+): Promise<SaveOcrMenuResult> {
+    const batchId = crypto.randomUUID()
+
+    const suggestions = items.map((item) => {
+        const suggestedData: MenuItemSuggestionData = {
+            name: item.name,
+            category: item.category,
+            price: item.price,
+            description: item.description ?? undefined,
+            is_food: item.is_food ?? false,
+            is_hot: item.is_hot ?? false,
+            is_cold: item.is_cold ?? false,
+            is_vegan: item.is_vegan ?? false,
+            is_vegetarian: item.is_vegetarian ?? false,
+            calories: item.calories ?? null,
+        }
+
+        return {
+            cafeId,
+            userId,
+            type: "add",
+            targetItemId: null,
+            suggestedData: suggestedData as unknown as Record<string, unknown>,
+            status: "pending",
+            batchId,
+        }
+    })
+
+    try {
+        await db.insert(menuItemSuggestions).values(suggestions)
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Failed to submit scanned menu items",
+        }
+    }
+
+    return { success: true, underReview: true, queued: items.length, batchId }
+}
+
 export async function saveOcrMenuItems(
     cafeId: string,
     items: OcrMenuItem[]
-): Promise<{ success: boolean; saved?: number; error?: string }> {
+): Promise<SaveOcrMenuResult> {
     const user = await getCurrentUser()
     if (!user) {
         return { success: false, error: "Authentication required" }
@@ -166,6 +233,22 @@ export async function saveOcrMenuItems(
 
     if (items.length === 0) {
         return { success: true, saved: 0 }
+    }
+
+    const cafe = await db.query.cafes.findFirst({
+        where: eq(cafes.id, cafeId),
+        columns: { slug: true },
+    })
+
+    if (!cafe) {
+        return { success: false, error: "Cafe not found" }
+    }
+
+    // Who is saving decides what saving means. Anyone who is not this Cafe's
+    // owner or an admin goes through review, exactly like a one-item suggestion.
+    const isTrustedWriter = await canWriteMenuDirectly(cafeId)
+    if (!isTrustedWriter) {
+        return queueMenuScanForReview(cafeId, user.id, items)
     }
 
     const existingItems = await db
@@ -205,8 +288,8 @@ export async function saveOcrMenuItems(
 
     await recalculatePriceLevel(cafeId)
 
-    revalidatePath(`/cafe/${cafeId}`)
-    revalidatePath(`/cafe/${cafeId}/menu`)
+    // The slug was loaded above; the helper must never rebuild a `/cafe/<id>` path.
+    await revalidateCafePages(cafeId, cafe.slug)
 
     return { success: true, saved: items.length }
 }

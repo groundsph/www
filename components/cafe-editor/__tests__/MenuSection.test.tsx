@@ -19,4 +19,12 @@ describe("MenuSection", () => {
     it("still renders the menu filters", () => {
         expect(source).toContain("filterPills")
     })
+
+    // The scan affordance sends an anonymous visitor back to this Cafe, so an
+    // optional slug with an empty-string fallback would silently link to the
+    // Cafe index instead.
+    it("requires the Cafe's slug rather than falling back to an empty one", () => {
+        expect(source).not.toContain("cafeSlug?:")
+        expect(source).not.toContain('cafeSlug ?? ""')
+    })
 })

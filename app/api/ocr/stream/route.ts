@@ -98,7 +98,10 @@ export async function POST(request: NextRequest) {
                                 type: "image_url",
                                 image_url: {
                                     url: `data:${resolveImageMime(validated.data.mimeType)};base64,${validated.data.imageBase64}`,
-                                    detail: "low",
+                                    // `low` downsamples to a single 512 px tile, which
+                                    // undoes the scan's compression budget: a dense
+                                    // Menu's prices do not survive it.
+                                    detail: "high",
                                 },
                             },
                         ],

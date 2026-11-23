@@ -5,10 +5,14 @@ import { cafes, profiles } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { getCurrentUser } from "@/lib/auth"
 import { getModeratorRegionsForCurrentUser } from "@/utils/moderation/region-access"
+import { isCafeOwner } from "@/utils/owner/cafe-ownership"
+
+/** Who may edit a Cafe, and through which surface. */
+export type CafeEditRole = "admin" | "moderator" | "owner"
 
 export interface CafeEditPermission {
     canEdit: boolean
-    role: "admin" | "moderator" | null
+    role: CafeEditRole | null
 }
 
 export async function getCafeEditPermission(cafeId: string): Promise<CafeEditPermission> {
@@ -23,15 +27,16 @@ export async function getCafeEditPermission(cafeId: string): Promise<CafeEditPer
 
     const role = profileResult[0]?.role
 
-    if (role !== "admin" && role !== "moderator") {
-        return { canEdit: false, role: null }
+    // Admin: unrestricted staff editing, exactly as before.
+    if (role === "admin") {
+        return { canEdit: true, role: "admin" }
     }
 
-    // For moderators, check region scope
+    // Moderator: staff editing, but only inside the regions they moderate.
+    // A refusal here is final — ownership never widens a scoped moderator's reach.
     if (role === "moderator") {
         const regions = await getModeratorRegionsForCurrentUser()
         if (regions.length > 0) {
-            // Moderator has region restrictions - check cafe region
             const cafeResult = await db
                 .select({ region: cafes.region })
                 .from(cafes)
@@ -43,7 +48,15 @@ export async function getCafeEditPermission(cafeId: string): Promise<CafeEditPer
                 return { canEdit: false, role: "moderator" }
             }
         }
+
+        return { canEdit: true, role: "moderator" }
     }
 
-    return { canEdit: true, role: role as "admin" | "moderator" }
+    // Everyone else: the only claim left is ownership of this very Cafe,
+    // read from the stored owner list on the Cafe row.
+    if (await isCafeOwner(cafeId, currentUser.id)) {
+        return { canEdit: true, role: "owner" }
+    }
+
+    return { canEdit: false, role: null }
 }

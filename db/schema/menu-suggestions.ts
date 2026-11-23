@@ -13,6 +13,11 @@ export const menuItemSuggestions = pgTable("menu_item_suggestions", {
     targetItemId: uuid("target_item_id"), // for edit/remove, references cafeMenuItems.id
     suggestedData: jsonb("suggested_data").notNull(), // the proposed menu item data
     status: text("status").default("pending"), // 'pending' | 'approved' | 'rejected'
+    // The Menu scan batch a suggestion belongs to: every suggestion produced by
+    // one scan shares this id. Null for a suggestion made one item at a time,
+    // which is reviewed on its own. Additive and nullable, so existing rows are
+    // untouched and old code that never reads it stays correct.
+    batchId: uuid("batch_id"),
     adminNotes: text("admin_notes"),
     reviewedBy: uuid("reviewed_by").references(() => profiles.id),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

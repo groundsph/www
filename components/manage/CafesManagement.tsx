@@ -69,11 +69,8 @@ import {
     getMallVerificationProofUrl,
     type MallCafeVerification,
 } from "@/app/api/actions/mall-cafe"
-import {
-    approveMenuItemSuggestion,
-    rejectMenuItemSuggestion,
-    type MenuItemSuggestionData,
-} from "@/app/api/actions/menu-suggestions"
+import type { PendingMenuItemSuggestion } from "@/app/api/actions/menu-suggestions"
+import MenuSuggestionQueue from "@/components/manage/MenuSuggestionQueue"
 import { EditSuggestion } from "@/utils/types/suggestions"
 import { getCafeThumbnailUrl } from "@/utils/extras"
 import { CafeWithRatings } from "@/utils/types/extra"
@@ -88,11 +85,6 @@ import RejectCafeModal from "@/components/admin/RejectCafeModal"
 import FeaturedScheduleManager from "@/components/manage/FeaturedScheduleManager"
 import { Star, UtensilsCrossed } from "lucide-react"
 import { type FeaturedSchedule } from "@/app/api/actions/admin"
-import type { menuItemSuggestions } from "@/db/schema/tables"
-
-type MenuItemSuggestion = typeof menuItemSuggestions.$inferSelect & {
-    suggestedData: MenuItemSuggestionData
-}
 
 interface CafesManagementProps {
     userRole: "admin" | "moderator"
@@ -106,7 +98,7 @@ interface CafesManagementProps {
     suggestions: EditSuggestion[]
     pendingClaims?: CafeClaim[]
     featuredSchedules: FeaturedSchedule[]
-    menuSuggestions: MenuItemSuggestion[]
+    menuSuggestions: PendingMenuItemSuggestion[]
 }
 
 type TabType =
@@ -151,7 +143,7 @@ export default function CafesManagement({
     const [suggestions, setSuggestions] = useState(initialSuggestions)
     const [claims, setClaims] = useState<CafeClaim[]>(initialClaims)
     const [mallVerifications, setMallVerifications] = useState<MallCafeVerification[]>([])
-    const [menuSuggestions, setMenuSuggestions] = useState<MenuItemSuggestion[]>(initialMenuSuggestions)
+    const [menuSuggestions, setMenuSuggestions] = useState<PendingMenuItemSuggestion[]>(initialMenuSuggestions)
 
     // Action confirmation hook
     const { requestConfirmation, isModalOpen, pendingAction, closeModal, handleConfirmed } = useActionConfirmation()
@@ -163,7 +155,6 @@ export default function CafesManagement({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [expandedClaim, setExpandedClaim] = useState<string | null>(null)
     const [expandedMallVerification, setExpandedMallVerification] = useState<string | null>(null)
-    const [expandedMenuSuggestion, setExpandedMenuSuggestion] = useState<string | null>(null)
     const [mallAdminNotes, setMallAdminNotes] = useState<Record<string, string>>({})
     const [processing, setProcessing] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
@@ -288,7 +279,7 @@ export default function CafesManagement({
             } else if (activeTab === "menu-suggestions") {
                 const { getPendingMenuItemSuggestions } = await import("@/app/api/actions/menu-suggestions")
                 const data = await getPendingMenuItemSuggestions()
-                setMenuSuggestions(data as MenuItemSuggestion[])
+                setMenuSuggestions(data)
             }
         } catch (error) {
             console.error("Failed to refresh:", error)
@@ -538,29 +529,12 @@ cafeName: string) => {
         setProcessing(null)
     }
 
-    const handleApproveMenuSuggestion = async (suggestionId: string) => {
-        setProcessing(suggestionId)
-        const result = await approveMenuItemSuggestion(suggestionId)
-        if (result.success) {
-            setMenuSuggestions((prev) => prev.filter((s) => s.id !== suggestionId))
-        } else {
-            alert(result.error || "Failed to approve menu suggestion")
-        }
-        setProcessing(null)
-    }
-
-    const handleRejectMenuSuggestion = async (suggestionId: string) => {
-        if (!confirm("Are you sure you want to reject this menu item suggestion?")) {
-            return
-        }
-        setProcessing(suggestionId)
-        const result = await rejectMenuItemSuggestion(suggestionId)
-        if (result.success) {
-            setMenuSuggestions((prev) => prev.filter((s) => s.id !== suggestionId))
-        } else {
-            alert(result.error || "Failed to reject menu suggestion")
-        }
-        setProcessing(null)
+    // A reviewed suggestion leaves the queue without a reload; the queue renders
+    // its own empty state once nothing pending remains.
+    const handleProcessedMenuSuggestions = (suggestionIds: string[]) => {
+        setMenuSuggestions((prev) =>
+            prev.filter((suggestion) => !suggestionIds.includes(suggestion.id))
+        )
     }
 
     const toggleExpand = (cafeId: string) => {
@@ -1713,242 +1687,10 @@ cafeName: string) => {
 
             {/* Menu Suggestions Tab */}
             {activeTab === "menu-suggestions" && (
-                <>
-                    {menuSuggestions.length === 0 ? (
-                        <EmptyState
-                            icon={UtensilsCrossed}
-                            title='No pending menu suggestions'
-                            description='Community-submitted menu item suggestions will appear here for review.'
-                        />
-                    ) : (
-                        <div className='space-y-3'>
-                            {menuSuggestions.map((suggestion) => {
-                                const isExpanded = expandedMenuSuggestion === suggestion.id
-                                const isProcessingThis = processing === suggestion.id
-                                const data = suggestion.suggestedData
-
-                                return (
-                                    <div
-                                        key={suggestion.id}
-                                        className='bg-background shadow-sm border border-tertiary/50 rounded-xl overflow-hidden hover:shadow-md transition-shadow'
-                                    >
-                                        {/* Header */}
-                                        <div
-                                            className='p-3 sm:p-4 cursor-pointer hover:bg-tertiary/10 transition flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4'
-                                            onClick={() =>
-                                                setExpandedMenuSuggestion(
-                                                    isExpanded ? null : suggestion.id
-                                                )
-                                            }
-                                        >
-                                            {/* Type Badge */}
-                                            <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                                                suggestion.type === 'add'
-                                                    ? 'bg-green-500/20 text-green-600'
-                                                    : suggestion.type === 'edit'
-                                                      ? 'bg-amber-500/20 text-amber-600'
-                                                      : 'bg-red-500/20 text-red-600'
-                                            }`}>
-                                                <UtensilsCrossed className='w-5 h-5' />
-                                            </div>
-
-                                            <div className='flex-1 min-w-0'>
-                                                <div className='flex items-center gap-2 flex-wrap'>
-                                                    <h3 className='font-semibold truncate'>
-                                                        {data.name || "Unnamed Item"}
-                                                    </h3>
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
-                                                        suggestion.type === 'add'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : suggestion.type === 'edit'
-                                                              ? 'bg-amber-100 text-amber-700'
-                                                              : 'bg-red-100 text-red-700'
-                                                    }`}>
-                                                        {suggestion.type === 'add' && 'Add'}
-                                                        {suggestion.type === 'edit' && 'Edit'}
-                                                        {suggestion.type === 'remove' && 'Remove'}
-                                                    </span>
-                                                    <span className='inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-tertiary/50 text-text/70 rounded-full'>
-                                                        {data.category}
-                                                    </span>
-                                                </div>
-                                                <p className='text-sm text-text/60 truncate'>
-                                                    {data.price !== undefined && (
-                                                        <span className='font-medium text-text/80'>
-                                                            ₱{data.price.toFixed(2)}
-                                                        </span>
-                                                    )}
-                                                    {data.description && (
-                                                        <span className='ml-2'>{data.description.slice(0, 60)}...</span>
-                                                    )}
-                                                </p>
-                                                <p className='text-xs text-text/40'>
-                                                    Suggested for cafe ID: {suggestion.cafeId.slice(0, 8)}...
-                                                    {" "}•{" "}
-                                                    {suggestion.createdAt ? new Date(suggestion.createdAt).toLocaleDateString() : "Unknown date"}
-                                                </p>
-                                            </div>
-
-                                            <div className='flex items-center gap-2'>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleApproveMenuSuggestion(suggestion.id)
-                                                    }}
-                                                    disabled={isProcessingThis}
-                                                    className='p-2 bg-green-500/20 text-green-600 rounded-lg hover:bg-green-500/30 transition disabled:opacity-50'
-                                                    title='Approve'
-                                                >
-                                                    <Check className='w-5 h-5' />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleRejectMenuSuggestion(suggestion.id)
-                                                    }}
-                                                    disabled={isProcessingThis}
-                                                    className='p-2 bg-red-500/20 text-red-600 rounded-lg hover:bg-red-500/30 transition disabled:opacity-50'
-                                                    title='Reject'
-                                                >
-                                                    <X className='w-5 h-5' />
-                                                </button>
-                                                {isExpanded ? (
-                                                    <ChevronUp className='w-5 h-5 text-text opacity-40' />
-                                                ) : (
-                                                    <ChevronDown className='w-5 h-5 text-text opacity-40' />
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Expanded Details */}
-                                        {isExpanded && (
-                                            <div className='border-t border-tertiary/50 p-4 space-y-4 bg-tertiary/10'>
-                                                {/* Item Details */}
-                                                <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                            Name
-                                                        </h4>
-                                                        <p className='text-sm text-text/80'>{data.name}</p>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                            Category
-                                                        </h4>
-                                                        <p className='text-sm text-text/80'>{data.category}</p>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                            Price
-                                                        </h4>
-                                                        <p className='text-sm text-text/80'>₱{data.price?.toFixed(2)}</p>
-                                                    </div>
-                                                    {data.calories !== undefined && data.calories !== null && (
-                                                        <div>
-                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                                Calories
-                                                            </h4>
-                                                            <p className='text-sm text-text/80'>{data.calories} kcal</p>
-                                                        </div>
-                                                    )}
-                                                    {data.is_food !== undefined && (
-                                                        <div>
-                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                                Type
-                                                            </h4>
-                                                            <p className='text-sm text-text/80'>
-                                                                {data.is_food ? 'Food' : 'Beverage'}
-                                                            </p>
-                                                        </div>
-                                                    )}
-                                                    {(data.is_hot || data.is_cold) && (
-                                                        <div>
-                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                                Temperature
-                                                            </h4>
-                                                            <p className='text-sm text-text/80'>
-                                                                {[
-                                                                    data.is_hot && 'Hot',
-                                                                    data.is_cold && 'Cold'
-                                                                ].filter(Boolean).join(' / ')}
-                                                            </p>
-                                                        </div>
-                                                    )}
-                                                    {(data.is_vegan || data.is_vegetarian) && (
-                                                        <div>
-                                                            <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                                Dietary
-                                                            </h4>
-                                                            <p className='text-sm text-text/80'>
-                                                                {[
-                                                                    data.is_vegan && 'Vegan',
-                                                                    data.is_vegetarian && 'Vegetarian'
-                                                                ].filter(Boolean).join(' / ')}
-                                                            </p>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Description */}
-                                                {data.description && (
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                            Description
-                                                        </h4>
-                                                        <p className='text-sm text-text/80 bg-background p-2 rounded-lg'>
-                                                            {data.description}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Size Options */}
-                                                {data.size_options && data.size_options.length > 0 && (
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-2'>
-                                                            Size Options
-                                                        </h4>
-                                                        <div className='flex flex-wrap gap-2'>
-                                                            {data.size_options.map((size, idx) => (
-                                                                <span
-                                                                    key={idx}
-                                                                    className='px-2 py-1 bg-background rounded-lg text-sm text-text/80'
-                                                                >
-                                                                    {size.label}: ₱{size.price.toFixed(2)}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Target Item for Edit/Remove */}
-                                                {suggestion.targetItemId && (
-                                                    <div>
-                                                        <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                            Target Item ID
-                                                        </h4>
-                                                        <p className='text-sm text-text/80 font-mono'>
-                                                            {suggestion.targetItemId}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Suggestion ID */}
-                                                <div>
-                                                    <h4 className='text-xs font-medium text-text/40 uppercase mb-1'>
-                                                        Suggestion ID
-                                                    </h4>
-                                                    <p className='text-sm text-text/80 font-mono'>
-                                                        {suggestion.id}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    )}
-                </>
+                <MenuSuggestionQueue
+                    suggestions={menuSuggestions}
+                    onProcessed={handleProcessedMenuSuggestions}
+                />
             )}
 
             {/* Image Lightbox */}

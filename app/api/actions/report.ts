@@ -3,7 +3,7 @@
 import { db } from "@/db"
 import { cafeReports, cafes } from "@/db/schema"
 import { eq, and, sql } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
+import { revalidateCafePages } from "@/utils/cafe-routes"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 
@@ -78,7 +78,7 @@ export async function submitCafeReport(
             }
         }
 
-        revalidatePath(`/cafe/${cafeId}`)
+        await revalidateCafePages(cafeId)
         return { success: true, message: "Report submitted successfully." }
     } catch (error) {
         console.error("Error submitting report:", error)

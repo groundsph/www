@@ -3,11 +3,18 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
-import { X as XIcon, Camera, Loader2, Check, Trash2, ScanLine, AlertCircle, ChevronDown, Plus } from "lucide-react"
+import { X as XIcon, Camera, ImageUp, Loader2, Check, Clock, Trash2, ScanLine, AlertCircle, ChevronDown, Plus } from "lucide-react"
 import imageCompression from "browser-image-compression"
 import { saveOcrMenuItems } from "@/app/api/actions/menu-ocr"
 import { OCR_PHASE_CONFIG, streamOcrScan, describeEmptyOcrResult, type OcrPhase } from "@/utils/ocr-stream-client"
 import { MENU_CATEGORIES } from "@/utils/types/owner"
+import {
+    MENU_SCAN_ACCEPT_ATTRIBUTE,
+    MENU_SCAN_COMPRESSION_MAX_LONG_EDGE_PX,
+    MENU_SCAN_COMPRESSION_TARGET_MB,
+    MENU_SCAN_LIMITS_COPY,
+    describeMenuScanFileProblem,
+} from "@/utils/validation/menu-scan"
 import { cn } from "@/utils/cn"
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
 import { useOcrPhasedTimer } from "@/hooks/useOcrPhasedTimer"
@@ -142,6 +149,10 @@ export default function MenuOcrScanModal({
     const [duplicates, setDuplicates] = useState<string[]>([])
     const [error, setError] = useState<string | null>(null)
     const [savedCount, setSavedCount] = useState(0)
+    // A queued scan is not a saved one: the success step must say it is under
+    // review, in words that cannot be read as "added to the menu".
+    const [queuedCount, setQueuedCount] = useState(0)
+    const [underReview, setUnderReview] = useState(false)
     const [streamedItemCount, setStreamedItemCount] = useState(0)
     const [statusMessage, setStatusMessage] = useState("Preparing...")
     const [streamedContent, setStreamedContent] = useState("")
@@ -149,6 +160,8 @@ export default function MenuOcrScanModal({
     const fileInputRef = useRef<HTMLInputElement>(null)
     const shouldResetRef = useRef(false)
     const abortControllerRef = useRef<AbortController | null>(null)
+    /** The object URL currently behind `imagePreview`, so it can be released. */
+    const previewUrlRef = useRef<string | null>(null)
 
     const {
         phase: ocrPhase,
@@ -160,47 +173,56 @@ export default function MenuOcrScanModal({
         stop: stopTimer,
     } = useOcrPhasedTimer()
 
+    /**
+     * Drops the blob behind the current preview, if there is one. Safe to call
+     * repeatedly: the ref is cleared, so a URL is never released twice.
+     */
+    const releasePreview = useCallback(() => {
+        if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current)
+            previewUrlRef.current = null
+        }
+    }, [])
+
+    /**
+     * Replaces the preview, releasing whatever was there before. Every path
+     * that shows or clears a preview goes through here, which is what stops a
+     * retry from leaving the previous scan's blob alive on the device.
+     */
+    const setPreview = useCallback((url: string | null) => {
+        releasePreview()
+        previewUrlRef.current = url
+        setImagePreview(url)
+    }, [releasePreview])
+
     const resetState = useCallback(() => {
+        setPreview(null)
         setStep("upload")
-        setImagePreview(null)
         setExtractedItems([])
         setDuplicates([])
         setError(null)
         setSavedCount(0)
+        setQueuedCount(0)
+        setUnderReview(false)
         setStreamedItemCount(0)
         setStatusMessage("Preparing...")
         setStreamedContent("")
         streamedContentRef.current = ""
-    }, [])
+    }, [setPreview])
 
     useEffect(() => {
         if (!isOpen && shouldResetRef.current) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setStep("upload")
-             
-            setImagePreview(null)
-             
-            setExtractedItems([])
-             
-            setDuplicates([])
-             
-            setError(null)
-             
-            setSavedCount(0)
-              
-            setStreamedItemCount(0)
-              
-            setStatusMessage("Preparing...")
-             
-            setStreamedContent("")
-             
-            streamedContentRef.current = ""
+            resetState()
             shouldResetRef.current = false
         }
         if (isOpen) {
             shouldResetRef.current = true
         }
-    }, [isOpen])
+    }, [isOpen, resetState])
+
+    // A scan can be abandoned by navigating away; the blob must not outlive the
+    // component that created it.
+    useEffect(() => () => releasePreview(), [releasePreview])
 
     const handleClose = useCallback(() => {
         resetState()
@@ -209,9 +231,10 @@ export default function MenuOcrScanModal({
 
     const handleImageSelect = async (file: File) => {
         try {
+            setError(null)
             const compressed = await imageCompression(file, {
-                maxSizeMB: 0.5,
-                maxWidthOrHeight: 1024,
+                maxSizeMB: MENU_SCAN_COMPRESSION_TARGET_MB,
+                maxWidthOrHeight: MENU_SCAN_COMPRESSION_MAX_LONG_EDGE_PX,
                 useWebWorker: true,
             })
 
@@ -230,7 +253,7 @@ export default function MenuOcrScanModal({
                 reader.readAsDataURL(compressed)
             })
 
-            setImagePreview(URL.createObjectURL(compressed))
+            setPreview(URL.createObjectURL(compressed))
             setStep("scanning")
             startTimer()
             setError(null)
@@ -289,6 +312,7 @@ export default function MenuOcrScanModal({
                 onError: (errorMsg) => {
                     stopTimer()
                     abortControllerRef.current = null
+                    setPreview(null)
                     setError(errorMsg)
                     setStep("upload")
                 },
@@ -296,16 +320,36 @@ export default function MenuOcrScanModal({
         } catch (e) {
             stopTimer()
             abortControllerRef.current = null
+            setPreview(null)
             setError(e instanceof Error ? e.message : "Failed to process image")
             setStep("upload")
         }
     }
 
+    /**
+     * Both targets feed this one handler, so which way a photo was chosen
+     * changes nothing downstream.
+     */
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            handleImageSelect(file)
+        const input = e.target
+        const file = input.files?.[0]
+
+        // Cleared on every outcome. A file input does not fire `change` twice for
+        // the same file, so without this an iOS retry with the same photo is a
+        // silent no-op. The File object is already captured, so resetting is safe.
+        input.value = ""
+
+        if (!file) return
+
+        // Before compression: a refused photo never costs the visitor a wait.
+        const problem = describeMenuScanFileProblem(file)
+        if (problem) {
+            setError(problem)
+            setStep("upload")
+            return
         }
+
+        void handleImageSelect(file)
     }
 
     const handleRemoveItem = (id: number) => {
@@ -367,7 +411,15 @@ export default function MenuOcrScanModal({
         const result = await saveOcrMenuItems(cafeId, itemsToSave)
 
         if (result.success) {
-            setSavedCount(result.saved ?? extractedItems.length)
+            if (result.underReview) {
+                setUnderReview(true)
+                setQueuedCount(result.queued ?? extractedItems.length)
+                setSavedCount(0)
+            } else {
+                setUnderReview(false)
+                setQueuedCount(0)
+                setSavedCount(result.saved ?? extractedItems.length)
+            }
             setStep("done")
         } else {
             setError(result.error ?? "Failed to save menu items")
@@ -458,33 +510,60 @@ export default function MenuOcrScanModal({
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
-                                    <motion.label
-                                        whileHover={{ scale: 1.01 }}
-                                        whileTap={{ scale: 0.99 }}
-                                        className="flex flex-col items-center justify-center w-full max-w-sm h-64 border-2 border-dashed border-text/20 rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 group"
-                                    >
-                                        <motion.div
-                                            animate={{ y: [0, -5, 0] }}
-                                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                                            className="mb-3"
-                                        >
-                                            <Camera className="w-14 h-14 text-text/30 group-hover:text-primary/60 transition-colors" />
-                                        </motion.div>
-                                        <span className="text-text/60 text-sm text-center px-4 group-hover:text-text/80 transition-colors">
-                                            Tap to take a photo or select an image
-                                        </span>
-                                        <span className="text-text/40 text-xs mt-2">
-                                            JPG, PNG up to 10MB
-                                        </span>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            capture="environment"
-                                            onChange={handleFileInputChange}
-                                            className="hidden"
-                                        />
-                                    </motion.label>
+                                    <div className="w-full max-w-sm space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {/* A capture target asks the camera; a plain one never does. */}
+                                            <motion.label
+                                                whileHover={{ scale: 1.01 }}
+                                                whileTap={{ scale: 0.99 }}
+                                                className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-text/20 rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 group"
+                                            >
+                                                <motion.div
+                                                    animate={{ y: [0, -5, 0] }}
+                                                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                                    className="mb-3"
+                                                >
+                                                    <Camera className="w-10 h-10 text-text/30 group-hover:text-primary/60 transition-colors" />
+                                                </motion.div>
+                                                <span className="text-text/60 text-sm text-center px-4 group-hover:text-text/80 transition-colors">
+                                                    Take photo
+                                                </span>
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    accept={MENU_SCAN_ACCEPT_ATTRIBUTE}
+                                                    capture="environment"
+                                                    onChange={handleFileInputChange}
+                                                    className="hidden"
+                                                />
+                                            </motion.label>
+                                            <motion.label
+                                                whileHover={{ scale: 1.01 }}
+                                                whileTap={{ scale: 0.99 }}
+                                                className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-text/20 rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 group"
+                                            >
+                                                <motion.div
+                                                    animate={{ y: [0, -5, 0] }}
+                                                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                                    className="mb-3"
+                                                >
+                                                    <ImageUp className="w-10 h-10 text-text/30 group-hover:text-primary/60 transition-colors" />
+                                                </motion.div>
+                                                <span className="text-text/60 text-sm text-center px-4 group-hover:text-text/80 transition-colors">
+                                                    Upload from device
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept={MENU_SCAN_ACCEPT_ATTRIBUTE}
+                                                    onChange={handleFileInputChange}
+                                                    className="hidden"
+                                                />
+                                            </motion.label>
+                                        </div>
+                                        <p className="text-center text-text/40 text-xs">
+                                            {MENU_SCAN_LIMITS_COPY}
+                                        </p>
+                                    </div>
                                 </motion.div>
                             )}
 
@@ -626,6 +705,7 @@ export default function MenuOcrScanModal({
                                                     abortControllerRef.current?.abort()
                                                     abortControllerRef.current = null
                                                     stopTimer()
+                                                    setPreview(null)
                                                     setStep("upload")
                                                     setError(null)
                                                 }}
@@ -649,7 +729,7 @@ export default function MenuOcrScanModal({
                                                 className="overflow-hidden"
                                             >
                                                 <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl">
-                                                    <p className="text-sm font-medium text-amber-700 flex items-center gap-2">
+                                                    <div className="text-sm font-medium text-amber-700 flex items-center gap-2">
                                                         <motion.div
                                                             animate={{ rotate: [0, -10, 10, -10, 0] }}
                                                             transition={{ duration: 0.4 }}
@@ -657,7 +737,7 @@ export default function MenuOcrScanModal({
                                                             <AlertCircle className="w-4 h-4" />
                                                         </motion.div>
                                                         {duplicates.length} duplicate{duplicates.length === 1 ? "" : "s"} skipped
-                                                    </p>
+                                                    </div>
                                                     <p className="text-xs text-amber-600/80 mt-1">
                                                         {duplicates.slice(0, 5).join(", ")}
                                                         {duplicates.length > 5 && ` and ${duplicates.length - 5} more`}
@@ -885,14 +965,21 @@ export default function MenuOcrScanModal({
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
                                         transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.1 }}
-                                        className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center"
+                                        className={cn(
+                                            "w-20 h-20 rounded-full flex items-center justify-center",
+                                            underReview ? "bg-amber-500/10" : "bg-primary/10"
+                                        )}
                                     >
                                         <motion.div
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}
                                             transition={{ type: "spring", damping: 10, stiffness: 300, delay: 0.3 }}
                                         >
-                                            <Check className="w-10 h-10 text-primary" />
+                                            {underReview ? (
+                                                <Clock className="w-10 h-10 text-amber-600" />
+                                            ) : (
+                                                <Check className="w-10 h-10 text-primary" />
+                                            )}
                                         </motion.div>
                                     </motion.div>
 
@@ -908,21 +995,33 @@ export default function MenuOcrScanModal({
                                             transition={{ delay: 0.5 }}
                                             className="text-xl font-semibold text-text"
                                         >
-                                            <motion.span
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ delay: 0.6 }}
-                                            >
-                                                {savedCount} item
-                                            </motion.span>
-                                            {savedCount !== 1 ? "s" : ""}{" "}
-                                            <motion.span
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ delay: 0.7 }}
-                                            >
-                                                added!
-                                            </motion.span>
+                                            {underReview ? (
+                                                <motion.span
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ delay: 0.6 }}
+                                                >
+                                                    Scan submitted for review
+                                                </motion.span>
+                                            ) : (
+                                                <>
+                                                    <motion.span
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ delay: 0.6 }}
+                                                    >
+                                                        {savedCount} item
+                                                    </motion.span>
+                                                    {savedCount !== 1 ? "s" : ""}{" "}
+                                                    <motion.span
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ delay: 0.7 }}
+                                                    >
+                                                        added!
+                                                    </motion.span>
+                                                </>
+                                            )}
                                         </motion.h3>
                                         <motion.p
                                             initial={{ opacity: 0 }}
@@ -930,7 +1029,9 @@ export default function MenuOcrScanModal({
                                             transition={{ delay: 0.8 }}
                                             className="text-text/50 text-sm mt-2"
                                         >
-                                            {cafeName} menu has been updated
+                                            {underReview
+                                                ? `${queuedCount} ${queuedCount === 1 ? "item" : "items"} from this scan are under review. Nothing has been added to ${cafeName ?? "this cafe"}'s menu — an admin will review them before they appear.`
+                                                : `${cafeName} menu has been updated`}
                                         </motion.p>
                                     </motion.div>
 
@@ -940,7 +1041,7 @@ export default function MenuOcrScanModal({
                                         transition={{ delay: 0.9 }}
                                         className="flex gap-3"
                                     >
-                                        {cafeSlug && (
+                                        {!underReview && cafeSlug && (
                                             <Link
                                                 href={`/cafes/${cafeSlug}/menu`}
                                                 onClick={handleClose}
