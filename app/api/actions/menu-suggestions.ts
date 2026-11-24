@@ -1,11 +1,12 @@
 "use server"
 
 import { db } from "@/db"
-import { menuItemSuggestions, cafeMenuItems, cafes } from "@/db/schema/tables"
+import { menuItemSuggestions, cafeMenuItems, cafes, profiles } from "@/db/schema/tables"
 import { getCurrentUser } from "@/lib/auth"
 import { eq, and, count, desc } from "drizzle-orm"
 import { revalidateCafePages, revalidateCafeIndex } from "@/utils/cafe-routes"
 import { getStaffRole } from "@/utils/auth/staff-role"
+import { notifyDiscordMenuSuggestion } from "./notify"
 
 export interface MenuItemSuggestionData {
     name: string
@@ -92,6 +93,10 @@ export async function submitMenuItemSuggestion(
                 status: "pending",
             })
             .returning({ id: menuItemSuggestions.id })
+
+        // One message per filed suggestion: this path is the one-at-a-time
+        // counterpart to a scan batch, which reports itself once for the whole scan.
+        await notifySubmittedMenuItemSuggestion(cafeId, user.id, type, data)
 
         revalidateCafeIndex()
         return { success: true, suggestionId: suggestion.id }
@@ -358,6 +363,47 @@ async function canReviewMenuSuggestions(
 ): Promise<boolean> {
     const { isAdmin, isModerator } = await getStaffRole(user)
     return isAdmin || isModerator
+}
+
+/**
+ * Announces a single Menu item suggestion, once.
+ *
+ * Best effort: a webhook that is missing, slow or rejecting is logged and
+ * swallowed, so it can never turn a filed suggestion into a failed one.
+ */
+async function notifySubmittedMenuItemSuggestion(
+    cafeId: string,
+    userId: string,
+    type: "add" | "edit" | "remove",
+    data: MenuItemSuggestionData
+): Promise<void> {
+    try {
+        const [cafe] = await db
+            .select({ name: cafes.name, slug: cafes.slug })
+            .from(cafes)
+            .where(eq(cafes.id, cafeId))
+            .limit(1)
+
+        if (!cafe?.slug) return
+
+        const [profile] = await db
+            .select({ displayName: profiles.displayName, username: profiles.username })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1)
+
+        await notifyDiscordMenuSuggestion(
+            { name: cafe.name, slug: cafe.slug },
+            {
+                type,
+                itemName: data.name ?? null,
+                price: typeof data.price === "number" ? data.price : null,
+            },
+            profile?.displayName || profile?.username || undefined
+        )
+    } catch (error) {
+        console.error("Failed to notify Discord about a menu item suggestion:", error)
+    }
 }
 
 /** A Drizzle transaction handle, named so a signature need not spell it out. */

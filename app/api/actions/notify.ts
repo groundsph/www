@@ -823,3 +823,72 @@ export async function notifyDiscordMenuScanBatch(
         return { success: false, message: 'Error sending notification' }
     }
 }
+
+/**
+ * Notify Discord about a single Menu item suggestion.
+ *
+ * The one-at-a-time path, as opposed to a scan batch: a contribution made by
+ * hand is still a contribution waiting for a reviewer, and it lands in the same
+ * queue. The title carries the queue link so the message is actionable without
+ * scrolling to a field.
+ */
+export async function notifyDiscordMenuSuggestion(
+    cafeInfo: { name: string; slug: string },
+    suggestion: { type: "add" | "edit" | "remove"; itemName?: string | null; price?: number | null },
+    submitterName?: string
+): Promise<NotifyResult> {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn('Discord webhook URL not configured')
+        return { success: false, message: 'Webhook not configured' }
+    }
+
+    try {
+        const cafeUrl = `${notificationSiteUrl()}/cafes/${cafeInfo.slug}`
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.menuScanBatches)
+        const itemName = suggestion.itemName?.trim() || "an item"
+
+        const titles = {
+            add: `🍽 Menu item suggested: ${itemName}`,
+            edit: `✏️ Menu item edit suggested: ${itemName}`,
+            remove: `🗑 Menu item removal suggested: ${itemName}`,
+        } as const
+
+        const colors = { add: 0x22c55e, edit: 0xf59e0b, remove: 0xef4444 } as const
+
+        const fields: Array<{ name: string; value: string; inline: boolean }> = [
+            { name: "Cafe", value: `[${cafeInfo.name}](${cafeUrl})`, inline: true },
+            { name: "Suggested By", value: submitterName || "A visitor", inline: true },
+        ]
+        if (typeof suggestion.price === "number" && Number.isFinite(suggestion.price)) {
+            fields.push({ name: "Price", value: `₱${suggestion.price.toFixed(2)}`, inline: true })
+        }
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: titles[suggestion.type],
+                    url: queueUrl,
+                    color: colors[suggestion.type],
+                    fields,
+                    footer: {
+                        text: "Grounds • Menu Suggestions"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            }),
+        })
+
+        if (!response.ok) {
+            console.error('Discord webhook failed:', response.status)
+            return { success: false, message: 'Failed to notify Discord' }
+        }
+
+        return { success: true, message: 'Menu suggestion notified' }
+    } catch (error) {
+        console.error('Discord notification error:', error)
+        return { success: false, message: 'Error sending notification' }
+    }
+}

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach } from "bun:test"
 import { installMenuSuggestionMocks } from "./support/menu-suggestion-store"
 import type { MenuItemSuggestionData } from "@/app/api/actions/menu-suggestions"
 
@@ -17,6 +17,7 @@ const {
     approveMenuSuggestionBatch,
     rejectMenuSuggestionBatch,
     getPendingMenuItemSuggestions,
+    submitMenuItemSuggestion,
 } = await import("@/app/api/actions/menu-suggestions")
 
 const BATCH = "batch-1"
@@ -340,5 +341,73 @@ describe("getPendingMenuItemSuggestions", () => {
         fake.control.currentUser = { id: "user-1", role: "user" }
 
         expect(await getPendingMenuItemSuggestions()).toEqual([])
+    })
+})
+
+/**
+ * The one-at-a-time path announces itself too.
+ *
+ * A suggestion filed by hand lands in the same queue as a scan batch, and it is
+ * still a contribution waiting for somebody. It reports once per suggestion,
+ * with the item, so the message is actionable on its own.
+ */
+describe("submitMenuItemSuggestion — notification", () => {
+    const originalFetch = globalThis.fetch
+    let fetchCalls: Array<{ url: string; body: string }> = []
+
+    beforeEach(() => {
+        fetchCalls = []
+        globalThis.fetch = (async (url: string, init: RequestInit) => {
+            fetchCalls.push({ url, body: init.body as string })
+            return new Response(null, { status: 204 })
+        }) as unknown as typeof fetch
+        process.env.DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/test"
+        process.env.NEXT_PUBLIC_SITE_URL = "https://grounds.ph"
+        fake.control.currentUser = { id: "user-1", role: "user" }
+    })
+
+    afterEach(() => {
+        globalThis.fetch = originalFetch
+        delete process.env.DISCORD_WEBHOOK_URL
+        delete process.env.NEXT_PUBLIC_SITE_URL
+    })
+
+    it("sends one message naming the item, linking to the Menu queue", async () => {
+        const result = await submitMenuItemSuggestion(CAFE, "add", {
+            name: "Flat White",
+            category: "Drinks",
+            price: 150,
+        })
+
+        expect(result.success).toBe(true)
+        expect(fetchCalls).toHaveLength(1)
+
+        const embed = JSON.parse(fetchCalls[0].body).embeds[0]
+        expect(embed.title).toContain("Flat White")
+        expect(embed.url).toBe("https://grounds.ph/manage/cafes?tab=menu-suggestions")
+    })
+
+    it("stays a filed suggestion when the webhook rejects", async () => {
+        globalThis.fetch = (async () => new Response(null, { status: 500 })) as unknown as typeof fetch
+
+        const result = await submitMenuItemSuggestion(CAFE, "add", {
+            name: "Cortado",
+            category: "Drinks",
+            price: 130,
+        })
+
+        expect(result.success).toBe(true)
+        expect(fake.store.suggestions).toHaveLength(1)
+    })
+
+    it("sends nothing when the suggestion fails to save", async () => {
+        const result = await submitMenuItemSuggestion(CAFE, "add", {
+            name: "",
+            category: "",
+            price: 0,
+        })
+
+        expect(result.success).toBeUndefined()
+        expect(fetchCalls).toHaveLength(0)
     })
 })
