@@ -119,6 +119,17 @@ export default function CommunityManagement({
     isFullAdmin,
 }: CommunityManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("reviews")
+
+    // A reviewer arriving from a notification should land on the queue it is
+    // about, not on the default tab. Read once on mount; the tab strip stays
+    // local state so switching tabs does not rewrite history.
+    useEffect(() => {
+        const requested = new URLSearchParams(window.location.search).get("tab")
+        const tabs: readonly string[] = ["reviews", "events", "team"]
+        if (requested && tabs.includes(requested)) {
+            setActiveTab(requested as TabType)
+        }
+    }, [])
     const [reportedReviews, setReportedReviews] = useState(initialReported)
     const [expandedReview, setExpandedReview] = useState<string | null>(null)
     const [processing, setProcessing] = useState<string | null>(null)

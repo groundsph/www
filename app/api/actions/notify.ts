@@ -1,5 +1,7 @@
 'use server'
 
+import { REVIEW_QUEUES, reviewQueueUrl, notificationSiteUrl } from "@/utils/notifications/review-queues"
+
 interface NotifyResult {
     success: boolean
     message: string
@@ -8,6 +10,8 @@ interface NotifyResult {
 /**
  * Notify Discord about a new cafe submission with a rich embed
  */
+
+
 export async function notifyDiscord(
     name: string,
     location: string,
@@ -20,12 +24,15 @@ export async function notifyDiscord(
     }
 
     try {
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.cafeSubmissions)
+
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 embeds: [{
                     title: "☕ New Cafe Submission",
+                    url: queueUrl,
                     description: "A new cafe has been submitted for review!",
                     color: 0x7c3aed, // Purple brand color
                     fields: [
@@ -90,7 +97,9 @@ export async function notifyDiscordReviewReport(
     }
 
     try {
-        const cafeUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.cafe'}/cafes/${cafeInfo.slug}`
+        const cafeUrl = `${notificationSiteUrl()}/cafes/${cafeInfo.slug}`
+
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.reviewReports)
 
         const response = await fetch(webhookUrl, {
             method: 'POST',
@@ -98,6 +107,7 @@ export async function notifyDiscordReviewReport(
             body: JSON.stringify({
                 embeds: [{
                     title: "🚩 Review Reported",
+                    url: queueUrl,
                     description: "A review has been flagged for moderation.",
                     color: 0xef4444, // Red warning color
                     fields: [
@@ -161,7 +171,9 @@ export async function notifyDiscordEditSuggestion(
     }
 
     try {
-        const cafeUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.cafe'}/cafes/${cafeInfo.slug}`
+        const cafeUrl = `${notificationSiteUrl()}/cafes/${cafeInfo.slug}`
+
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.cafeEditSuggestions)
 
         const response = await fetch(webhookUrl, {
             method: 'POST',
@@ -169,6 +181,7 @@ export async function notifyDiscordEditSuggestion(
             body: JSON.stringify({
                 embeds: [{
                     title: "✏️ New Edit Suggestion",
+                    url: queueUrl,
                     description: "A user has suggested edits for a cafe.",
                     color: 0xf59e0b, // Amber color
                     fields: [
@@ -242,12 +255,15 @@ export async function notifyDiscordCafeClaim(
             ? proofSummary.substring(0, 200) + '...'
             : proofSummary
 
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.cafeClaims)
+
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 embeds: [{
                     title: "🏪 New Cafe Claim Request",
+                    url: queueUrl,
                     description: "A user is claiming ownership of a cafe.",
                     color: 0x8b5cf6, // Purple color
                     fields: [
@@ -336,10 +352,12 @@ export async function notifyDiscordBlogSubmission(
     try {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'
         const blogUrl = `${siteUrl}/blog/${blogInfo.slug}`
-        const adminUrl = `${siteUrl}/manage/content`
+        const adminUrl = reviewQueueUrl(REVIEW_QUEUES.blogSubmissions)
         const displayTitle = blogInfo.title.length > 100
             ? blogInfo.title.slice(0, 100) + '...'
             : blogInfo.title
+
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.blogSubmissions)
 
         const response = await fetch(webhookUrl, {
             method: 'POST',
@@ -347,6 +365,7 @@ export async function notifyDiscordBlogSubmission(
             body: JSON.stringify({
                 embeds: [{
                     title: "📝 New Blog Submission",
+                    url: queueUrl,
                     description: "A blog post has been submitted for approval.",
                     color: 0xf59e0b, // Amber color — awaiting moderation
                     fields: [
@@ -490,7 +509,9 @@ export async function notifyDiscordBlogReport(
 
     try {
         const blogUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/blog/${blogInfo.slug}`
-        const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/manage/content`
+        const adminUrl = reviewQueueUrl(REVIEW_QUEUES.blogReports)
+
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.blogReports)
 
         const response = await fetch(webhookUrl, {
             method: 'POST',
@@ -498,6 +519,7 @@ export async function notifyDiscordBlogReport(
             body: JSON.stringify({
                 embeds: [{
                     title: "🚩 Blog Post Reported",
+                    url: queueUrl,
                     description: "A blog post has been flagged for moderation.",
                     color: 0xef4444, // Red warning color
                     fields: [
@@ -565,7 +587,7 @@ export async function notifyDiscordEventSubmission(
     }
 
     try {
-        const adminUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'}/manage/community`
+        const adminUrl = reviewQueueUrl(REVIEW_QUEUES.eventSubmissions)
 
         const formattedDate = new Date(eventInfo.startDate).toLocaleDateString('en-PH', {
             weekday: 'long',
@@ -574,12 +596,15 @@ export async function notifyDiscordEventSubmission(
             day: 'numeric',
         })
 
+        const queueUrl = reviewQueueUrl(REVIEW_QUEUES.eventSubmissions)
+
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 embeds: [{
                     title: "📅 New Event Submission",
+                    url: queueUrl,
                     description: "A community event has been submitted for review.",
                     color: 0xf59e0b, // Orange/amber color for events
                     fields: [
@@ -721,5 +746,80 @@ export async function notifyDiscordCritical(
         })
     } catch (error) {
         console.error("[Critical] Failed to send Discord notification:", error)
+    }
+}
+/**
+ * Notify Discord that a Menu scan has been queued for review.
+ *
+ * Sent once per scan, not once per item: a forty-item scan is one decision in
+ * the queue, so it is one message. The link goes straight to the Menu tab of
+ * Cafes Management, because the queue is otherwise three clicks deep behind a
+ * tab strip and a reviewer who is told "something needs review" should not have
+ * to go looking for it.
+ */
+export async function notifyDiscordMenuScanBatch(
+    cafeInfo: { name: string; slug: string },
+    itemCount: number,
+    submitterName?: string
+): Promise<NotifyResult> {
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+    if (!webhookUrl) {
+        console.warn('Discord webhook URL not configured')
+        return { success: false, message: 'Webhook not configured' }
+    }
+
+    try {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://grounds.ph'
+        const cafeUrl = `${siteUrl}/cafes/${cafeInfo.slug}`
+        const queueUrl = `${siteUrl}/manage/cafes?tab=menu-suggestions`
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: "📷 Menu scan waiting for review",
+                    description: `${itemCount} item${itemCount === 1 ? "" : "s"} read from a photo. One approval covers all of them.`,
+                    url: queueUrl,
+                    color: 0x3b82f6, // Blue
+                    fields: [
+                        {
+                            name: "Cafe",
+                            value: `[${cafeInfo.name}](${cafeUrl})`,
+                            inline: true
+                        },
+                        {
+                            name: "Items",
+                            value: String(itemCount),
+                            inline: true
+                        },
+                        {
+                            name: "Submitted By",
+                            value: submitterName || "A visitor",
+                            inline: true
+                        },
+                        {
+                            name: "Review queue",
+                            value: `[Open the Menu tab](${queueUrl})`,
+                            inline: false
+                        },
+                    ],
+                    footer: {
+                        text: "Grounds • Menu Scan Review"
+                    },
+                    timestamp: new Date().toISOString()
+                }]
+            }),
+        })
+
+        if (!response.ok) {
+            console.error('Discord webhook failed:', response.status)
+            return { success: false, message: 'Failed to notify Discord' }
+        }
+
+        return { success: true, message: 'Menu scan batch notified' }
+    } catch (error) {
+        console.error('Discord notification error:', error)
+        return { success: false, message: 'Error sending notification' }
     }
 }

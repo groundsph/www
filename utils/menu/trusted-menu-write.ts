@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth"
+import { getStaffRole } from "@/utils/auth/staff-role"
 import { isCafeOwner } from "@/utils/owner/cafe-ownership"
 
 /**
@@ -16,7 +17,10 @@ export async function canWriteMenuDirectly(cafeId: string): Promise<boolean> {
     const user = await getCurrentUser()
     if (!user) return false
 
-    if (user.role === "admin") return true
+    // An admin is staff by either role source: `profiles.role` is what the app's
+    // admin surfaces read, and it is the one most real staff accounts carry.
+    const { isAdmin } = await getStaffRole(user)
+    if (isAdmin) return true
 
     return isCafeOwner(cafeId, user.id)
 }

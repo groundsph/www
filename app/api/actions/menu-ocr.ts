@@ -2,10 +2,11 @@
 
 import { getCurrentUser } from "@/lib/auth"
 import { db } from "@/db"
-import { cafeMenuItems, cafes, menuItemSuggestions } from "@/db/schema/tables"
+import { cafeMenuItems, cafes, menuItemSuggestions, profiles } from "@/db/schema/tables"
 import { desc, eq } from "drizzle-orm"
 import { revalidateCafePages } from "@/utils/cafe-routes"
 import { canWriteMenuDirectly } from "@/utils/menu/trusted-menu-write"
+import { notifyDiscordMenuScanBatch } from "./notify"
 import { recalculatePriceLevel } from "./price-level"
 import { extractMenuItemsFromImage } from "@/utils/ai/menu-ocr"
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
@@ -178,6 +179,36 @@ export interface SaveOcrMenuResult {
  * Menu scan batch: every extracted item is an ordinary Menu suggestion, and all
  * of them share a freshly assigned batch id.
  */
+/**
+ * Tells Discord a scan is waiting, with the Cafe's name and a link to the queue.
+ * Best effort by design: failures are logged and swallowed.
+ */
+async function notifyQueuedMenuScan(cafeId: string, userId: string, itemCount: number): Promise<void> {
+    try {
+        const [cafe] = await db
+            .select({ name: cafes.name, slug: cafes.slug })
+            .from(cafes)
+            .where(eq(cafes.id, cafeId))
+            .limit(1)
+
+        if (!cafe?.slug) return
+
+        const [profile] = await db
+            .select({ displayName: profiles.displayName, username: profiles.username })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1)
+
+        await notifyDiscordMenuScanBatch(
+            { name: cafe.name, slug: cafe.slug },
+            itemCount,
+            profile?.displayName || profile?.username || undefined
+        )
+    } catch (error) {
+        console.error("Failed to notify Discord about a queued menu scan:", error)
+    }
+}
+
 async function queueMenuScanForReview(
     cafeId: string,
     userId: string,
@@ -218,6 +249,11 @@ async function queueMenuScanForReview(
             error: error instanceof Error ? error.message : "Failed to submit scanned menu items",
         }
     }
+
+    // Once per scan, not once per item: a forty-item scan is one decision in the
+    // queue. A webhook that is missing, slow or rejecting is logged and swallowed
+    // by the reporter, so it can never turn a queued scan into a failed one.
+    await notifyQueuedMenuScan(cafeId, userId, items.length)
 
     return { success: true, underReview: true, queued: items.length, batchId }
 }

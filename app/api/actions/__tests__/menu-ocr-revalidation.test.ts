@@ -63,9 +63,15 @@ const scannedItems: OcrMenuItem[] = [
 describe("saveOcrMenuItems revalidation", () => {
     beforeEach(() => {
         mockCafeLookupResult = { slug: "kape-lolo" }
-        // The save path asks who owns the Cafe before it writes anything, then
-        // reads the highest sort order, then the prices for the price level.
-        mockSelectResults = [[{ ownerIds: ["user-1"] }], [{ sortOrder: 4 }], [{ price: 120 }]]
+        // The save path asks whether the caller is staff before it writes
+        // anything, then whether they own the Cafe, then reads the highest sort
+        // order, then the prices for the price level.
+        mockSelectResults = [
+            [{ role: "user" }],
+            [{ ownerIds: ["user-1"] }],
+            [{ sortOrder: 4 }],
+            [{ price: 120 }],
+        ]
         mockRevalidatedPaths.length = 0
         mockInsertedItems.length = 0
     })

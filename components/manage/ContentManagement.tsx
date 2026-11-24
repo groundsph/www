@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
     FileText,
     Calendar,
@@ -49,6 +49,17 @@ export default function ContentManagement({
     currentUserId,
 }: ContentManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("blog")
+
+    // A reviewer arriving from a notification should land on the queue it is
+    // about, not on the default tab. Read once on mount; the tab strip stays
+    // local state so switching tabs does not rewrite history.
+    useEffect(() => {
+        const requested = new URLSearchParams(window.location.search).get("tab")
+        const tabs: readonly string[] = ["blog", "events", "reports"]
+        if (requested && tabs.includes(requested)) {
+            setActiveTab(requested as TabType)
+        }
+    }, [])
     const [blogPosts, setBlogPosts] = useState(initialBlogPosts)
     const [events] = useState(initialEvents)
     const [statusFilter, setStatusFilter] = useState<BlogStatus | "all">("all")

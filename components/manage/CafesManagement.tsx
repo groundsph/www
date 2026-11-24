@@ -125,6 +125,20 @@ export default function CafesManagement({
 }: CafesManagementProps) {
     const [activeTab, setActiveTab] = useState<TabType>("pending")
 
+    // A reviewer arriving from a notification should land on the queue the
+    // notification is about, not on the default tab. Read once on mount: the tab
+    // strip itself stays local state so switching tabs does not rewrite history.
+    useEffect(() => {
+        const requested = new URLSearchParams(window.location.search).get("tab")
+        const tabs: readonly string[] = [
+            "pending", "published", "suggestions", "claims",
+            "featured", "mall-verifications", "menu-suggestions",
+        ]
+        if (requested && tabs.includes(requested)) {
+            setActiveTab(requested as TabType)
+        }
+    }, [])
+
     // Cafe pagination state
     const [pendingCafes, setPendingCafes] = useState(initialPendingCafes)
     const [publishedCafes, setPublishedCafes] = useState(initialPublishedCafes)

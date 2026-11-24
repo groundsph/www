@@ -5,6 +5,7 @@ import { menuItemSuggestions, cafeMenuItems, cafes } from "@/db/schema/tables"
 import { getCurrentUser } from "@/lib/auth"
 import { eq, and, count, desc } from "drizzle-orm"
 import { revalidateCafePages, revalidateCafeIndex } from "@/utils/cafe-routes"
+import { getStaffRole } from "@/utils/auth/staff-role"
 
 export interface MenuItemSuggestionData {
     name: string
@@ -176,7 +177,7 @@ export async function getPendingMenuItemSuggestions(): Promise<
     PendingMenuItemSuggestion[]
 > {
     const user = await getCurrentUser()
-    if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+    if (!user || !(await canReviewMenuSuggestions(user))) {
         return []
     }
 
@@ -213,7 +214,7 @@ export async function getPendingMenuItemSuggestionsCount(cafeId: string) {
 
 export async function approveMenuItemSuggestion(suggestionId: string) {
     const user = await getCurrentUser()
-    if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+    if (!user || !(await canReviewMenuSuggestions(user))) {
         return { error: "Unauthorized" }
     }
 
@@ -286,7 +287,7 @@ export async function approveMenuItemSuggestion(suggestionId: string) {
 
 export async function rejectMenuItemSuggestion(suggestionId: string, adminNotes?: string) {
     const user = await getCurrentUser()
-    if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+    if (!user || !(await canReviewMenuSuggestions(user))) {
         return { error: "Unauthorized" }
     }
 
@@ -352,8 +353,11 @@ export interface MenuSuggestionBatchResult {
  * Moderation is a different permission from writing a Menu: the batch review
  * keeps the queue's existing admin-or-moderator gate.
  */
-function canReviewMenuSuggestions(user: { role?: string | null } | null): boolean {
-    return !!user && (user.role === "admin" || user.role === "moderator")
+async function canReviewMenuSuggestions(
+    user: { id: string; role?: string | null } | null
+): Promise<boolean> {
+    const { isAdmin, isModerator } = await getStaffRole(user)
+    return isAdmin || isModerator
 }
 
 /** A Drizzle transaction handle, named so a signature need not spell it out. */
@@ -397,7 +401,7 @@ export async function approveMenuSuggestionBatch(
     batchId: string
 ): Promise<MenuSuggestionBatchResult> {
     const user = await getCurrentUser()
-    if (!user || !canReviewMenuSuggestions(user)) {
+    if (!user || !(await canReviewMenuSuggestions(user))) {
         return { success: false, error: "Unauthorized" }
     }
     if (!batchId) return { success: false, error: "Batch id is required" }
@@ -482,7 +486,7 @@ export async function rejectMenuSuggestionBatch(
     adminNotes?: string
 ): Promise<MenuSuggestionBatchResult> {
     const user = await getCurrentUser()
-    if (!user || !canReviewMenuSuggestions(user)) {
+    if (!user || !(await canReviewMenuSuggestions(user))) {
         return { success: false, error: "Unauthorized" }
     }
     if (!batchId) return { success: false, error: "Batch id is required" }
