@@ -69,3 +69,67 @@ export function describeMenuScanFileProblem(file: MenuScanFileLike): string | nu
     }
     return null
 }
+
+/**
+ * How many pages one scan may send.
+ *
+ * A menu is often several pages, and the reason to scan them together is that
+ * the visitor thinks of it as one action. The cap keeps one selection from
+ * turning into an unbounded number of model calls.
+ */
+export const MENU_SCAN_MAX_PAGES = 10
+
+/** "Up to 10 pages at once", printed next to the tile's other limits. */
+export const MENU_SCAN_MULTI_PAGE_COPY = `Up to ${MENU_SCAN_MAX_PAGES} pages at once`
+
+export const MENU_SCAN_TOO_MANY_PAGES_MESSAGE = `Only the first ${MENU_SCAN_MAX_PAGES} pages are scanned at once.`
+
+export interface MenuScanRejectedFile {
+    name: string
+    reason: string
+}
+
+export interface MenuScanSelection<T> {
+    /** Files to scan, in the order they were chosen. */
+    accepted: T[]
+    /** Files that will not be scanned, each with the reason to show. */
+    rejected: MenuScanRejectedFile[]
+}
+
+/**
+ * Splits a multi-file selection into what will be scanned and what will not.
+ *
+ * A bad file in a five-page selection must not discard the other four, so this
+ * reports per file rather than rejecting the selection wholesale.
+ */
+export function partitionMenuScanFiles<T extends MenuScanFileLike & { name?: string }>(
+    files: readonly T[],
+    maxPages: number = MENU_SCAN_MAX_PAGES
+): MenuScanSelection<T> {
+    const accepted: T[] = []
+    const rejected: MenuScanRejectedFile[] = []
+
+    for (const file of files) {
+        const name = file.name || "That file"
+        const problem = describeMenuScanFileProblem(file)
+        if (problem) {
+            rejected.push({ name, reason: problem })
+            continue
+        }
+        if (accepted.length >= maxPages) {
+            rejected.push({ name, reason: MENU_SCAN_TOO_MANY_PAGES_MESSAGE })
+            continue
+        }
+        accepted.push(file)
+    }
+
+    return { accepted, rejected }
+}
+
+/**
+ * Collapses case and whitespace so "Iced  Latte" and "iced latte" are one item.
+ * Used to merge the pages of a multi-page scan into a single review list.
+ */
+export function menuScanItemKey(name: string): string {
+    return name.trim().toLowerCase().replace(/\s+/g, " ")
+}

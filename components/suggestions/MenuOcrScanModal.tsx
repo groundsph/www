@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import Image from "next/image"
 import { motion, AnimatePresence } from "motion/react"
 import { X as XIcon, Camera, ImageUp, Loader2, Check, Clock, Trash2, ScanLine, AlertCircle, ChevronDown, Plus } from "lucide-react"
@@ -13,7 +14,11 @@ import {
     MENU_SCAN_COMPRESSION_MAX_LONG_EDGE_PX,
     MENU_SCAN_COMPRESSION_TARGET_MB,
     MENU_SCAN_LIMITS_COPY,
+    MENU_SCAN_MULTI_PAGE_COPY,
     describeMenuScanFileProblem,
+    menuScanItemKey,
+    partitionMenuScanFiles,
+    type MenuScanRejectedFile,
 } from "@/utils/validation/menu-scan"
 import { cn } from "@/utils/cn"
 import type { OcrMenuItem } from "@/utils/ai/menu-ocr"
@@ -156,6 +161,12 @@ export default function MenuOcrScanModal({
     const [streamedItemCount, setStreamedItemCount] = useState(0)
     const [statusMessage, setStatusMessage] = useState("Preparing...")
     const [streamedContent, setStreamedContent] = useState("")
+    /** Which page of a multi-page scan is in flight, so the visitor can see progress. */
+    const [pageProgress, setPageProgress] = useState<{ current: number; total: number } | null>(null)
+    /** Files that will not be scanned, each with the reason to show. */
+    const [rejectedFiles, setRejectedFiles] = useState<MenuScanRejectedFile[]>([])
+    /** Ids must stay unique across pages, so they come from one counter, not a per-page index. */
+    const nextItemIdRef = useRef(1)
     const streamedContentRef = useRef("")
     const fileInputRef = useRef<HTMLInputElement>(null)
     const shouldResetRef = useRef(false)
@@ -207,6 +218,9 @@ export default function MenuOcrScanModal({
         setStreamedItemCount(0)
         setStatusMessage("Preparing...")
         setStreamedContent("")
+        setRejectedFiles([])
+        setPageProgress(null)
+        nextItemIdRef.current = 1
         streamedContentRef.current = ""
     }, [setPreview])
 
@@ -229,102 +243,198 @@ export default function MenuOcrScanModal({
         onClose()
     }, [resetState, onClose])
 
-    const handleImageSelect = async (file: File) => {
-        try {
-            setError(null)
-            const compressed = await imageCompression(file, {
-                maxSizeMB: MENU_SCAN_COMPRESSION_TARGET_MB,
-                maxWidthOrHeight: MENU_SCAN_COMPRESSION_MAX_LONG_EDGE_PX,
-                useWebWorker: true,
-            })
+    /**
+     * Compresses, streams and transcribes one page. Resolves with that page's
+     * items, or rejects with a message fit to show a visitor. Every side effect
+     * the visitor can see — preview, status, streamed text — happens here, so a
+     * multi-page scan can call this once per page and still look like one scan.
+     */
+    const scanOnePage = useCallback((file: File): Promise<{ deduplicated: OcrMenuItem[]; duplicates: string[] }> => {
+        return new Promise((resolve, reject) => {
+            void (async () => {
+                try {
+                    const compressed = await imageCompression(file, {
+                        maxSizeMB: MENU_SCAN_COMPRESSION_TARGET_MB,
+                        maxWidthOrHeight: MENU_SCAN_COMPRESSION_MAX_LONG_EDGE_PX,
+                        useWebWorker: true,
+                    })
 
-            const base64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader()
-                reader.onload = () => {
-                    const result = reader.result as string
-                    const base64Data = result.split(",")[1]
-                    if (base64Data) {
-                        resolve(base64Data)
+                    const base64 = await new Promise<string>((res, rej) => {
+                        const reader = new FileReader()
+                        reader.onload = () => {
+                            const result = reader.result as string
+                            const base64Data = result.split(",")[1]
+                            if (base64Data) {
+                                res(base64Data)
+                            } else {
+                                rej(new Error("Failed to convert to base64"))
+                            }
+                        }
+                        reader.onerror = rej
+                        reader.readAsDataURL(compressed)
+                    })
+
+                    // Replaces any previous page's preview, which setPreview revokes.
+                    setPreview(URL.createObjectURL(compressed))
+                    setStreamedContent("")
+                    streamedContentRef.current = ""
+                    setStreamedItemCount(0)
+
+                    abortControllerRef.current = new AbortController()
+
+                    let outcome: { deduplicated: OcrMenuItem[]; duplicates: string[] } | null = null
+                    let failure: string | null = null
+
+                    await streamOcrScan(cafeId, base64, compressed.type, {
+                        onStatus: (message) => setStatusMessage(message),
+                        onContent: (token) => {
+                            streamedContentRef.current += token
+                            setStreamedContent(streamedContentRef.current)
+                            resetPhaseTimer()
+                        },
+                        onPhaseChange: (newPhase: OcrPhase) => {
+                            setOcrPhase(newPhase)
+                            resetPhaseTimer()
+                        },
+                        onItemCount: (count: number) => setStreamedItemCount(count),
+                        onComplete: (data) => {
+                            outcome = {
+                                deduplicated: data.deduplicated ?? [],
+                                duplicates: data.duplicates ?? [],
+                            }
+                        },
+                        onError: (errorMsg) => {
+                            failure = errorMsg
+                        },
+                    }, abortControllerRef.current.signal)
+
+                    abortControllerRef.current = null
+
+                    if (failure) {
+                        reject(new Error(failure))
+                    } else if (!outcome) {
+                        reject(new Error("That page finished without a result."))
                     } else {
-                        reject(new Error("Failed to convert to base64"))
+                        resolve(outcome)
                     }
+                } catch (e) {
+                    abortControllerRef.current = null
+                    reject(e instanceof Error ? e : new Error("Failed to process image"))
                 }
-                reader.onerror = reject
-                reader.readAsDataURL(compressed)
-            })
+            })()
+        })
+    }, [cafeId, setPreview, setOcrPhase, resetPhaseTimer])
 
-            setPreview(URL.createObjectURL(compressed))
-            setStep("scanning")
-            startTimer()
-            setError(null)
-            setStreamedContent("")
-            streamedContentRef.current = ""
-            setStatusMessage("Uploading image...")
+    const toEditableItems = useCallback((items: OcrMenuItem[]): EditableItem[] => {
+        return items.map((item) => {
+            const id = nextItemIdRef.current++
+            return {
+                id,
+                name: item.name,
+                category: MENU_CATEGORIES.includes(item.category as typeof MENU_CATEGORIES[number])
+                    ? item.category
+                    : "Other",
+                price: typeof item.price === "string" ? parseFloat(item.price) : item.price,
+                description: item.description ?? "",
+                isFood: item.is_food ?? false,
+                isHot: item.is_hot ?? false,
+                isCold: item.is_cold ?? false,
+                isVegan: item.is_vegan ?? false,
+                isVegetarian: item.is_vegetarian ?? false,
+                calories: item.calories != null ? String(item.calories) : "",
+                sizeOptions: [],
+                isExpanded: !!(item.is_food || item.is_hot || item.is_cold || item.is_vegan || item.is_vegetarian || item.description || item.calories),
+            }
+        })
+    }, [])
 
-            abortControllerRef.current = new AbortController()
+    /**
+     * Scans every chosen page, in order, and merges them into one review list.
+     *
+     * One page failing does not throw away the pages that worked: the visitor
+     * still lands on review with what was read, and is told which pages were
+     * skipped and why. Only a selection where nothing at all could be read goes
+     * back to the upload step.
+     */
+    const handleScanPages = useCallback(async (files: File[], refusedBeforeScan: MenuScanRejectedFile[] = []) => {
+        setError(null)
+        setRejectedFiles([])
+        setDuplicates([])
+        setExtractedItems([])
+        setStep("scanning")
+        startTimer()
+        setStatusMessage(files.length > 1 ? `Scanning page 1 of ${files.length}...` : "Uploading image...")
+        setPageProgress(files.length > 1 ? { current: 1, total: files.length } : null)
 
-            await streamOcrScan(cafeId, base64, compressed.type, {
-                onStatus: (message) => {
-                    setStatusMessage(message)
-                },
-                onContent: (token) => {
-                    streamedContentRef.current += token
-                    setStreamedContent(streamedContentRef.current)
-                    resetPhaseTimer()
-                },
-                onPhaseChange: (newPhase: OcrPhase) => {
-                    setOcrPhase(newPhase)
-                    resetPhaseTimer()
-                },
-                onItemCount: (count: number) => {
-                    setStreamedItemCount(count)
-                },
-                onComplete: (data) => {
-                    stopTimer()
-                    abortControllerRef.current = null
-                    const editableItems: EditableItem[] = (data.deduplicated ?? []).map(
-                        (item, index) => ({
-                            id: index,
-                            name: item.name,
-                            category: MENU_CATEGORIES.includes(item.category as typeof MENU_CATEGORIES[number])
-                                ? item.category
-                                : "Other",
-                            price: typeof item.price === "string" ? parseFloat(item.price) : item.price,
-                            description: item.description ?? "",
-                            isFood: item.is_food ?? false,
-                            isHot: item.is_hot ?? false,
-                            isCold: item.is_cold ?? false,
-                            isVegan: item.is_vegan ?? false,
-                            isVegetarian: item.is_vegetarian ?? false,
-                            calories: item.calories != null ? String(item.calories) : "",
-                            sizeOptions: [],
-                            isExpanded: !!(item.is_food || item.is_hot || item.is_cold || item.is_vegan || item.is_vegetarian || item.description || item.calories),
-                        })
-                    )
-                    setExtractedItems(editableItems)
-                    setDuplicates(data.duplicates ?? [])
-                    const emptyMessage = describeEmptyOcrResult(data.items.length)
-                    if (emptyMessage) {
-                        setError(emptyMessage)
-                    }
-                    setTimeout(() => setStep("review"), 300)
-                },
-                onError: (errorMsg) => {
-                    stopTimer()
-                    abortControllerRef.current = null
-                    setPreview(null)
-                    setError(errorMsg)
-                    setStep("upload")
-                },
-            }, abortControllerRef.current.signal)
-        } catch (e) {
-            stopTimer()
-            abortControllerRef.current = null
-            setPreview(null)
-            setError(e instanceof Error ? e.message : "Failed to process image")
-            setStep("upload")
+        const collected: OcrMenuItem[] = []
+        const duplicateNames: string[] = []
+        // Files refused before any work happened (wrong format, too large, over
+        // the page cap) are reported next to the pages that failed to read.
+        const skipped: MenuScanRejectedFile[] = [...refusedBeforeScan]
+
+        for (let i = 0; i < files.length; i++) {
+            if (files.length > 1) {
+                setPageProgress({ current: i + 1, total: files.length })
+                setStatusMessage(`Scanning page ${i + 1} of ${files.length}...`)
+            }
+            try {
+                const page = await scanOnePage(files[i])
+                collected.push(...page.deduplicated)
+                duplicateNames.push(...page.duplicates)
+            } catch (e) {
+                skipped.push({
+                    name: files[i].name,
+                    reason: e instanceof Error ? e.message : "That page could not be scanned.",
+                })
+            }
         }
-    }
+
+        stopTimer()
+        setPageProgress(null)
+
+        if (collected.length === 0) {
+            setPreview(null)
+            // A page can read perfectly and still add nothing, because the route
+            // drops lines the Cafe already has. Saying "nothing found" there would
+            // send the visitor looking for a scanning problem that is not there.
+            const onlyRepeats = duplicateNames.length > 0
+            setError(
+                skipped.length > 0
+                    ? skipped[0].reason
+                    : onlyRepeats
+                        ? "Those pages only repeat items already on this menu."
+                        : "No menu items were found in the pages you chose."
+            )
+            setRejectedFiles(skipped)
+            setStep("upload")
+            return
+        }
+
+        // A menu can repeat a line on two pages (a price list and an insert),
+        // so pages are merged on the item's name and the repeats are reported.
+        const seen = new Set<string>()
+        const merged: OcrMenuItem[] = []
+        const crossPageDuplicates: string[] = []
+        for (const item of collected) {
+            const key = menuScanItemKey(item.name)
+            if (seen.has(key)) {
+                crossPageDuplicates.push(item.name)
+                continue
+            }
+            seen.add(key)
+            merged.push(item)
+        }
+
+        setExtractedItems(toEditableItems(merged))
+        setDuplicates([...new Set([...duplicateNames, ...crossPageDuplicates])])
+        setRejectedFiles(skipped)
+
+        const emptyMessage = describeEmptyOcrResult(merged.length)
+        if (emptyMessage) {
+            setError(emptyMessage)
+        }
+        setTimeout(() => setStep("review"), 300)
+    }, [scanOnePage, toEditableItems, startTimer, stopTimer, setPreview])
 
     /**
      * Both targets feed this one handler, so which way a photo was chosen
@@ -332,24 +442,26 @@ export default function MenuOcrScanModal({
      */
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const input = e.target
-        const file = input.files?.[0]
+        const files = Array.from(input.files ?? [])
 
         // Cleared on every outcome. A file input does not fire `change` twice for
         // the same file, so without this an iOS retry with the same photo is a
-        // silent no-op. The File object is already captured, so resetting is safe.
+        // silent no-op. The File objects are already captured, so resetting is safe.
         input.value = ""
 
-        if (!file) return
+        if (files.length === 0) return
 
         // Before compression: a refused photo never costs the visitor a wait.
-        const problem = describeMenuScanFileProblem(file)
-        if (problem) {
-            setError(problem)
+        const { accepted, rejected } = partitionMenuScanFiles(files)
+
+        if (accepted.length === 0) {
+            setError(rejected[0]?.reason ?? "Those files cannot be scanned.")
+            setRejectedFiles(rejected)
             setStep("upload")
             return
         }
 
-        void handleImageSelect(file)
+        void handleScanPages(accepted, rejected)
     }
 
     const handleRemoveItem = (id: number) => {
@@ -427,7 +539,18 @@ export default function MenuOcrScanModal({
         }
     }
 
-    return (
+    // Portalled to <body>. The affordance that opens this modal lives inside
+    // containers that establish a containing block for fixed-position
+    // descendants — the menu page's action row sits in a `sticky` header with
+    // `backdrop-blur`, and `backdrop-filter` makes an element the containing
+    // block for its fixed children. Rendered inline, `inset-4` resolved against
+    // that 61px header instead of the viewport: the panel collapsed to a 28px
+    // strip, painted under the page, and its buttons received no taps because
+    // the page underneath won the hit test. Portalling puts the fixed
+    // positioning and the z-index back on the viewport, whatever the call site.
+    if (typeof document === "undefined") return null
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -533,6 +656,7 @@ export default function MenuOcrScanModal({
                                                     type="file"
                                                     accept={MENU_SCAN_ACCEPT_ATTRIBUTE}
                                                     capture="environment"
+                                                    multiple
                                                     onChange={handleFileInputChange}
                                                     className="hidden"
                                                 />
@@ -555,6 +679,7 @@ export default function MenuOcrScanModal({
                                                 <input
                                                     type="file"
                                                     accept={MENU_SCAN_ACCEPT_ATTRIBUTE}
+                                                    multiple
                                                     onChange={handleFileInputChange}
                                                     className="hidden"
                                                 />
@@ -562,6 +687,8 @@ export default function MenuOcrScanModal({
                                         </div>
                                         <p className="text-center text-text/40 text-xs">
                                             {MENU_SCAN_LIMITS_COPY}
+                                            <span className="mx-1 text-text/20">·</span>
+                                            {MENU_SCAN_MULTI_PAGE_COPY}
                                         </p>
                                     </div>
                                 </motion.div>
@@ -617,6 +744,12 @@ export default function MenuOcrScanModal({
                                                 </motion.span>
                                             </AnimatePresence>
                                         </div>
+
+                                        {pageProgress && pageProgress.total > 1 && (
+                                            <p className="text-center text-xs text-text/40">
+                                                Page {pageProgress.current} of {pageProgress.total}
+                                            </p>
+                                        )}
 
                                         {streamedContent && (
                                             <motion.div
@@ -721,6 +854,41 @@ export default function MenuOcrScanModal({
                             {step === "review" && (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                                     <AnimatePresence mode="wait">
+                                        {error && (
+                                            <div className="mb-3 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-sm flex items-start gap-2">
+                                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                                <span className="min-w-0 break-words">{error}</span>
+                                            </div>
+                                        )}
+                                        {rejectedFiles.length > 0 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: "auto" }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl">
+                                                    <div className="text-sm font-medium text-amber-700 flex items-start gap-2">
+                                                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                                        <span className="min-w-0 break-words">
+                                                            {rejectedFiles.length === 1
+                                                                ? "1 page was not scanned"
+                                                                : `${rejectedFiles.length} pages were not scanned`}
+                                                        </span>
+                                                    </div>
+                                                    <ul className="text-xs text-amber-600/80 mt-1 space-y-0.5">
+                                                        {rejectedFiles.slice(0, 3).map((file) => (
+                                                            <li key={file.name} className="break-words">
+                                                                <span className="font-medium">{file.name}</span> — {file.reason}
+                                                            </li>
+                                                        ))}
+                                                        {rejectedFiles.length > 3 && (
+                                                            <li>and {rejectedFiles.length - 3} more</li>
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            </motion.div>
+                                        )}
                                         {duplicates.length > 0 && (
                                             <motion.div
                                                 initial={{ opacity: 0, height: 0 }}
@@ -771,11 +939,11 @@ export default function MenuOcrScanModal({
                                         </motion.div>
                                     ) : (
                                         <>
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-medium text-text/70">
+                                            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                                <p className="text-sm font-medium text-text/70 min-w-0">
                                                     Review {extractedItems.length} extracted item{extractedItems.length === 1 ? "" : "s"}
                                                 </p>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                                                     <button type="button" onClick={handleExpandAll}
                                                         className="text-xs text-text/40 hover:text-text transition-colors cursor-pointer">
                                                         Expand all
@@ -787,7 +955,7 @@ export default function MenuOcrScanModal({
                                                     </button>
                                                 </div>
                                                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                                    className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
+                                                    className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium whitespace-nowrap shrink-0">
                                                     {extractedItems.length} items
                                                 </motion.span>
                                             </div>
@@ -799,14 +967,14 @@ export default function MenuOcrScanModal({
                                                         className="group border border-text/10 rounded-xl overflow-hidden bg-text/[0.02] hover:bg-text/[0.04] transition-colors"
                                                     >
                                                         {/* Compact Row */}
-                                                        <div className="flex items-center gap-2 p-3">
+                                                        <div className="flex flex-wrap items-center gap-2 p-3">
                                                             <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
                                                                 {idx + 1}
                                                             </div>
-                                                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                            <div className="flex-1 min-w-[200px] grid grid-cols-2 sm:grid-cols-3 gap-2">
                                                                 <input type="text" value={item.name}
                                                                     onChange={(e) => handleUpdateItem(item.id, "name", e.target.value)}
-                                                                    className="px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                                                                    className="col-span-2 sm:col-span-1 min-w-0 px-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                                                                     placeholder="Item name" />
                                                                 <select value={item.category}
                                                                     onChange={(e) => handleUpdateItem(item.id, "category", e.target.value)}
@@ -822,26 +990,30 @@ export default function MenuOcrScanModal({
                                                                         className="w-full pl-7 pr-3 py-2 bg-background border border-text/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" />
                                                                 </div>
                                                             </div>
-                                                            {/* Active flags badges */}
-                                                            <div className="flex items-center gap-1 shrink-0">
-                                                                {item.isFood && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">Food</span>}
-                                                                {item.isHot && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full">Hot</span>}
-                                                                {item.isCold && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full">Cold</span>}
+                                                            {/* Active flags + row actions stay together so they
+                                                                wrap as one unit on narrow screens. */}
+                                                            <div className="ml-auto flex items-center gap-1 shrink-0">
+                                                                {item.isFood && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full whitespace-nowrap">Food</span>}
+                                                                {item.isHot && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full whitespace-nowrap">Hot</span>}
+                                                                {item.isCold && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full whitespace-nowrap">Cold</span>}
+                                                                {/* Expand toggle */}
+                                                                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                                                    onClick={() => handleToggleExpand(item.id)}
+                                                                    className="p-2 hover:bg-text/10 rounded-lg transition-colors text-text/40 hover:text-text cursor-pointer">
+                                                                    <motion.div animate={{ rotate: item.isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                                                                        <ChevronDown className="w-4 h-4" />
+                                                                    </motion.div>
+                                                                </motion.button>
+                                                                {/* Delete. Hover-revealed on pointer devices, but a
+                                                                    touch screen has no hover, so it stays visible below
+                                                                    sm or the row could never be removed on a phone. */}
+                                                                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                                                    onClick={() => handleRemoveItem(item.id)}
+                                                                    aria-label={`Remove ${item.name || "item"}`}
+                                                                    className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-text/30 hover:text-destructive cursor-pointer sm:opacity-0 sm:group-hover:opacity-100">
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </motion.button>
                                                             </div>
-                                                            {/* Expand toggle */}
-                                                            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                                                onClick={() => handleToggleExpand(item.id)}
-                                                                className="p-2 hover:bg-text/10 rounded-lg transition-colors text-text/40 hover:text-text cursor-pointer">
-                                                                <motion.div animate={{ rotate: item.isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                                                                    <ChevronDown className="w-4 h-4" />
-                                                                </motion.div>
-                                                            </motion.button>
-                                                            {/* Delete */}
-                                                            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                                                onClick={() => handleRemoveItem(item.id)}
-                                                                className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-text/30 hover:text-destructive cursor-pointer opacity-0 group-hover:opacity-100">
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </motion.button>
                                                         </div>
 
                                                         {/* Expanded Panel */}
@@ -1100,6 +1272,7 @@ export default function MenuOcrScanModal({
                     </motion.div>
                 </>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     )
 }

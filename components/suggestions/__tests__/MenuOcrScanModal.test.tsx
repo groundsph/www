@@ -85,6 +85,13 @@ function spyOnObjectUrls() {
 // chosen file with a FileReader, which jsdom does implement on its window.
 globalThis.FileReader = window.FileReader
 
+// The modal is portalled to <body> so that `position: fixed` resolves against
+// the viewport rather than a transformed/backdrop-filtered ancestor. Assertions
+// therefore read the portal target, not the render container.
+function renderedText() {
+    return document.body.textContent ?? ""
+}
+
 function renderModal() {
     return render(
         <MenuOcrScanModal
@@ -175,7 +182,7 @@ describe("MenuOcrScanModal — choosing a photo", () => {
         expect(device.accept).toBe("image/jpeg,image/png,image/webp")
 
         // The tile's promise, as the visitor reads it.
-        expect(container.textContent).toContain("JPEG, PNG, WebP up to 10 MB")
+        expect(renderedText()).toContain("JPEG, PNG, WebP up to 10 MB")
     })
 
     it("runs the same scan whichever target was used", async () => {
@@ -336,11 +343,11 @@ describe("MenuOcrScanModal — what the success step says", () => {
 
         await waitFor(() => expect(getByText("Done")).toBeTruthy())
 
-        expect(container.textContent).toContain("2 items added!")
-        expect(container.textContent).toContain("Moni Cafe menu has been updated")
-        expect(container.textContent).not.toContain("under review")
+        expect(renderedText()).toContain("2 items added!")
+        expect(renderedText()).toContain("Moni Cafe menu has been updated")
+        expect(renderedText()).not.toContain("under review")
         expect(
-            container.querySelector('a[href="/cafes/moni-cafe/menu"]')
+            document.body.querySelector('a[href="/cafes/moni-cafe/menu"]')
         ).toBeTruthy()
     })
 
@@ -355,13 +362,13 @@ describe("MenuOcrScanModal — what the success step says", () => {
 
         await waitFor(() => expect(getByText("Done")).toBeTruthy())
 
-        expect(container.textContent).toContain("under review")
-        expect(container.textContent).toContain("2 items from this scan are under review")
-        expect(container.textContent).not.toContain("added!")
-        expect(container.textContent).not.toContain("menu has been updated")
+        expect(renderedText()).toContain("under review")
+        expect(renderedText()).toContain("2 items from this scan are under review")
+        expect(renderedText()).not.toContain("added!")
+        expect(renderedText()).not.toContain("menu has been updated")
         // Nothing is on the Menu yet, so there is nothing to go and look at.
         expect(
-            container.querySelector('a[href="/cafes/moni-cafe/menu"]')
+            document.body.querySelector('a[href="/cafes/moni-cafe/menu"]')
         ).toBeNull()
     })
 })
@@ -435,5 +442,178 @@ describe("MenuOcrScanModal — the preview blob", () => {
         expect(urls.revoked.slice().sort()).toEqual(urls.created.slice().sort())
         // Each blob is released once: never leaked, never revoked twice.
         expect(new Set(urls.revoked).size).toBe(urls.revoked.length)
+    })
+})
+
+/**
+ * Multi-page scanning: a menu is often several sheets, and the visitor thinks of
+ * "scan my menu" as one action. What is asserted is that one selection of several
+ * photos is scanned page by page and arrives as one review list.
+ */
+describe("MenuOcrScanModal — several pages in one scan", () => {
+    /** Answers each page with the items it is told to return, in call order. */
+    function streamPages(pages: Array<{ items: string[]; duplicates?: string[] }>) {
+        let call = 0
+        streamScanSpy.mockImplementation(async (_cafeId, _b64, _mime, callbacks) => {
+            const page = pages[Math.min(call, pages.length - 1)]
+            call += 1
+            callbacks.onComplete?.({
+                items: page.items,
+                deduplicated: page.items.map((name) => itemNamed(name)),
+                duplicates: page.duplicates ?? [],
+            })
+        })
+    }
+
+    function itemNamed(name: string) {
+        return {
+            name,
+            category: "Coffee",
+            price: 100,
+            description: null,
+            is_food: false,
+            is_hot: false,
+            is_cold: false,
+            is_vegan: false,
+            is_vegetarian: false,
+            calories: null,
+        }
+    }
+
+    function chooseMany(input: HTMLInputElement, files: File[]) {
+        Object.defineProperty(input, "files", { value: files, configurable: true })
+        fireEvent.change(input)
+    }
+
+    it("scans every chosen page and merges them into one review list", async () => {
+        streamPages([{ items: ["Espresso"] }, { items: ["Cold Brew"] }])
+        const { getByLabelText } = renderModal()
+
+        chooseMany(getByLabelText("Upload from device") as HTMLInputElement, [
+            photoFile("page-1.jpg"),
+            photoFile("page-2.jpg"),
+        ])
+
+        await waitFor(() => expect(renderedText()).toContain("Review 2 extracted items"))
+        expect(streamScanSpy).toHaveBeenCalledTimes(2)
+        expect(renderedText()).toContain("Espresso")
+        expect(renderedText()).toContain("Cold Brew")
+    })
+
+    it("reports a line repeated across pages as a duplicate instead of listing it twice", async () => {
+        streamPages([{ items: ["Espresso", "Latte"] }, { items: ["latte  "] }])
+        const { getByLabelText } = renderModal()
+
+        chooseMany(getByLabelText("Upload from device") as HTMLInputElement, [
+            photoFile("page-1.jpg"),
+            photoFile("page-2.jpg"),
+        ])
+
+        await waitFor(() => expect(renderedText()).toContain("Review 2 extracted items"))
+        expect(renderedText()).toContain("1 duplicate skipped")
+    })
+
+    it("still scans the pages it can when one file in the selection is refused", async () => {
+        streamPages([{ items: ["Espresso"] }])
+        const { getByLabelText } = renderModal()
+
+        const badFile = new window.File(["not a photo"], "menu.heic", { type: "image/heic" })
+        chooseMany(getByLabelText("Upload from device") as HTMLInputElement, [
+            badFile,
+            photoFile("page-1.jpg"),
+        ])
+
+        await waitFor(() => expect(renderedText()).toContain("Review 1 extracted item"))
+        expect(streamScanSpy).toHaveBeenCalledTimes(1)
+        // The reason is surfaced rather than the page vanishing silently.
+        expect(renderedText()).toContain("menu.heic")
+    })
+
+    it("keeps what it read when one page fails, and says which page failed", async () => {
+        let call = 0
+        streamScanSpy.mockImplementation(async (_cafeId, _b64, _mime, callbacks) => {
+            call += 1
+            if (call === 1) {
+                callbacks.onComplete?.({
+                    items: [itemNamed("Espresso")],
+                    deduplicated: [itemNamed("Espresso")],
+                    duplicates: [],
+                })
+            } else {
+                callbacks.onError?.("The AI service is unavailable")
+            }
+        })
+        const { getByLabelText } = renderModal()
+
+        chooseMany(getByLabelText("Upload from device") as HTMLInputElement, [
+            photoFile("page-1.jpg"),
+            photoFile("page-2.jpg"),
+        ])
+
+        await waitFor(() => expect(renderedText()).toContain("Review 1 extracted item"))
+        expect(renderedText()).toContain("page-2.jpg")
+    })
+
+    it("goes back to the upload step when no page could be read", async () => {
+        let call = 0
+        streamScanSpy.mockImplementation(async (_cafeId, _b64, _mime, callbacks) => {
+            call += 1
+            callbacks.onError?.(`page ${call} unreadable`)
+        })
+        const { getByLabelText } = renderModal()
+
+        chooseMany(getByLabelText("Upload from device") as HTMLInputElement, [
+            photoFile("page-1.jpg"),
+            photoFile("page-2.jpg"),
+        ])
+
+        await waitFor(() => expect(renderedText()).toContain("page 1 unreadable"))
+        expect(renderedText()).not.toContain("Review ")
+    })
+})
+
+describe("MenuOcrScanModal — where it renders", () => {
+    it("portals to the end of <body> so `fixed` resolves against the viewport", () => {
+        // Rendered inline, the panel inherits whatever containing block its call
+        // site establishes. The menu page's action row sits in a sticky header
+        // with backdrop-blur, and backdrop-filter makes that header the containing
+        // block for fixed children: the panel collapsed to a 28px strip and its
+        // buttons took no taps. Portalling is what keeps that from coming back.
+        renderModal()
+
+        const panel = [...document.querySelectorAll("div")].find((d) =>
+            String(d.className).includes("fixed inset-4")
+        )
+
+        expect(panel).toBeTruthy()
+        expect(panel?.parentElement).toBe(document.body)
+    })
+})
+
+describe("MenuOcrScanModal — when saving fails", () => {
+    it("shows the reason on the review step instead of appearing to do nothing", async () => {
+        streamScanSpy.mockImplementation(async (_cafeId, _b64, _mime, callbacks) => {
+            const item = {
+                name: "Espresso", category: "Coffee", price: 90, description: null,
+                is_food: false, is_hot: false, is_cold: false,
+                is_vegan: false, is_vegetarian: false, calories: null,
+            }
+            callbacks.onComplete?.({ items: [item], deduplicated: [item], duplicates: [] })
+        })
+        saveItemsSpy.mockImplementation(async () => ({
+            success: false,
+            error: "That cafe no longer exists",
+        }))
+
+        const { getByLabelText } = renderModal()
+        choose(getByLabelText("Upload from device") as HTMLInputElement, photoFile("menu.jpg"))
+
+        await waitFor(() => expect(renderedText()).toContain("Review 1 extracted item"))
+
+        fireEvent.click([...document.querySelectorAll("button")].find((b) => /^Save/.test(b.textContent.trim()))!)
+
+        await waitFor(() => expect(renderedText()).toContain("That cafe no longer exists"))
+        // Still on review, so the visitor can retry rather than losing the scan.
+        expect(renderedText()).toContain("Review 1 extracted item")
     })
 })
