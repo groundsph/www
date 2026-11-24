@@ -438,7 +438,7 @@ export default function CreateCampaignForm({
                 Max Total Redemptions <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
                 <input
                   type="number"
                   min="1"
@@ -463,7 +463,7 @@ export default function CreateCampaignForm({
                 Max Per User
               </label>
               <div className="relative">
-                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
                 <input
                   type="number"
                   min="1"
@@ -484,7 +484,7 @@ export default function CreateCampaignForm({
               Minimum Purchase Amount
             </label>
             <div className="relative">
-              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
               <input
                 type="number"
                 min="0"
@@ -568,7 +568,7 @@ export default function CreateCampaignForm({
           <div>
             <label className="block text-sm font-medium mb-1.5">Code Prefix</label>
             <div className="relative">
-              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
               <input
                 type="text"
                 value={form.codePrefix}
@@ -598,7 +598,7 @@ export default function CreateCampaignForm({
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-text/60" />
+                  <Lock className="w-4 h-4 text-text opacity-60" />
                   <span className="font-medium">Public Campaign</span>
                 </div>
                 <p className="text-sm text-text/60 mt-0.5">
@@ -623,7 +623,7 @@ export default function CreateCampaignForm({
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <QrCode className="w-4 h-4 text-text/60" />
+                  <QrCode className="w-4 h-4 text-text opacity-60" />
                   <span className="font-medium">QR Code Enabled</span>
                 </div>
                 <p className="text-sm text-text/60 mt-0.5">

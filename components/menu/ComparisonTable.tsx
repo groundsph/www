@@ -14,7 +14,7 @@ export default function ComparisonTable({ items }: ComparisonTableProps) {
 		return (
 			<div className="flex flex-col items-center justify-center py-12 text-center">
 				<div className="w-16 h-16 rounded-full bg-text/5 flex items-center justify-center mb-4">
-					<Coffee className="w-8 h-8 text-text/30" />
+					<Coffee className="w-8 h-8 text-text opacity-30" />
 				</div>
 				<h3 className="text-lg font-medium text-text/70 mb-1">
 					No items to compare

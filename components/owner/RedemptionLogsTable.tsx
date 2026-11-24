@@ -73,7 +73,7 @@ export default function RedemptionLogsTable({ campaignId }: RedemptionLogsTableP
     return (
       <div className="text-center py-12 bg-background border border-text/10 rounded-xl">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-text/5 flex items-center justify-center">
-          <ScanLine className="w-8 h-8 text-text/30" />
+          <ScanLine className="w-8 h-8 text-text opacity-30" />
         </div>
         <h3 className="text-lg font-semibold mb-2">No Redemption Logs</h3>
         <p className="text-text/60 max-w-md mx-auto">

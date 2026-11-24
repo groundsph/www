@@ -150,7 +150,7 @@ export function LeaderboardBackfillClient({
                             onClick={() => setResult(null)}
                             className="p-1 hover:bg-text/10 rounded-lg transition"
                         >
-                            <X className="w-4 h-4 text-text/40" />
+                            <X className="w-4 h-4 text-text opacity-40" />
                         </button>
                     </div>
                 </div>
@@ -198,7 +198,7 @@ export function LeaderboardBackfillClient({
                             className="w-4 h-4 rounded border-tertiary/50"
                         />
                         <span className="text-sm font-medium">Force refresh</span>
-                        <RotateCcw className={`w-4 h-4 ${forceMode ? 'text-primary' : 'text-text/40'}`} />
+                        <RotateCcw className={`w-4 h-4 ${forceMode ? 'text-primary' : 'text-text opacity-40'}`} />
                     </label>
                     <button
                         onClick={refresh}

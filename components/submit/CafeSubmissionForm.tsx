@@ -1679,7 +1679,7 @@ export default function CafeSubmissionForm({
                                             >
                                                 <div className='flex items-center gap-2 mb-2'>
                                                     <BadgeCheck className={`w-5 h-5 ${
-                                                        mallVerificationType === 'owner' ? 'text-purple-600' : 'text-text/40'
+                                                        mallVerificationType === 'owner' ? 'text-purple-600' : 'text-text opacity-40'
                                                     }`} />
                                                     <span className='font-medium'>I am the Owner/Manager</span>
                                                 </div>
@@ -1698,7 +1698,7 @@ export default function CafeSubmissionForm({
                                             >
                                                 <div className='flex items-center gap-2 mb-2'>
                                                     <ExternalLink className={`w-5 h-5 ${
-                                                        mallVerificationType === 'contributor' ? 'text-purple-600' : 'text-text/40'
+                                                        mallVerificationType === 'contributor' ? 'text-purple-600' : 'text-text opacity-40'
                                                     }`} />
                                                     <span className='font-medium'>I&apos;m a Contributor</span>
                                                 </div>
@@ -1826,7 +1826,7 @@ export default function CafeSubmissionForm({
                                                 ) : (
                                                     <>
                                                         <div className='relative'>
-                                                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40' />
+                                                            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40' />
                                                             <input
                                                                 type='text'
                                                                 value={linkedBranchQuery}
@@ -2970,7 +2970,7 @@ export default function CafeSubmissionForm({
                                                         </div>
                                                     ) : (
                                                         <div className='w-16 h-16 rounded-lg bg-text/5 flex items-center justify-center shrink-0'>
-                                                            <Utensils className='w-6 h-6 text-text/30' />
+                                                            <Utensils className='w-6 h-6 text-text opacity-30' />
                                                         </div>
                                                     )}
                                                     <div className='flex-1 min-w-0'>

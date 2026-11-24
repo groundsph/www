@@ -93,7 +93,7 @@ function Stars({ filled }: { filled: number }) {
                         "size-2.5",
                         index < filled
                             ? "fill-accent text-accent"
-                            : "text-text/25"
+                            : "text-text opacity-25"
                     )}
                     aria-hidden='true'
                 />
@@ -211,7 +211,7 @@ function ListingEditorScreen() {
                             </p>
                         </div>
                         <PencilLine
-                            className='size-3 shrink-0 text-text/30'
+                            className='size-3 shrink-0 text-text opacity-30'
                             aria-hidden='true'
                         />
                     </div>

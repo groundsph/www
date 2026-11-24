@@ -523,7 +523,7 @@ export default function MenuOcrScanModal({
                                                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                                                     className="mb-3"
                                                 >
-                                                    <Camera className="w-10 h-10 text-text/30 group-hover:text-primary/60 transition-colors" />
+                                                    <Camera className="w-10 h-10 text-text opacity-30 group-hover:text-primary group-hover:opacity-60 transition-[color,opacity]" />
                                                 </motion.div>
                                                 <span className="text-text/60 text-sm text-center px-4 group-hover:text-text/80 transition-colors">
                                                     Take photo
@@ -547,7 +547,7 @@ export default function MenuOcrScanModal({
                                                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                                                     className="mb-3"
                                                 >
-                                                    <ImageUp className="w-10 h-10 text-text/30 group-hover:text-primary/60 transition-colors" />
+                                                    <ImageUp className="w-10 h-10 text-text opacity-30 group-hover:text-primary group-hover:opacity-60 transition-[color,opacity]" />
                                                 </motion.div>
                                                 <span className="text-text/60 text-sm text-center px-4 group-hover:text-text/80 transition-colors">
                                                     Upload from device
@@ -753,7 +753,7 @@ export default function MenuOcrScanModal({
                                             animate={{ opacity: 1, scale: 1 }}
                                             className="flex flex-col items-center justify-center py-12 gap-3 text-center"
                                         >
-                                            <AlertCircle className="w-12 h-12 text-text/30" />
+                                            <AlertCircle className="w-12 h-12 text-text opacity-30" />
                                             <p className="text-text/60 font-medium">
                                                 No new items found
                                             </p>

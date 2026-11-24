@@ -35,7 +35,7 @@ export default function CafeLeaderboardSection({
                     Community Favorites
                 </h2>
                 <div className='bg-text/5 rounded-xl p-8 text-center'>
-                    <CrownIcon className='w-12 h-12 text-text/20 mx-auto mb-3' />
+                    <CrownIcon className='w-12 h-12 text-text opacity-20 mx-auto mb-3' />
                     <p className='text-text/60'>
                         No leaderboard data available yet.
                     </p>

@@ -140,7 +140,7 @@ export default function VoucherRedeemPanel() {
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
                 <input
                   type="text"
                   value={code}

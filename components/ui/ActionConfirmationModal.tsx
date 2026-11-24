@@ -399,7 +399,7 @@ export default function ActionConfirmationModal({
                                                     disabled={verifying}
                                                     autoFocus
                                                 />
-                                                <Key className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text/40" />
+                                                <Key className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text opacity-40" />
                                             </div>
                                         </div>
                                     )}

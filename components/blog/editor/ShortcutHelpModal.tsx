@@ -35,7 +35,7 @@ export default function ShortcutHelpModal({ isOpen, onClose }: ShortcutHelpModal
                 <div className="flex items-center justify-between p-4 border-b border-text/10">
                     <h3 className="font-serif font-bold text-lg text-text">Keyboard Shortcuts</h3>
                     <button onClick={onClose} className="p-1 hover:bg-text/5 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-text/60" />
+                        <X className="w-5 h-5 text-text opacity-60" />
                     </button>
                 </div>
                 <div className="p-4 space-y-2">

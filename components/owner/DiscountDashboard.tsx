@@ -202,7 +202,7 @@ export default function DiscountDashboard({
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
             <input
               type="text"
               placeholder="Search campaigns..."
@@ -214,7 +214,7 @@ export default function DiscountDashboard({
 
           {/* Status Filter */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-            <Filter className="w-4 h-4 text-text/40 shrink-0" />
+            <Filter className="w-4 h-4 text-text opacity-40 shrink-0" />
             {statusFilters.map((filter) => (
               <button
                 key={filter.value}

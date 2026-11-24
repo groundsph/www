@@ -188,7 +188,7 @@ export default function CafeSidebar({
                             {copied ? (
                                 <Check className='w-4 h-4 text-green-500' />
                             ) : (
-                                <Copy className='w-4 h-4 text-text/40' />
+                                <Copy className='w-4 h-4 text-text opacity-40' />
                             )}
                         </button>
                     </div>

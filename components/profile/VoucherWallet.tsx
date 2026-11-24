@@ -191,7 +191,7 @@ export default function VoucherWallet({ vouchers }: VoucherWalletProps) {
           className="bg-linear-to-br from-text/5 to-text/10 border border-text/10 rounded-xl p-4"
         >
           <div className="flex items-center gap-2 mb-1">
-            <Ticket className="w-4 h-4 text-text/40" />
+            <Ticket className="w-4 h-4 text-text opacity-40" />
             <span className="text-sm text-text/60">Used</span>
           </div>
           <p className="text-2xl font-bold text-text/70">{usedVouchers.length}</p>
@@ -246,9 +246,9 @@ export default function VoucherWallet({ vouchers }: VoucherWalletProps) {
             >
               <div className="w-16 h-16 rounded-full bg-text/5 flex items-center justify-center mb-4">
                 {activeTab === "active" ? (
-                  <Ticket className="w-8 h-8 text-text/20" />
+                  <Ticket className="w-8 h-8 text-text opacity-20" />
                 ) : (
-                  <Search className="w-8 h-8 text-text/20" />
+                  <Search className="w-8 h-8 text-text opacity-20" />
                 )}
               </div>
               <h3 className="text-lg font-semibold mb-2">

@@ -203,7 +203,7 @@ export default function FollowRequestsDropdown({
                             {isRefreshing && (
                                 <Loader2
                                     size={14}
-                                    className='animate-spin text-text/40'
+                                    className='animate-spin text-text opacity-40'
                                 />
                             )}
                         </div>
@@ -214,7 +214,7 @@ export default function FollowRequestsDropdown({
                                 <div className='px-4 py-8 text-center'>
                                     <BellIcon
                                         size={32}
-                                        className='mx-auto text-text/20 mb-2'
+                                        className='mx-auto text-text opacity-20 mb-2'
                                     />
                                     <p className='text-sm text-text/60'>
                                         No pending requests

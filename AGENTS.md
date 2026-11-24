@@ -84,6 +84,17 @@ Add new components to the matching domain folder. Create a new domain only if no
 - **Client components**: `"use client"` at top. Prefer Server Components by default.
 - **Naming**: PascalCase components, camelCase functions/vars, kebab-case utility files, snake_case DB tables, `is`/`has`/`should` prefix for booleans.
 - **Styling**: Tailwind CSS v4 (PostCSS plugin `@tailwindcss/postcss`, no `tailwind.config.js`). Use `cn()` from `@/utils/cn` for conditional classes.
+- **Lucide icons — dim with `opacity-*`, never a slash-alpha colour.** Lucide renders `stroke="currentColor"`, so `text-text/40` sets alpha on `color` and every stroke becomes independently translucent. Lucide icons are drawn as several sibling elements, so where two overlap their alphas composite — 0.4 over 0.4 renders at 64% — and the icon grows the dark patches at stroke intersections. Worst on multi-element icons such as `ImageUp`, `Camera`, `Ticket`, `QrCode`, `Users`, `CreditCard`, `Coffee`, `UtensilsCrossed`.
+
+  Write the colour at full strength and dim the element instead: `className="text-text opacity-40"`, **not** `className="text-text/40"`. When a hover changes the colour, swap the opacity too and transition both properties:
+
+  ```tsx
+  <ImageUp className="w-10 h-10 text-text opacity-30 group-hover:text-primary group-hover:opacity-60 transition-[color,opacity]" />
+  ```
+
+  This applies to any icon whose dimming currently comes from a slash-alpha colour utility, decorative background icons included (`text-primary/5` → `text-primary opacity-5`). Slash-alpha on ordinary text is fine and is not covered by this rule.
+
+  It also applies to **inherited** alpha: an icon sitting inside a dimmed row (`<div className="text-text/50">` wrapping a `<Clock />`) inherits the transparent colour and gets the same compounding. Do not rely on inheritance to dim a new icon — give the icon its own `text-*` at full strength plus `opacity-*` matching the row's alpha, so the group composites once.
 - **DB**: Drizzle ORM only. Select specific columns, never `*`. Use `eq()`, `and()`, `or()` for conditions.
 
 ## Testing

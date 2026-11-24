@@ -401,7 +401,7 @@ export default function FollowListModal({
                                                     }}
                                                     className="flex items-center justify-center py-4"
                                                 >
-                                                    {isLoading && <Loader2 className="w-5 h-5 animate-spin text-text/60" />}
+                                                    {isLoading && <Loader2 className="w-5 h-5 animate-spin text-text opacity-60" />}
                                                 </div>
                                             )
                                         }

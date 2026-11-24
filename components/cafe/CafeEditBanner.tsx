@@ -69,7 +69,7 @@ export default function CafeEditBanner({ cafeId, cafeSlug, cafeName, role }: Caf
                                 className='p-1 rounded-lg hover:bg-text/5 transition-colors'
                                 aria-label='Dismiss'
                             >
-                                <X className='w-4 h-4 text-text/40' />
+                                <X className='w-4 h-4 text-text opacity-40' />
                             </button>
                         </div>
                     </div>

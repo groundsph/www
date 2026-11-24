@@ -37,7 +37,7 @@ export default async function ActivityPage() {
 
             {checkIns.length === 0 ? (
                 <div className='bg-text/5 border border-text/10 rounded-xl p-12 flex flex-col items-center justify-center'>
-                    <Users className='w-16 h-16 text-text/20 mb-4' />
+                    <Users className='w-16 h-16 text-text opacity-20 mb-4' />
                     <p className='text-text/60 font-medium text-lg'>
                         No activity yet
                     </p>
@@ -127,7 +127,7 @@ export default async function ActivityPage() {
                             {/* Companions */}
                             {checkIn.companions.length > 0 && (
                                 <div className='mt-3 flex items-center gap-2'>
-                                    <Users className='w-4 h-4 text-text/40' />
+                                    <Users className='w-4 h-4 text-text opacity-40' />
                                     <span className='text-sm text-text/50'>
                                         with
                                     </span>

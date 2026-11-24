@@ -320,7 +320,7 @@ export default function OwnerBenefits() {
                                 <summary className='flex items-center justify-between gap-4 list-none font-semibold text-text'>
                                     <span>{faq.question}</span>
                                     <ChevronDown
-                                        className='w-5 h-5 text-text/40 shrink-0 transition-transform group-open:rotate-180'
+                                        className='w-5 h-5 text-text opacity-40 shrink-0 transition-transform group-open:rotate-180'
                                         aria-hidden='true'
                                     />
                                 </summary>

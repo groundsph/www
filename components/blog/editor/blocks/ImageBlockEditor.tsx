@@ -56,7 +56,7 @@ function DropZone({
             {uploading ? (
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
             ) : (
-                <ImageIcon className="w-6 h-6 text-text/40" />
+                <ImageIcon className="w-6 h-6 text-text opacity-40" />
             )}
             <span className="text-xs text-text/60">{label}</span>
             <input

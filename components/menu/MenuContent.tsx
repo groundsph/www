@@ -382,7 +382,7 @@ export default function MenuContent({
             {/* Search bar — scrolls with content */}
             <div className="px-4 py-3 bg-tertiary/20 border-b border-text/10">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -396,7 +396,7 @@ export default function MenuContent({
                             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-text/10 rounded-full transition-colors"
                             aria-label="Clear search"
                         >
-                            <X className="w-3.5 h-3.5 text-text/50" />
+                            <X className="w-3.5 h-3.5 text-text opacity-50" />
                         </button>
                     )}
                 </div>
@@ -510,7 +510,7 @@ export default function MenuContent({
 
                     const communityIndicator = (item: MenuItem) => item.communitySubmitted ? (
                         <div className="bg-background/90 backdrop-blur-sm p-1 rounded-full shadow-sm">
-                            <Globe className="w-3.5 h-3.5 text-text/50" />
+                            <Globe className="w-3.5 h-3.5 text-text opacity-50" />
                         </div>
                     ) : null
 
@@ -548,9 +548,9 @@ export default function MenuContent({
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
                                             {item.isFood ? (
-                                                <UtensilsCrossed className="w-16 h-16 text-text/15" />
+                                                <UtensilsCrossed className="w-16 h-16 text-text opacity-15" />
                                             ) : (
-                                                <Coffee className="w-16 h-16 text-text/15" />
+                                                <Coffee className="w-16 h-16 text-text opacity-15" />
                                             )}
                                         </div>
                                     )}
@@ -670,7 +670,7 @@ export default function MenuContent({
                                     animate={{ rotate: collapsedCategories.has(category) ? -90 : 0 }}
                                     transition={{ duration: 0.2 }}
                                 >
-                                    <ChevronDown className="w-5 h-5 text-text/40" />
+                                    <ChevronDown className="w-5 h-5 text-text opacity-40" />
                                 </motion.div>
                             </button>
 
@@ -696,7 +696,7 @@ export default function MenuContent({
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             {item.communitySubmitted && (
-                                                                <Globe className="w-3 h-3 text-text/40" />
+                                                                <Globe className="w-3 h-3 text-text opacity-40" />
                                                             )}
                                                             <span className="font-medium text-sm">{item.name}</span>
                                                         </div>

@@ -1046,7 +1046,7 @@ export default function CommunityManagement({
                             <div className='flex flex-wrap items-center gap-2'>
                                 {/* Search */}
                                 <div className='relative'>
-                                    <Search className='absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text/40' />
+                                    <Search className='absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text opacity-40' />
                                     <input
                                         type='text'
                                         value={teamViewSearch}
@@ -1125,16 +1125,16 @@ export default function CommunityManagement({
                                             <tr key={perm.name} className='border-b border-tertiary/30 last:border-0'>
                                                 <td className='py-2 px-2'>{perm.name}</td>
                                                 <td className='text-center py-2 px-2'>
-                                                    {perm.user ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                    {perm.user ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text opacity-20' />}
                                                 </td>
                                                 <td className='text-center py-2 px-2'>
-                                                    {perm.writer ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                    {perm.writer ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text opacity-20' />}
                                                 </td>
                                                 <td className='text-center py-2 px-2'>
-                                                    {perm.moderator ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                    {perm.moderator ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text opacity-20' />}
                                                 </td>
                                                 <td className='text-center py-2 px-2'>
-                                                    {perm.admin ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text/20' />}
+                                                    {perm.admin ? <Check className='w-4 h-4 mx-auto text-green-500' /> : <X className='w-4 h-4 mx-auto text-text opacity-20' />}
                                                 </td>
                                             </tr>
                                         ))}
@@ -1487,7 +1487,7 @@ export default function CommunityManagement({
                                 </div>
                             ) : activityLogs.length === 0 ? (
                                 <div className='text-center py-12'>
-                                    <FileText className='w-12 h-12 mx-auto text-text/30 mb-3' />
+                                    <FileText className='w-12 h-12 mx-auto text-text opacity-30 mb-3' />
                                     <p className='text-text/60'>No activity found</p>
                                 </div>
                             ) : (

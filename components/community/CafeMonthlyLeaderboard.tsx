@@ -276,7 +276,7 @@ export default function CafeMonthlyLeaderboard({
                                 </div>
                                 <div className="flex items-center gap-1" title="Composite score based on visits, reviews, and engagement">
                                     <span>Score</span>
-                                    <Info className="w-3 h-3 text-text/30" />
+                                    <Info className="w-3 h-3 text-text opacity-30" />
                                 </div>
                             </div>
                             <div className="divide-y divide-secondary/10">

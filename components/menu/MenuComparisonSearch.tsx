@@ -143,7 +143,7 @@ export default function MenuComparisonSearch({
 			{/* Search Input */}
 			<div className="relative" ref={dropdownRef}>
 				<div className="relative">
-					<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+					<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
 					<input
 						ref={inputRef}
 						type="text"
@@ -163,7 +163,7 @@ export default function MenuComparisonSearch({
 						)}
 					/>
 					{isLoading && (
-						<Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40 animate-spin" />
+						<Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40 animate-spin" />
 					)}
 					{!isLoading && query && (
 						<button
@@ -173,7 +173,7 @@ export default function MenuComparisonSearch({
 							}}
 							className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-text/10 rounded-full transition-colors"
 						>
-							<X className="w-4 h-4 text-text/40" />
+							<X className="w-4 h-4 text-text opacity-40" />
 						</button>
 					)}
 				</div>
@@ -199,9 +199,9 @@ export default function MenuComparisonSearch({
 								>
 									<div className="w-8 h-8 rounded-lg bg-tertiary flex items-center justify-center shrink-0">
 										{item.isFood ? (
-											<UtensilsCrossed className="w-4 h-4 text-text/60" />
+											<UtensilsCrossed className="w-4 h-4 text-text opacity-60" />
 										) : (
-											<Coffee className="w-4 h-4 text-text/60" />
+											<Coffee className="w-4 h-4 text-text opacity-60" />
 										)}
 									</div>
 									<div className="flex-1 min-w-0">

@@ -173,19 +173,19 @@ export default function VoucherCard({ voucher }: VoucherCardProps) {
                 </div>
               ) : (
                 <div className="w-5 h-5 rounded-full bg-text/10 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-3 h-3 text-text/40" />
+                  <MapPin className="w-3 h-3 text-text opacity-40" />
                 </div>
               )}
               <span className="text-sm text-text/70 group-hover:text-primary transition-colors truncate">
                 {voucher.campaign.cafeName}
               </span>
-              <ExternalLink className="w-3 h-3 text-text/30 group-hover:text-primary transition-colors flex-shrink-0" />
+              <ExternalLink className="w-3 h-3 text-text opacity-30 group-hover:text-primary group-hover:opacity-100 transition-[color,opacity] flex-shrink-0" />
             </Link>
 
             {/* Voucher Code */}
             <div className="flex items-center gap-2 mt-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-text/5 border border-text/10 rounded-lg">
-                <Ticket className="w-3.5 h-3.5 text-text/40" />
+                <Ticket className="w-3.5 h-3.5 text-text opacity-40" />
                 <span className="font-mono text-sm font-medium tracking-wider">
                   {voucher.code}
                 </span>
@@ -201,7 +201,7 @@ export default function VoucherCard({ voucher }: VoucherCardProps) {
                     {copied ? (
                       <Check className="w-4 h-4 text-green-500" />
                     ) : (
-                      <Copy className="w-4 h-4 text-text/40" />
+                      <Copy className="w-4 h-4 text-text opacity-40" />
                     )}
                   </motion.button>
                   <motion.button
@@ -214,9 +214,9 @@ export default function VoucherCard({ voucher }: VoucherCardProps) {
                     title={showQR ? "Hide QR" : "Show QR"}
                   >
                     {showQR ? (
-                      <X className="w-4 h-4 text-text/60" />
+                      <X className="w-4 h-4 text-text opacity-60" />
                     ) : (
-                      <QrCode className="w-4 h-4 text-text/40" />
+                      <QrCode className="w-4 h-4 text-text opacity-40" />
                     )}
                   </motion.button>
                 </>

@@ -75,7 +75,7 @@ export default async function VisitsPage() {
 
             {visits.length === 0 ? (
                 <div className='bg-text/5 border border-text/10 rounded-xl p-12 flex flex-col items-center justify-center'>
-                    <Coffee className='w-16 h-16 text-text/20 mb-4' />
+                    <Coffee className='w-16 h-16 text-text opacity-20 mb-4' />
                     <p className='text-text/60 font-medium text-lg'>
                         No visits yet
                     </p>

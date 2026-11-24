@@ -111,7 +111,7 @@ function EmbedView({ url, title }: { url: string; title?: string }) {
             <span className="min-w-0 flex-1 truncate text-sm text-text/80">
                 {title || url}
             </span>
-            <ArrowUpRight className="w-4 h-4 shrink-0 text-text/40" />
+            <ArrowUpRight className="w-4 h-4 shrink-0 text-text opacity-40" />
         </a>
     )
 }
@@ -291,7 +291,7 @@ export default function BlockRenderer({
                                 key={block.id}
                                 className="my-6 border-l-4 border-primary/40 bg-muted/30 py-3 pl-5 pr-4 italic"
                             >
-                                <QuoteIcon className="mb-2 w-4 h-4 text-primary/50" />
+                                <QuoteIcon className="mb-2 w-4 h-4 text-primary opacity-50" />
                                 <MarkdownRender content={block.content} compact />
                                 {block.attribution && (
                                     <footer className="mt-2 text-sm not-italic text-text/60">

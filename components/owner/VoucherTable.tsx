@@ -163,7 +163,7 @@ export default function VoucherTable({ campaignId }: VoucherTableProps) {
     return (
       <div className="text-center py-12 bg-background border border-text/10 rounded-xl">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-text/5 flex items-center justify-center">
-          <Ticket className="w-8 h-8 text-text/30" />
+          <Ticket className="w-8 h-8 text-text opacity-30" />
         </div>
         <h3 className="text-lg font-semibold mb-2">No Vouchers Yet</h3>
         <p className="text-text/60 max-w-md mx-auto">
@@ -178,7 +178,7 @@ export default function VoucherTable({ campaignId }: VoucherTableProps) {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-          <Filter className="w-4 h-4 text-text/40 shrink-0" />
+          <Filter className="w-4 h-4 text-text opacity-40 shrink-0" />
           {statusFilters.map((filter) => (
             <button
               key={filter.value}
@@ -276,7 +276,7 @@ export default function VoucherTable({ campaignId }: VoucherTableProps) {
                         {copiedId === voucher.id ? (
                           <Check className="w-4 h-4 text-green-500" />
                         ) : (
-                          <Copy className="w-4 h-4 text-text/60" />
+                          <Copy className="w-4 h-4 text-text opacity-60" />
                         )}
                       </button>
                       {voucher.status === "available" && (
@@ -287,7 +287,7 @@ export default function VoucherTable({ campaignId }: VoucherTableProps) {
                           title="Cancel voucher"
                         >
                           {cancellingId === voucher.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-text/60" />
+                            <Loader2 className="w-4 h-4 animate-spin text-text opacity-60" />
                           ) : (
                             <X className="w-4 h-4 text-red-500" />
                           )}

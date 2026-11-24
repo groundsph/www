@@ -202,7 +202,7 @@ export default function GenerateVouchersModal({
                 Number of Vouchers to Generate
               </label>
               <div className="relative">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text/40" />
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text opacity-40" />
                 <input
                   type="number"
                   min="1"
@@ -295,7 +295,7 @@ export default function GenerateVouchersModal({
                     {copiedId === voucher.id ? (
                       <Check className="w-4 h-4 text-green-500" />
                     ) : (
-                      <Copy className="w-4 h-4 text-text/60" />
+                      <Copy className="w-4 h-4 text-text opacity-60" />
                     )}
                   </button>
                 </motion.div>

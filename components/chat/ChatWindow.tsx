@@ -763,7 +763,7 @@ export default function ChatWindow({
                         >
                             <div className='max-w-[85%] px-4 py-2.5 rounded-2xl rounded-bl-md bg-secondary/5 border border-secondary/15 text-sm leading-relaxed'>
                                 <div className='flex items-center gap-1.5 text-text/70'>
-                                    <Sparkles className='w-3.5 h-3.5 text-secondary/60 shrink-0' />
+                                    <Sparkles className='w-3.5 h-3.5 text-secondary opacity-60 shrink-0' />
                                     <span className='font-medium'>
                                         Marble couldn&apos;t respond
                                     </span>

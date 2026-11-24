@@ -53,7 +53,7 @@ function StepIcon({ state }: { state: SubmissionStepState }) {
     }
     return (
         <span className='w-5 h-5 flex items-center justify-center shrink-0'>
-            <Circle className='w-2.5 h-2.5 text-text/25' />
+            <Circle className='w-2.5 h-2.5 text-text opacity-25' />
         </span>
     )
 }
