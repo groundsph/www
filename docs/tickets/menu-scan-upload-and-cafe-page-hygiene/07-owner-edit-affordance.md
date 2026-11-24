@@ -9,9 +9,10 @@ Owners maintain their listing from a separate area of the site and are not recog
 public page's edit permission check, which answers only for staff. So the person most
 responsible for a Cafe's accuracy is the one person the page does not offer to help.
 
-**Blocked by:** 01, 02, 03, 04, 05, 06 — no code dependency. These edges mark the pull
-request boundary: this is the first ticket of `fix/cafe-details-hygiene`, cut from `prod`
-once the first PR has merged.
+**Blocked by:** 01, 02, 03, 04, 05, 06 — no code dependency. These edges were planned as a
+pull request boundary: this was to be the first ticket of `fix/cafe-details-hygiene`, cut from
+`prod` once the first PR had merged. As delivered there was a single PR
+(`fix/menu-scan-upload`, #38), so the edges were applied as ordering only.
 
 **Seams:** S5 — the edit permission check and the banner that renders it. *Catches:* the
 permission widening to anyone who is not the owner, the owner's link pointing at the staff

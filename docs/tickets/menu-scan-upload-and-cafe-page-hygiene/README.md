@@ -3,13 +3,17 @@
 **Spec:** docs/superpowers/specs/2026-11-24-menu-scan-upload-and-cafe-page-hygiene.md
 **Baseline:** f30a83eca1d65cb4cde5baa5b18507c385f92330
 **Branch:** fix/menu-scan-upload
+**Delivered:** one pull request, `fix/menu-scan-upload` → `prod` (PR #38, squash-merged as
+`6200c4b`, 2026-11-24). All eight tickets landed together.
 **Spec issue:** https://git.ranio.xyz/groundsph/www/issues/29
 
-Delivered as two sequential pull requests off `prod`. Tickets 01–06 form the first,
-`fix/menu-scan-upload`; tickets 07–08 form the second, `fix/cafe-details-hygiene`, cut from
-`prod` after the first merges. The blocking edges on 07 and 08 encode that boundary: batch
-two starts only once batch one is complete, so the first PR can merge from `prod` before
-the second is cut.
+**Delivery note.** The plan below called for two sequential pull requests: tickets 01–06 on
+`fix/menu-scan-upload`, then 07–08 on `fix/cafe-details-hygiene` cut from `prod` after the first
+merged. The run delivered everything on one integration branch instead, so
+**`fix/cafe-details-hygiene` was never created**. The blocking edges on 07 and 08 were therefore
+applied as ordering only: 07 and 08 still waited for 01–06 to be integrated, but the split no
+longer marks a PR boundary. Consequence worth knowing before a revert: 07–08 are **not**
+separately revertable at PR level; use commit ranges instead (see the spec's rollback note).
 
 ## Graph
 

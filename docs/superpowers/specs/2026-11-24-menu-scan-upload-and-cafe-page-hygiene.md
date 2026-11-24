@@ -237,6 +237,13 @@ is removed in favour of the boundary so that response status and metadata are co
 merged in order: upload and OCR reliability first, cafe page hygiene second. They touch
 disjoint modules and neither depends on the other's code, only on its presence on `prod`.
 
+> **Delivery note (retrospective).** As delivered this was **one** pull request, not two:
+> all eight tickets landed on `fix/menu-scan-upload` and squash-merged to `prod` as
+> `6200c4b` (PR #38). `fix/cafe-details-hygiene` was never created. The module-disjointness
+> claim above still holds — the two batches touch disjoint modules and neither depends on the
+> other's code — but the PR-level split does not, which is why the rollback note below gives
+> commit ranges rather than PRs as the revert unit.
+
 ## Testing Decisions
 
 ### Seams
@@ -328,9 +335,10 @@ code revert with the column left in place — reverted code simply never reads i
 the column is nullable and unused by old code, the migration can land before, with, or
 after the application change.
 
-The two pull requests are independently revertable. Reverting batch one restores
-camera-only scanning but leaves batch two's permission and route work intact; reverting
-batch two touches no menu write path. Neither revert requires a schema change.
+The two batches are independently revertable, though **not** as separate pull requests — there
+was only one PR. Revert by commit range instead: reverting the upload/OCR batch restores
+camera-only scanning but leaves the permission and route work intact; reverting the cafe page
+hygiene batch touches no menu write path. Neither revert requires a schema change.
 
 No destructive SQL. No rename, no drop, no data rewrite.
 

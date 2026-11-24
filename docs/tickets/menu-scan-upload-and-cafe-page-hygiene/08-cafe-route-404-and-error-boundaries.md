@@ -11,9 +11,10 @@ already asks the framework for a not-found response, but the app's only not-foun
 redirects home, so the visitor is sent to the homepage instead of being told the page is
 gone. No error boundary exists anywhere in the application.
 
-**Blocked by:** 01, 02, 03, 04, 05, 06 — no code dependency. These edges mark the pull
-request boundary: this is the second ticket of `fix/cafe-details-hygiene`, cut from `prod`
-once the first PR has merged.
+**Blocked by:** 01, 02, 03, 04, 05, 06 — no code dependency. These edges were planned as a
+pull request boundary: this was to be the second ticket of `fix/cafe-details-hygiene`, cut from
+`prod` once the first PR had merged. As delivered there was a single PR
+(`fix/menu-scan-upload`, #38), so the edges were applied as ordering only.
 
 **Seams:** S6 — the Cafe route segment's boundaries. *Catches:* an unpublished Cafe returning
 something different from a missing one, and a name leaking into the 404. *Misses:* visual
